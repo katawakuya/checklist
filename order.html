@@ -455,6 +455,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="85-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="85-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="85-author" placeholder="氏名"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromTab('85')">📐 図面を見る</button></div>
     </div>
   </div>
 
@@ -606,6 +607,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="40-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="40-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="40-author" placeholder="氏名"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromTab('40')">📐 図面を見る</button></div>
     </div>
   </div>
   <div class="notice">
@@ -701,6 +703,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="30-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="30-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="30-author" placeholder="氏名"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromTab('30')">📐 図面を見る</button></div>
     </div>
   </div>
   <div class="notice">
@@ -792,6 +795,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="20-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="20-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="20-author" placeholder="氏名"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromTab('20')">📐 図面を見る</button></div>
     </div>
   </div>
   <div class="notice">
@@ -883,6 +887,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="14-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="14-hata" placeholder="例: 50" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="14-author" placeholder="氏名"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromTab('14')">📐 図面を見る</button></div>
     </div>
   </div>
   <div class="notice">
@@ -2628,8 +2633,8 @@ function renderDiagTypeUI(typeKey) {
 
   // パターンボタン生成
   const patterns = (typeKey === '85' || typeKey === '14')
-    ? [{id:'n',label:'通常（左）'},{id:'ns',label:'通常 特殊部（右）'},
-       {id:'k',label:'勾配あり（左）'},{id:'ks',label:'勾配あり 特殊部（右）'}]
+    ? [{id:'n',label:'通常'},{id:'ns',label:'通常 特殊部'},
+       {id:'k',label:'勾配あり'},{id:'ks',label:'勾配あり 特殊部'}]
     : [{id:'n',label:'通常'},{id:'k',label:'勾配あり'}];
 
   let html = '';
@@ -2696,6 +2701,19 @@ const EXCEL_DIAGRAMS = [{"hata":27,"dp":null,"dp_end":null,"img":"UklGRmQmAABXRU
 
 function getExcelDiagram(hata) {
   return EXCEL_DIAGRAMS.find(d => d.hata === parseInt(hata));
+}
+
+// 基本情報の「図面を見る」ボタン
+function viewDiagramFromTab(typeKey) {
+  const hata = document.getElementById(`${typeKey}-hata`)?.value?.trim();
+  if (!hata) { alert('旗揚げ番号を入力してください'); return; }
+  const siteArr = getMasterForCalcTab(typeKey);
+  const entry = siteArr.find(r => String(r.hata) === String(hata))
+             || getMaster('').find(r => String(r.hata) === String(hata))
+             || null;
+  const excelEntry = getExcelDiagram(hata);
+  if (!entry && !excelEntry) { alert(`旗揚げ番号 №${hata} はマスタに登録されていません`); return; }
+  showDiagram(hata, typeKey);
 }
 
 // =====================================================================
@@ -2880,7 +2898,7 @@ function applyMasterValues(typeKey, patternId) {
   showOnlyPattern(typeKey, patternId);
 
   const badge = document.getElementById('saveBadge');
-  badge.textContent = `✅ №${_currentDiagHata} の値を ${patternId==='n'?'通常（左）':patternId==='ns'?'通常 特殊部（右）':patternId==='k'?'勾配あり（左）':'勾配あり 特殊部（右）'} に適用`;
+  badge.textContent = `✅ №${_currentDiagHata} の値を ${patternId==='n'?'通常':patternId==='ns'?'通常 特殊部':patternId==='k'?'勾配あり':'勾配あり 特殊部'} に適用`;
   badge.style.display = 'block';
   setTimeout(() => { badge.style.display='none'; badge.textContent='💾 保存済み'; }, 2500);
 }
