@@ -440,6 +440,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <button class="tab-btn" data-tab="calc20">歩道切下 20型</button>
   <button class="tab-btn" data-tab="calc14">歩道部 14型</button>
   <button class="tab-btn" data-tab="history">📊 発注履歴 <span class="badge" id="histBadge">0</span></button>
+  <button class="tab-btn" data-tab="sites">🏗 現場管理 <span class="badge" id="siteBadge">0</span></button>
   <button class="tab-btn" data-tab="master">🗂 旗揚げマスタ <span class="badge" id="masterBadge">0</span></button>
 </nav>
 
@@ -450,6 +451,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="card">
     <div class="card-title">基本情報</div>
     <div class="input-grid">
+      <div class="field" style="grid-column:1/-1"><label>現場名</label><div style="display:flex;gap:8px;"><select id="85-site" class="highlight" style="flex:1;" onchange="onSiteChange('85')"><option value="">― 現場を選択 ―</option></select><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場管理</button></div></div>
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="85-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="85-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="85-author" placeholder="氏名"></div>
@@ -600,6 +602,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="card">
     <div class="card-title">基本情報</div>
     <div class="input-grid">
+      <div class="field" style="grid-column:1/-1"><label>現場名</label><div style="display:flex;gap:8px;"><select id="40-site" class="highlight" style="flex:1;" onchange="onSiteChange('40')"><option value="">― 現場を選択 ―</option></select><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場管理</button></div></div>
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="40-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="40-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="40-author" placeholder="氏名"></div>
@@ -694,6 +697,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="card">
     <div class="card-title">基本情報</div>
     <div class="input-grid">
+      <div class="field" style="grid-column:1/-1"><label>現場名</label><div style="display:flex;gap:8px;"><select id="30-site" class="highlight" style="flex:1;" onchange="onSiteChange('30')"><option value="">― 現場を選択 ―</option></select><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場管理</button></div></div>
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="30-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="30-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="30-author" placeholder="氏名"></div>
@@ -784,6 +788,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="card">
     <div class="card-title">基本情報</div>
     <div class="input-grid">
+      <div class="field" style="grid-column:1/-1"><label>現場名</label><div style="display:flex;gap:8px;"><select id="20-site" class="highlight" style="flex:1;" onchange="onSiteChange('20')"><option value="">― 現場を選択 ―</option></select><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場管理</button></div></div>
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="20-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="20-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="20-author" placeholder="氏名"></div>
@@ -874,6 +879,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="card">
     <div class="card-title">基本情報</div>
     <div class="input-grid">
+      <div class="field" style="grid-column:1/-1"><label>現場名</label><div style="display:flex;gap:8px;"><select id="14-site" class="highlight" style="flex:1;" onchange="onSiteChange('14')"><option value="">― 現場を選択 ―</option></select><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場管理</button></div></div>
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="14-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="14-hata" placeholder="例: 50" class="highlight" style="width:100%"></div>
       <div class="field"><label>作業記録者</label><input type="text" id="14-author" placeholder="氏名"></div>
@@ -1005,9 +1011,28 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 <!-- ========== HISTORY ========== -->
 <div class="tab-content" id="tab-history">
   <div class="card">
+    <div class="card-title">絞り込み・集計</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="min-width:200px;flex:1;">
+        <label>現場で絞り込み</label>
+        <select id="hist-siteFilter" onchange="renderHistory()" class="highlight">
+          <option value="">すべての現場</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:120px;">
+        <label>年月</label>
+        <input type="month" id="hist-monthFilter" onchange="renderHistory()">
+      </div>
+      <button class="btn btn-ghost" onclick="document.getElementById('hist-siteFilter').value='';document.getElementById('hist-monthFilter').value='';renderHistory()">リセット</button>
+    </div>
+    <!-- 現場別集計サマリー -->
+    <div id="hist-summary" style="margin-top:14px;"></div>
+  </div>
+  <div class="card">
     <div class="card-title">発注履歴</div>
     <div class="actions" style="margin-bottom:16px;">
-      <button class="btn btn-ghost" onclick="exportCSV()">📤 CSVエクスポート</button>
+      <button class="btn btn-ghost" onclick="exportCSV()">📤 CSV（全件）</button>
+      <button class="btn btn-ghost" onclick="exportCSVFiltered()">📤 CSV（絞込中）</button>
       <button class="btn btn-danger" onclick="clearAllHistory()">🗑 全履歴削除</button>
     </div>
     <div class="history-wrap" id="historyContainer">
@@ -1016,17 +1041,97 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   </div>
 </div>
 
+<!-- ========== SITES ========== -->
+<div class="tab-content" id="tab-sites">
+  <div class="card">
+    <div class="card-title">現場登録・管理</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px;">現場を登録すると各計算タブのドロップダウンから選択できます。現場ごとに旗揚げマスタが切り替わります。</p>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">新規登録 / 編集</div>
+      <div class="input-grid" style="margin-bottom:12px;">
+        <div class="field" style="grid-column:1/-1"><label>現場名 ＊</label><input type="text" id="site-name" placeholder="例: ○○交差点 配管工事" class="highlight" style="width:100%"></div>
+        <div class="field"><label>担当者</label><input type="text" id="site-manager" placeholder="例: 山田 太郎"></div>
+        <div class="field"><label>工期開始</label><input type="date" id="site-start"></div>
+        <div class="field"><label>工期終了（予定）</label><input type="date" id="site-end"></div>
+        <div class="field" style="grid-column:1/-1"><label>備考</label><input type="text" id="site-note" placeholder="メモ（任意）" style="width:100%"></div>
+      </div>
+      <input type="hidden" id="site-edit-id">
+      <div class="actions">
+        <button class="btn btn-primary" onclick="saveSite()">💾 登録する</button>
+        <button class="btn btn-ghost" onclick="clearSiteForm()">クリア</button>
+      </div>
+    </div>
+    <div class="card-title" style="margin-bottom:12px;">登録済み現場一覧</div>
+    <div id="siteList"><div class="empty-state"><div class="big">🏗</div>まだ登録されていません</div></div>
+  </div>
+</div>
+
 <!-- ========== MASTER ========== -->
 <div class="tab-content" id="tab-master">
   <div class="card">
     <div class="card-title">旗揚げ番号マスタ登録</div>
     <p style="font-size:12px;color:var(--text3);margin-bottom:16px;">
-      登録しておくと、各計算書で旗揚げ番号を入力した際に DP・管下H が自動入力され、図面画像がポップアップ表示されます。
+      現場ごとに旗揚げマスタを管理できます。計算タブで旗揚げ番号を入力すると DP・管下H が自動入力されます。
     </p>
+
+    <!-- 現場選択 -->
+    <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.25);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent);">🏗 対象現場</div>
+      <select id="master-site-sel" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;" onchange="onMasterSiteChange()">
+        <option value="">― 現場を選択 ―</option>
+      </select>
+      <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="document.querySelector('.tab-btn[data-tab=sites]').click()">＋ 現場登録</button>
+    </div>
+
+    <!-- Excelインポートバナー -->
+    <div id="master-import-area" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">📥 Excelから一括インポート</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">
+        Excelファイル（.xlsx）を読み込んで旗揚げマスタを一括登録します。<br>
+        ヘッダー行に <strong style="color:var(--text);">旗揚げ番号（またはNO・番号）・DP・管下H（またはDPH）</strong> を含む列が必要です。備考・管路名称・管種も自動認識します。
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--green);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">
+          📂 Excelファイルを選択
+          <input type="file" id="master-xlsx-file" accept=".xlsx,.xls" style="display:none" onchange="importMasterExcel(event)">
+        </label>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="downloadMasterTemplate()">📋 テンプレートDL</button>
+        <span id="master-import-status" style="font-size:12px;color:var(--text3);"></span>
+      </div>
+    </div>
+
+    <!-- 画像一括アップロードバナー -->
+    <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.25);border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px;">🖼 断面図JPGを一括アップロード（自動マッチング）</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">
+        <strong style="color:var(--text);">ファイル名を旗揚げ番号にしたJPG/PNG</strong>を複数選択すると、番号ごとに自動で登録されます。<br>
+        例: <span style="font-family:var(--mono);color:var(--yellow);">35.jpg</span>　<span style="font-family:var(--mono);color:var(--yellow);">42.png</span>　<span style="font-family:var(--mono);color:var(--yellow);">断面図_50.jpg</span>　→ 旗揚げ番号 35・42・50 に自動登録
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <label id="bulk-img-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--orange);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;"
+          ondragover="event.preventDefault();this.style.outline='2px solid var(--orange)'"
+          ondragleave="this.style.outline='none'"
+          ondrop="handleBulkImgDrop(event)">
+          📁 JPG/PNGを複数選択（またはD&D）
+          <input type="file" id="bulk-img-input" accept="image/*" multiple style="display:none" onchange="importBulkImages(event.target.files)">
+        </label>
+        <span id="bulk-img-status" style="font-size:12px;color:var(--text3);"></span>
+      </div>
+      <!-- プレビューエリア -->
+      <div id="bulk-img-preview" style="display:none;margin-top:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">マッチング結果プレビュー（「確定登録」で保存されます）</div>
+        <div id="bulk-img-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:260px;overflow-y:auto;padding:2px;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+          <button class="btn btn-primary" onclick="confirmBulkImages()">✅ 確定登録</button>
+          <button class="btn btn-ghost" style="font-size:12px;" onclick="cancelBulkImages()">キャンセル</button>
+          <span id="bulk-img-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
+        </div>
+      </div>
+    </div>
 
     <!-- 登録フォーム -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">新規 / 上書き登録</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">手動 新規 / 上書き登録</div>
       <div class="input-grid" style="margin-bottom:12px;">
         <div class="field"><label>旗揚げ番号 ＊</label><input type="number" id="m-hata" placeholder="例: 35" class="highlight"></div>
         <div class="field"><label>管路名称（任意）</label><input type="text" id="m-name" placeholder="例: A区間 φ200"></div>
@@ -1051,7 +1156,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
       <!-- 図面画像 -->
       <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">断面図・図面画像（PNG / JPG / PDF 可）</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">断面図・図面画像（PNG / JPG 可）</div>
         <label id="m-imgLabel" style="
           display:flex;align-items:center;justify-content:center;
           gap:10px;border:2px dashed var(--border);border-radius:10px;
@@ -1062,7 +1167,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
            ondrop="handleImgDrop(event)">
           <span style="font-size:24px;">🖼</span>
           <span>クリックまたはドラッグ＆ドロップで画像を選択</span>
-          <input type="file" id="m-imgFile" accept="image/*,application/pdf" style="display:none" onchange="handleImgSelect(event)">
+          <input type="file" id="m-imgFile" accept="image/*" style="display:none" onchange="handleImgSelect(event)">
         </label>
         <div id="m-imgPreview" style="margin-top:10px;display:none;">
           <img id="m-previewImg" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid var(--border);">
@@ -1079,8 +1184,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       </div>
     </div>
 
-    <!-- 登録済み一覧 -->
-    <div class="card-title" style="margin-bottom:12px;">登録済み一覧</div>
+    <!-- 登録済み一覧ヘッダー -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">登録済み一覧 <span id="master-site-label" style="font-size:11px;color:var(--accent);font-weight:400;"></span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="printMasterList()">🖨 一覧印刷</button>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="exportMasterJSON()">💾 JSONエクスポート</button>
+        <label class="btn btn-ghost" style="font-size:12px;cursor:pointer;">📂 JSONインポート<input type="file" accept=".json" style="display:none" onchange="importMasterJSON(event)"></label>
+      </div>
+    </div>
     <div id="masterList">
       <div class="empty-state"><div class="big">📂</div>まだ登録されていません</div>
     </div>
@@ -1690,6 +1802,7 @@ function saveRecord(typeKey) {
   const date   = document.getElementById(`${typeKey}-date`)?.value;
   const hata   = document.getElementById(`${typeKey}-hata`)?.value;
   const author = document.getElementById(`${typeKey}-author`)?.value || '';
+  const site   = document.getElementById(`${typeKey}-site`)?.value || '';
   if (!date) { alert('作業日付を入力してください'); return; }
   if (!hata) { alert('旗揚げ番号を入力してください'); return; }
 
@@ -1698,7 +1811,7 @@ function saveRecord(typeKey) {
 
   const record = {
     id: Date.now(),
-    date, hata, author, typeKey,
+    date, hata, author, site, typeKey,
     typeLabel: t.label,
     asTon密粒:   +s.asTon密粒.toFixed(6),
     asTon粗粒:   +s.asTon粗粒.toFixed(6),
@@ -1719,7 +1832,7 @@ function saveRecord(typeKey) {
   const badge = document.getElementById('saveBadge');
   badge.style.display = 'block';
   setTimeout(() => badge.style.display = 'none', 2500);
-  alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}`);
+  alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${site ? ' / ' + site : ''}`);
 }
 
 function getResults(typeKey) {
@@ -1754,7 +1867,15 @@ function clearAllHistory() {
 // 履歴 描画
 // =====================================================================
 function renderHistory() {
-  const h = getHistory();
+  updateHistSiteFilter();
+  const siteFilter  = document.getElementById('hist-siteFilter')?.value || '';
+  const monthFilter = document.getElementById('hist-monthFilter')?.value || '';
+  let h = getHistory();
+  if (siteFilter)  h = h.filter(r => (r.site||'') === siteFilter);
+  if (monthFilter) h = h.filter(r => r.date.startsWith(monthFilter));
+
+  renderHistorySummary(h);
+
   const el = document.getElementById('historyContainer');
   if (h.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="big">📭</div>履歴はまだありません</div>';
@@ -1766,7 +1887,7 @@ function renderHistory() {
 
   let html = `<table class="history-table">
     <thead><tr>
-      <th>日付</th><th>型</th><th>旗揚番</th>
+      <th>日付</th><th>現場名</th><th>型</th><th>旗揚番</th>
       <th class="num">密粒AS(t)</th><th class="num">粗粒AS(t)</th>
       <th class="num">RM-40(m³)</th><th class="num">RC-40(m³)</th>
       <th class="num">RC+RM(m³)</th>
@@ -1780,11 +1901,12 @@ function renderHistory() {
     const month = r.date.substring(0, 7);
     if (month !== prevMonth) {
       prevMonth = month;
-      html += `<tr class="month-row"><td colspan="13">📅 ${month.replace('-','年')}月</td></tr>`;
+      html += `<tr class="month-row"><td colspan="14">📅 ${month.replace('-','年')}月</td></tr>`;
     }
     const t = TYPES[r.typeKey];
     html += `<tr>
       <td>${r.date}</td>
+      <td>${r.site || '―'}</td>
       <td><span style="color:${t?.color||'#fff'}">${r.typeLabel}</span></td>
       <td>${r.hata}</td>
       <td class="num">${fmt(r.asTon密粒)}</td>
@@ -1804,32 +1926,12 @@ function renderHistory() {
 }
 
 // =====================================================================
-// CSV エクスポート
+// CSV エクスポート（全件）
 // =====================================================================
 function exportCSV() {
   const h = getHistory();
   if (h.length === 0) { alert('履歴がありません'); return; }
-  const rows = [['日付','型','旗揚げ番号','密粒度AS(t)','粗粒度AS(t)','RM-40(m3)','RC-40(m3)','RC+RM合計(m3)','改良土(m3)','再生砂(m3)','改良土+再生砂(m3)','記録者']];
-  for (const r of h) {
-    const t = TYPES[r.typeKey];
-    rows.push([
-      r.date, r.typeLabel, r.hata,
-      r.asTon密粒,
-      t?.asT粗粒 > 0 ? r.asTon粗粒 : '',
-      t?.rmH > 0 ? r.rmOrd : '',
-      r.rcOrd,
-      t?.rmH > 0 ? r.rcRmSum : r.rcOrd,
-      r.isoilOrd || 0,
-      r.sandOrd,
-      r.sandSoilSum,
-      r.author
-    ]);
-  }
-  const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `発注履歴_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  exportCSVData(h, `発注履歴_${new Date().toISOString().slice(0,10)}.csv`);
 }
 
 // =====================================================================
@@ -1859,6 +1961,7 @@ document.getElementById('tabNav').addEventListener('click', e => {
   document.getElementById(`tab-${tab}`)?.classList.add('active');
   if (tab === 'history') renderHistory();
   if (tab === 'master') renderMasterList();
+  if (tab === 'sites') renderSiteList();
 });
 
 // =====================================================================
@@ -1954,59 +2057,75 @@ const today = new Date().toISOString().slice(0,10);
 });
 
 // =====================================================================
-// 旗揚げマスタ（localStorage）
+// 旗揚げマスタ（現場ごとに管理）
 // =====================================================================
-function getMaster() {
-  try { return JSON.parse(localStorage.getItem('hata_master') || '[]'); } catch { return []; }
+let _currentMasterSiteId = ''; // 現在マスタタブで選択中の現場ID
+
+function getMasterKey(siteId) {
+  return siteId ? `hata_master_${siteId}` : 'hata_master';
 }
-function saveMasterData(arr) {
-  localStorage.setItem('hata_master', JSON.stringify(arr));
+function getMaster(siteId) {
+  const key = getMasterKey(siteId !== undefined ? siteId : _currentMasterSiteId);
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function saveMasterData(arr, siteId) {
+  const key = getMasterKey(siteId !== undefined ? siteId : _currentMasterSiteId);
+  localStorage.setItem(key, JSON.stringify(arr));
   updateMasterBadge();
 }
 function updateMasterBadge() {
-  const m = getMaster();
-  document.getElementById('masterBadge').textContent = m.length;
+  const total = getSites().reduce((n, s) => n + getMaster(s.id).length, 0) + getMaster('').length;
+  document.getElementById('masterBadge').textContent = total;
 }
 
-// 現在選択中の画像データ(base64)
+// 現場セレクタ同期
+function syncMasterSiteDropdown() {
+  const sel = document.getElementById('master-site-sel');
+  if (!sel) return;
+  const sites = getSites();
+  const cur = _currentMasterSiteId;
+  sel.innerHTML = '<option value="">（現場未登録 / 共通）</option>' +
+    sites.map(s => `<option value="${s.id}"${s.id===cur?' selected':''}>${s.name}</option>`).join('');
+  sel.value = cur;
+  const lbl = document.getElementById('master-site-label');
+  if (lbl) {
+    const site = sites.find(s => s.id === cur);
+    lbl.textContent = site ? `— ${site.name}` : '';
+  }
+}
+
+function onMasterSiteChange() {
+  _currentMasterSiteId = document.getElementById('master-site-sel')?.value || '';
+  syncMasterSiteDropdown();
+  renderMasterList();
+}
+
+// 現在の画像データ
 let _masterImgData = null;
 let _masterImgName = null;
 
-function handleImgSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  readImgFile(file);
-}
+function handleImgSelect(e) { const file = e.target.files[0]; if (file) readImgFile(file); }
 function handleImgDrop(e) {
   e.preventDefault();
   document.getElementById('m-imgLabel').style.borderColor = 'var(--border)';
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  readImgFile(file);
+  const file = e.dataTransfer.files[0]; if (file) readImgFile(file);
 }
 function readImgFile(file) {
-  // PDFは非対応プレビューだが保存はする
   const reader = new FileReader();
   reader.onload = ev => {
-    _masterImgData = ev.target.result; // base64 data URL
+    _masterImgData = ev.target.result;
     _masterImgName = file.name;
     const preview = document.getElementById('m-imgPreview');
     const img = document.getElementById('m-previewImg');
-    const nm = document.getElementById('m-imgName');
     preview.style.display = 'block';
-    nm.textContent = file.name;
-    if (file.type.startsWith('image/')) {
-      img.src = _masterImgData;
-      img.style.display = 'block';
-    } else {
-      img.style.display = 'none';
-    }
+    document.getElementById('m-imgName').textContent = file.name;
+    if (file.type.startsWith('image/')) { img.src = _masterImgData; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
   };
   reader.readAsDataURL(file);
 }
 function clearMasterImg() {
-  _masterImgData = null;
-  _masterImgName = null;
+  _masterImgData = null; _masterImgName = null;
   document.getElementById('m-imgPreview').style.display = 'none';
   document.getElementById('m-previewImg').src = '';
   document.getElementById('m-imgFile').value = '';
@@ -2020,11 +2139,9 @@ function saveMaster() {
   if (!dp || !dph) { alert('DP・管下H を入力してください'); return; }
 
   const entry = {
-    hata,
-    name:     document.getElementById('m-name').value.trim(),
-    dp, dph,
-    dp1:  parseFloat(document.getElementById('m-dp1').value)  || null,
-    dp2:  parseFloat(document.getElementById('m-dp2').value)  || null,
+    hata, name: document.getElementById('m-name').value.trim(), dp, dph,
+    dp_start: parseFloat(document.getElementById('m-dp1').value) || null,
+    dp_end:   parseFloat(document.getElementById('m-dp2').value) || null,
     dph1: parseFloat(document.getElementById('m-dph1').value) || null,
     dph2: parseFloat(document.getElementById('m-dph2').value) || null,
     pipetype: document.getElementById('m-pipetype').value,
@@ -2045,8 +2162,7 @@ function saveMaster() {
 
 function clearMasterForm() {
   ['m-hata','m-name','m-dp','m-dph','m-dp1','m-dp2','m-dph1','m-dph2','m-note'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
+    const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('m-pipetype').value = '';
   clearMasterImg();
@@ -2065,44 +2181,40 @@ function editMaster(hata) {
   document.getElementById('m-name').value   = entry.name || '';
   document.getElementById('m-dp').value     = entry.dp   || '';
   document.getElementById('m-dph').value    = entry.dph  || '';
-  document.getElementById('m-dp1').value    = entry.dp1  != null ? entry.dp1 : '';
-  document.getElementById('m-dp2').value    = entry.dp2  != null ? entry.dp2 : '';
+  document.getElementById('m-dp1').value    = entry.dp_start != null ? entry.dp_start : (entry.dp1 ?? '');
+  document.getElementById('m-dp2').value    = entry.dp_end   != null ? entry.dp_end   : (entry.dp2 ?? '');
   document.getElementById('m-dph1').value   = entry.dph1 != null ? entry.dph1 : '';
   document.getElementById('m-dph2').value   = entry.dph2 != null ? entry.dph2 : '';
   document.getElementById('m-pipetype').value = entry.pipetype || '';
   document.getElementById('m-note').value   = entry.note || '';
   if (entry.imgData) {
-    _masterImgData = entry.imgData;
-    _masterImgName = entry.imgName;
-    const preview = document.getElementById('m-imgPreview');
-    preview.style.display = 'block';
+    _masterImgData = entry.imgData; _masterImgName = entry.imgName;
+    document.getElementById('m-imgPreview').style.display = 'block';
     document.getElementById('m-imgName').textContent = entry.imgName || '';
     const img = document.getElementById('m-previewImg');
-    if (entry.imgData.startsWith('data:image')) {
-      img.src = entry.imgData; img.style.display = 'block';
-    } else { img.style.display = 'none'; }
+    if (entry.imgData.startsWith('data:image')) { img.src = entry.imgData; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
   }
-  // スクロール先頭へ
-  document.querySelector('.tab-content.active').scrollTop = 0;
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function renderMasterList() {
+  syncMasterSiteDropdown();
   const arr = getMaster();
   const el = document.getElementById('masterList');
   if (!el) return;
   updateMasterBadge();
   if (arr.length === 0) {
-    el.innerHTML = '<div class="empty-state"><div class="big">📂</div>まだ登録されていません</div>';
+    el.innerHTML = '<div class="empty-state"><div class="big">📂</div>まだ登録されていません<br><span style="font-size:11px;">Excelインポートまたは手動で追加してください</span></div>';
     return;
   }
-  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
   for (const r of arr) {
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">`;
     if (r.imgData && r.imgData.startsWith('data:image')) {
-      html += `<img src="${r.imgData}" style="width:100%;height:140px;object-fit:cover;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showDiagram('${r.hata}')">`;
+      html += `<img src="${r.imgData}" style="width:100%;height:130px;object-fit:cover;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showDiagram('${r.hata}')">`;
     } else {
-      html += `<div style="height:80px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" onclick="showDiagram('${r.hata}')">📐 図面未登録</div>`;
+      html += `<div style="height:70px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" onclick="showDiagram('${r.hata}')">📐 図面未登録</div>`;
     }
     html += `<div style="padding:12px;">
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
@@ -2114,10 +2226,10 @@ function renderMasterList() {
         <span>管下H: <b style="color:var(--text)">${r.dph}</b></span>
         ${r.pipetype?`<span>${r.pipetype}</span>`:''}
       </div>
-      ${r.dp1!=null?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);">勾配: DP ${r.dp1}→${r.dp2??'―'}　管下H ${r.dph1}→${r.dph2??'―'}</div>`:''}
+      ${(r.dp_start??r.dp1)!=null?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);">勾配: DP ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}</div>`:''}
       ${r.note?`<div style="font-size:11px;color:var(--text3);margin-top:4px;">${r.note}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="showDiagram('${r.hata}')">📐 図面表示</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="showDiagram('${r.hata}')">📐 図面</button>
         <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="editMaster('${r.hata}')">✏️ 編集</button>
         <button class="del-btn" onclick="deleteMaster('${r.hata}')">✕</button>
       </div>
@@ -2125,6 +2237,323 @@ function renderMasterList() {
   }
   html += '</div>';
   el.innerHTML = html;
+}
+
+// =====================================================================
+// Excelインポート（SheetJS）
+// =====================================================================
+function importMasterExcel(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!_currentMasterSiteId) {
+    const ok = confirm('現場が選択されていません。共通マスタとしてインポートしますか？\n（現場を選択してからインポートすると現場別管理できます）');
+    if (!ok) { e.target.value=''; return; }
+  }
+  const status = document.getElementById('master-import-status');
+  status.textContent = '読み込み中...';
+  status.style.color = 'var(--text3)';
+
+  // SheetJS CDN ロード（未ロードなら動的追加）
+  const doImport = () => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        if (!rows.length) { status.textContent = '⚠ データが見つかりません'; status.style.color='var(--orange)'; return; }
+
+        // ヘッダーキー正規化
+        const norm = s => String(s).replace(/\s/g,'').toLowerCase();
+        const findKey = (obj, candidates) => Object.keys(obj).find(k => candidates.some(c => norm(k).includes(c)));
+
+        let imported=0, skipped=0;
+        const arr = getMaster();
+
+        rows.forEach(row => {
+          const hataKey = findKey(row, ['旗揚げ','旗揚','hata','no','番号','number']);
+          const dpKey   = findKey(row, ['dp']);
+          const dphKey  = findKey(row, ['管下h','dph','管下','kanashita','かんした']);
+          if (!hataKey || !dpKey || !dphKey) { skipped++; return; }
+
+          const hata = String(row[hataKey]).trim();
+          const dp   = parseFloat(row[dpKey]);
+          const dph  = parseFloat(row[dphKey]);
+          if (!hata || isNaN(dp) || isNaN(dph)) { skipped++; return; }
+
+          const nameKey  = findKey(row, ['名称','名前','name','管路']);
+          const noteKey  = findKey(row, ['備考','メモ','note','remark']);
+          const pipeKey  = findKey(row, ['管種','管径','pipe']);
+          const dp1Key   = findKey(row, ['dp始','dp1','dp_start','始点dp']);
+          const dp2Key   = findKey(row, ['dp終','dp2','dp_end','終点dp']);
+          const dph1Key  = findKey(row, ['管下h始','dph1','dph_start']);
+          const dph2Key  = findKey(row, ['管下h終','dph2','dph_end']);
+
+          const existing = arr.find(r => String(r.hata) === hata);
+          const entry = {
+            ...(existing||{}),
+            hata, dp, dph,
+            name:     nameKey  ? String(row[nameKey]).trim()  : (existing?.name||''),
+            note:     noteKey  ? String(row[noteKey]).trim()  : (existing?.note||''),
+            pipetype: pipeKey  ? String(row[pipeKey]).trim()  : (existing?.pipetype||''),
+            dp_start: dp1Key   ? parseFloat(row[dp1Key])||null : (existing?.dp_start||null),
+            dp_end:   dp2Key   ? parseFloat(row[dp2Key])||null : (existing?.dp_end||null),
+            dph1:     dph1Key  ? parseFloat(row[dph1Key])||null: (existing?.dph1||null),
+            dph2:     dph2Key  ? parseFloat(row[dph2Key])||null: (existing?.dph2||null),
+            imgData:  existing?.imgData||null,
+            imgName:  existing?.imgName||null,
+            updatedAt: new Date().toISOString().slice(0,10),
+          };
+          const idx = arr.findIndex(r => String(r.hata) === hata);
+          if (idx >= 0) arr[idx] = entry; else arr.push(entry);
+          imported++;
+        });
+        arr.sort((a,b) => +a.hata - +b.hata);
+        saveMasterData(arr);
+        renderMasterList();
+        status.textContent = `✅ ${imported}件インポート完了${skipped?` (スキップ${skipped}件)`:''}`;
+        status.style.color = 'var(--green)';
+        e.target.value = '';
+      } catch(err) {
+        status.textContent = `❌ 読み込みエラー: ${err.message}`;
+        status.style.color = 'var(--red)';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  if (typeof XLSX === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = doImport;
+    s.onerror = () => { status.textContent = '❌ ライブラリ読み込み失敗（オフライン？）'; status.style.color='var(--red)'; };
+    document.head.appendChild(s);
+  } else { doImport(); }
+}
+
+// Excelテンプレートダウンロード
+function downloadMasterTemplate() {
+  const doDownload = () => {
+    const wb = XLSX.utils.book_new();
+    const data = [
+      ['旗揚げ番号','管路名称','DP','管下H','勾配DP始点','勾配DP終点','勾配管下H始','勾配管下H終','管種','備考'],
+      [1,'A区間φ200',1.1,0.509,'','','','','BD管φ200',''],
+      [2,'B区間φ150',0.8,0.409,0.8,1.2,0.409,0.209,'FA管φ150','勾配あり'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [10,16,8,8,10,10,10,10,12,16].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '旗揚げマスタ');
+    XLSX.writeFile(wb, '旗揚げマスタ_テンプレート.xlsx');
+  };
+  if (typeof XLSX === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = doDownload;
+    document.head.appendChild(s);
+  } else { doDownload(); }
+}
+
+// =====================================================================
+// 旗揚げマスタ一覧印刷
+// =====================================================================
+function printMasterList() {
+  const arr = getMaster();
+  if (!arr.length) { alert('マスタが登録されていません'); return; }
+  const site = getSites().find(s => s.id === _currentMasterSiteId);
+  const siteName = site ? site.name : '共通';
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+  <title>旗揚げマスタ一覧 ${siteName}</title>
+  <style>
+    body{font-family:'Noto Sans JP',sans-serif;font-size:12px;color:#1a1a1a;margin:16px;}
+    h2{font-size:16px;margin-bottom:4px;}
+    .sub{font-size:11px;color:#666;margin-bottom:16px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+    .card{border:1px solid #ccc;border-radius:8px;overflow:hidden;page-break-inside:avoid;}
+    .card img{width:100%;height:120px;object-fit:cover;border-bottom:1px solid #ddd;display:block;}
+    .noimg{height:60px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999;border-bottom:1px solid #ddd;}
+    .info{padding:8px 10px;}
+    .hata{font-size:17px;font-weight:900;font-family:monospace;color:#1a4fa0;}
+    .name{font-size:11px;color:#555;margin-bottom:4px;}
+    .vals{font-size:11px;font-family:monospace;color:#333;}
+    .note{font-size:10px;color:#888;margin-top:3px;}
+    @media print{body{margin:0;}@page{size:A4;margin:12mm;}}
+  </style></head><body>
+  <h2>🏗 旗揚げマスタ一覧</h2>
+  <div class="sub">現場: ${siteName}　　出力日: ${new Date().toLocaleDateString('ja-JP')}　　合計: ${arr.length}件</div>
+  <div class="grid">`);
+  arr.forEach(r => {
+    w.document.write(`<div class="card">`);
+    if (r.imgData && r.imgData.startsWith('data:image')) {
+      w.document.write(`<img src="${r.imgData}" alt="№${r.hata}">`);
+    } else {
+      w.document.write(`<div class="noimg">📐 図面未登録</div>`);
+    }
+    w.document.write(`<div class="info">
+      <div class="hata">№${r.hata}</div>
+      ${r.name?`<div class="name">${r.name}</div>`:''}
+      <div class="vals">DP: ${r.dp}m　管下H: ${r.dph}m</div>
+      ${(r.dp_start??r.dp1)!=null?`<div class="vals">勾配: ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}m</div>`:''}
+      ${r.pipetype?`<div class="vals">${r.pipetype}</div>`:''}
+      ${r.note?`<div class="note">${r.note}</div>`:''}
+    </div></div>`);
+  });
+  w.document.write(`</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+
+// =====================================================================
+// 画像一括アップロード（ファイル名→旗揚げ番号 自動マッチング）
+// =====================================================================
+let _bulkImgPending = []; // { hata, dataUrl, fileName }
+
+function handleBulkImgDrop(e) {
+  e.preventDefault();
+  document.getElementById('bulk-img-label').style.outline = 'none';
+  const files = e.dataTransfer.files;
+  if (files.length) importBulkImages(files);
+}
+
+function importBulkImages(files) {
+  if (!files || files.length === 0) return;
+  _bulkImgPending = [];
+  const status = document.getElementById('bulk-img-status');
+  status.textContent = `読み込み中... (0/${files.length})`;
+  status.style.color = 'var(--text3)';
+
+  let loaded = 0;
+  const matched = [];
+  const unmatched = [];
+
+  Array.from(files).forEach(file => {
+    // ファイル名から旗揚げ番号を抽出（数字部分を取り出す）
+    const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+    const numMatch = nameWithoutExt.match(/\d+/);
+    const hata = numMatch ? String(parseInt(numMatch[0])) : null;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      loaded++;
+      if (hata) {
+        matched.push({ hata, dataUrl: ev.target.result, fileName: file.name });
+      } else {
+        unmatched.push(file.name);
+      }
+      status.textContent = `読み込み中... (${loaded}/${files.length})`;
+
+      if (loaded === files.length) {
+        // 重複番号は後勝ち
+        const deduped = {};
+        matched.forEach(m => { deduped[m.hata] = m; });
+        _bulkImgPending = Object.values(deduped).sort((a,b) => +a.hata - +b.hata);
+
+        if (_bulkImgPending.length === 0) {
+          status.textContent = '⚠ 番号を読み取れるファイルがありませんでした';
+          status.style.color = 'var(--orange)';
+          return;
+        }
+
+        status.textContent = `✅ ${_bulkImgPending.length}件マッチ${unmatched.length ? `、${unmatched.length}件スキップ` : ''}`;
+        status.style.color = 'var(--green)';
+        renderBulkPreview(unmatched);
+        document.getElementById('bulk-img-input').value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderBulkPreview(unmatched) {
+  const preview = document.getElementById('bulk-img-preview');
+  const grid    = document.getElementById('bulk-img-grid');
+  const count   = document.getElementById('bulk-img-count');
+  preview.style.display = 'block';
+  count.textContent = `${_bulkImgPending.length}件を登録予定${unmatched?.length ? `（${unmatched.length}件は番号不明のためスキップ）` : ''}`;
+
+  grid.innerHTML = _bulkImgPending.map(m => {
+    const existing = getMaster().find(r => String(r.hata) === String(m.hata));
+    const badge = existing
+      ? `<div style="position:absolute;top:3px;right:3px;background:var(--orange);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;">上書き</div>`
+      : `<div style="position:absolute;top:3px;right:3px;background:var(--green);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;">新規</div>`;
+    return `<div style="position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);">
+      ${badge}
+      <img src="${m.dataUrl}" style="width:100%;height:80px;object-fit:contain;background:#1a1a2e;display:block;">
+      <div style="padding:4px 6px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);">№${m.hata}</div>
+      <div style="padding:0 6px 4px;font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.fileName}</div>
+    </div>`;
+  }).join('');
+}
+
+function confirmBulkImages() {
+  if (_bulkImgPending.length === 0) return;
+  const arr = getMaster();
+  _bulkImgPending.forEach(m => {
+    const idx = arr.findIndex(r => String(r.hata) === String(m.hata));
+    if (idx >= 0) {
+      arr[idx] = { ...arr[idx], imgData: m.dataUrl, imgName: m.fileName, updatedAt: new Date().toISOString().slice(0,10) };
+    } else {
+      arr.push({
+        hata: m.hata, name: '', dp: null, dph: null,
+        imgData: m.dataUrl, imgName: m.fileName,
+        updatedAt: new Date().toISOString().slice(0,10)
+      });
+    }
+  });
+  arr.sort((a,b) => +a.hata - +b.hata);
+  saveMasterData(arr);
+  renderMasterList();
+  cancelBulkImages();
+  const badge = document.getElementById('saveBadge');
+  badge.textContent = `✅ ${_bulkImgPending.length}件の断面図を登録しました`;
+  badge.style.display = 'block';
+  setTimeout(() => { badge.style.display='none'; badge.textContent='💾 保存済み'; }, 3000);
+  _bulkImgPending = [];
+}
+
+function cancelBulkImages() {
+  _bulkImgPending = [];
+  document.getElementById('bulk-img-preview').style.display = 'none';
+  document.getElementById('bulk-img-status').textContent = '';
+  document.getElementById('bulk-img-grid').innerHTML = '';
+}
+
+// =====================================================================
+// JSONエクスポート/インポート（バックアップ用）
+// =====================================================================
+function exportMasterJSON() {
+  const arr = getMaster();
+  if (!arr.length) { alert('マスタが登録されていません'); return; }
+  const site = getSites().find(s => s.id === _currentMasterSiteId);
+  const payload = { siteName: site?.name||'共通', siteId: _currentMasterSiteId, exportedAt: new Date().toISOString(), data: arr };
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+  a.download = `旗揚げマスタ_${site?.name||'共通'}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importMasterJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const payload = JSON.parse(ev.target.result);
+      const incoming = payload.data || (Array.isArray(payload) ? payload : null);
+      if (!incoming) { alert('JSONの形式が正しくありません'); return; }
+      if (!confirm(`${incoming.length}件をインポートします。\n既存の同番号は上書きされます。よろしいですか？`)) return;
+      const arr = getMaster();
+      incoming.forEach(entry => {
+        const idx = arr.findIndex(r => String(r.hata) === String(entry.hata));
+        if (idx >= 0) arr[idx] = {...arr[idx], ...entry};
+        else arr.push(entry);
+      });
+      arr.sort((a,b) => +a.hata - +b.hata);
+      saveMasterData(arr);
+      renderMasterList();
+      alert(`✅ ${incoming.length}件をインポートしました`);
+    } catch { alert('JSONの読み込みに失敗しました'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // =====================================================================
@@ -2270,6 +2699,19 @@ function getExcelDiagram(hata) {
 }
 
 // =====================================================================
+// 計算タブの現場選択から対応するマスタを取得
+// =====================================================================
+function getMasterForCalcTab(typeKey) {
+  const siteEl = document.getElementById(`${typeKey}-site`);
+  const siteName = siteEl?.value || '';
+  if (!siteName) return getMaster('');
+  const site = getSites().find(s => s.name === siteName);
+  if (!site) return getMaster('');
+  const siteArr = getMaster(site.id);
+  return siteArr.length > 0 ? siteArr : getMaster('');
+}
+
+// =====================================================================
 // 旗揚げ番号入力 → 自動ポップアップ（Excelデータ優先）
 // =====================================================================
 ['85','40','30','20','14'].forEach(typeKey => {
@@ -2281,18 +2723,24 @@ function getExcelDiagram(hata) {
     const val = hataEl.value.trim();
     if (!val) return;
     timer = setTimeout(() => {
-      // Excelデータ優先、なければ手動マスタ
       const excelEntry = getExcelDiagram(val);
-      const manualEntry = getMaster().find(r => String(r.hata) === String(val));
-      if (excelEntry || manualEntry) showDiagram(val);
+      const siteArr = getMasterForCalcTab(typeKey);
+      const manualEntry = siteArr.find(r => String(r.hata) === String(val))
+                       || getMaster('').find(r => String(r.hata) === String(val));
+      if (excelEntry || manualEntry) showDiagram(val, typeKey);
     }, 500);
   });
 });
 
 // =====================================================================
 // showDiagram をフォーム連動版に上書き
-function showDiagram(hata) {
-  const manual = getMaster().find(r => String(r.hata) === String(hata));
+function showDiagram(hata, typeKey) {
+  const tKey = typeKey || (['85','40','30','20','14'].includes(
+    document.querySelector('.tab-btn.active')?.dataset?.tab?.replace('calc','')) ?
+    document.querySelector('.tab-btn.active').dataset.tab.replace('calc','') : '');
+  const siteArr = tKey ? getMasterForCalcTab(tKey) : getMaster(_currentMasterSiteId);
+  const manual = siteArr.find(r => String(r.hata) === String(hata))
+              || getMaster('').find(r => String(r.hata) === String(hata));
   const excel  = getExcelDiagram(hata);
   _currentDiagHata = hata;
 
@@ -2352,7 +2800,8 @@ function saveDiagToMaster() {
   const dph  = gF('diag-in-dph');
   if (!dp) { alert('DPを入力してください'); return; }
 
-  const existing = getMaster().find(r => String(r.hata) === String(hata)) || {};
+  const existing = getMasterForCalcTab(_currentDiagType) .find(r => String(r.hata) === String(hata))
+                || getMaster('').find(r => String(r.hata) === String(hata)) || {};
   const excel    = getExcelDiagram(hata);
 
   const entry = {
@@ -2371,11 +2820,15 @@ function saveDiagToMaster() {
     updatedAt: new Date().toISOString().slice(0,10),
   };
 
-  const arr = getMaster().filter(r => String(r.hata) !== String(hata));
+  const arr = getMasterForCalcTab(_currentDiagType).filter(r => String(r.hata) !== String(hata));
   arr.push(entry);
   arr.sort((a,b) => +a.hata - +b.hata);
-  saveHistory(arr.filter(r=>false) || []); // dummy
-  saveMasterData(arr);
+  // 現場対応：現在の計算タブの現場に保存
+  const tKey = _currentDiagType;
+  const siteEl = document.getElementById(`${tKey}-site`);
+  const siteName = siteEl?.value || '';
+  const site = getSites().find(s => s.name === siteName);
+  saveMasterData(arr, site?.id || '');
 
   const badge = document.getElementById('saveBadge');
   badge.textContent = `✅ №${hata} をマスタに保存しました`;
@@ -2455,10 +2908,242 @@ function showAllPatterns(typeKey) {
 }
 
 // =====================================================================
-// マスタバッジ初期化
+// 現場マスタ管理
 // =====================================================================
+function getSites() {
+  try { return JSON.parse(localStorage.getItem('site_master') || '[]'); } catch { return []; }
+}
+function saveSites(arr) {
+  localStorage.setItem('site_master', JSON.stringify(arr));
+  updateSiteBadge();
+  populateSiteDropdowns();
+  updateHistSiteFilter();
+}
+function updateSiteBadge() {
+  const el = document.getElementById('siteBadge');
+  if (el) el.textContent = getSites().length;
+}
+
+function saveSite() {
+  const name = document.getElementById('site-name')?.value?.trim();
+  if (!name) { alert('現場名を入力してください'); return; }
+  const editId = document.getElementById('site-edit-id')?.value;
+  const sites = getSites();
+  if (editId) {
+    const idx = sites.findIndex(s => s.id === editId);
+    if (idx >= 0) {
+      sites[idx] = { ...sites[idx],
+        name, manager: document.getElementById('site-manager')?.value?.trim()||'',
+        start: document.getElementById('site-start')?.value||'',
+        end:   document.getElementById('site-end')?.value||'',
+        note:  document.getElementById('site-note')?.value?.trim()||'',
+        updatedAt: new Date().toISOString().slice(0,10)
+      };
+    }
+  } else {
+    sites.push({
+      id: 'site_' + Date.now(),
+      name, manager: document.getElementById('site-manager')?.value?.trim()||'',
+      start: document.getElementById('site-start')?.value||'',
+      end:   document.getElementById('site-end')?.value||'',
+      note:  document.getElementById('site-note')?.value?.trim()||'',
+      createdAt: new Date().toISOString().slice(0,10),
+      updatedAt: new Date().toISOString().slice(0,10)
+    });
+  }
+  saveSites(sites);
+  clearSiteForm();
+  renderSiteList();
+  alert(`✅ 現場「${name}」を登録しました`);
+}
+
+function clearSiteForm() {
+  ['site-name','site-manager','site-start','site-end','site-note','site-edit-id'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function editSite(id) {
+  const s = getSites().find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('site-name').value    = s.name || '';
+  document.getElementById('site-manager').value = s.manager || '';
+  document.getElementById('site-start').value   = s.start || '';
+  document.getElementById('site-end').value     = s.end || '';
+  document.getElementById('site-note').value    = s.note || '';
+  document.getElementById('site-edit-id').value = s.id;
+  document.getElementById('site-name').focus();
+  document.getElementById('site-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function deleteSite(id) {
+  const s = getSites().find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`現場「${s.name}」を削除しますか？\n※この現場の旗揚げマスタも削除されます`)) return;
+  // 旗揚げマスタから該当現場を削除
+  try {
+    const allMaster = JSON.parse(localStorage.getItem('master_data') || '{}');
+    delete allMaster[id];
+    localStorage.setItem('master_data', JSON.stringify(allMaster));
+  } catch {}
+  saveSites(getSites().filter(x => x.id !== id));
+  renderSiteList();
+}
+
+function renderSiteList() {
+  const el = document.getElementById('siteList');
+  if (!el) return;
+  const sites = getSites();
+  if (sites.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="big">🏗</div>まだ登録されていません</div>';
+    return;
+  }
+  el.innerHTML = sites.map(s => {
+    const hist = getHistory().filter(r => r.site === s.name);
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:160px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">${s.name}</div>
+        ${s.manager ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">担当: ${s.manager}</div>` : ''}
+        ${s.start ? `<div style="font-size:11px;color:var(--text3);">工期: ${s.start}${s.end?' 〜 '+s.end:''}</div>` : ''}
+        ${s.note ? `<div style="font-size:11px;color:var(--text3);">備考: ${s.note}</div>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:right;">
+        <div>発注記録 <strong style="color:var(--accent);">${hist.length}件</strong></div>
+        <div>更新: ${s.updatedAt||''}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="editSite('${s.id}')">✏️ 編集</button>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="deleteSite('${s.id}')">✕ 削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function populateSiteDropdowns() {
+  const sites = getSites();
+  const types = ['85','40','30','20','14'];
+  types.forEach(t => {
+    const sel = document.getElementById(`${t}-site`);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">― 現場を選択 ―</option>' +
+      sites.map(s => `<option value="${s.name}" data-id="${s.id}"${s.name===cur?' selected':''}>${s.name}</option>`).join('');
+  });
+}
+
+function onSiteChange(typeKey) {
+  // 現場切り替えで旗揚げマスタを現場ごとに持つ準備（今後の拡張用）
+  // 現時点では選択値をそのまま使用
+}
+
+function updateHistSiteFilter() {
+  const sel = document.getElementById('hist-siteFilter');
+  if (!sel) return;
+  const sites = getSites();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">すべての現場</option>' +
+    sites.map(s => `<option value="${s.name}"${s.name===cur?' selected':''}>${s.name}</option>`).join('');
+}
+
+// =====================================================================
+// 旗揚げマスタ：現場ごとのデータ取得・保存
+// =====================================================================
+function getMasterBySite(siteId) {
+  try {
+    const all = JSON.parse(localStorage.getItem('master_data') || '{}');
+    return all[siteId] || [];
+  } catch { return []; }
+}
+function saveMasterBySite(siteId, arr) {
+  try {
+    const all = JSON.parse(localStorage.getItem('master_data') || '{}');
+    all[siteId] = arr;
+    localStorage.setItem('master_data', JSON.stringify(all));
+  } catch {}
+}
+
+// =====================================================================
+// 現場別集計サマリー
+// =====================================================================
+function renderHistorySummary(filtered) {
+  const el = document.getElementById('hist-summary');
+  if (!el) return;
+  if (filtered.length === 0) { el.innerHTML = ''; return; }
+  // 現場別集計
+  const bysite = {};
+  filtered.forEach(r => {
+    const k = r.site || '（現場名なし）';
+    if (!bysite[k]) bysite[k] = { cnt:0, asTon密粒:0, asTon粗粒:0, rcOrd:0, rmOrd:0, sandOrd:0, sandSoilSum:0 };
+    const b = bysite[k];
+    b.cnt++;
+    b.asTon密粒  += r.asTon密粒  || 0;
+    b.asTon粗粒  += r.asTon粗粒  || 0;
+    b.rcOrd      += r.rcOrd      || 0;
+    b.rmOrd      += r.rmOrd      || 0;
+    b.sandOrd    += r.sandOrd    || 0;
+    b.sandSoilSum+= r.sandSoilSum|| 0;
+  });
+  const keys = Object.keys(bysite);
+  if (keys.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="margin-bottom:8px;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;">現場別集計サマリー</div>` +
+    keys.map(k => {
+      const b = bysite[k];
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">🏗 ${k} <span style="font-size:11px;color:var(--text3);font-weight:400;">（${b.cnt}件）</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">密粒AS</div><div style="color:var(--text);font-weight:700;">${b.asTon密粒.toFixed(2)} t</div></div>
+          ${b.asTon粗粒>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">粗粒AS</div><div style="color:var(--text);font-weight:700;">${b.asTon粗粒.toFixed(2)} t</div></div>`:''}
+          ${b.rmOrd>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">RM-40</div><div style="color:var(--text);font-weight:700;">${b.rmOrd.toFixed(2)} m³</div></div>`:''}
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">RC-40</div><div style="color:var(--text);font-weight:700;">${b.rcOrd.toFixed(2)} m³</div></div>
+          <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">砂+改良土</div><div style="color:var(--accent);font-weight:700;">${b.sandSoilSum.toFixed(2)} m³</div></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// CSVエクスポート（絞込中）
+function exportCSVFiltered() {
+  const siteFilter  = document.getElementById('hist-siteFilter')?.value || '';
+  const monthFilter = document.getElementById('hist-monthFilter')?.value || '';
+  let h = getHistory();
+  if (siteFilter)  h = h.filter(r => (r.site||'') === siteFilter);
+  if (monthFilter) h = h.filter(r => r.date.startsWith(monthFilter));
+  if (h.length === 0) { alert('対象の履歴がありません'); return; }
+  exportCSVData(h, `発注履歴_${siteFilter||'全現場'}_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function exportCSVData(h, filename) {
+  const rows = [['日付','現場名','型','旗揚げ番号','密粒度AS(t)','粗粒度AS(t)','RM-40(m3)','RC-40(m3)','RC+RM合計(m3)','改良土(m3)','再生砂(m3)','改良土+再生砂(m3)','記録者']];
+  for (const r of h) {
+    const t = TYPES[r.typeKey];
+    rows.push([
+      r.date, r.site||'', r.typeLabel, r.hata,
+      r.asTon密粒,
+      t?.asT粗粒 > 0 ? r.asTon粗粒 : '',
+      t?.rmH > 0 ? r.rmOrd : '',
+      r.rcOrd,
+      t?.rmH > 0 ? r.rcRmSum : r.rcOrd,
+      r.isoilOrd || 0,
+      r.sandOrd,
+      r.sandSoilSum,
+      r.author
+    ]);
+  }
+  const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = filename;
+  a.click();
+}
+
 updateMasterBadge();
+updateSiteBadge();
 renderMasterList();
+renderSiteList();
+populateSiteDropdowns();
+updateHistSiteFilter();
+syncMasterSiteDropdown();
 </script>
 </body>
 </html>
