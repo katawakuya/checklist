@@ -202,6 +202,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <button class="snav-btn active" id="snav-check" onclick="switchScreen('check')">📋 撮影チェック</button>
   <button class="snav-btn" id="snav-master" onclick="switchScreen('master')">🗂 旗揚げマスタ <span class="mbadge" id="m-badge">0</span></button>
   <button class="snav-btn" id="snav-records" onclick="switchScreen('records')">📊 施工記録 <span class="mbadge" id="rec-badge" style="background:#f59e0b">0</span></button>
+  <button class="snav-btn" id="snav-itemlist" onclick="switchScreen('itemlist')">📷 品目一覧</button>
 </div>
 
 <!-- 撮影チェック画面 -->
@@ -309,6 +310,32 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div id="rec-list"><div style="text-align:center;color:#aaa;padding:20px;font-size:12px;">📂 まだ記録がありません</div></div>
   </div>
 </div><!-- /screen-records -->
+
+<!-- 撮影品目一覧画面 -->
+<div class="screen" id="screen-itemlist">
+  <div style="background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:12px 14px;margin-bottom:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+    <div style="font-size:12px;font-weight:700;color:#7030a0;margin-bottom:8px;">📐 舗装構成図（タップで開く）</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="https://drive.google.com/open?id=1d0N6CU-Jov_WlElIWEapGAY6VR_HmWd9&usp=drive_fs" target="_blank" style="padding:6px 11px;background:#ede7f6;border:1px solid #7030a0;border-radius:8px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道40型</a>
+      <a href="https://drive.google.com/open?id=1qOSMojamnjnqQQ6YDh7e5qfd00vVy8Mc&usp=drive_fs" target="_blank" style="padding:6px 11px;background:#ede7f6;border:1px solid #7030a0;border-radius:8px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道85型</a>
+      <a href="https://drive.google.com/open?id=15nf3hdotTrR-OI0BiVzwrj_mHHm6ehJz&usp=drive_fs" target="_blank" style="padding:6px 11px;background:#ede7f6;border:1px solid #7030a0;border-radius:8px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道30型</a>
+      <a href="https://drive.google.com/open?id=12sqhYI0YSwsLli1GMY1GQ4dlHbIbNl0S&usp=drive_fs" target="_blank" style="padding:6px 11px;background:#ede7f6;border:1px solid #7030a0;border-radius:8px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道20型</a>
+      <a href="https://drive.google.com/open?id=1AgGzVxC9xlPtntrwnhLdJDsU89WvYy5q&usp=drive_fs" target="_blank" style="padding:6px 11px;background:#ede7f6;border:1px solid #7030a0;border-radius:8px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道14型</a>
+    </div>
+  </div>
+  <div style="background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:10px 14px;margin-bottom:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+    <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:7px;">🔎 型で絞り込み</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="tab active" onclick="ilFilter('all')" id="il-btn-all">すべて</button>
+      <button class="tab" onclick="ilFilter('車道乗入れ40型')" id="il-btn-40">車道40型</button>
+      <button class="tab" onclick="ilFilter('車道85型')" id="il-btn-85">車道85型</button>
+      <button class="tab" onclick="ilFilter('歩道乗入れ30型')" id="il-btn-30">歩道30型</button>
+      <button class="tab" onclick="ilFilter('歩道乗入れ20型')" id="il-btn-20">歩道20型</button>
+      <button class="tab" onclick="ilFilter('歩道14型')" id="il-btn-14">歩道14型</button>
+    </div>
+  </div>
+  <div id="il-list"></div>
+</div><!-- /screen-itemlist -->
 
 </div><!-- /app -->
 <script>
@@ -948,7 +975,7 @@ function debugMaster(){
 var _mmImgData=null, _mmImgName=null;
 
 function switchScreen(s){
-  ['check','master','records'].forEach(function(id){
+  ['check','master','records','itemlist'].forEach(function(id){
     var sc=document.getElementById('screen-'+id);
     var nb=document.getElementById('snav-'+id);
     if(sc) sc.className='screen'+(s===id?' active':'');
@@ -956,6 +983,7 @@ function switchScreen(s){
   });
   if(s==='master') mmRenderList();
   if(s==='records') renderRecords();
+  if(s==='itemlist') ilRender();
 }
 
 function mmHandleImg(e){
@@ -1398,6 +1426,176 @@ renderInputPanel();
 recalc();
 mmUpdateBadge();
 updateRecBadge();
+
+// =============================
+// 撮影品目一覧 機能
+// =============================
+var IL_FILTER = 'all';
+var ALL_TYPES = ['車道乗入れ40型','車道85型','歩道乗入れ30型','歩道乗入れ20型','歩道14型'];
+var SHAREWAY  = ['車道乗入れ40型','車道85型'];
+var SIDEWALK  = ['歩道乗入れ30型','歩道乗入れ20型','歩道14型'];
+
+var IL_ITEMS = [
+  // フェーズ・品目データ: {phase, name, unit, note, types, url}
+  // types: 配列 or 'all' → 全型対象
+  {phase:'▶ 【 特殊状況 】', color:'#c00000', fontColor:'#fff'},
+  {name:'特殊状況', unit:'', note:'通常施工と異なる特殊な状況が発生した場合に撮影。詳細は元受けに確認。', types:'all',
+   url:'https://drive.google.com/open?id=1ZSF2OqpbWB4dBoR6RLol0au6_UTP7nFM&usp=drive_fs'},
+
+  {phase:'▶ 【 施工前 】', color:'#f4b942', fontColor:'#7b3f00'},
+  {name:'施工前状況', unit:'', note:'規制をする前の状況写真。工事関係物が何も映っていないものが望ましい。', types:'all',
+   url:'https://drive.google.com/open?id=1qoJaPwlx-Eav_8wvilFV17WKQ_zbkFTP&usp=drive_fs'},
+  {name:'既存舗装カッター入れ状況', unit:'', note:'既存アスファルト舗装にカッター入れ状況を1桝の大きさで検測し写真撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=1z70l12G3QNx_GtAgub-XamymVNGP3W3c&usp=drive_fs'},
+
+  {phase:'▶ 【 施工中 】', color:'#2e74b5', fontColor:'#fff'},
+  {name:'舗装壊し状況', unit:'', note:'舗装を壊している状況の写真を撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1MwcPnfd4Hl2zdWjtv48risD7gb03sJkx&usp=drive_fs'},
+  {name:'舗装厚確認', unit:'ｔ＝ｍ', note:'路盤構成に合わせた舗装厚確認。', types:'all',
+   url:'https://drive.google.com/open?id=1NsEcwbgIbgJYtz8bWa159CfdcG0-IST8&usp=drive_fs'},
+  {name:'舗装積込み状況', unit:'', note:'ASガラをダンプへの積み込む状況の撮影：ナンバー・積載重量・許可番号撮影。', types:'all',
+   url:'https://drive.google.com/open?id=19a4_pKSgjTQJEi_KLeh5Vn1gN6qPPOnM&usp=drive_fs'},
+  {name:'路盤積込み状況', unit:'', note:'路盤材をダンプへの積み込む状況の撮影：ナンバー・積載重量・許可番号撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1s-uhy4W-L3ULmzXBigWMB9_nnmdIPqHQ&usp=drive_fs'},
+  {name:'手掘り状況', unit:'', note:'掘削時手掘り状況の撮影。', types:'all',
+   url:'https://drive.google.com/open?id=14fRDrWKKRtRBYScj1aPNKp7eDMom-dD1&usp=drive_fs'},
+  {name:'発生土積込み状況', unit:'', note:'発生土をダンプへの積み込む状況の撮影：ナンバー・積載重量。', types:'all',
+   url:'https://drive.google.com/open?id=19lBUJc2qBf_qPRycIhcwvR7nqTaphWcr&usp=drive_fs'},
+  {name:'掘削出来形検測', unit:'L＝m：W＝m：H＝m', note:'掘削後の底盤のW、Lを検測しW・Lともに始点・終点と全景を撮影。Hは図面通りの寸法か確認し撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=1RBlQRl8YHoDU1GYS9vfyCmGdiVMwWV2z&usp=drive_fs'},
+  {name:'ダミー管（特殊部起点側さや管）', unit:'', note:'特殊部（MH）内で配管固定用のスペーサー取付状況撮影。スペーサー本体取付状況と配管を当てて撮影。', types:'all',
+   url:'https://drive.google.com/open?id=10GALGs0TP-cHApwMIt7ovY2hnmBrCI7R&usp=drive_fs'},
+  {name:'通信管  管台測定', unit:'L＝m+m+m', note:'0.5m以上2.5m以内。管台下に隙間なく転圧されている状況で撮影。\n【前回の撮影位置（終点側管先端より○○m手前）を記録しておき、前回管設置より○○m（2.5mを超えない範囲）管先端より○○m+2.5mなどと記載。\n※元受けに確認し不要と確認取れれば必要なし】', types:'all',
+   url:'https://drive.google.com/open?id=19cO8XRqQod461agq65OBgxcTwM2AoCTx&usp=drive_fs'},
+  {name:'電力管  管台測定', unit:'L＝m+m+m', note:'0.5m以上2.5m以内。管台下に隙間なく転圧されている状況で撮影。\n【前回の撮影位置（終点側管先端より○○m手前）を記録しておき、前回管設置より○○m（2.5mを超えない範囲）管先端より○○m+2.5mなどと記載。\n※元受けに確認し不要と確認取れれば必要なし】', types:'all',
+   url:'https://drive.google.com/open?id=19cO8XRqQod461agq65OBgxcTwM2AoCTx&usp=drive_fs'},
+  {name:'通信管  配管延長確認', unit:'L=m', note:'配管延長、始点・終点・全景撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1EWAgqQkKSsx7YENm1Kds2YkUWFBZ4pBs&usp=drive_fs'},
+  {name:'電力管  配管延長確認', unit:'L=m', note:'配管延長、始点・終点・全景撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1EWAgqQkKSsx7YENm1Kds2YkUWFBZ4pBs&usp=drive_fs'},
+  {name:'通信管  オフセット確認', unit:'OF=m', note:'下振りを用いてL字側溝など起点を含め全景撮影。\n官民境界が脇にない箇所（側道合流など）の場合はマンホール中心点・民地境界・排水溝角などブレない物から三点測位すること。', types:'all',
+   url:'https://drive.google.com/open?id=17zBKBZWvUch4PfOKT0MMtVNcTHKKwPlG&usp=drive_fs'},
+  {name:'電力管  オフセット確認', unit:'OF=m', note:'下振りを用いてL字側溝など起点を含め全景撮影。\n官民境界が脇にない箇所（側道合流など）の場合はマンホール中心点・民地境界・排水溝角などブレない物から三点測位すること。', types:'all',
+   url:'https://drive.google.com/open?id=17zBKBZWvUch4PfOKT0MMtVNcTHKKwPlG&usp=drive_fs'},
+  {name:'通信管  土被り確認', unit:'DP=m', note:'DP=図面確認。', types:'all',
+   url:'https://drive.google.com/open?id=1gPkhZTozkSftQiESyfzmfpapuwCbstqG&usp=drive_fs'},
+  {name:'電力管  土被り確認', unit:'DP=m', note:'DP=図面確認。', types:'all',
+   url:'https://drive.google.com/open?id=1gPkhZTozkSftQiESyfzmfpapuwCbstqG&usp=drive_fs'},
+
+  {phase:'▶ 【 埋戻し・仮復旧 】', color:'#5b9bd5', fontColor:'#fff'},
+  {name:'中間転圧（水締め）', unit:'GL-m', note:'水締め写真は管上100mmで撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1q0WAAVWdIEditTwxHeNvs0GKGox4IUtR&usp=drive_fs'},
+  {name:'中間転圧（水締め）勾配時', unit:'GL-m', note:'勾配時は低い方、高い方共に撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=1q0WAAVWdIEditTwxHeNvs0GKGox4IUtR&usp=drive_fs'},
+  {name:'埋設シート敷設', unit:'GL-m', note:'管上300mm埋設シート敷設（30型・20型・14型は200mm）。路盤材に入ってしまう際は路盤材の下に入れる。', types:'all',
+   url:'https://drive.google.com/open?id=1HALWRKLT5u6O9tcO_SKBoZDLSRgC6oRY&usp=drive_fs'},
+  {name:'埋設シート敷設（勾配時）', unit:'GL-m', note:'勾配時は低い方、高い方共に高さ H＝GL-m を記載し撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=1HALWRKLT5u6O9tcO_SKBoZDLSRgC6oRY&usp=drive_fs'},
+  {name:'中間転圧', unit:'GL-m', note:'路盤構成下まで@200以内。ランマー転圧状況も撮影（黒板は共通・高さのみ変更）。', types:'all',
+   url:'https://drive.google.com/open?id=1dLdewEbH3LVGh0G7AXijM5PsuHI6EZ5H&usp=drive_fs'},
+  {name:'中間転圧（路盤構成変更点）', unit:'85型:GL-0.85m / 40型:GL-0.40m\n30型:GL-0.30m / 20型:GL-0.20m / 14型:GL-0.14m', note:'※黒板は中間転圧のままOK。路盤構成変更箇所。', types:'all',
+   url:'https://drive.google.com/open?id=1IEB0slPc48fvPgqWDW1M5kQqN-KnFPLU&usp=drive_fs'},
+  {name:'路盤転圧', unit:'GL-m', note:'ランマー転圧状況と高さ撮影。＠200mm以内。\n※30型は1回目150mm・2回目100mm転圧。', types:SIDEWALK,
+   url:'https://drive.google.com/open?id=1-S4vDttP0oiNhN3GE9Rex4ahNwsfTZto&usp=drive_fs'},
+  {name:'下層路盤転圧', unit:'GL-m', note:'ランマー転圧状況と高さ撮影。', types:SHAREWAY,
+   url:'https://drive.google.com/open?id=1IQUeBLCH6N4MnvB3PxkePXt9fnndwEQH&usp=drive_fs'},
+  {name:'上層路盤転圧', unit:'GL-m', note:'ランマー転圧状況と高さ撮影。', types:SHAREWAY,
+   url:'https://drive.google.com/open?id=121bFHjtu8wDle0yYyf7RJPlRtFhlrdvI&usp=drive_fs'},
+
+  {phase:'▶ 【 施工後 】', color:'#375623', fontColor:'#fff'},
+  {name:'プライムコート散布', unit:'', note:'プライムコート散布状況を撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1MjW7cuWdkHv-bSSFk1-KpjX-FjM0ZO0m&usp=drive_fs'},
+  {name:'基層転圧', unit:'GL-0.05m / t＝0.05m', note:'ランマー転圧状況と高さ撮影。', types:['車道85型'],
+   url:'https://drive.google.com/open?id=1cO44duwIxog1e7TqURwGmwE71PG-sOSk&usp=drive_fs'},
+  {name:'タックコート散布', unit:'', note:'タックコート散布状況を撮影。', types:['車道85型'],
+   url:'https://drive.google.com/open?id=1tjSzF_9t-MnXyRiBkEuI--AzzP-avvNw&usp=drive_fs'},
+  {name:'表層転圧', unit:'t＝0.05m', note:'ローラー転圧状況撮影。', types:'all',
+   url:'https://drive.google.com/open?id=13nSZUOtukzElz3bJ_5yNEdo6u7X7flTM&usp=drive_fs'},
+  {name:'白線復旧延長', unit:'L=m', note:'白線と、速度表示（黄色）の復旧延長を撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=11ZMxCaQjzp6nFBocO_hU_ZDCzDPD8EnB&usp=drive_fs'},
+  {name:'復旧延長', unit:'L＝m：W＝m', note:'今回掘削復旧したアスファルトのW、Lを検測し撮影する。', types:'all',
+   url:'https://drive.google.com/open?id=1IhdYLJXjZdRzMSBzDJVi0E8nzK4-gYhu&usp=drive_fs'},
+  {name:'施工後状況', unit:'', note:'復旧後の全景を撮影。', types:'all',
+   url:'https://drive.google.com/open?id=1tmywKIeOPVEisT94wfRyeA5SvudndhkN&usp=drive_fs'},
+];
+
+function ilTypeMatch(types, filter){
+  if(filter==='all') return true;
+  if(types==='all') return true;
+  return types.indexOf(filter)>=0;
+}
+
+function ilFilter(f){
+  IL_FILTER=f;
+  // ボタン更新
+  var btnIds={'all':'il-btn-all','車道乗入れ40型':'il-btn-40','車道85型':'il-btn-85',
+              '歩道乗入れ30型':'il-btn-30','歩道乗入れ20型':'il-btn-20','歩道14型':'il-btn-14'};
+  Object.keys(btnIds).forEach(function(k){
+    var b=document.getElementById(btnIds[k]);
+    if(b) b.className='tab'+(k===f?' active':'');
+  });
+  ilRender();
+}
+
+function ilRender(){
+  var c=document.getElementById('il-list');
+  if(!c) return;
+  c.innerHTML='';
+  var no=0;
+  IL_ITEMS.forEach(function(d){
+    if(d.phase){
+      // フェーズ行 — 絞り込み時も常に表示
+      var ph=document.createElement('div');
+      ph.style.cssText='padding:8px 13px;border-radius:10px;margin-bottom:6px;font-size:12px;font-weight:700;';
+      ph.style.background=d.color; ph.style.color=d.fontColor;
+      ph.textContent=d.phase;
+      c.appendChild(ph);
+      return;
+    }
+    // 型フィルター
+    if(!ilTypeMatch(d.types, IL_FILTER)) return;
+    no++;
+
+    // 対象型バッジ生成
+    var typeArr=(d.types==='all')?ALL_TYPES:d.types;
+    var badgesHtml=typeArr.map(function(t){
+      var short=t.replace('車道乗入れ','車道').replace('歩道乗入れ','歩道');
+      var bg=t.indexOf('車道')>=0?'#dbeafe':'#dcfce7';
+      var co=t.indexOf('車道')>=0?'#1d4ed8':'#166534';
+      return '<span style="display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700;background:'+bg+';color:'+co+';margin:1px 2px;">'+short+'</span>';
+    }).join('');
+
+    var noteHtml=d.note
+      ?'<div style="font-size:11px;color:#555;margin-top:5px;padding:5px 9px;background:#f9f8f5;border-radius:6px;border-left:2px solid #d0cfc8;line-height:1.6;white-space:pre-wrap;">'+d.note+'</div>'
+      :'';
+    var unitHtml=d.unit
+      ?'<span style="display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;margin-left:6px;white-space:pre-wrap;">'+d.unit+'</span>'
+      :'';
+    var linkHtml=d.url
+      ?'<a href="'+d.url+'" target="_blank" style="display:inline-block;padding:4px 10px;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;background:#ede7f6;flex-shrink:0;">📷 見本</a>'
+      :'';
+
+    var el=document.createElement('div');
+    el.style.cssText='background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:10px 12px;margin-bottom:7px;box-shadow:0 1px 2px rgba(0,0,0,.04);';
+    el.innerHTML=
+      '<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:18px;font-weight:900;color:#94a3b8;min-width:28px;line-height:1.3;">'+no+'</span>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'
+      +'<span style="font-size:13px;font-weight:700;">'+d.name+'</span>'
+      +unitHtml
+      +'</div>'
+      +'<div style="margin-top:4px;">'+badgesHtml+'</div>'
+      +noteHtml
+      +'</div>'
+      +linkHtml
+      +'</div>';
+    c.appendChild(el);
+  });
+  if(no===0){
+    c.innerHTML='<div style="text-align:center;color:#aaa;padding:30px;font-size:13px;">該当する品目がありません</div>';
+  }
+}
 </script>
 </body>
 </html>
