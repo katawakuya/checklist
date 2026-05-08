@@ -7,8 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0f1117">
 <title>現場資材発注計算書 v4.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
   :root {
     --bg: #0f1117;
@@ -24,8 +26,8 @@
     --text: #e2e8f0;
     --text2: #94a3b8;
     --text3: #64748b;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Noto Sans JP', sans-serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --sans: 'Noto Sans JP', 'Hiragino Sans', 'Meiryo', sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -767,7 +769,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="30-cutoff-display" data-cutoff-wrap="1" style="display:none" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+          <div id="30-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
         </div>
         <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
@@ -859,7 +861,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="20-cutoff-display" data-cutoff-wrap="1" style="display:none" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+          <div id="20-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
         </div>
         <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
@@ -994,7 +996,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="14-cutoff-display" data-cutoff-wrap="1" style="display:none" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+          <div id="14-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
         </div>
         <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
@@ -1141,11 +1143,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div class="field"><label>旗揚げ番号 ＊</label><input type="number" id="m-hata" placeholder="例: 35" class="highlight"></div>
         <div class="field"><label>管路名称（任意）</label><input type="text" id="m-name" placeholder="例: A区間 φ200"></div>
         <div class="field"><label>DP（m） ＊</label><input type="number" step="0.001" id="m-dp" placeholder="1.1"></div>
-        <div class="field"><label>管下H（m） ＊</label><input type="number" step="0.001" id="m-dph" placeholder="0.509"></div>
+        <div class="field"><label>DP下配管H（m） ＊</label><input type="number" step="0.001" id="m-dph" placeholder="0.509"></div>
         <div class="field"><label>勾配DP 始点（m）</label><input type="number" step="0.001" id="m-dp1" placeholder="省略可"></div>
         <div class="field"><label>勾配DP 終点（m）</label><input type="number" step="0.001" id="m-dp2" placeholder="省略可"></div>
-        <div class="field"><label>勾配管下H 始（m）</label><input type="number" step="0.001" id="m-dph1" placeholder="省略可"></div>
-        <div class="field"><label>勾配管下H 終（m）</label><input type="number" step="0.001" id="m-dph2" placeholder="省略可"></div>
+        <div class="field"><label>勾配DP下配管H 始（m）</label><input type="number" step="0.001" id="m-dph1" placeholder="省略可"></div>
+        <div class="field"><label>勾配DP下配管H 終（m）</label><input type="number" step="0.001" id="m-dph2" placeholder="省略可"></div>
         <div class="field"><label>主な管種（任意）</label>
           <select id="m-pipetype">
             <option value="">―選択―</option>
@@ -1247,7 +1249,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <!-- 右：編集フォーム -->
       <div style="width:320px;flex-shrink:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;">
 
-        <!-- DP + 管下H 入力グループ（通常） -->
+        <!-- DP + DP下配管H 入力グループ（通常） -->
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;
             text-transform:uppercase;margin-bottom:8px;">通常パターン</div>
@@ -1259,14 +1261,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
                 placeholder="例: 1.1">
             </div>
             <div class="field">
-              <label>管下H（m）</label>
+              <label>DP下配管H（m）</label>
               <input type="number" step="0.001" id="diag-in-dph"
                 placeholder="例: 0.509">
             </div>
           </div>
         </div>
 
-        <!-- DP + 管下H 入力グループ（勾配） -->
+        <!-- DP + DP下配管H 入力グループ（勾配） -->
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;
             text-transform:uppercase;margin-bottom:8px;">勾配あり（省略可）</div>
@@ -1280,11 +1282,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
               <input type="number" step="0.001" id="diag-in-dp2" placeholder="省略可">
             </div>
             <div class="field">
-              <label>管下H 始（m）</label>
+              <label>DP下配管H 始（m）</label>
               <input type="number" step="0.001" id="diag-in-dph1" placeholder="省略可">
             </div>
             <div class="field">
-              <label>管下H 終（m）</label>
+              <label>DP下配管H 終（m）</label>
               <input type="number" step="0.001" id="diag-in-dph2" placeholder="省略可">
             </div>
           </div>
@@ -1529,7 +1531,7 @@ function calcSpecial(prefix, typeKey) {
   const asTotal  = asH密粒 + asH粗粒;
   const rcH      = t.rcH;
   const rmH      = t.rmH;
-  // 特殊部の桝: masH を床付けとみなし、管下H は本体の DPH を参照
+  // 特殊部の桝: masH を床付けとみなし、DP下配管H は本体の DPH を参照
   const masDPH = getNum(`${prefix}-DPH`);
   const { excessSandH: masExSandH, soilH: masSoilH } = splitExcess(masH - masDPH, masDPH, typeKey);
   const masHasExcess  = masExSandH > 0;
@@ -1892,7 +1894,7 @@ function renderHistory() {
 
   let html = `<table class="history-table">
     <thead><tr>
-      <th>日付</th><th>現場名</th><th>型</th><th>旗揚番</th>
+      <th>日付</th><th>現場名</th><th>型</th><th>旗揚げ番号</th>
       <th class="num">密粒AS(t)</th><th class="num">粗粒AS(t)</th>
       <th class="num">RM-40(m³)</th><th class="num">RC-40(m³)</th>
       <th class="num">RC+RM(m³)</th>
@@ -2228,7 +2230,7 @@ function renderMasterList() {
       </div>
       <div style="display:flex;gap:12px;font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:2px;">
         <span>DP: <b style="color:var(--text)">${r.dp}</b></span>
-        <span>管下H: <b style="color:var(--text)">${r.dph}</b></span>
+        <span>DP下配管H: <b style="color:var(--text)">${r.dph}</b></span>
         ${r.pipetype?`<span>${r.pipetype}</span>`:''}
       </div>
       ${(r.dp_start??r.dp1)!=null?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);">勾配: DP ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}</div>`:''}
@@ -2886,6 +2888,9 @@ function applyMasterValues(typeKey, patternId) {
   const inp = document.getElementById(`${prefix}-DP`) || document.getElementById(`${prefix}-DP1`);
   if (inp) inp.dispatchEvent(new Event('input', {bubbles:true}));
 
+  // 適用前に旗揚げ番号を保持しておく
+  const savedHata = _currentDiagHata;
+
   _closeDiagram();
 
   // ===== 対象タブに切り替え（型を変えた場合も対応）=====
@@ -2894,11 +2899,18 @@ function applyMasterValues(typeKey, patternId) {
     targetTabBtn.click();
   }
 
+  // ===== 旗揚げ番号を書き戻す（タブ切り替えやDOMイベントでクリアされるのを防ぐ）=====
+  // setTimeout(0) で1フレーム遅延させ、inputイベント連鎖による再クリアを防止
+  setTimeout(() => {
+    const hataEl = document.getElementById(`${typeKey}-hata`);
+    if (hataEl && savedHata) hataEl.value = savedHata;
+  }, 0);
+
   // ===== 選択されたパターン以外を非表示 =====
   showOnlyPattern(typeKey, patternId);
 
   const badge = document.getElementById('saveBadge');
-  badge.textContent = `✅ №${_currentDiagHata} の値を ${patternId==='n'?'通常':patternId==='ns'?'通常 特殊部':patternId==='k'?'勾配あり':'勾配あり 特殊部'} に適用`;
+  badge.textContent = `✅ №${savedHata} の値を ${patternId==='n'?'通常':patternId==='ns'?'通常 特殊部':patternId==='k'?'勾配あり':'勾配あり 特殊部'} に適用`;
   badge.style.display = 'block';
   setTimeout(() => { badge.style.display='none'; badge.textContent='💾 保存済み'; }, 2500);
 }
