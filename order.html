@@ -474,6 +474,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="85n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85n-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85n-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85n-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="85n-DP" placeholder="1.1"></div>
@@ -490,6 +492,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="85ns-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85ns-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85ns-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85ns-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="85ns-DP" placeholder="1.1"></div>
@@ -511,6 +515,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="85k-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85k-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85k-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85k-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85k-DP1" placeholder="1.1"></div>
@@ -532,6 +538,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="85ks-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85ks-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85ks-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85ks-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85ks-DP1" placeholder="1.1"></div>
@@ -576,7 +584,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="color:#a78bfa;font-weight:700;">H = 850mm</div>
       </div>
     </div>
-      <!-- 構成切替点・配管シート -->
+
+    <!-- 構成切替点・配管シート -->
       <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
         <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
           <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
@@ -589,6 +598,48 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div id="85-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
         </div>
       </div>
+    <!-- 現況・本復旧 路盤構成 -->
+    <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">表層 ポーラスAS（透水性）</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">基層 粗粒度AS（改質Ⅱ型）</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">基層 再生粗粒度AS</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">上層路盤 瀝青安定処理</div>
+          <div style="color:rgba(234,179,8,1);font-weight:700;">t = 100mm</div>
+        </div>
+        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">上層路盤 瀝青安定処理</div>
+          <div style="color:rgba(234,179,8,1);font-weight:700;">t = 100mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">上層路盤 RM-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 200mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">下層路盤 RC-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 300mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤合計H（現況）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 850mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">AS合計（廃材対象）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 350mm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（85型）</div>
@@ -624,6 +675,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="40n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="40n-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="40n-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="40n-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="40n-DP" placeholder="0.7"></div>
@@ -638,6 +691,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="40k-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="40k-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="40k-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="40k-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="40k-DP1" placeholder="0.7"></div>
@@ -685,6 +740,28 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div id="40-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
         </div>
       </div>
+    <!-- 現況・本復旧 路盤構成 -->
+    <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">表層 密粒度AS</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">上層路盤 RM-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 150mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">下層路盤 RC-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 200mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤合計H（現況）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 400mm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（40型）</div>
@@ -720,6 +797,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="30n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="30n-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="30n-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="30n-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="30n-DP" placeholder="0.55"></div>
@@ -734,6 +813,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="30k-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="30k-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="30k-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="30k-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="30k-DP1" placeholder="0.55"></div>
@@ -777,6 +858,24 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div id="30-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
         </div>
       </div>
+    <!-- 現況・本復旧 路盤構成 -->
+    <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">表層 開粒度AS</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤 RC-40</div>
+          <div style="color:var(--green);font-weight:700;">100＋150 = 250mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤合計H（現況）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 300mm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（30型）</div>
@@ -812,6 +911,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="20n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="20n-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="20n-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="20n-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="20n-DP" placeholder="0.45"></div>
@@ -826,6 +927,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="20k-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="20k-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="20k-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="20k-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="20k-DP1" placeholder="0.45"></div>
@@ -869,6 +972,24 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div id="20-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
         </div>
       </div>
+    <!-- 現況・本復旧 路盤構成 -->
+    <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">表層 開粒度AS</div>
+          <div style="color:var(--text);font-weight:700;">t = 50mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤 RC-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 150mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤合計H（現況）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 200mm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（20型）</div>
@@ -904,6 +1025,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="14n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14n-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14n-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14n-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="14n-DP" placeholder="1.1"></div>
@@ -918,6 +1041,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="14ns-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14ns-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14ns-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14ns-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="14ns-DP" placeholder="1.1"></div>
@@ -937,6 +1062,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="14k-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14k-L" placeholder="5"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14k-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14k-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="14k-DP1" placeholder="1.1"></div>
@@ -956,6 +1083,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="14ks-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14ks-L" placeholder="3"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14ks-genW" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14ks-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="14ks-DP1" placeholder="1.1"></div>
@@ -1004,6 +1133,24 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div id="14-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
         </div>
       </div>
+    <!-- 現況・本復旧 路盤構成 -->
+    <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
+        <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">表層 開粒度AS</div>
+          <div style="color:var(--text);font-weight:700;">t = 40mm</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤 RC-40</div>
+          <div style="color:var(--green);font-weight:700;">t = 100mm</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:4px;">路盤合計H（現況）</div>
+          <div style="color:#a78bfa;font-weight:700;">H = 140mm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（14型）</div>
@@ -1384,7 +1531,17 @@ const TYPES = {
     rcH: 0.300,                          // RC-40合計(m): 150×2
     totalH: 0.850,                       // 路盤構成合計H(m)
     hasImprovedSoil: true,
-    color:'#4f8ef7'
+    color:'#4f8ef7',
+    // 路盤廃材計算用（現況・本復旧）
+    genkyoAsH: 0.350,                    // 現況AS合計H(m): 表50+基50+基50+瀝青安定処理100+100=350mm
+    genkyoRM: 0.200,                     // 現況RM合計H(m): 200mm
+    genkyoRC: 0.300,                     // 現況RC合計H(m): 300mm
+    // 仮復旧・路盤先行の路盤構成（PDF参照）
+    kariRM_layers: [{t:150,n:3}],        // RM 150×3層
+    kariRC_layers: [{t:150,n:2}],        // RC 150×2層
+    // 現況・本復旧の路盤構成（PDF参照）
+    honRM_layers:  [{t:150,n:3}],        // RM 150×3層
+    honRC_layers:  [{t:150,n:2}],        // RC 150×2層
   },
   '40': {
     label:'車道側道部 40型',
@@ -1393,7 +1550,14 @@ const TYPES = {
     rcH: 0.200,                          // RC-40: 200mm×1
     totalH: 0.400,
     hasImprovedSoil: true,
-    color:'#22c55e'
+    color:'#22c55e',
+    genkyoAsH: 0.050,                    // 現況AS: 表50mm
+    genkyoRM: 0.150,
+    genkyoRC: 0.200,
+    kariRM_layers: [{t:150,n:1}],
+    kariRC_layers: [{t:200,n:1}],
+    honRM_layers:  [{t:150,n:1}],
+    honRC_layers:  [{t:200,n:1}],
   },
   '30': {
     label:'歩道切下部 30型',
@@ -1402,7 +1566,14 @@ const TYPES = {
     rcH: 0.250,                          // RC-40: 100+150=250mm
     totalH: 0.300,
     hasImprovedSoil: false,
-    color:'#f97316'
+    color:'#f97316',
+    genkyoAsH: 0.050,                    // 現況AS: 表50mm
+    genkyoRM: 0,
+    genkyoRC: 0.250,
+    kariRM_layers: [],
+    kariRC_layers: [{t:100,n:1},{t:150,n:1}],
+    honRM_layers:  [],
+    honRC_layers:  [{t:100,n:1},{t:150,n:1}],
   },
   '20': {
     label:'歩道切下部 20型',
@@ -1411,7 +1582,14 @@ const TYPES = {
     rcH: 0.150,                          // RC-40: 150mm
     totalH: 0.200,
     hasImprovedSoil: false,
-    color:'#eab308'
+    color:'#eab308',
+    genkyoAsH: 0.050,                    // 現況AS: 表50mm
+    genkyoRM: 0,
+    genkyoRC: 0.150,
+    kariRM_layers: [],
+    kariRC_layers: [{t:150,n:1}],
+    honRM_layers:  [],
+    honRC_layers:  [{t:150,n:1}],
   },
   '14': {
     label:'歩道部 14型',
@@ -1420,7 +1598,14 @@ const TYPES = {
     rcH: 0.100,                          // RC-40: 100mm
     totalH: 0.140,
     hasImprovedSoil: false,
-    color:'#a78bfa'
+    color:'#a78bfa',
+    genkyoAsH: 0.040,                    // 現況AS: 表40mm
+    genkyoRM: 0,
+    genkyoRC: 0.100,
+    kariRM_layers: [],
+    kariRC_layers: [{t:100,n:1}],
+    honRM_layers:  [],
+    honRC_layers:  [{t:100,n:1}],
   },
 };
 
@@ -1512,7 +1697,8 @@ function calcNormal(prefix, typeKey) {
   const sandOrd   = (sandH * W * L - pipeVol) * 1.25;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
-           sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd };
+           sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
+           _W: W, _L: L };
 }
 
 // 特殊部あり計算（本体から桝部分を控除）
@@ -1557,6 +1743,7 @@ function calcSpecial(prefix, typeKey) {
     sandOrd:     base.sandOrd     - masSand * 1.25,
     sandSoilSum: base.sandSoilSum - (masSoil + masSand) * 1.25,
     rcRmSum:     rcOrd + rmOrd,
+    _W: base._W, _L: base._L,
   };
 }
 
@@ -1594,7 +1781,8 @@ function calcGradient(prefix, typeKey) {
   const sandOrd    = (gSandH * W * L - pipeVol) * 1.25;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
-           sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd };
+           sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
+           _W: W, _L: L };
 }
 
 // 勾配あり特殊部計算
@@ -1638,6 +1826,7 @@ function calcGradientSpecial(prefix, typeKey) {
     sandOrd:     base.sandOrd     - masSand * 1.25,
     sandSoilSum: base.sandSoilSum - (masSoil + masSand) * 1.25,
     rcRmSum:     rcOrd + rmOrd,
+    _W: base._W, _L: base._L,
   };
 }
 
@@ -1703,7 +1892,8 @@ function chip(label, val, unit, accent) {
 // 合計集計
 // =====================================================================
 function sumResults(arr) {
-  const out = { asTon密粒:0, asTon粗粒:0, rcOrd:0, rmOrd:0, isoilOrd:0, sandOrd:0, sandSoilSum:0, rcRmSum:0 };
+  const out = { asTon密粒:0, asTon粗粒:0, rcOrd:0, rmOrd:0, isoilOrd:0, sandOrd:0, sandSoilSum:0, rcRmSum:0,
+                totalW:0, totalL:0 };
   for (const r of arr) {
     if (!r) continue;
     out.asTon密粒    += r.asTon密粒    || 0;
@@ -1714,6 +1904,8 @@ function sumResults(arr) {
     out.sandOrd      += r.sandOrd      || 0;
     out.sandSoilSum  += r.sandSoilSum  || 0;
     out.rcRmSum      += r.rcRmSum      || 0;
+    out.totalW       += r._W           || 0;
+    out.totalL       += r._L           || 0;
   }
   return out;
 }
@@ -1741,13 +1933,62 @@ function renderTotal(typeKey) {
   }
 
   const s = sumResults(results.filter(Boolean));
+
+  // ─── 仮復旧 W・L 合計（パターン別に集計）───
+  const totalWL = results.filter(Boolean).reduce((acc, r) => acc + ((r._W || 0) * (r._L || 0)), 0);
+
+  // ─── 現況廃材 W・L 合計（パターン別に集計）───
+  const patterns = typeKey === '85' || typeKey === '14'
+    ? [`${typeKey}n`, `${typeKey}ns`, `${typeKey}k`, `${typeKey}ks`]
+    : [`${typeKey}n`, `${typeKey}k`];
+
+  let totalKariW = 0, totalKariL = 0, totalGenW = 0, totalGenL = 0;
+  for (const p of patterns) {
+    const r = results[patterns.indexOf(p)];
+    if (r) { totalKariW += r._W || 0; totalKariL += r._L || 0; }
+    totalGenW += parseFloat(document.getElementById(`${p}-genW`)?.value) || 0;
+    totalGenL += parseFloat(document.getElementById(`${p}-genL`)?.value) || 0;
+  }
+
+  // 仮復旧路盤廃材 = (仮復旧W合計 − 現況廃材W合計) × (仮復旧L合計 − 現況廃材L合計)
+  const kariHaibanW  = Math.max(0, totalKariW - totalGenW);
+  const kariHaibanL  = Math.max(0, totalKariL - totalGenL);
+  const kariHaibanWL = kariHaibanW * kariHaibanL;
+
+  // 現況廃材 = 現況廃材W × 現況廃材L
+  const genWL = totalGenW * totalGenL;
+
+  // 路盤廃材合計 = 仮復旧路盤廃材 + 現況廃材
+  const honTotalWL = kariHaibanWL + genWL;
+
+  // ─── 仮復旧・路盤先行 廃材量（仮復旧WLのみ）───
+  const kariAsH     = (t.asT密粒 + (t.asT粗粒 || 0)) / 1000;
+  const kariAsWaste = kariAsH * totalWL * AS_DENSITY;
+  const kariRcWaste = t.rcH * totalWL;
+  const kariRmWaste = t.rmH * totalWL;
+  const kariRcRmWaste = kariRcWaste + kariRmWaste;
+
+  // ─── 現況（本復旧）廃材量（仮復旧路盤廃材WL ＋ 現況廃材WL）───
+  const honAsH      = t.genkyoAsH;
+  const honAsWaste  = honAsH * honTotalWL * AS_DENSITY;
+  const honRcWaste  = t.genkyoRC * honTotalWL;
+  const honRmWaste  = t.genkyoRM * honTotalWL;
+  const honRcRmWaste = honRcWaste + honRmWaste;
+
   const el = document.getElementById(`${typeKey}-total`);
   if (!el) return;
 
   let html = '';
-  const add = (label, val, unit, accent) =>
-    `<div class="summary-item${accent?' accent':''}"><div class="s-label">${label}</div><div class="s-val">${fmt(val)}<span class="s-unit">${unit}</span></div></div>`;
+  const add = (label, val, unit, accent, dimmed) => {
+    const cls = accent ? ' accent' : '';
+    const opacity = dimmed ? 'opacity:0.7;' : '';
+    return `<div class="summary-item${cls}" style="${opacity}"><div class="s-label">${label}</div><div class="s-val">${fmt(val)}<span class="s-unit">${unit}</span></div></div>`;
+  };
+  const sep = (title, color) =>
+    `<div style="grid-column:1/-1;margin:10px 0 4px;padding:6px 10px;background:${color};border-radius:6px;font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px;">${title}</div>`;
 
+  // ── 発注量 ──
+  html += sep('📦 発注量（仮復旧・路盤先行）', 'rgba(79,142,247,0.7)');
   html += add('密粒度AS', s.asTon密粒, 't', true);
   if (t.asT粗粒 > 0) html += add('粗粒度AS', s.asTon粗粒, 't', true);
   if (t.rmH > 0) html += add('RM-40（上層路盤）合計', s.rmOrd, 'm³', false);
@@ -1756,8 +1997,67 @@ function renderTotal(typeKey) {
   if (t.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
   html += add('改良土+再生砂', s.sandSoilSum, 'm³');
-  el.innerHTML = html;
 
+  // ── 路盤廃材 ──
+  if (totalWL > 0) {
+    // 現況廃材が100%かどうか判定（仮復旧路盤廃材WL=0 かつ 現況廃材WL>0）
+    const genOnly = kariHaibanWL === 0 && genWL > 0;
+    // 混在かどうか（仮復旧廃材あり かつ 現況廃材あり）
+    const mixed   = kariHaibanWL > 0 && genWL > 0;
+
+    const honAsLabel = typeKey === '85'
+      ? `廃材AS（表50＋基50×2＋瀝青安定処理100×2 合計${Math.round(t.genkyoAsH*1000)}mm）`
+      : `廃材AS（表層${Math.round(t.genkyoAsH*1000)}mm）`;
+
+    if (genOnly) {
+      // ── 現況廃材100%：現況廃材のみ表示 ──
+      html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
+      html += add(honAsLabel, honAsWaste, 't', false);
+      if (t.genkyoRM > 0) html += add(`廃材RM-40（${Math.round(t.genkyoRM*1000)}mm）`, honRmWaste, 'm³', false);
+      html += add(`廃材RC-40（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
+      if (t.genkyoRM > 0) html += add('廃材RC＋RM 合計', honRcRmWaste, 'm³', true);
+      else                 html += add('廃材RC 合計',     honRcWaste,    'm³', true);
+
+    } else if (mixed) {
+      // ── 混在：仮復旧廃材 ＋ 現況廃材 ＋ 合計 ──
+      html += sep(`🗑️ 路盤廃材（仮復旧・路盤先行）　仮復旧路盤廃材（${fmt(kariHaibanW)}×${fmt(kariHaibanL)}=${fmt(kariHaibanWL)}㎡）`, 'rgba(234,88,12,0.75)');
+      html += add(`廃材AS（表層${t.asT密粒}${t.asT粗粒>0?'＋基層'+t.asT粗粒:''}mm）`, kariAsWaste, 't', false);
+      if (t.rmH > 0) html += add(`廃材RM-40（${Math.round(t.rmH*1000)}mm）`, kariRmWaste, 'm³', false);
+      html += add(`廃材RC-40（${Math.round(t.rcH*1000)}mm）`, kariRcWaste, 'm³', false);
+      if (t.rmH > 0) html += add('廃材RC＋RM 合計', kariRcRmWaste, 'm³', true);
+      else           html += add('廃材RC 合計',      kariRcWaste,   'm³', true);
+
+      html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
+      html += add(honAsLabel, honAsWaste, 't', false);
+      if (t.genkyoRM > 0) html += add(`廃材RM-40（${Math.round(t.genkyoRM*1000)}mm）`, honRmWaste, 'm³', false);
+      html += add(`廃材RC-40（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
+      if (t.genkyoRM > 0) html += add('廃材RC＋RM 合計', honRcRmWaste, 'm³', true);
+      else                 html += add('廃材RC 合計',     honRcWaste,   'm³', true);
+
+      // 合計（仮復旧廃材＋現況廃材）
+      const totalAsWaste  = kariAsWaste  + honAsWaste;
+      const totalRcWaste  = kariRcWaste  + honRcWaste;
+      const totalRmWaste  = kariRmWaste  + honRmWaste;
+      const totalRcRmWaste = totalRcWaste + totalRmWaste;
+      html += sep(`📊 仮復旧・現況路盤廃材 合計　（${fmt(kariHaibanWL)}㎡＋${fmt(genWL)}㎡＝${fmt(honTotalWL)}㎡）`, 'rgba(79,142,247,0.7)');
+      html += add(`廃材AS 合計`, totalAsWaste, 't', true);
+      if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃材RM-40 合計', totalRmWaste, 'm³', false);
+      html += add('廃材RC-40 合計', totalRcWaste, 'm³', false);
+      if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃材RC＋RM 合計', totalRcRmWaste, 'm³', true);
+      else                               html += add('廃材RC 合計',     totalRcWaste,   'm³', true);
+
+    } else {
+      // ── 仮復旧のみ ──
+      html += sep(`🗑️ 路盤廃材（仮復旧・路盤先行）　仮復旧路盤廃材（${fmt(totalKariW)}×${fmt(totalKariL)}=${fmt(totalWL)}㎡）`, 'rgba(234,88,12,0.75)');
+      html += add(`廃材AS（表層${t.asT密粒}${t.asT粗粒>0?'＋基層'+t.asT粗粒:''}mm）`, kariAsWaste, 't', false);
+      if (t.rmH > 0) html += add(`廃材RM-40（${Math.round(t.rmH*1000)}mm）`, kariRmWaste, 'm³', false);
+      html += add(`廃材RC-40（${Math.round(t.rcH*1000)}mm）`, kariRcWaste, 'm³', false);
+      if (t.rmH > 0) html += add('廃材RC＋RM 合計', kariRcRmWaste, 'm³', true);
+      else           html += add('廃材RC 合計',      kariRcWaste,   'm³', true);
+    }
+  }
+
+  el.innerHTML = html;
   return s;
 }
 
