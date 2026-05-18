@@ -6,6 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="manifest_order.json">
+<link rel="apple-touch-icon" href="icon_or_192.png">
+<meta name="apple-mobile-web-app-title" content="発注計算">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>現場資材発注計算書 v4.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1861,9 +1866,58 @@ function initFirebase() {
       _fbUser  = user;
       _isAdmin = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
+      if (_isAdmin) { setTimeout(autoRegisterDefaultRoadbeds, 1500); }
     });
     fbSyncMasters();
   } catch(e) { console.warn('[FB] init error', e); }
+}
+
+// 小田原扇町計画 路盤マスタ デフォルト登録（管理者ログイン時に未登録なら自動追加）
+function autoRegisterDefaultRoadbeds() {
+  if (!_fbDb || !_isAdmin) return;
+  var today = new Date().toISOString().slice(0,10);
+  var defaults = [
+    {
+      key: 'rm_odawara_no1to4', label: '小田原扇町計画NO1〜NO4', color: '#4f8ef7',
+      kariAsLayers: [{name:'As表層工（密粒度）', t:50}],
+      kariRmSize:30, kariRmH:0.10, kariRmLayers:'t=100mm',
+      kariRcSize:40, kariRcH:0.15, kariRcLayers:'t=150mm', kariTotalH:0.30,
+      honAsLayers:  [{name:'As表層工（密粒度）', t:50}],
+      honRmSize:30,  honRmH:0.10,  honRmLayers:'t=100mm',
+      honRcSize:40,  honRcH:0.15,  honRcLayers:'t=150mm',  honTotalH:0.30,
+      updatedAt: today,
+    },
+    {
+      key: 'rm_odawara_no5', label: '小田原扇町計画NO5+2.50', color: '#f59e0b',
+      kariAsLayers: [
+        {name:'密粒改良1', t:50}, {name:'粗粒度AS', t:50}, {name:'瀝青安定処理', t:100}
+      ],
+      kariRmSize:40, kariRmH:0, kariRmLayers:'',
+      kariRcSize:40, kariRcH:0.30, kariRcLayers:'既設路盤', kariTotalH:0.50,
+      honAsLayers: [
+        {name:'密粒改良1', t:50}, {name:'粗粒度AS', t:50}, {name:'瀝青安定処理', t:100}
+      ],
+      honRmSize:40, honRmH:0, honRmLayers:'',
+      honRcSize:40, honRcH:0.30, honRcLayers:'既設路盤', honTotalH:0.50,
+      updatedAt: today,
+    }
+  ];
+  _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc) {
+    var existing = (doc.exists && doc.data().data) ? doc.data().data : [];
+    var changed = false;
+    defaults.forEach(function(entry) {
+      var idx = existing.findIndex(function(r){ return r.key === entry.key; });
+      if (idx < 0) { existing.push(entry); changed = true; }
+    });
+    if (!changed) return; // 既に登録済み
+    _fbDb.collection('masters').doc('roadbed_masters').set({
+      data: existing, updatedAt: new Date().toISOString()
+    }).then(function() {
+      localStorage.setItem('roadbed_masters', JSON.stringify(existing));
+      try { renderRoadbedMasterList(); } catch(e) {}
+      console.log('[FB] 小田原扇町計画 路盤マスタ を自動登録しました');
+    }).catch(function(e){ console.warn('[FB] autoRegister err:', e); });
+  }).catch(function(e){ console.warn('[FB] autoRegister read err:', e); });
 }
 
 function fbSyncMasters(callback) {
@@ -5749,7 +5803,14 @@ function printMasterList() {
       ${r.note?`<div class="note">${r.note}</div>`:''}
     </div></div>`);
   });
-  w.document.write(`</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+  w.document.write(`</div><script>window.onload=()=>window.print();<\/script><script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
+</body></html>`);
   w.document.close();
 }
 
