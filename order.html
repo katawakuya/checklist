@@ -3,14 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1117">
-<link rel="manifest" href="manifest_order.json">
-<link rel="apple-touch-icon" href="icon_or_192.png">
-<meta name="apple-mobile-web-app-title" content="発注計算">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>現場資材発注計算書 v4.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1920,10 +1914,36 @@ function autoRegisterDefaultRoadbeds() {
   }).catch(function(e){ console.warn('[FB] autoRegister read err:', e); });
 }
 
+function loadRoadbedForCurrentSite(siteId) {
+  if (!siteId) return;
+  var localKey = 'roadbed_masters_' + siteId;
+  var siteData = JSON.parse(localStorage.getItem(localKey) || 'null');
+  if (siteData) {
+    localStorage.setItem('roadbed_masters', JSON.stringify(siteData));
+    try { renderRoadbedMasterList(); } catch(e) {}
+    return;
+  }
+  if (!_fbDb) return;
+  _fbDb.collection('masters').doc('roadbed_masters').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        var all = doc.data().data;
+        if (!Array.isArray(all) && all[siteId]) {
+          localStorage.setItem(localKey, JSON.stringify(all[siteId]));
+          localStorage.setItem('roadbed_masters', JSON.stringify(all[siteId]));
+          try { renderRoadbedMasterList(); } catch(e) {}
+        } else if (!Array.isArray(all) && !all[siteId]) {
+          localStorage.setItem('roadbed_masters', JSON.stringify([]));
+          try { renderRoadbedMasterList(); } catch(e) {}
+        }
+      }
+    }).catch(function(e){ console.warn('[FB] roadbed site load:', e); });
+}
+
 function fbSyncMasters(callback) {
   if (!_fbDb) { if(callback) callback(); return; }
-  var simpleKeys = ['site_master', 'road_presets', 'roadbed_masters'];
-  var done = 0, total = simpleKeys.length + 1;
+  var simpleKeys = ['site_master', 'road_presets'];
+  var done = 0, total = simpleKeys.length + 2; // +2: hata_master + roadbed_masters
   function finish() {
     done++;
     if (done < total) return;
@@ -1940,6 +1960,30 @@ function fbSyncMasters(callback) {
         finish();
       }).catch(finish);
   });
+  // 路盤マスタ：現場別構造に対応（{ siteId: [...] } or 旧フラット配列）
+  _fbDb.collection('masters').doc('roadbed_masters').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        var rbData = doc.data().data;
+        if (Array.isArray(rbData)) {
+          // 旧フォーマット：フラット配列としてそのまま保存
+          localStorage.setItem('roadbed_masters', JSON.stringify(rbData));
+        } else {
+          // 新フォーマット：現場別オブジェクト → 各現場キーに分配
+          Object.keys(rbData).forEach(function(sid) {
+            localStorage.setItem('roadbed_masters_' + sid, JSON.stringify(rbData[sid]));
+          });
+          // 現在選択中の現場があればそのデータをセット
+          var curSite = document.getElementById('global-site-sel')?.value || '';
+          if (curSite && rbData[curSite]) {
+            localStorage.setItem('roadbed_masters', JSON.stringify(rbData[curSite]));
+          } else {
+            localStorage.setItem('roadbed_masters', JSON.stringify([]));
+          }
+        }
+      }
+      finish();
+    }).catch(finish);
   _fbDb.collection('masters').doc('hata_master').get()
     .then(function(doc) {
       if (doc.exists) {
@@ -3092,6 +3136,20 @@ function getRoadbedMasters() {
 }
 function saveRoadbedMasters(arr) {
   localStorage.setItem('roadbed_masters', JSON.stringify(arr));
+  var siteId = document.getElementById('global-site-sel') ? document.getElementById('global-site-sel').value : '';
+  if (siteId) {
+    localStorage.setItem('roadbed_masters_' + siteId, JSON.stringify(arr));
+    if (_fbDb && _isAdmin) {
+      _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(function(doc) {
+          var all = (doc.exists && doc.data().data && !Array.isArray(doc.data().data)) ? doc.data().data : {};
+          all[siteId] = arr;
+          return _fbDb.collection('masters').doc('roadbed_masters').set({ data: all, updatedAt: new Date().toISOString() });
+        }).catch(function(e){ console.warn('[FB] roadbed save:', e); });
+    }
+  } else {
+    try { fbSaveMaster('roadbed_masters', arr); } catch(e) {}
+  }
 }
 
 // AS行の動的追加
@@ -4631,6 +4689,9 @@ function onGlobalSiteChange() {
 
   // 動的タブを生成
   buildDynamicCalcTabs(siteId, site.name, types);
+
+  // 路盤構成マスタを現場連動でロード
+  loadRoadbedForCurrentSite(siteId);
 }
 
 // =====================================================================
@@ -5803,14 +5864,7 @@ function printMasterList() {
       ${r.note?`<div class="note">${r.note}</div>`:''}
     </div></div>`);
   });
-  w.document.write(`</div><script>window.onload=()=>window.print();<\/script><script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  });
-}
-</script>
-</body></html>`);
+  w.document.write(`</div><script>window.onload=()=>window.print();<\/script></body></html>`);
   w.document.close();
 }
 
