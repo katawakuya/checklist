@@ -487,7 +487,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <button class="tab-btn active" data-tab="calc">📋 計算シート</button>
     <button class="tab-btn" data-tab="history">📊 発注履歴 <span class="badge" id="histBadge">0</span></button>
     <button class="tab-btn" data-tab="sites">🏗 現場管理 <span class="badge" id="siteBadge">0</span></button>
-    <button class="tab-btn" data-tab="master">🗂 旗揚げ／路盤マスタ <span class="badge" id="masterBadge">0</span></button>
+    <a class="tab-btn" href="roadbed.html" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">🗺 路盤・旗揚げマスタ <span style="font-size:10px;opacity:0.7;">↗</span></a>
   </div>
 </nav>
 
@@ -607,6 +607,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85n-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85n-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="85n-DP" placeholder="1.1"></div>
@@ -625,6 +626,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85ns-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85ns-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85ns-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85ns-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="85ns-DP" placeholder="1.1"></div>
@@ -648,6 +650,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85k-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85k-DP1" placeholder="1.1"></div>
@@ -671,6 +674,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="85ks-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="85ks-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="85ks-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85ks-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85ks-DP1" placeholder="1.1"></div>
@@ -721,19 +725,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       </div>
     </div>
 
-    <!-- 構成切替点・配管シート -->
-    <div style="margin-bottom:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
-      <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-        <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-        <div id="85-cutoff-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
-      </div>
-      <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.3 + DP）</div>
-        <div id="85-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
-      </div>
-    </div>
 
     <!-- 現況・本復旧 路盤構成 -->
     <div style="border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
@@ -774,6 +765,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       </div>
     </div>
   </div>
+
+  <!-- 📋 配管シート・埋戻し切替え点（85型） -->
+  <div class="card" style="border-left:3px solid var(--accent);padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
+    <div id="85-cutoff-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+    </div>
+    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <button id="85-zone-sharyo"  class="zone-btn zone-active"  onclick="setRoadZone('85','sharyo')"  style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:rgba(79,142,247,0.25);color:var(--accent);">車道 0.3</button>
+      <button id="85-zone-hodo"    class="zone-btn"    onclick="setRoadZone('85','hodo')"    style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">歩道 0.2</button>
+      <button id="85-zone-unknown" class="zone-btn" onclick="setRoadZone('85','unknown')" style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">不明</button>
+    </div>
+    <div id="85-pipesheet-formula" style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.3 + DP）</div>
+    <div id="85-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
+    </div>
+    </div>
+  </div>
   <div class="card">
     <div class="card-title">🧾 発注量合計（85型）</div>
     <div class="summary-grid" id="85-total"></div>
@@ -810,6 +822,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="40n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="40n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="40n-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="40n-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="40n-DP" placeholder="0.7"></div>
@@ -826,6 +839,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="40k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="40k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="40k-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="40k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="40k-DP1" placeholder="0.7"></div>
@@ -860,19 +874,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="color:#a78bfa;font-weight:700;">H = 400mm</div>
       </div>
     </div>
-      <!-- 構成切替点・配管シート -->
-      <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
-        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="40-cutoff-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
-        </div>
-        <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.3 + DP）</div>
-          <div id="40-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
-        </div>
-      </div>
     <!-- 現況・本復旧 路盤構成 -->
     <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
       <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
@@ -894,6 +895,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div style="color:#a78bfa;font-weight:700;">H = 400mm</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 📋 配管シート・埋戻し切替え点（40型） -->
+  <div class="card" style="border-left:3px solid var(--accent);padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
+    <div id="40-cutoff-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+    </div>
+    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <button id="40-zone-sharyo"  class="zone-btn zone-active"  onclick="setRoadZone('40','sharyo')"  style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:rgba(79,142,247,0.25);color:var(--accent);">車道 0.3</button>
+      <button id="40-zone-hodo"    class="zone-btn"    onclick="setRoadZone('40','hodo')"    style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">歩道 0.2</button>
+      <button id="40-zone-unknown" class="zone-btn" onclick="setRoadZone('40','unknown')" style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">不明</button>
+    </div>
+    <div id="40-pipesheet-formula" style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.3 + DP）</div>
+    <div id="40-pipesheet-display" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
+    </div>
     </div>
   </div>
   <div class="card">
@@ -932,6 +954,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="30n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="30n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="30n-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="30n-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="30n-DP" placeholder="0.55"></div>
@@ -948,6 +971,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="30k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="30k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="30k-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="30k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="30k-DP1" placeholder="0.55"></div>
@@ -978,19 +1002,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="color:#a78bfa;font-weight:700;">H = 300mm</div>
       </div>
     </div>
-      <!-- 構成切替点・配管シート -->
-      <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
-        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="30-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
-        </div>
-        <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
-          <div id="30-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
-        </div>
-      </div>
     <!-- 現況・本復旧 路盤構成 -->
     <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
       <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
@@ -1008,6 +1019,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div style="color:#a78bfa;font-weight:700;">H = 300mm</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 📋 配管シート・埋戻し切替え点（30型） -->
+  <div class="card" style="border-left:3px solid var(--accent);padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
+    <div id="30-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+    </div>
+    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <button id="30-zone-sharyo"  onclick="setRoadZone('30','sharyo')"  style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">車道 0.3</button>
+      <button id="30-zone-hodo"    onclick="setRoadZone('30','hodo')"    style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:rgba(79,142,247,0.25);color:var(--accent);">歩道 0.2</button>
+      <button id="30-zone-unknown" onclick="setRoadZone('30','unknown')" style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">不明</button>
+    </div>
+    <div id="30-pipesheet-formula" style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
+    <div id="30-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
+    </div>
     </div>
   </div>
   <div class="card">
@@ -1046,6 +1078,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="20n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="20n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="20n-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="20n-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="20n-DP" placeholder="0.45"></div>
@@ -1062,6 +1095,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="20k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="20k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="20k-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="20k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="20k-DP1" placeholder="0.45"></div>
@@ -1092,19 +1126,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="color:#a78bfa;font-weight:700;">H = 200mm</div>
       </div>
     </div>
-      <!-- 構成切替点・配管シート -->
-      <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
-        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="20-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
-        </div>
-        <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
-          <div id="20-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
-        </div>
-      </div>
     <!-- 現況・本復旧 路盤構成 -->
     <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
       <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
@@ -1122,6 +1143,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div style="color:#a78bfa;font-weight:700;">H = 200mm</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 📋 配管シート・埋戻し切替え点（20型） -->
+  <div class="card" style="border-left:3px solid var(--accent);padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
+    <div id="20-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+    </div>
+    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <button id="20-zone-sharyo"  onclick="setRoadZone('20','sharyo')"  style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">車道 0.3</button>
+      <button id="20-zone-hodo"    onclick="setRoadZone('20','hodo')"    style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:rgba(79,142,247,0.25);color:var(--accent);">歩道 0.2</button>
+      <button id="20-zone-unknown" onclick="setRoadZone('20','unknown')" style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">不明</button>
+    </div>
+    <div id="20-pipesheet-formula" style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
+    <div id="20-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
+    </div>
     </div>
   </div>
   <div class="card">
@@ -1160,6 +1202,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14n-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="14n-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="14n-DP" placeholder="1.1"></div>
@@ -1197,6 +1240,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="14k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="14k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14k-genL" placeholder="0"></div>
+      <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:11px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="14k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="14k-DP1" placeholder="1.1"></div>
@@ -1253,19 +1297,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div style="color:#a78bfa;font-weight:700;">H = 140mm</div>
       </div>
     </div>
-      <!-- 構成切替点・配管シート -->
-      <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
-        <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
-          <div id="14-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
-        </div>
-        <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
-          <div id="14-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
-        </div>
-      </div>
     <!-- 現況・本復旧 路盤構成 -->
     <div style="margin-top:14px;border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;">
       <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">📐 路盤構成（現況・本復旧）</div>
@@ -1283,6 +1314,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div style="color:#a78bfa;font-weight:700;">H = 140mm</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 📋 配管シート・埋戻し切替え点（14型） -->
+  <div class="card" style="border-left:3px solid var(--accent);padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
+    <div id="14-cutoff-display" data-cutoff-wrap="1" style="display:none;font-family:var(--mono);font-size:15px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
+    </div>
+    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
+    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <button id="14-zone-sharyo"  onclick="setRoadZone('14','sharyo')"  style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">車道 0.3</button>
+      <button id="14-zone-hodo"    onclick="setRoadZone('14','hodo')"    style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:rgba(79,142,247,0.25);color:var(--accent);">歩道 0.2</button>
+      <button id="14-zone-unknown" onclick="setRoadZone('14','unknown')" style="flex:1;padding:3px 6px;font-size:10px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);cursor:pointer;background:transparent;color:var(--text3);">不明</button>
+    </div>
+    <div id="14-pipesheet-formula" style="font-size:11px;color:var(--text3);margin-bottom:4px;">GL−（ = 0.2 + DP）</div>
+    <div id="14-pipesheet-display" data-pipe-wrap="1" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);">GL − ― m</div>
+    </div>
     </div>
   </div>
   <div class="card">
@@ -1332,371 +1384,41 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 <!-- ========== SITES ========== -->
 <div class="tab-content" id="tab-sites">
 
-  <!-- 現場登録 -->
-  <div class="card">
-    <div class="card-title">現場登録・管理</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">現場を登録すると各計算タブのドロップダウンから選択できます。現場ごとに旗揚げマスタが切り替わります。</p>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">新規登録 / 編集</div>
-      <div class="input-grid" style="margin-bottom:12px;">
-        <div class="field" style="grid-column:1/-1"><label>現場名 ＊</label><input type="text" id="site-name" placeholder="例: ○○交差点 配管工事" class="highlight" style="width:100%"></div>
-        <div class="field"><label>担当者</label><input type="text" id="site-manager" placeholder="例: 山田 太郎"></div>
-        <div class="field"><label>工期開始</label><input type="date" id="site-start"></div>
-        <div class="field"><label>工期終了（予定）</label><input type="date" id="site-end"></div>
-        <div class="field" style="grid-column:1/-1"><label>備考</label><input type="text" id="site-note" placeholder="メモ（任意）" style="width:100%"></div>
-      </div>
-      <!-- 路盤構成プリセット選択 -->
-      <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px;margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">📐 路盤構成プリセット</div>
-        <select id="site-preset-sel" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;" onchange="onSitePresetChange()">
-          <option value="">― プリセットを選択（後から変更可）―</option>
-        </select>
-        <div id="site-preset-preview" style="margin-top:8px;"></div>
-      </div>
-      <input type="hidden" id="site-edit-id">
-      <div class="actions">
-        <button class="btn btn-primary" onclick="saveSite()">💾 登録する</button>
-        <button class="btn btn-ghost" onclick="clearSiteForm()">クリア</button>
-      </div>
-    </div>
-    <div class="card-title" style="margin-bottom:12px;">登録済み現場一覧</div>
-    <div id="siteList"><div class="empty-state"><div class="big">🏗</div>まだ登録されていません</div></div>
+  <!-- サブタブバー -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+    <button id="stab-site-btn" onclick="switchSitesTab('site')"
+      style="padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);
+      background:var(--accent);color:#fff;transition:all 0.15s;">
+      🏗 現場一覧・登録
+    </button>
   </div>
 
-  <!-- 路盤構成プリセット管理 -->
-  <div class="card">
-    <div class="card-title">📐 路盤構成プリセット管理</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">
-      現場ごとの路盤構成（型）を定義します。過去の工事から流用することも可能です。新しい現場登録時にプリセットを選択して使用します。
-    </p>
-
-    <!-- プリセット新規作成エリア -->
-    <div id="preset-editor" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px;">プリセット新規作成 / 編集</div>
-
-      <div style="margin-bottom:12px;">
-        <div class="field">
-          <label>プリセット名 ＊</label>
-          <input type="text" id="preset-name" placeholder="例: 環状2号線 2026年工事" style="width:100%;font-size:14px;">
+  <!-- ===== 現場一覧・登録 パネル ===== -->
+  <div id="stab-site">
+    <div class="card">
+      <div class="card-title">現場登録・管理</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">現場を登録すると各計算タブのドロップダウンから選択できます。現場ごとに旗揚げマスタが切り替わります。</p>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">新規登録 / 編集</div>
+        <div class="input-grid" style="margin-bottom:12px;">
+          <div class="field" style="grid-column:1/-1"><label>現場名 ＊</label><input type="text" id="site-name" placeholder="例: ○○交差点 配管工事" class="highlight" style="width:100%"></div>
+          <div class="field"><label>担当者</label><input type="text" id="site-manager" placeholder="例: 山田 太郎"></div>
+          <div class="field"><label>工期開始</label><input type="date" id="site-start"></div>
+          <div class="field"><label>工期終了（予定）</label><input type="date" id="site-end"></div>
+          <div class="field" style="grid-column:1/-1"><label>備考</label><input type="text" id="site-note" placeholder="メモ（任意）" style="width:100%"></div>
+        </div>
+        <input type="hidden" id="site-edit-id">
+        <div class="actions">
+          <button class="btn btn-primary" onclick="saveSite()">💾 登録する</button>
+          <button class="btn btn-ghost" onclick="clearSiteForm()">クリア</button>
         </div>
       </div>
-
-      <!-- 流用元選択 -->
-      <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px;margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">♻️ 既存プリセットから流用</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <select id="preset-copy-src" style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;">
-            <option value="">― 流用しない（白紙から作成）―</option>
-          </select>
-          <button class="btn btn-ghost" style="padding:8px 14px;font-size:12px;" onclick="copyPreset()">📋 この構成を流用</button>
-        </div>
-      </div>
-
-      <!-- 型リスト編集 -->
-      <div style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:700;color:var(--text3);">型の定義（追加・編集・削除）</div>
-          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="addPresetType()">＋ 型を追加</button>
-        </div>
-        <div id="preset-types-list"></div>
-      </div>
-
-      <input type="hidden" id="preset-edit-id">
-      <div class="actions">
-        <button class="btn btn-primary" onclick="savePreset()">💾 プリセットを保存</button>
-        <button class="btn btn-ghost" onclick="clearPresetForm()">クリア</button>
-      </div>
+      <div class="card-title" style="margin-bottom:12px;">登録済み現場一覧</div>
+      <div id="siteList"><div class="empty-state"><div class="big">🏗</div>まだ登録されていません</div></div>
     </div>
-
-    <!-- プリセット一覧 -->
-    <div class="card-title" style="margin-bottom:12px;">登録済みプリセット一覧</div>
-    <div id="presetList"><div class="empty-state"><div class="big">📐</div>まだ登録されていません</div></div>
   </div>
 
 </div>
-
-<!-- ========== MASTER ========== -->
-<div class="tab-content" id="tab-master">
-
-  <!-- サブナビ -->
-  <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
-    <button id="msub-hata-btn" onclick="switchMasterSub('hata')"
-      style="padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);
-      background:var(--accent);color:#fff;transition:all 0.15s;">
-      🗂 旗揚げマスタ
-    </button>
-    <button id="msub-road-btn" onclick="switchMasterSub('road')"
-      style="padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);
-      background:var(--surface2);color:var(--text2);border:1px solid var(--border);transition:all 0.15s;">
-      📐 路盤構成マスタ
-    </button>
-  </div>
-
-  <!-- ===== 旗揚げマスタ パネル ===== -->
-  <div id="msub-hata">
-  <div class="card">
-    <div class="card-title">旗揚げ番号マスタ登録</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">
-      現場ごとに旗揚げマスタを管理できます。計算タブで旗揚げ番号を入力すると DP・管下H が自動入力されます。
-    </p>
-
-    <!-- 現場選択 -->
-    <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.25);border-radius:10px;padding:14px;margin-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;">🏗 対象現場</div>
-        <select id="master-site-sel" style="flex:1;min-width:200px;background:var(--surface2);border:1.5px solid rgba(79,142,247,0.4);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;font-weight:600;" onchange="onMasterSiteChange()">
-          <option value="">― 現場を選択 ―</option>
-        </select>
-        <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;flex-shrink:0;" onclick="activateTab('sites')">＋ 現場登録</button>
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--text2);">
-        💡 計算シートで現場を選択した状態でこのタブを開くと、その現場が自動的に選択されます
-      </div>
-    </div>
-
-    <!-- Excelインポートバナー -->
-    <div id="master-import-area" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">📥 Excelから一括インポート</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">
-        Excelファイル（.xlsx）を読み込んで旗揚げマスタを一括登録します。<br>
-        ヘッダー行に <strong style="color:var(--text);">旗揚げ番号（またはNO・番号）・DP・管下H（またはDPH）</strong> を含む列が必要です。備考・管路名称・管種も自動認識します。
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--green);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;">
-          📂 Excelファイルを選択
-          <input type="file" id="master-xlsx-file" accept=".xlsx,.xls" style="display:none" onchange="importMasterExcel(event)">
-        </label>
-        <button class="btn btn-ghost" style="font-size:12px;" onclick="downloadMasterTemplate()">📋 テンプレートDL</button>
-        <span id="master-import-status" style="font-size:12px;color:var(--text3);"></span>
-      </div>
-    </div>
-
-    <!-- 画像一括アップロードバナー -->
-    <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.25);border-radius:10px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px;">🖼 断面図JPGを一括アップロード（自動マッチング）</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">
-        <strong style="color:var(--text);">ファイル名を旗揚げ番号にしたJPG/PNG</strong>を複数選択すると、番号ごとに自動で登録されます。<br>
-        例: <span style="font-family:var(--mono);color:var(--yellow);">35.jpg</span>　<span style="font-family:var(--mono);color:var(--yellow);">42.png</span>　<span style="font-family:var(--mono);color:var(--yellow);">断面図_50.jpg</span>　→ 旗揚げ番号 35・42・50 に自動登録
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <label id="bulk-img-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--orange);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;"
-          ondragover="event.preventDefault();this.style.outline='2px solid var(--orange)'"
-          ondragleave="this.style.outline='none'"
-          ondrop="handleBulkImgDrop(event)">
-          📁 JPG/PNGを複数選択（またはD&D）
-          <input type="file" id="bulk-img-input" accept="image/*" multiple style="display:none" onchange="importBulkImages(event.target.files)">
-        </label>
-        <span id="bulk-img-status" style="font-size:12px;color:var(--text3);"></span>
-      </div>
-      <!-- プレビューエリア -->
-      <div id="bulk-img-preview" style="display:none;margin-top:12px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">マッチング結果プレビュー（「確定登録」で保存されます）</div>
-        <div id="bulk-img-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:260px;overflow-y:auto;padding:2px;"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
-          <button class="btn btn-primary" onclick="confirmBulkImages()">✅ 確定登録</button>
-          <button class="btn btn-ghost" style="font-size:12px;" onclick="cancelBulkImages()">キャンセル</button>
-          <span id="bulk-img-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 登録フォーム -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">手動 新規 / 上書き登録</div>
-      <div class="input-grid" style="margin-bottom:12px;">
-        <div class="field"><label>旗揚げ番号 ＊</label><input type="number" id="m-hata" placeholder="例: 35" class="highlight"></div>
-        <div class="field"><label>管路名称（任意）</label><input type="text" id="m-name" placeholder="例: A区間 φ200"></div>
-        <div class="field"><label>DP（m） ＊</label><input type="number" step="0.001" id="m-dp" placeholder="1.1"></div>
-        <div class="field"><label>DP下配管H（m） ＊</label><input type="number" step="0.001" id="m-dph" placeholder="0.509"></div>
-        <div class="field"><label>勾配DP 始点（m）</label><input type="number" step="0.001" id="m-dp1" placeholder="省略可"></div>
-        <div class="field"><label>勾配DP 終点（m）</label><input type="number" step="0.001" id="m-dp2" placeholder="省略可"></div>
-        <div class="field"><label>勾配DP下配管H 始（m）</label><input type="number" step="0.001" id="m-dph1" placeholder="省略可"></div>
-        <div class="field"><label>勾配DP下配管H 終（m）</label><input type="number" step="0.001" id="m-dph2" placeholder="省略可"></div>
-        <div class="field"><label>主な管種（任意）</label>
-          <select id="m-pipetype">
-            <option value="">―選択―</option>
-            <option>BD管φ200</option><option>FA管φ150</option>
-            <option>E街ELφ100</option><option>E割φ100</option>
-            <option>ELφ100</option><option>ETφ100</option>
-            <option>Eφ130</option><option>KD/Yφ75</option>
-            <option>BD管φ250</option>
-          </select>
-        </div>
-        <div class="field"><label>備考</label><input type="text" id="m-note" placeholder="メモ（任意）"></div>
-      </div>
-
-      <!-- 図面画像 -->
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">断面図・図面画像（PNG / JPG 可）</div>
-        <label id="m-imgLabel" style="
-          display:flex;align-items:center;justify-content:center;
-          gap:10px;border:2px dashed var(--border);border-radius:10px;
-          padding:20px;cursor:pointer;color:var(--text3);font-size:13px;
-          transition:border-color 0.2s;
-        " ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-           ondragleave="this.style.borderColor='var(--border)'"
-           ondrop="handleImgDrop(event)">
-          <span style="font-size:24px;">🖼</span>
-          <span>クリックまたはドラッグ＆ドロップで画像を選択</span>
-          <input type="file" id="m-imgFile" accept="image/*" style="display:none" onchange="handleImgSelect(event)">
-        </label>
-        <div id="m-imgPreview" style="margin-top:10px;display:none;">
-          <img id="m-previewImg" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid var(--border);">
-          <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
-            <span id="m-imgName" style="font-size:11px;color:var(--text3);font-family:var(--mono);"></span>
-            <button onclick="clearMasterImg()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;">✕ 削除</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-primary" onclick="saveMaster()">💾 登録する</button>
-        <button class="btn btn-ghost" onclick="clearMasterForm()">クリア</button>
-      </div>
-    </div>
-
-    <!-- 登録済み一覧ヘッダー -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <div class="card-title" style="margin-bottom:0;">登録済み一覧 <span id="master-site-label" style="font-size:12px;color:var(--accent);font-weight:600;"></span></div>
-        <div id="master-sync-badge" style="display:none;font-size:11px;color:var(--green);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:3px 8px;"></div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost" style="font-size:12px;" onclick="printMasterList()">🖨 一覧印刷</button>
-        <button class="btn btn-ghost" style="font-size:12px;" onclick="exportMasterJSON()">💾 JSONエクスポート</button>
-        <label class="btn btn-ghost" style="font-size:12px;cursor:pointer;">📂 JSONインポート<input type="file" accept=".json" style="display:none" onchange="importMasterJSON(event)"></label>
-      </div>
-    </div>
-    <div id="masterList">
-      <div class="empty-state"><div class="big">📂</div>まだ登録されていません</div>
-    </div>
-  </div>
-  </div><!-- /msub-hata -->
-
-  <!-- ===== 路盤構成マスタ パネル ===== -->
-  <div id="msub-road" style="display:none;">
-  <div class="card">
-    <div class="card-title">📐 路盤構成マスタ</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">
-      型ごとの路盤構成を仮復旧・現況に分けて正確に管理します。ここで登録した内容がプリセット編集の「路盤構成を確認」パネルに反映されます。
-    </p>
-
-    <!-- PDF取込済バナー -->
-    <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div style="font-size:20px;">📄</div>
-      <div style="flex:1;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:2px;">PDF図面から自動登録済み（6型）</div>
-        <div style="font-size:11px;color:var(--text3);">
-          アップロードされた舗装構成図PDFを読み取り、85型・40型・30型・20型・14型（切下・歩道）を初期データとして登録しました。<br>
-          編集・上書きはフォームから行えます。新しいPDFが追加された場合は下の「＋ 型を追加」から手動登録してください。
-        </div>
-      </div>
-      <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px;flex-shrink:0;"
-        onclick="if(confirm('PDF初期データ6型をすべてリセットします（ユーザー登録データは保持）。よろしいですか？')){resetDefaultRoadbedMasters();}">
-        🔄 初期データをリセット
-      </button>
-    </div>
-
-    <!-- 路盤構成マスタ 登録フォーム -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:14px;">新規登録 / 編集</div>
-      <input type="hidden" id="rm-edit-key">
-
-      <!-- 型名・色 -->
-      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:14px;align-items:end;">
-        <div class="field">
-          <label>型名 ＊（例: 車道部 85型）</label>
-          <input type="text" id="rm-label" placeholder="例: 車道部 85型" style="width:100%;">
-        </div>
-        <div class="field">
-          <label>表示色</label>
-          <select id="rm-color" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 8px;font-size:13px;">
-            <option value="#4f8ef7">青（車道）</option>
-            <option value="#22c55e">緑（側道）</option>
-            <option value="#f97316">橙（切下）</option>
-            <option value="#eab308">黄</option>
-            <option value="#a78bfa">紫（歩道）</option>
-            <option value="#ec4899">ピンク</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 仮復旧 AS層 -->
-      <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.25);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--orange);letter-spacing:0.5px;margin-bottom:10px;">🔧 仮復旧（路盤先行）AS層</div>
-        <div id="rm-kari-as-rows"></div>
-        <button onclick="addRoadbedAsRow('kari')" class="btn btn-ghost" style="padding:5px 12px;font-size:11px;margin-top:6px;">＋ AS層を追加</button>
-      </div>
-
-      <!-- 仮復旧 路盤層（RM・RC） -->
-      <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:0.5px;margin-bottom:10px;">🔧 仮復旧 路盤層</div>
-        <!-- RM -->
-        <div style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;">上層路盤 RM</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div class="field"><label>骨材サイズ(mm)</label><input type="number" id="rm-kari-rmsize" placeholder="40" style="width:100%;"></div>
-            <div class="field"><label>合計H(m)　<span style="font-size:9px;color:var(--text3);">0=なし</span></label><input type="number" step="0.001" id="rm-kari-rmh" placeholder="0.450" style="width:100%;"></div>
-          </div>
-          <div class="field" style="margin-top:4px;"><label>層構成メモ（例: 150×3層）</label><input type="text" id="rm-kari-rmlayers" placeholder="例: 150×3層" style="width:100%;"></div>
-        </div>
-        <!-- RC -->
-        <div style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:8px 10px;">
-          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;">下層路盤 RC</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div class="field"><label>骨材サイズ(mm)</label><input type="number" id="rm-kari-rcsize" placeholder="40" style="width:100%;"></div>
-            <div class="field"><label>合計H(m)</label><input type="number" step="0.001" id="rm-kari-rch" placeholder="0.300" style="width:100%;"></div>
-          </div>
-          <div class="field" style="margin-top:4px;"><label>層構成メモ（例: 150×2層）</label><input type="text" id="rm-kari-rclayers" placeholder="例: 150×2層" style="width:100%;"></div>
-        </div>
-      </div>
-
-      <!-- 現況・本復旧 AS層 -->
-      <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.25);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:0.5px;margin-bottom:10px;">🏗 現況・本復旧 AS層</div>
-        <div id="rm-hon-as-rows"></div>
-        <button onclick="addRoadbedAsRow('hon')" class="btn btn-ghost" style="padding:5px 12px;font-size:11px;margin-top:6px;">＋ AS層を追加</button>
-      </div>
-
-      <!-- 現況 路盤層（RM・RC） -->
-      <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.25);border-radius:8px;padding:12px;margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:0.5px;margin-bottom:10px;">🏗 現況 路盤層</div>
-        <!-- RM -->
-        <div style="background:rgba(124,58,237,0.04);border:1px solid rgba(124,58,237,0.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-          <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;">上層路盤 RM</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div class="field"><label>骨材サイズ(mm)</label><input type="number" id="rm-hon-rmsize" placeholder="40" style="width:100%;"></div>
-            <div class="field"><label>合計H(m)　<span style="font-size:9px;color:var(--text3);">0=なし</span></label><input type="number" step="0.001" id="rm-hon-rmh" placeholder="0.200" style="width:100%;"></div>
-          </div>
-          <div class="field" style="margin-top:4px;"><label>層構成メモ（例: t=200mm）</label><input type="text" id="rm-hon-rmlayers" placeholder="例: t=200mm" style="width:100%;"></div>
-        </div>
-        <!-- RC -->
-        <div style="background:rgba(124,58,237,0.04);border:1px solid rgba(124,58,237,0.2);border-radius:6px;padding:8px 10px;">
-          <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;">下層路盤 RC</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div class="field"><label>骨材サイズ(mm)</label><input type="number" id="rm-hon-rcsize" placeholder="40" style="width:100%;"></div>
-            <div class="field"><label>合計H(m)</label><input type="number" step="0.001" id="rm-hon-rch" placeholder="0.300" style="width:100%;"></div>
-          </div>
-          <div class="field" style="margin-top:4px;"><label>層構成メモ（例: t=300mm）</label><input type="text" id="rm-hon-rclayers" placeholder="例: t=300mm" style="width:100%;"></div>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-primary" onclick="saveRoadbedMaster()">💾 路盤構成を登録</button>
-        <button class="btn btn-ghost" onclick="clearRoadbedForm()">クリア</button>
-      </div>
-    </div>
-
-    <!-- 登録済み路盤構成一覧 -->
-    <div class="card-title" style="margin-bottom:12px;">登録済み路盤構成一覧</div>
-    <div id="roadbedMasterList">
-      <div class="empty-state"><div class="big">📐</div>まだ登録されていません</div>
-    </div>
-  </div>
-  </div><!-- /msub-road -->
-
-</div><!-- /tab-master -->
-
 <!-- ========== 図面ポップアップ ========== -->
 <div id="diagramOverlay" style="
   display:none;position:fixed;inset:0;z-index:1000;
@@ -1836,6 +1558,26 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
 </main>
 
+<!-- ── 管理者ログインモーダル ───────────────────────────────────── -->
+<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e2233;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#e2e8f0;">🔑 管理者ログイン</div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:#8fa3bb;display:block;margin-bottom:4px;">メールアドレス</label>
+      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="管理者メールアドレス">
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-size:11px;color:#8fa3bb;display:block;margin-bottom:4px;">パスワード</label>
+      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="パスワード">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ログイン</button>
+      <button onclick="closeFbModal()" style="padding:11px 16px;background:#252a3d;color:#e2e8f0;border:1px solid #363d5c;border-radius:8px;font-size:14px;cursor:pointer;">×</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // =====================================================
 // Firebase 設定・初期化
@@ -1897,7 +1639,8 @@ function autoRegisterDefaultRoadbeds() {
     }
   ];
   _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc) {
-    var existing = (doc.exists && doc.data().data) ? doc.data().data : [];
+    var rawExisting = (doc.exists && doc.data().data) ? doc.data().data : [];
+    var existing = Array.isArray(rawExisting) ? rawExisting : [];
     var changed = false;
     defaults.forEach(function(entry) {
       var idx = existing.findIndex(function(r){ return r.key === entry.key; });
@@ -1929,11 +1672,15 @@ function loadRoadbedForCurrentSite(siteId) {
       if (doc.exists && doc.data().data) {
         var all = doc.data().data;
         if (!Array.isArray(all) && all[siteId]) {
+          // 新フォーマット：この現場のデータあり
           localStorage.setItem(localKey, JSON.stringify(all[siteId]));
           localStorage.setItem('roadbed_masters', JSON.stringify(all[siteId]));
           try { renderRoadbedMasterList(); } catch(e) {}
         } else if (!Array.isArray(all) && !all[siteId]) {
-          localStorage.setItem('roadbed_masters', JSON.stringify([]));
+          // 新フォーマット：この現場のデータなし → 空にしない
+          try { renderRoadbedMasterList(); } catch(e) {}
+        } else if (Array.isArray(all)) {
+          // 旧フォーマット（フラット配列）：fbSyncMasters でセット済みのデータで描画
           try { renderRoadbedMasterList(); } catch(e) {}
         }
       }
@@ -1951,6 +1698,10 @@ function fbSyncMasters(callback) {
     try { if(typeof populateSiteDropdowns==='function') populateSiteDropdowns(); } catch(e) {}
     try { if(typeof renderSiteList==='function') renderSiteList(); } catch(e) {}
     try { if(typeof syncMasterSiteDropdown==='function') syncMasterSiteDropdown(); } catch(e) {}
+    try { if(typeof syncRmFormSiteSel==='function') syncRmFormSiteSel(); } catch(e) {}
+    try { if(typeof updatePresetNameSiteSel==='function') updatePresetNameSiteSel(); } catch(e) {}
+    try { if(typeof renderRoadbedMasterList==='function') renderRoadbedMasterList(); } catch(e) {}
+    try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
     if (callback) callback();
   }
   simpleKeys.forEach(function(k) {
@@ -1977,9 +1728,8 @@ function fbSyncMasters(callback) {
           var curSite = document.getElementById('global-site-sel')?.value || '';
           if (curSite && rbData[curSite]) {
             localStorage.setItem('roadbed_masters', JSON.stringify(rbData[curSite]));
-          } else {
-            localStorage.setItem('roadbed_masters', JSON.stringify([]));
           }
+          // 現場未選択 or 対応データなし → roadbed_masters は変更しない（既存データ保持）
         }
       }
       finish();
@@ -1990,9 +1740,21 @@ function fbSyncMasters(callback) {
         var d = doc.data();
         if (d && d.data) {
           var allHata = d.data;
-          if (allHata._global) localStorage.setItem('hata_master', JSON.stringify(allHata._global));
+          // ローカルに既存データがある場合は上書きしない（Firebase保存失敗時の損失防止）
+          if (allHata._global && allHata._global.length > 0) {
+            var localGlobal = localStorage.getItem('hata_master');
+            if (!localGlobal || JSON.parse(localGlobal||'[]').length === 0)
+              localStorage.setItem('hata_master', JSON.stringify(allHata._global));
+          }
           Object.keys(allHata).forEach(function(k) {
-            if (k !== '_global') localStorage.setItem('hata_master_' + k, JSON.stringify(allHata[k]));
+            if (k !== '_global') {
+              var siteArr = allHata[k];
+              if (siteArr && siteArr.length > 0) {
+                var localSite = localStorage.getItem('hata_master_' + k);
+                if (!localSite || JSON.parse(localSite||'[]').length === 0)
+                  localStorage.setItem('hata_master_' + k, JSON.stringify(siteArr));
+              }
+            }
           });
         }
       }
@@ -2062,10 +1824,33 @@ function migrateToFirebase() {
     }
   } catch(e) { results.push('路盤プリセット: エラー ' + e); }
   try {
-    var rb = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
-    if (rb.length > 0) {
-      _fbDb.collection('masters').doc('roadbed_masters').set({ data: rb, updatedAt: new Date().toISOString() });
-      results.push('路盤マスタ: ' + rb.length + '件');
+    // 全現場の roadbed_masters を収集して per-site 形式でアップロード
+    var migrSites = JSON.parse(localStorage.getItem('site_master') || '[]');
+    var allRb = {};
+    var totalRb = 0;
+    // グローバル roadbed_masters（現在選択中の現場分 or 旧フォーマット）
+    var rbGlobal = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+    var migrCurSite = document.getElementById('global-site-sel')?.value || '';
+    if (rbGlobal.length > 0 && migrCurSite) {
+      allRb[migrCurSite] = rbGlobal;
+      totalRb += rbGlobal.length;
+    }
+    // 各現場の per-site キー
+    migrSites.forEach(function(s) {
+      var rbSite = JSON.parse(localStorage.getItem('roadbed_masters_' + s.id) || 'null');
+      if (rbSite && rbSite.length > 0) {
+        allRb[s.id] = rbSite;
+        totalRb += rbSite.length;
+      }
+    });
+    if (totalRb > 0) {
+      // 既存 Firebase データと merge して上書き
+      _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc) {
+        var existing = (doc.exists && doc.data().data && !Array.isArray(doc.data().data)) ? doc.data().data : {};
+        Object.keys(allRb).forEach(function(sid) { existing[sid] = allRb[sid]; });
+        return _fbDb.collection('masters').doc('roadbed_masters').set({ data: existing, updatedAt: new Date().toISOString() });
+      });
+      results.push('路盤マスタ: ' + totalRb + '件（' + Object.keys(allRb).length + '現場）');
     }
   } catch(e) { results.push('路盤マスタ: エラー ' + e); }
   setTimeout(function() { alert('\u2705 Firebaseへのアップロード完了\n\n' + results.join('\n')); }, 800);
@@ -2219,11 +2004,13 @@ const TYPES = {
 // =====================================================================
 // 計算定数（デフォルト値）
 // =====================================================================
-const AS_DENSITY = 2.35; // t/m3（後方互換のため残す）
+const AS_DENSITY    = 2.35;  // t/m³（発注・廃材共通 密度）
+const WASTE_AS_BULK = 1.15;  // 廃AS嵩増率（破砕後も密度高いため1.15）
+const WASTE_RB_BULK = 1.25;  // 廃路盤材嵩増率（RM/RC 掘削膨れ1.25）
 
 const CALC_DEFAULTS = {
   asDensity:   2.35,  // AS密度 t/m³
-  bulkRatioAS: 1.25,  // AS嵩増率
+  bulkRatioAS: 1.25,  // AS発注嵩増率 1.25（発注量計算用）
   bulkRatioRC: 1.25,  // RC嵩増率
   bulkRatioRM: 1.25,  // RM嵩増率
   bulkRatioSand:  1.25, // 再生砂嵩増率
@@ -2498,6 +2285,48 @@ function updateFloor(prefix, isGrad) {
   }
 }
 
+// ── 路盤ラベル動的生成ヘルパー ──────────────────────────────────────
+// kariRmLayers等が厚み記法（t=Xmm / 数字×数字 / 数字mm）なら標準ラベル
+// そうでなければ（"既設路盤"/"その他路盤"等）その文字列を使用
+function _isStdLayers(s) {
+  if (!s) return true;
+  return /^t=\d|^\d+[×x×]\d+|^\d+mm/.test(s.trim());
+}
+function getRmLabel(rmSize, layersStr) {
+  return _isStdLayers(layersStr) ? `RM-${rmSize}（上層路盤）` : layersStr;
+}
+function getRcLabel(rcSize, layersStr) {
+  return _isStdLayers(layersStr) ? `RC-${rcSize}（下層路盤）` : layersStr;
+}
+// 型オブジェクトから kariRmLayers 等の文字列フィールドを解決する。
+// 型オブジェクトには kariRM_layers（配列）しかない場合があるため、
+// type_import_{rmKey} 形式のキーから路盤マスタを逆引きしてフォールバックする。
+function _resolveLayersStr(t, field) {
+  if (!t) return undefined;
+  var v = t[field];
+  if (v !== undefined) return v;
+  var rmKey = (t.key || '').replace(/^type_import_/, '');
+  if (rmKey && rmKey !== (t.key || '')) {
+    try {
+      var rm = getRoadbedMasters().find(function(r){ return r.key === rmKey; });
+      if (rm && rm[field] !== undefined) return rm[field] || '';
+    } catch(e) {}
+  }
+  return undefined;
+}
+// typeConf と現在モードから RM/RC ラベルを返す
+function getModeRmLabel(t, typeKey, rmSize) {
+  const mode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[typeKey]) || 'kari';
+  const layersStr = _resolveLayersStr(t, mode === 'hon' ? 'honRmLayers' : 'kariRmLayers');
+  return getRmLabel(rmSize != null ? rmSize : (t.rmSize||40), layersStr);
+}
+function getModeRcLabel(t, typeKey, rcSize) {
+  const mode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[typeKey]) || 'kari';
+  const layersStr = _resolveLayersStr(t, mode === 'hon' ? 'honRcLayers' : 'kariRcLayers');
+  return getRcLabel(rcSize != null ? rcSize : (t.rcSize||40), layersStr);
+}
+// ────────────────────────────────────────────────────────────────────
+
 function renderChips(containerId, result, typeKey) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -2545,8 +2374,8 @@ function renderChips(containerId, result, typeKey) {
     html += chip(surfName, fmt(result.asTon密粒), 't');
     if (show粗粒) html += chip(baseName, fmt(result.asTon粗粒), 't');
   }
-  if (showRM)   html += chip(`RM-${rmS}（上層路盤）`, fmt(result.rmOrd), 'm³');
-  html += chip(`RC-${rcS}（下層路盤）`, fmt(result.rcOrd), 'm³');
+  if (showRM)   html += chip(getModeRmLabel(t, typeKey, rmS), fmt(result.rmOrd), 'm³');
+  html += chip(getModeRcLabel(t, typeKey, rcS), fmt(result.rcOrd), 'm³');
   if (showRM)   html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
   if (t.hasImprovedSoil) html += chip('改良土', fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
@@ -2640,16 +2469,38 @@ function renderTotal(typeKey) {
        {role:'base',preset:'粗粒度AS混合物',custom:'',t:t.asT粗粒||0}];
   const _asActiveStr = _aslayers.filter(a=>(a.t||0)>0).map(a=>`${getAsLayerName(a)||''} ${a.t}mm`).join('＋');
   const kariAsH     = _aslayers.reduce((s,a)=>s+(a.t||0),0) / 1000;
-  const kariAsWaste = kariAsH * totalWL * AS_DENSITY;
-  const kariRcWaste = t.rcH * totalWL;
-  const kariRmWaste = t.rmH * totalWL;
+  const kariAsWaste = kariAsH * totalWL * AS_DENSITY * WASTE_AS_BULK;
+  const kariRcWaste = t.rcH * totalWL * WASTE_RB_BULK;
+  const kariRmWaste = t.rmH * totalWL * WASTE_RB_BULK;
   const kariRcRmWaste = kariRcWaste + kariRmWaste;
 
   // ─── 現況（本復旧）廃材量（仮復旧路盤廃材WL ＋ 現況廃材WL）───
-  const honAsH      = t.genkyoAsH;
-  const honAsWaste  = honAsH * honTotalWL * AS_DENSITY;
-  const honRcWaste  = t.genkyoRC * honTotalWL;
-  const honRmWaste  = t.genkyoRM * honTotalWL;
+  // 現況AS高: 上書き入力 > roadbed_masters本復旧AS合計 > preset値
+  const _overrideAsH = (() => {
+    const sfx = typeKey==='85' ? ['n','ns','k','ks'] : ['n','k'];
+    for (const s of sfx) {
+      const v = parseFloat(document.getElementById(`${typeKey}${s}-genAsH`)?.value);
+      if (!isNaN(v) && v > 0) return v;
+    }
+    return null;
+  })();
+  const _rbAsH = (() => {
+    try {
+      const sid = document.getElementById(`${typeKey}-site`)?.value || '';
+      if (!sid) return null;
+      // roadbed.html は roadbed_masters_${sid} に保存。グローバルキーはその現場のフラット配列
+      const perSite = JSON.parse(localStorage.getItem('roadbed_masters_' + sid) || 'null');
+      const global  = JSON.parse(localStorage.getItem('roadbed_masters')  || '[]');
+      const cfg = (perSite || global)[0];
+      if (!cfg) return null;
+      const h = (cfg.honAsLayers||[]).reduce((s,a)=>s+(a.t||0),0)/1000;
+      return h > 0 ? h : null;
+    } catch(e) { return null; }
+  })();
+  const honAsH = _overrideAsH ?? _rbAsH ?? (t.genkyoAsH ?? 0);
+  const honAsWaste  = honAsH * honTotalWL * AS_DENSITY * WASTE_AS_BULK;
+  const honRcWaste  = t.genkyoRC * honTotalWL * WASTE_RB_BULK;
+  const honRmWaste  = t.genkyoRM * honTotalWL * WASTE_RB_BULK;
   const honRcRmWaste = honRcWaste + honRmWaste;
 
   const el = document.getElementById(`${typeKey}-total`);
@@ -2688,8 +2539,8 @@ function renderTotal(typeKey) {
     html += add(_surfName, s.asTon密粒, 't', true);
     if ((t.asT粗粒||0) > 0) html += add(_baseName, s.asTon粗粒, 't', true);
   }
-  if ((t.rmH||0) > 0) html += add(`RM-${rmS}（上層路盤）合計`, s.rmOrd, 'm³', false);
-  html += add(`RC-${rcS}（下層路盤）合計`, s.rcOrd, 'm³', true);
+  if ((t.rmH||0) > 0) html += add(`${getModeRmLabel(t, typeKey, rmS)}合計`, s.rmOrd, 'm³', false);
+  html += add(`${getModeRcLabel(t, typeKey, rcS)}合計`, s.rcOrd, 'm³', true);
   if ((t.rmH||0) > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', true);
   if (t.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
@@ -2711,25 +2562,25 @@ function renderTotal(typeKey) {
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
       html += add(honAsLabel, honAsWaste, 't', false);
       if (t.genkyoRM > 0) html += add(`廃材RM-40（${Math.round(t.genkyoRM*1000)}mm）`, honRmWaste, 'm³', false);
-      html += add(`廃材RC-${rcS}（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
-      if (t.genkyoRM > 0) html += add('廃材RC＋RM 合計', honRcRmWaste, 'm³', true);
-      else                 html += add('廃材RC 合計',     honRcWaste,    'm³', true);
+      html += add(`廃路盤材（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
+      if (t.genkyoRM > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
+      else                 html += add('廃路盤材 合計',     honRcWaste,    'm³', true);
 
     } else if (mixed) {
       // ── 混在：仮復旧廃材 ＋ 現況廃材 ＋ 合計 ──
       html += sep(`🗑️ 路盤廃材（仮復旧・路盤先行）　仮復旧路盤廃材（${fmt(kariHaibanW)}×${fmt(kariHaibanL)}=${fmt(kariHaibanWL)}㎡）`, 'rgba(234,88,12,0.75)');
       html += add(`廃材AS（${_asActiveStr} 合計${Math.round(kariAsH*1000)}mm）`, kariAsWaste, 't', false);
       if (t.rmH > 0) html += add(`廃材RM-${rmS}（${Math.round((t.rmH||0)*1000)}mm）`, kariRmWaste, 'm³', false);
-      html += add(`廃材RC-${rcS}（${Math.round((t.rcH||0)*1000)}mm）`, kariRcWaste, 'm³', false);
-      if (t.rmH > 0) html += add('廃材RC＋RM 合計', kariRcRmWaste, 'm³', true);
-      else           html += add('廃材RC 合計',      kariRcWaste,   'm³', true);
+      html += add(`廃路盤材（${Math.round((t.rcH||0)*1000)}mm）`, kariRcWaste, 'm³', false);
+      if (t.rmH > 0) html += add('廃路盤材（RC＋RM）合計', kariRcRmWaste, 'm³', true);
+      else           html += add('廃路盤材 合計',      kariRcWaste,   'm³', true);
 
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
       html += add(honAsLabel, honAsWaste, 't', false);
       if (t.genkyoRM > 0) html += add(`廃材RM-40（${Math.round(t.genkyoRM*1000)}mm）`, honRmWaste, 'm³', false);
-      html += add(`廃材RC-${rcS}（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
-      if (t.genkyoRM > 0) html += add('廃材RC＋RM 合計', honRcRmWaste, 'm³', true);
-      else                 html += add('廃材RC 合計',     honRcWaste,   'm³', true);
+      html += add(`廃路盤材（${Math.round(t.genkyoRC*1000)}mm）`, honRcWaste, 'm³', false);
+      if (t.genkyoRM > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
+      else                 html += add('廃路盤材 合計',     honRcWaste,   'm³', true);
 
       // 合計（仮復旧廃材＋現況廃材）
       const totalAsWaste  = kariAsWaste  + honAsWaste;
@@ -2740,17 +2591,17 @@ function renderTotal(typeKey) {
       html += add(`廃材AS 合計`, totalAsWaste, 't', true);
       if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃材RM-40 合計', totalRmWaste, 'm³', false);
       html += add(`廃材RC-${rcS} 合計`, totalRcWaste, 'm³', false);
-      if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃材RC＋RM 合計', totalRcRmWaste, 'm³', true);
-      else                               html += add('廃材RC 合計',     totalRcWaste,   'm³', true);
+      if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃路盤材（RC＋RM）合計', totalRcRmWaste, 'm³', true);
+      else                               html += add('廃路盤材 合計',     totalRcWaste,   'm³', true);
 
     } else {
       // ── 仮復旧のみ ──
       html += sep(`🗑️ 路盤廃材（仮復旧・路盤先行）　仮復旧路盤廃材（${fmt(totalKariW)}×${fmt(totalKariL)}=${fmt(totalWL)}㎡）`, 'rgba(234,88,12,0.75)');
       html += add(`廃材AS（${_asActiveStr} 合計${Math.round(kariAsH*1000)}mm）`, kariAsWaste, 't', false);
       if (t.rmH > 0) html += add(`廃材RM-${rmS}（${Math.round((t.rmH||0)*1000)}mm）`, kariRmWaste, 'm³', false);
-      html += add(`廃材RC-${rcS}（${Math.round((t.rcH||0)*1000)}mm）`, kariRcWaste, 'm³', false);
-      if (t.rmH > 0) html += add('廃材RC＋RM 合計', kariRcRmWaste, 'm³', true);
-      else           html += add('廃材RC 合計',      kariRcWaste,   'm³', true);
+      html += add(`廃路盤材（${Math.round((t.rcH||0)*1000)}mm）`, kariRcWaste, 'm³', false);
+      if (t.rmH > 0) html += add('廃路盤材（RC＋RM）合計', kariRcRmWaste, 'm³', true);
+      else           html += add('廃路盤材 合計',      kariRcWaste,   'm³', true);
     }
   }
 
@@ -2985,7 +2836,7 @@ document.getElementById('tabNav').addEventListener('click', e => {
 function activateTab(tabId) {
   // メインタブ切り替え
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('#tab-calc, #tab-history, #tab-sites, #tab-master').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#tab-calc, #tab-history, #tab-sites').forEach(c => c.classList.remove('active'));
 
   const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
   if (btn) btn.classList.add('active');
@@ -2996,6 +2847,24 @@ function activateTab(tabId) {
 // =====================================================================
 // マスタタブ サブナビ切り替え
 // =====================================================================
+function switchSitesTab(tab) {
+  const sitePanel   = document.getElementById('stab-site');
+  const presetPanel = document.getElementById('stab-preset');
+  const siteBtn     = document.getElementById('stab-site-btn');
+  const presetBtn   = document.getElementById('stab-preset-btn');
+  if (tab === 'site') {
+    sitePanel.style.display   = '';
+    presetPanel.style.display = 'none';
+    siteBtn.style.background   = 'var(--accent)'; siteBtn.style.color = '#fff'; siteBtn.style.border = 'none';
+    presetBtn.style.background = 'var(--surface2)'; presetBtn.style.color = 'var(--text2)'; presetBtn.style.border = '1px solid var(--border)';
+  } else {
+    sitePanel.style.display   = 'none';
+    presetPanel.style.display = '';
+    presetBtn.style.background = 'var(--accent)'; presetBtn.style.color = '#fff'; presetBtn.style.border = 'none';
+    siteBtn.style.background   = 'var(--surface2)'; siteBtn.style.color = 'var(--text2)'; siteBtn.style.border = '1px solid var(--border)';
+  }
+}
+
 function switchMasterSub(sub) {
   const hataPanel = document.getElementById('msub-hata');
   const roadPanel = document.getElementById('msub-road');
@@ -3128,15 +2997,16 @@ const ROADBED_MASTER_DEFAULTS = [
 function getRoadbedMasters() {
   try {
     const stored = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
-    // デフォルトデータをマージ（ユーザー登録が優先、未登録のデフォルトは末尾に追加）
-    const storedKeys = new Set(stored.map(r => r.key));
-    const defaults = ROADBED_MASTER_DEFAULTS.filter(d => !storedKeys.has(d.key));
-    return [...stored, ...defaults];
+    // 現場固有データがある場合はデフォルト（他現場PDF取込分）を混入させない
+    // 現場未選択 or データなしの場合のみデフォルトをフォールバック表示
+    if (stored.length > 0) return stored;
+    return [...ROADBED_MASTER_DEFAULTS];
   } catch { return [...ROADBED_MASTER_DEFAULTS]; }
 }
 function saveRoadbedMasters(arr) {
   localStorage.setItem('roadbed_masters', JSON.stringify(arr));
-  var siteId = document.getElementById('global-site-sel') ? document.getElementById('global-site-sel').value : '';
+  var siteId = (document.getElementById('rm-form-site-sel')?.value) ||
+               (document.getElementById('global-site-sel')?.value) || '';
   if (siteId) {
     localStorage.setItem('roadbed_masters_' + siteId, JSON.stringify(arr));
     if (_fbDb && _isAdmin) {
@@ -3150,6 +3020,22 @@ function saveRoadbedMasters(arr) {
   } else {
     try { fbSaveMaster('roadbed_masters', arr); } catch(e) {}
   }
+}
+
+// 路盤マスタフォーム用 現場セレクト同期
+function syncRmFormSiteSel() {
+  var sel = document.getElementById('rm-form-site-sel');
+  if (!sel) return;
+  var sites = getSites();
+  var cur = (document.getElementById('global-site-sel')?.value) || sel.value || '';
+  sel.innerHTML = '<option value="">― 現場を選択 ―</option>' +
+    sites.map(function(s){ return '<option value="'+s.id+'"'+(s.id===cur?' selected':'')+'>'+s.name+'</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+function onRmFormSiteChange(siteId) {
+  var gsel = document.getElementById('global-site-sel');
+  if (gsel && siteId) { gsel.value = siteId; }
+  loadRoadbedForCurrentSite(siteId);
 }
 
 // AS行の動的追加
@@ -3378,7 +3264,6 @@ function renderRoadbedMasterList() {
       </div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="editRoadbedMaster('${r.key}')">✏️ 編集</button>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="editRoadbedMaster('${r.key}')">✏️ 編集</button>
         ${!r.isDefault ? `<button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="deleteRoadbedMaster('${r.key}')">✕ 削除</button>` : ''}
       </div>
     </div>`;
@@ -3442,20 +3327,75 @@ populateGlobalSiteDropdown();
 // 初期状態：現場未選択画面を表示
 activateTab('no-site');
 
+// Firebase・各マスタ初期化
+initFirebase();
+try { updateMasterBadge(); } catch(e) {}
+try { updateSiteBadge();   } catch(e) {}
+try { renderMasterList();  } catch(e) {}
+try { renderSiteList();    } catch(e) {}
+try { renderPresetList();  } catch(e) {}
+try { populateSiteDropdowns(); } catch(e) {}
+try { updateHistSiteFilter();  } catch(e) {}
+try { syncMasterSiteDropdown();} catch(e) {}
+try { initPresetSystem();  } catch(e) {}
+try { initRoadbedForm();   } catch(e) {}
+
 // =====================================================================
 // 構成切替点・配管シート　リアルタイム表示更新
 // =====================================================================
-const PIPE_COEFF = { '85': 0.3, '40': 0.3, '30': 0.2, '20': 0.2, '14': 0.2 };
+const PIPE_COEFF_DEFAULT = { '85': 0.3, '40': 0.3, '30': 0.2, '20': 0.2, '14': 0.2 };
+const _roadZoneState = { '85':'sharyo','40':'sharyo','30':'hodo','20':'hodo','14':'hodo' };
+
+/** 道路区分を切替え（静的タブ用） */
+function setRoadZone(typeKey, zone) {
+  _roadZoneState[typeKey] = zone;
+  // ボタン見た目更新
+  ['sharyo','hodo','unknown'].forEach(z => {
+    const btn = document.getElementById(`${typeKey}-zone-${z}`);
+    if (!btn) return;
+    const active = z === zone;
+    btn.style.background = active ? 'rgba(79,142,247,0.25)' : 'transparent';
+    btn.style.color      = active ? 'var(--accent)' : 'var(--text3)';
+  });
+  // フォーミュララベル更新
+  const fEl = document.getElementById(`${typeKey}-pipesheet-formula`);
+  if (fEl) {
+    if (zone === 'sharyo') fEl.textContent = 'GL−（ = 0.3 + DP）';
+    else if (zone === 'hodo') fEl.textContent = 'GL−（ = 0.2 + DP）';
+    else fEl.textContent = 'GL−（不明: 0.2 or 0.3 + DP）';
+  }
+  updateCutoffDisplay(typeKey);
+}
+
+/** typeKeyを標準パイプ径キー(85/40/30/20/14)に正規化 */
+function normalizePipeKey(typeKey) {
+  if (['85','40','30','20','14'].includes(typeKey)) return typeKey;
+  // 'type_import_rm_default_85' / 'dyntype_85' 等から数字抽出
+  const m = String(typeKey).match(/(?:^|[_\-])(85|40|30|20|14)(?:[_\-]|$|\b)/);
+  if (m) return m[1];
+  return typeKey;  // 未知キーはそのまま
+}
+
+/** 道路区分から配管シート係数を返す（静的タブ用） */
+function getPipeCoeff(typeKey) {
+  const normKey = normalizePipeKey(typeKey);
+  const z = _roadZoneState[normKey] || _roadZoneState[typeKey] || 'sharyo';
+  if (z === 'sharyo') return { coeff: 0.3, unknown: false };
+  if (z === 'hodo')   return { coeff: 0.2, unknown: false };
+  return { coeff: 0.3, unknown: true };  // 不明=両値表示のため0.3を基準に
+}
 
 // 改良土を表示する型（車道のみ）・配管シートは全型表示
 const IMPROVED_SOIL_TYPES = ['85','40'];
 // PIPE_COEFFは全型対応（85/40:+0.3、30/20/14:+0.2）
 
 function updateCutoffDisplay(typeKey) {
-  const dpEl  = document.getElementById(`${typeKey}n-DP`)
-             || document.getElementById(`${typeKey}n-DP1`);
-  const dp = parseFloat(dpEl?.value);
-  const coeff = PIPE_COEFF[typeKey];
+  // 通常(n) → 特殊部あり(ns) → 勾配(k) の順でDP取得
+  const dp = parseFloat(document.getElementById(`${typeKey}n-DP`)?.value)
+          || parseFloat(document.getElementById(`${typeKey}ns-DP`)?.value)
+          || parseFloat(document.getElementById(`${typeKey}n-DP1`)?.value)
+          || parseFloat(document.getElementById(`${typeKey}k-DP1`)?.value);
+  const { coeff, unknown: zoneUnknown } = getPipeCoeff(typeKey);
 
   const cutoffEl    = document.getElementById(`${typeKey}-cutoff-display`);
   const pipesheetEl = document.getElementById(`${typeKey}-pipesheet-display`);
@@ -3473,21 +3413,23 @@ function updateCutoffDisplay(typeKey) {
   }
 
   if (!isNaN(dp) && dp > 0) {
-    // ① 埋戻し構成切替え点: GL-(DP-0.1)
-    // DP=1.1（正値・GL深さ）→ 管上100mm = 1.1-0.1 = 1.000 → GL-1.000m
     const cutoff = (dp - 0.1).toFixed(3);
-
-    // 配管シート: 管上coeff分の位置 = DP - coeff
-    // 路盤下限(totalH)より浅い場合（GL値が小さい）は路盤下限に合わせる
-    // 例: 85型 DP=1.1 → 管上300mm=GL-0.800m < 路盤下限GL-0.850m → GL-0.850m採用（頭打ち）
-    // 例: 85型 DP=1.5 → 管上300mm=GL-1.200m > 路盤下限GL-0.850m → GL-1.200m採用
-    // 例: 40型 DP=0.6 → 管上300mm=GL-0.300m < 路盤下限GL-0.400m → GL-0.400m採用（頭打ち）
     const t = TYPES[typeKey];
-    const rawPipe = dp - coeff;           // 管上coeff分の位置（GL深さ）
-    const pipesheet = t ? Math.max(rawPipe, t.totalH).toFixed(3) : rawPipe.toFixed(3);
 
-    if (cutoffEl && showImproved) cutoffEl.textContent    = `GL − ${cutoff} m（改良土↑ / 再生砂↓）`;
-    if (pipesheetEl)              pipesheetEl.textContent = `GL − ${pipesheet} m`;
+    if (zoneUnknown) {
+      // 不明: 車道(0.3)と歩道(0.2)の両値を併記
+      const raw03 = dp - 0.3;
+      const raw02 = dp - 0.2;
+      const val03 = t ? Math.max(raw03, t.totalH).toFixed(3) : raw03.toFixed(3);
+      const val02 = t ? Math.max(raw02, t.totalH).toFixed(3) : raw02.toFixed(3);
+      if (cutoffEl && showImproved) cutoffEl.textContent    = `GL − ${cutoff} m（改良土↑ / 再生砂↓）`;
+      if (pipesheetEl)              pipesheetEl.textContent = `GL − ${val03} m (車道) / ${val02} m (歩道)`;
+    } else {
+      const rawPipe = dp - coeff;
+      const pipesheet = t ? Math.max(rawPipe, t.totalH).toFixed(3) : rawPipe.toFixed(3);
+      if (cutoffEl && showImproved) cutoffEl.textContent    = `GL − ${cutoff} m（改良土↑ / 再生砂↓）`;
+      if (pipesheetEl)              pipesheetEl.textContent = `GL − ${pipesheet} m`;
+    }
   } else {
     if (cutoffEl && showImproved) cutoffEl.textContent    = 'GL − ― m';
     if (pipesheetEl)              pipesheetEl.textContent = 'GL − ― m';
@@ -3496,8 +3438,8 @@ function updateCutoffDisplay(typeKey) {
 
 // 各型のDP入力にイベントをバインド
 ['85','40','30','20','14'].forEach(typeKey => {
-  // 通常パターン・勾配パターン両方のDPをウォッチ
-  [`${typeKey}n-DP`, `${typeKey}k-DP1`].forEach(id => {
+  // 通常・特殊部・勾配パターン全てのDPをウォッチ
+  [`${typeKey}n-DP`, `${typeKey}ns-DP`, `${typeKey}k-DP1`, `${typeKey}n-DP1`].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => updateCutoffDisplay(typeKey));
   });
@@ -3655,11 +3597,10 @@ const KANJYO2_PRESET = {
 function getPresets() {
   try {
     const stored = JSON.parse(localStorage.getItem('road_presets') || '[]');
-    // アーカイブが含まれていなければ先頭に挿入
-    if (!stored.find(p => p.id === KANJYO2_PRESET.id)) {
-      return [KANJYO2_PRESET, ...stored];
-    }
-    return stored;
+    // KANJYO2アーカイブは常にビルトイン定数を使用
+    // （保存版が型数不足などで壊れていてもビルトイン5型を確実に返す）
+    const withoutKanjyo = stored.filter(p => p.id !== KANJYO2_PRESET.id);
+    return [KANJYO2_PRESET, ...withoutKanjyo];
   } catch { return [KANJYO2_PRESET]; }
 }
 function savePresets(arr) {
@@ -3671,10 +3612,29 @@ function savePresets(arr) {
 // プリセットフォームで使う型リスト（編集中）
 let _editingTypes = [];
 
+function updatePresetNameSiteSel() {
+  const sel = document.getElementById('preset-name-site-sel');
+  if (!sel) return;
+  const sites = getSites();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">― 現場名から選ぶ ―</option>' +
+    sites.map(s => `<option value="${s.name}"${s.name===cur?' selected':''}>${s.name}</option>`).join('') +
+    '<option value="_free">✏️ フリー入力</option>';
+}
+function onPresetNameSiteChange(val) {
+  const inp = document.getElementById('preset-name');
+  if (!inp) return;
+  if (val === '_free') { inp.value = ''; inp.focus(); }
+  else if (val) inp.value = val;
+}
+
 function initPresetSystem() {
   // プリセット流用元セレクトを更新
   updatePresetCopySrc();
   updateSitePresetSelect();
+  updatePresetNameSiteSel();
+  // 新規フォームを現場名＋路盤マスタで初期化
+  clearPresetForm();
 }
 
 function updatePresetCopySrc() {
@@ -3709,6 +3669,78 @@ function copyPreset() {
   document.getElementById('preset-name').value = src.name + ' (コピー)';
   renderPresetTypeEditor();
   alert(`✅「${src.name}」の路盤構成を流用しました。型名・厚さを必要に応じて編集してください。`);
+}
+
+// 路盤構成マスタからプリセット型を一括取り込み
+function importFromRoadbedMasters(silent) {
+  const masters = getRoadbedMasters().filter(r => !r.isDefault);
+  if (masters.length === 0) {
+    if (!silent) alert('現在の現場に登録された路盤構成マスタがありません。\n先に路盤構成マスタタブか roadbed.html で登録してください。');
+    return;
+  }
+  const isRm = c => String(c||'').startsWith('RM') || c==='rm' || c==='rmfree';
+  const isRc = c => String(c||'').startsWith('RC') || c==='rc' || c==='rcfree';
+
+  const imported = masters.map(r => {
+    // AS層をプリセット形式（role/preset/custom/t）に変換
+    const asLayers = (r.kariAsLayers||[]).map((a, idx) => ({
+      role: idx === 0 ? 'surface' : 'base',
+      preset: '', custom: a.name || '', t: a.t || 0,
+    }));
+    while (asLayers.length < 6) asLayers.push({role:'base', preset:'', custom:'', t:0});
+    asLayers.push({role:'tack',  preset:'タックコートアスファルト乳剤(PK-4)', custom:'', t:0, memo:true});
+    asLayers.push({role:'prime', preset:'プライムコートアスファルト乳剤(PK-3)', custom:'', t:0, memo:true});
+
+    // RbLayersから層リストを構築するヘルパー
+    const toLayerList = (rbLayers, filterFn) => {
+      if (!rbLayers || !rbLayers.length) return [];
+      return rbLayers
+        .filter(x => filterFn(x.subcat || x.cat || '') && (x.t || 0) > 0)
+        .map(x => ({t: x.t || 0, n: x.n || 1}));
+    };
+
+    const kariRM = toLayerList(r.kariRbLayers, isRm).length
+      ? toLayerList(r.kariRbLayers, isRm)
+      : (r.kariRmH||0) > 0 ? [{t: Math.round((r.kariRmH||0)*1000), n:1}] : [];
+    const kariRC = toLayerList(r.kariRbLayers, isRc).length
+      ? toLayerList(r.kariRbLayers, isRc)
+      : (r.kariRcH||0) > 0 ? [{t: Math.round((r.kariRcH||0)*1000), n:1}] : [];
+    const honRM  = toLayerList(r.honRbLayers,  isRm).length
+      ? toLayerList(r.honRbLayers,  isRm)
+      : (r.honRmH||0)  > 0 ? [{t: Math.round((r.honRmH||0)*1000),  n:1}] : [];
+    const honRC  = toLayerList(r.honRbLayers,  isRc).length
+      ? toLayerList(r.honRbLayers,  isRc)
+      : (r.honRcH||0)  > 0 ? [{t: Math.round((r.honRcH||0)*1000),  n:1}] : [];
+
+    const kariAsArr = r.kariAsLayers || [];
+    const honAsArr  = r.honAsLayers  || [];
+    return {
+      key: 'type_import_' + r.key,
+      label: r.label,
+      color: r.color || '#4f8ef7',
+      asT密粒: kariAsArr.find(a => a.name && a.name.includes('表層'))?.t || kariAsArr[0]?.t || 50,
+      asT粗粒: kariAsArr.filter(a => a.name && a.name.includes('基層')).reduce((s,a) => s+(a.t||0), 0),
+      asLayers,
+      rmSize: r.kariRmSize || 40, rmH: r.kariRmH || 0,
+      rcSize: r.kariRcSize || 40, rcH: r.kariRcH || 0,
+      totalH: r.kariTotalH || 0,
+      hasImprovedSoil: false, noGradient: false,
+      genkyoAsH: honAsArr.reduce((s,a) => s+(a.t||0), 0) / 1000,
+      genkyoRM: r.honRmH || 0, genkyoRC: r.honRcH || 0,
+      kariRM_layers: kariRM, kariRC_layers: kariRC,
+      honRM_layers:  honRM,  honRC_layers:  honRC,
+      kariRmLayers: r.kariRmLayers || '', kariRcLayers: r.kariRcLayers || '',
+      honRmLayers:  r.honRmLayers  || '', honRcLayers:  r.honRcLayers  || '',
+      extraMaterials: [
+        {name:'', unitH:0, calcH:0, unit:'m³', includeInTotal:true, memo:''},
+        {name:'', unitH:0, calcH:0, unit:'m³', includeInTotal:true, memo:''},
+      ],
+      teppan: {use:false, pending:true, memo:'仕様未定', timing:'after_mid'},
+    };
+  });
+  _editingTypes = imported;
+  renderPresetTypeEditor();
+  if (!silent) alert('✅ 路盤構成マスタから ' + imported.length + ' 型を取り込みました。\nAS層・材料名・路盤厚さを確認してから「プリセットを保存」してください。');
 }
 
 function addPresetType() {
@@ -4264,39 +4296,73 @@ function savePreset() {
 
   const editId = document.getElementById('preset-edit-id').value;
   const presets = getPresets().filter(p => !p.isArchive);
+  let savedPresetId = editId;
 
   if (editId) {
     const idx = presets.findIndex(p => p.id === editId);
     if (idx >= 0) { presets[idx] = { ...presets[idx], name, types, updatedAt: new Date().toISOString().slice(0,10) }; }
   } else {
-    presets.push({ id: 'preset_' + Date.now(), name, types, createdAt: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString().slice(0,10) });
+    savedPresetId = 'preset_' + Date.now();
+    presets.push({ id: savedPresetId, name, types, createdAt: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString().slice(0,10) });
   }
 
   savePresets([KANJYO2_PRESET, ...presets]);
+
+  // 現在選択中の現場に自動紐付け（presetIdが未設定の場合に限る）
+  const curSiteId = document.getElementById('global-site-sel')?.value || '';
+  if (curSiteId && savedPresetId) {
+    const sites = getSites();
+    const sIdx = sites.findIndex(s => s.id === curSiteId);
+    if (sIdx >= 0) {
+      sites[sIdx].presetId = savedPresetId;
+      saveSites(sites);
+      try { renderSiteList(); } catch(e) {}
+    }
+  }
+
   clearPresetForm();
   renderPresetList();
   updatePresetCopySrc();
   updateSitePresetSelect();
-  alert(`✅ プリセット「${name}」を保存しました`);
+  updatePresetNameSiteSel();
+
+  // 計算シートを即時再ロード
+  try { if (curSiteId) onGlobalSiteChange(); } catch(e) {}
+
+  alert(`✅ プリセット「${name}」を保存しました${curSiteId ? '\n現場「'+getSites().find(s=>s.id===curSiteId)?.name+'」に紐付けました':''}\n計算シートに反映済みです`);
 }
 
 function clearPresetForm() {
-  document.getElementById('preset-name').value = '';
-  document.getElementById('preset-edit-id').value = '';
-  document.getElementById('preset-copy-src').value = '';
+  // 現場名を自動セット（新規作成時のデフォルト）
+  const siteId = document.getElementById('global-site-sel')?.value || '';
+  const site = getSites().find(s => s.id === siteId);
+  const siteName = site ? site.name : '';
+  const pnEl = document.getElementById('preset-name'); if (pnEl) pnEl.value = siteName;
+  // 現場名セレクトも同期
+  const nsel = document.getElementById('preset-name-site-sel');
+  if (nsel && siteName) {
+    // セレクトに該当オプションがあれば選択
+    const opt = Array.from(nsel.options).find(o => o.value === siteName);
+    if (opt) nsel.value = siteName;
+  }
+  const _pei = document.getElementById('preset-edit-id'); if (_pei) _pei.value = '';
+  const _pcs = document.getElementById('preset-copy-src'); if (_pcs) _pcs.value = '';
+  // 路盤マスタが登録済みなら自動取り込み
   _editingTypes = [];
-  renderPresetTypeEditor();
+  importFromRoadbedMasters(true); // silent=true でアラートなし
+  if (_editingTypes.length === 0) renderPresetTypeEditor();
 }
 
 function editPreset(id) {
   const p = getPresets().find(x => x.id === id);
   if (!p) return;
-  if (p.isArchive) { alert('環状2号線アーカイブは編集できません。\n流用元として選択して新しいプリセットを作成してください。'); return; }
+  if (p.isArchive) { alert('環状2号線アーカイブは編集できません。\n流用元として選択して新しいテンプレートを作成してください。'); return; }
+  switchSitesTab('preset');
   document.getElementById('preset-name').value = p.name;
   document.getElementById('preset-edit-id').value = p.id;
   _editingTypes = p.types.map(t => ({ ...t }));
   renderPresetTypeEditor();
-  document.getElementById('preset-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => document.getElementById('preset-editor').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 function deletePreset(id) {
@@ -4595,7 +4661,7 @@ function renderPresetList() {
       <div style="margin-bottom:10px;">${typesDetail}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${!p.isArchive ? `<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="editPreset('${p.id}')">✏️ 編集</button>` : ''}
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="confirmAndCopyPreset('${p.id}')">📋 この構成を流用</button>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="confirmAndCopyPreset('${p.id}')">📋 この構成をコピー</button>
         ${!p.isArchive ? `<button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="deletePreset('${p.id}')">✕ 削除</button>` : ''}
       </div>
     </div>`;
@@ -4692,6 +4758,9 @@ function onGlobalSiteChange() {
 
   // 路盤構成マスタを現場連動でロード
   loadRoadbedForCurrentSite(siteId);
+
+  // 路盤マスタフォームの現場セレクトも同期
+  try { syncRmFormSiteSel(); } catch(e) {}
 }
 
 // =====================================================================
@@ -4784,10 +4853,10 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       ];
   const _asCoats = (t.asLayers||[]).filter(a=>a.memo&&a.preset);
   const asDesc = _asLayers.map(a=>`${getAsLayerName(a)} t=${a.t}mm`).join(' ／ ');
-  const rcDesc = `RC-${rcS}（下層路盤）${Math.round((t.rcH||0)*1000)}mm`;
-  const rmDesc = (t.rmH||0) > 0 ? ` ／ <span style="color:#7dd3fc;">RM-${rmS}（上層路盤）${Math.round((t.rmH||0)*1000)}mm</span>` : '';
+  const rcDesc = `${getRcLabel(rcS, _resolveLayersStr(t, 'kariRcLayers'))} ${Math.round((t.rcH||0)*1000)}mm`;
+  const rmDesc = (t.rmH||0) > 0 ? ` ／ <span style="color:#7dd3fc;">${getRmLabel(rmS, _resolveLayersStr(t, 'kariRmLayers'))} ${Math.round((t.rmH||0)*1000)}mm</span>` : '';
   const totalH = Math.round((t.totalH||0) * 1000);
-  const pipeCoeff = (t.rmH||0) > 0 ? 0.3 : 0.2;
+  const pipeCoeff = PIPE_COEFF_DEFAULT[normalizePipeKey(t.key)] ?? ((t.rmH||0) > 0 ? 0.3 : 0.2);
   const ex = t.extraMaterials || [];
   const tp = t.teppan || { use: false, pending: false, memo: '' };
 
@@ -5162,14 +5231,18 @@ function switchDynMode(tid, mode) {
     const effRM = Math.round((eff.rmH || 0) * 1000);
     const effRC = Math.round((eff.rcH || 0) * 1000);
     if (mode === 'hon') {
+      const _rmLbl = getRmLabel(rmS, _resolveLayersStr(eff, 'honRmLayers'));
+      const _rcLbl = getRcLabel(rcS, _resolveLayersStr(eff, 'honRcLayers'));
       noticeEl.innerHTML = '📐 <strong>本復旧 路盤構成 H=' + effTH + 'mm</strong>：AS ' + effAS + 'mm'
-        + (effRM > 0 ? ' ／ <span style="color:#7dd3fc;">RM-' + rmS + '（上層路盤）' + effRM + 'mm</span>' : '')
-        + ' ／ <span style="color:#86efac;">RC-' + rcS + '（下層路盤）' + effRC + 'mm</span>';
+        + (effRM > 0 ? ' ／ <span style="color:#7dd3fc;">' + _rmLbl + ' ' + effRM + 'mm</span>' : '')
+        + ' ／ <span style="color:#86efac;">' + _rcLbl + ' ' + effRC + 'mm</span>';
       noticeEl.style.cssText = 'background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.4);border-radius:8px;padding:10px 14px;font-size:13px;color:#a78bfa;margin-bottom:12px;';
     } else {
+      const _rmLbl = getRmLabel(rmS, _resolveLayersStr(eff, 'kariRmLayers'));
+      const _rcLbl = getRcLabel(rcS, _resolveLayersStr(eff, 'kariRcLayers'));
       noticeEl.innerHTML = '📐 <strong>仮復旧・路盤先行 構成（固定値）H=' + effTH + 'mm</strong>：AS ' + effAS + 'mm'
-        + (effRM > 0 ? ' ／ <span style="color:#7dd3fc;">RM-' + rmS + '（上層路盤）' + effRM + 'mm</span>' : '')
-        + ' ／ <span style="color:#86efac;">RC-' + rcS + '（下層路盤）' + effRC + 'mm</span>'
+        + (effRM > 0 ? ' ／ <span style="color:#7dd3fc;">' + _rmLbl + ' ' + effRM + 'mm</span>' : '')
+        + ' ／ <span style="color:#86efac;">' + _rcLbl + ' ' + effRC + 'mm</span>'
         + ' <span style="display:inline-block;margin-left:8px;background:rgba(239,68,68,0.2);color:var(--red);font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;">⚠️ 現況路盤は異なる</span>';
       noticeEl.style.cssText = '';
       noticeEl.className = 'notice';
@@ -5202,9 +5275,12 @@ function switchDynMode(tid, mode) {
 }
 
 function updateDynCutoff(tid, typeConf) {
-  const dpEl = document.getElementById(`${tid}n-DP`) || document.getElementById(`${tid}n-DP1`);
-  const dp = parseFloat(dpEl?.value);
-  const pipeCoeff = typeConf.rmH > 0 ? 0.3 : 0.2;
+  // 通常(n) → 特殊部あり(ns) → 勾配(k) の順でDP取得
+  const dp = parseFloat(document.getElementById(`${tid}n-DP`)?.value)
+          || parseFloat(document.getElementById(`${tid}ns-DP`)?.value)
+          || parseFloat(document.getElementById(`${tid}n-DP1`)?.value)
+          || parseFloat(document.getElementById(`${tid}k-DP1`)?.value);
+  const pipeCoeff = PIPE_COEFF_DEFAULT[normalizePipeKey(typeConf.key)] ?? (typeConf.rmH > 0 ? 0.3 : 0.2);
   const cutoffEl = document.getElementById(`${typeConf.key}-dyn-cutoff`);
   const pipesheetEl = document.getElementById(`${typeConf.key}-dyn-pipesheet`);
   if (!isNaN(dp) && dp > 0) {
@@ -5249,13 +5325,13 @@ function renderDynTotal(tid, typeConf) {
   // 廃材量：仮復旧廃材はkariHaibanWL、現況廃材はgenWLでそれぞれ計算
   const _kariT       = typeConf;  // kari値は常にtypeConfから参照
   const kariAsH      = (_kariT.asT密粒 + (_kariT.asT粗粒||0)) / 1000;
-  const kariAsWaste  = kariAsH * kariHaibanWL * AS_DENSITY;
-  const kariRcWaste  = _kariT.rcH * kariHaibanWL;
-  const kariRmWaste  = _kariT.rmH * kariHaibanWL;
+  const kariAsWaste  = kariAsH * kariHaibanWL * AS_DENSITY * WASTE_AS_BULK;
+  const kariRcWaste  = _kariT.rcH * kariHaibanWL * WASTE_RB_BULK;
+  const kariRmWaste  = _kariT.rmH * kariHaibanWL * WASTE_RB_BULK;
   const kariRcRmWaste = kariRcWaste + kariRmWaste;
-  const honAsWaste   = _kariT.genkyoAsH * genWL * AS_DENSITY;
-  const honRcWaste   = _kariT.genkyoRC * genWL;
-  const honRmWaste   = _kariT.genkyoRM * genWL;
+  const honAsWaste   = _kariT.genkyoAsH * genWL * AS_DENSITY * WASTE_AS_BULK;
+  const honRcWaste   = _kariT.genkyoRC * genWL * WASTE_RB_BULK;
+  const honRmWaste   = _kariT.genkyoRM * genWL * WASTE_RB_BULK;
   const honRcRmWaste = honRcWaste + honRmWaste;
 
   const el = document.getElementById(`${tid}-total`);
@@ -5312,8 +5388,8 @@ function renderDynTotal(tid, typeConf) {
   const _effRcH = (_effT2.rcH||0);
   const _effRmS = _effT2.rmSize || 40;
   const _effRcS = _effT2.rcSize || 40;
-  if (_effRmH > 0) html += add(`RM-${_effRmS}（上層路盤）合計`, s.rmOrd, 'm³', 'var(--green)');
-  html += add(`RC-${_effRcS}（下層路盤）合計`, s.rcOrd, 'm³', 'var(--green)');
+  if (_effRmH > 0) html += add(`${getModeRmLabel(_effT2, tid, _effRmS)}合計`, s.rmOrd, 'm³', 'var(--green)');
+  html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
   if (_effRmH > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
   if (_effT2.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
   html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
@@ -5328,14 +5404,14 @@ function renderDynTotal(tid, typeConf) {
       html += add(`廃材AS（${_kariT.asT密粒}${_kariT.asT粗粒>0?'＋'+_kariT.asT粗粒:''}mm）`, kariAsWaste, 't', 'rgba(249,115,22,0.85)');
       if (_kariT.rmH>0) html += add(`廃材RM-40（${Math.round((_kariT.rmH||0)*1000)}mm）`, kariRmWaste, 'm³', 'var(--green)');
       html += add(`廃材RC-40（${Math.round((_kariT.rcH||0)*1000)}mm）`, kariRcWaste, 'm³', 'var(--green)');
-      if (_kariT.rmH>0) html += add('廃材RC＋RM 合計', kariRcRmWaste, 'm³', 'var(--green)');
+      if (_kariT.rmH>0) html += add('廃路盤材（RC＋RM）合計', kariRcRmWaste, 'm³', 'var(--green)');
     }
     if (genWL > 0.0001) {
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡`, 'rgba(124,58,237,0.75)');
       html += add(`廃材AS（現況 ${Math.round((_kariT.genkyoAsH||0)*1000)}mm）`, honAsWaste, 't', 'rgba(249,115,22,0.85)');
       if ((_kariT.genkyoRM||0)>0) html += add(`廃材RM-40（${Math.round((_kariT.genkyoRM||0)*1000)}mm）`, honRmWaste, 'm³', 'var(--green)');
       html += add(`廃材RC-${_effRcS}（${Math.round((_kariT.genkyoRC||0)*1000)}mm）`, honRcWaste, 'm³', 'var(--green)');
-      if ((_kariT.genkyoRM||0)>0) html += add('廃材RC＋RM 合計', honRcRmWaste, 'm³', 'var(--green)');
+      if ((_kariT.genkyoRM||0)>0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
     }
   }
   el.innerHTML = html;
@@ -5405,13 +5481,7 @@ function resetDynForm(tid) {
 function viewDiagramFromDynTab(tid, typeKey) {
   const hata = document.getElementById(`${tid}-hata`)?.value?.trim();
   if (!hata) { alert('旗揚げ番号を入力してください'); return; }
-  const siteId = document.getElementById('global-site-sel').value;
-  const siteArr = siteId ? getMaster(siteId) : getMaster('');
-  const entry = siteArr.find(r => String(r.hata) === String(hata))
-             || getMaster('').find(r => String(r.hata) === String(hata))
-             || null;
-  const excelEntry = getExcelDiagram(hata);
-  if (!entry && !excelEntry) { alert(`旗揚げ番号 №${hata} はマスタに登録されていません`); return; }
+  // 未登録でも図面ダイアログを開く（新規登録フローに対応）
   showDiagram(hata, typeKey);
 }
 
@@ -6246,13 +6316,23 @@ function viewDiagramFromTab(typeKey) {
 // 計算タブの現場選択から対応するマスタを取得
 // =====================================================================
 function getMasterForCalcTab(typeKey) {
+  // 型固有のサイトドロップダウンを優先（固定型：85-site, 40-site …）
   const siteEl = document.getElementById(`${typeKey}-site`);
   const siteName = siteEl?.value || '';
-  if (!siteName) return getMaster('');
-  const site = getSites().find(s => s.name === siteName);
-  if (!site) return getMaster('');
-  const siteArr = getMaster(site.id);
-  return siteArr.length > 0 ? siteArr : getMaster('');
+  if (siteName) {
+    const site = getSites().find(s => s.name === siteName);
+    if (site) {
+      const siteArr = getMaster(site.id);
+      return siteArr.length > 0 ? siteArr : getMaster('');
+    }
+  }
+  // 動的タブなど型固有要素がない場合は global-site-sel にフォールバック
+  const globalSiteId = document.getElementById('global-site-sel')?.value || '';
+  if (globalSiteId) {
+    const siteArr = getMaster(globalSiteId);
+    return siteArr.length > 0 ? siteArr : getMaster('');
+  }
+  return getMaster('');
 }
 
 // =====================================================================
@@ -6284,6 +6364,8 @@ function showDiagram(hata, typeKey) {
     document.querySelector('.tab-btn.active').dataset.tab.replace('calc','') : '');
   const siteArr = tKey ? getMasterForCalcTab(tKey) : getMaster(_currentMasterSiteId);
   const manual = siteArr.find(r => String(r.hata) === String(hata))
+              || getMaster(_currentMasterSiteId).find(r => String(r.hata) === String(hata))
+              || getMaster(document.getElementById('global-site-sel')?.value||'').find(r => String(r.hata) === String(hata))
               || getMaster('').find(r => String(r.hata) === String(hata));
   const excel  = getExcelDiagram(hata);
   _currentDiagHata = hata;
@@ -6373,11 +6455,13 @@ function saveDiagToMaster() {
   const arr = getMasterForCalcTab(_currentDiagType).filter(r => String(r.hata) !== String(hata));
   arr.push(entry);
   arr.sort((a,b) => +a.hata - +b.hata);
-  // 現場対応：現在の計算タブの現場に保存
+  // 現場対応：現在の計算タブの現場に保存（動的タブはglobal-site-selをフォールバック）
   const tKey = _currentDiagType;
   const siteEl = document.getElementById(`${tKey}-site`);
   const siteName = siteEl?.value || '';
-  const site = getSites().find(s => s.name === siteName);
+  const globalSiteId = document.getElementById('global-site-sel')?.value || '';
+  const site = getSites().find(s => s.name === siteName)
+    || (globalSiteId ? getSites().find(s => s.id === globalSiteId) : null);
   saveMasterData(arr, site?.id || '');
 
   const badge = document.getElementById('saveBadge');
@@ -6403,10 +6487,6 @@ function applyMasterValues(typeKey, patternId) {
   const prefix = `${typeKey}${patternId}`;
   const isGrad = patternId === 'k' || patternId === 'ks';
 
-  // W・L・現況廃材をクリア（前回値が残らないように）
-  ['W','L','genW','genL'].forEach(f => {
-    setVal(`${prefix}-${f}`, '');
-  });
   // 桝寸法もクリア（特殊部パターンの場合）
   if (patternId === 'ns' || patternId === 'ks') {
     ['masH','masW','masL'].forEach(f => setVal(`${prefix}-${f}`, ''));
@@ -6514,8 +6594,6 @@ function showRestoreBtn(typeKey, patternId) {
   `;
   btn.innerHTML = `
     <span>📌 <strong>${patLabel}</strong> パターンを適用中（他のパターンは非表示）</span>
-    <button onclick="showAllPatterns('${typeKey}')"
-      style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
         color:var(--text2);padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;margin-left:10px;">
       全パターンを表示
     </button>
@@ -6678,6 +6756,7 @@ function populateSiteDropdowns() {
 }
 
 function onSiteChange(typeKey) {
+  try { if(typeof importFromRoadbedMasters==='function') importFromRoadbedMasters(true); } catch(e) {}
   // 現場切り替えで旗揚げマスタを現場ごとに持つ準備（今後の拡張用）
   // 現時点では選択値をそのまま使用
 }
@@ -6715,7 +6794,6 @@ function renderHistorySummary(filtered) {
   const el = document.getElementById('hist-summary');
   if (!el) return;
   if (filtered.length === 0) { el.innerHTML = ''; return; }
-  // 現場別集計
   const bysite = {};
   filtered.forEach(r => {
     const k = r.site || '（現場名なし）';
@@ -6735,11 +6813,11 @@ function renderHistorySummary(filtered) {
     keys.map(k => {
       const b = bysite[k];
       return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">🏗 ${k} <span style="font-size:11px;color:var(--text3);font-weight:400;">（${b.cnt}件）</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">\u{1f3d7} ${k} <span style="font-size:11px;color:var(--text3);font-weight:400;">（${b.cnt}件）</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">密粒AS</div><div style="color:var(--text);font-weight:700;">${b.asTon密粒.toFixed(2)} t</div></div>
-          ${b.asTon粗粒>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">粗粒AS</div><div style="color:var(--text);font-weight:700;">${b.asTon粗粒.toFixed(2)} t</div></div>`:''}
-          ${b.rmOrd>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">RM</div><div style="color:var(--text);font-weight:700;">${b.rmOrd.toFixed(2)} m³</div></div>`:''}
+          ${b.asTon粗粒>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">粗粒AS</div><div style="color:var(--text);font-weight:700;">${b.asTon粗粒.toFixed(2)} t</div></div>`:""}
+          ${b.rmOrd>0?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">RM</div><div style="color:var(--text);font-weight:700;">${b.rmOrd.toFixed(2)} m³</div></div>`:""}
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">RC-40</div><div style="color:var(--text);font-weight:700;">${b.rcOrd.toFixed(2)} m³</div></div>
           <div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:6px 10px;"><div style="color:var(--text3);font-size:10px;">砂+改良土</div><div style="color:var(--accent);font-weight:700;">${b.sandSoilSum.toFixed(2)} m³</div></div>
         </div>
@@ -6773,7 +6851,7 @@ function exportCSVData(h, filename) {
       r.sandOrd,
       r.sandSoilSum,
       r.author
-    ]);
+     ]);
   }
   const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
   const a = document.createElement('a');
@@ -6781,39 +6859,6 @@ function exportCSVData(h, filename) {
   a.download = filename;
   a.click();
 }
-
-initFirebase();
-updateMasterBadge();
-updateSiteBadge();
-renderMasterList();
-renderSiteList();
-renderPresetList();
-populateSiteDropdowns();
-updateHistSiteFilter();
-syncMasterSiteDropdown();
-initPresetSystem();
-initRoadbedForm();
-// 初期表示は計算シートタブ
-activateTab('calc');
 </script>
-
-<!-- 管理者ログインモーダル -->
-<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#1e2233;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
-    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#e2e8f0;">🔑 管理者ログイン</div>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:#8fa3bb;display:block;margin-bottom:4px;">メールアドレス</label>
-      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="管理者メールアドレス">
-    </div>
-    <div style="margin-bottom:18px;">
-      <label style="font-size:11px;color:#8fa3bb;display:block;margin-bottom:4px;">パスワード</label>
-      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="パスワード">
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ログイン</button>
-      <button onclick="closeFbModal()" style="padding:11px 16px;background:#252a3d;color:#e2e8f0;border:1px solid #363d5c;border-radius:8px;font-size:14px;cursor:pointer;">×</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
