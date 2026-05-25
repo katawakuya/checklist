@@ -1658,7 +1658,11 @@ function autoRegisterDefaultRoadbeds() {
         }
       }
     });
-    if (!changed) return; // 既に登録済み
+    // 路盤マスタがロードされたので動的タブのラベルを必ず更新
+    setTimeout(function() {
+      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+    }, 100);
+    if (!changed) return; // Firestoreへの書き込みは変更ありの場合のみ
     _fbDb.collection('masters').doc('roadbed_masters').set({
       data: existing, updatedAt: new Date().toISOString()
     }).then(function() {
@@ -1678,6 +1682,10 @@ function loadRoadbedForCurrentSite(siteId) {
   if (siteData) {
     localStorage.setItem('roadbed_masters', JSON.stringify(siteData));
     try { renderRoadbedMasterList(); } catch(e) {}
+    // 路盤マスタ更新後、動的タブのラベルも再描画
+    setTimeout(function() {
+      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+    }, 50);
     return;
   }
   if (!_fbDb) return;
@@ -1690,6 +1698,10 @@ function loadRoadbedForCurrentSite(siteId) {
           localStorage.setItem(localKey, JSON.stringify(all[siteId]));
           localStorage.setItem('roadbed_masters', JSON.stringify(all[siteId]));
           try { renderRoadbedMasterList(); } catch(e) {}
+          // 路盤マスタ更新後、動的タブのラベルも再描画
+          setTimeout(function() {
+            try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+          }, 50);
         } else if (!Array.isArray(all) && !all[siteId]) {
           // 新フォーマット：この現場のデータなし → 空にしない
           try { renderRoadbedMasterList(); } catch(e) {}
@@ -1716,6 +1728,10 @@ function fbSyncMasters(callback) {
     try { if(typeof updatePresetNameSiteSel==='function') updatePresetNameSiteSel(); } catch(e) {}
     try { if(typeof renderRoadbedMasterList==='function') renderRoadbedMasterList(); } catch(e) {}
     try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
+    // 全マスタロード完了後、動的タブのラベルを更新（非同期ロード完了後の反映）
+    setTimeout(function() {
+      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+    }, 200);
     if (callback) callback();
   }
   simpleKeys.forEach(function(k) {
@@ -3988,7 +4004,7 @@ function renderPresetTypeEditor() {
             const warnBar = differs
               ? `<div style="background:rgba(239,68,68,0.1);border-bottom:1px solid rgba(239,68,68,0.25);padding:7px 14px;font-size:11px;font-weight:700;color:var(--red);">⚠️ 仮復旧と現況路盤が異なります。「現況廃材」入力時に注意してください。</div>`
               : `<div style="background:rgba(34,197,94,0.07);border-bottom:1px solid rgba(34,197,94,0.2);padding:7px 14px;font-size:11px;color:var(--green);">✅ 仮復旧と現況・本復旧の路盤構成は同じです</div>`;
-            const rmS2 = t.rmSize||40; const rcS2 = t.rcSize||40;
+            const rmS2 = _resolveRmSize(t); const rcS2 = _resolveRcSize(t);
 
             // 仮復旧列：asLayers（仮復旧用）を使用
             const kariRows = [];
@@ -5068,6 +5084,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     <div class="input-grid">
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="${tid}-date" class="highlight" style="width:100%"></div>
       <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="${tid}-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
+      <input type="hidden" id="${tid}-siteid" value="${siteId}">
       <div class="field"><label>作業記録者</label><input type="text" id="${tid}-author" placeholder="氏名"></div>
       <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="viewDiagramFromDynTab('${tid}','${t.key}')">📐 図面を見る</button></div>
     </div>
@@ -5109,7 +5126,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <span style="font-size:11px;font-weight:700;color:${_rbDiff?'var(--orange)':'#a78bfa'};">${_rbDiff?'🔧 仮復旧':'🏗 路盤'}</span>
       <span style="font-size:11px;font-family:var(--mono);color:var(--text2);">
         AS:${((_asLayers||[]).reduce((s,a)=>s+(a.t||0),0))}mm
-        ${_kariRmMm>0?' RM-'+rmS+':'+_kariRmMm+'mm':''}
+        ${_kariRmMm>0?' '+(_rmIsCustom?_rmLabel:'RM-'+rmS)+':'+_kariRmMm+'mm':''}
         ${_kariRcMm>0?' RC-'+rcS+':'+_kariRcMm+'mm':''}
         <span style="color:#a78bfa;font-weight:700;">＝${totalH}mm</span>
       </span>
@@ -5577,8 +5594,8 @@ function renderDynTotal(tid, typeConf) {
   // RM/RC: TYPES[tid]の現モード値を使って条件判定・表示
   const _effRmH = (_effT2.rmH||0);
   const _effRcH = (_effT2.rcH||0);
-  const _effRmS = _effT2.rmSize || 40;
-  const _effRcS = _effT2.rcSize || 40;
+  const _effRmS = _resolveRmSize(_effT2);
+  const _effRcS = _resolveRcSize(_effT2);
   if (_effRmH > 0) html += add(`${getModeRmLabel(_effT2, tid, _effRmS)}合計`, s.rmOrd, 'm³', 'var(--green)');
   html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
   if (_effRmH > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
@@ -6505,6 +6522,12 @@ function viewDiagramFromTab(typeKey) {
 // 計算タブの現場選択から対応するマスタを取得
 // =====================================================================
 function getMasterForCalcTab(typeKey) {
+  // 動的タブ: 隠しフィールド dyntype_XXX-siteid からsiteIdを取得
+  const dynSiteIdEl = document.getElementById(`dyntype_${typeKey}-siteid`);
+  if (dynSiteIdEl && dynSiteIdEl.value) {
+    const siteArr = getMaster(dynSiteIdEl.value);
+    return siteArr.length > 0 ? siteArr : getMaster('');
+  }
   // 型固有のサイトドロップダウンを優先（固定型：85-site, 40-site …）
   const siteEl = document.getElementById(`${typeKey}-site`);
   const siteName = siteEl?.value || '';
@@ -6648,8 +6671,12 @@ function saveDiagToMaster() {
   const tKey = _currentDiagType;
   const siteEl = document.getElementById(`${tKey}-site`);
   const siteName = siteEl?.value || '';
+  // 動的タブ: 隠しフィールドからsiteIdを直接取得
+  const dynSiteIdEl = document.getElementById(`dyntype_${tKey}-siteid`);
+  const dynSiteId = dynSiteIdEl?.value || '';
   const globalSiteId = document.getElementById('global-site-sel')?.value || '';
   const site = getSites().find(s => s.name === siteName)
+    || (dynSiteId ? getSites().find(s => s.id === dynSiteId) : null)
     || (globalSiteId ? getSites().find(s => s.id === globalSiteId) : null);
   saveMasterData(arr, site?.id || '');
 
