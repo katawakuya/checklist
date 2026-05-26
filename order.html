@@ -1373,7 +1373,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="actions" style="margin-bottom:16px;">
       <button class="btn btn-ghost" onclick="exportCSV()">📤 CSV（全件）</button>
       <button class="btn btn-ghost" onclick="exportCSVFiltered()">📤 CSV（絞込中）</button>
-      <button class="btn btn-danger" onclick="clearAllHistory()">🗑 全履歴削除</button>
+      <button class="btn btn-danger" id="clearHistBtn" onclick="clearAllHistory()" style="display:none;">🗑 全履歴削除</button>
     </div>
     <div class="history-wrap" id="historyContainer">
       <div class="empty-state"><div class="big">📭</div>履歴はまだありません</div>
@@ -1716,23 +1716,25 @@ function loadRoadbedForCurrentSite(siteId) {
 function fbSyncMasters(callback) {
   if (!_fbDb) { if(callback) callback(); return; }
   var simpleKeys = ['site_master', 'road_presets'];
-  var done = 0, total = simpleKeys.length + 2; // +2: hata_master + roadbed_masters
+  var done = 0, total = simpleKeys.length + 1; // +1: roadbed_masters (hata は別関数)
   function finish() {
     done++;
     if (done < total) return;
-    try { loadSites(); } catch(e) {}
-    try { if(typeof populateSiteDropdowns==='function') populateSiteDropdowns(); } catch(e) {}
-    try { if(typeof renderSiteList==='function') renderSiteList(); } catch(e) {}
-    try { if(typeof syncMasterSiteDropdown==='function') syncMasterSiteDropdown(); } catch(e) {}
-    try { if(typeof syncRmFormSiteSel==='function') syncRmFormSiteSel(); } catch(e) {}
-    try { if(typeof updatePresetNameSiteSel==='function') updatePresetNameSiteSel(); } catch(e) {}
-    try { if(typeof renderRoadbedMasterList==='function') renderRoadbedMasterList(); } catch(e) {}
-    try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
-    // 全マスタロード完了後、動的タブのラベルを更新（非同期ロード完了後の反映）
-    setTimeout(function() {
-      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-    }, 200);
-    if (callback) callback();
+    // hata_master を現場別ドキュメントで読み込んでから UI 更新
+    fbSyncHataMasters(function() {
+      try { loadSites(); } catch(e) {}
+      try { if(typeof populateSiteDropdowns==='function') populateSiteDropdowns(); } catch(e) {}
+      try { if(typeof renderSiteList==='function') renderSiteList(); } catch(e) {}
+      try { if(typeof syncMasterSiteDropdown==='function') syncMasterSiteDropdown(); } catch(e) {}
+      try { if(typeof syncRmFormSiteSel==='function') syncRmFormSiteSel(); } catch(e) {}
+      try { if(typeof updatePresetNameSiteSel==='function') updatePresetNameSiteSel(); } catch(e) {}
+      try { if(typeof renderRoadbedMasterList==='function') renderRoadbedMasterList(); } catch(e) {}
+      try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
+      setTimeout(function() {
+        try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+      }, 200);
+      if (callback) callback();
+    });
   }
   simpleKeys.forEach(function(k) {
     _fbDb.collection('masters').doc(k).get()
@@ -1764,32 +1766,92 @@ function fbSyncMasters(callback) {
       }
       finish();
     }).catch(finish);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 旗揚げマスタを現場別ドキュメントで Firestore から読み込む
+// 旧フォーマット（hata_master 単一ドキュメント）からの自動移行も行う
+// ─────────────────────────────────────────────────────────────────────────────
+function fbSyncHataMasters(callback) {
+  if (!_fbDb) { if (callback) callback(); return; }
+  var sites = [];
+  try { sites = JSON.parse(localStorage.getItem('site_master') || '[]'); } catch(e) {}
+  // 旧ドキュメント + hata_master_global + 現場別ドキュメント
+  var total = 2 + sites.length;
+  var done  = 0;
+  function finish() { done++; if (done >= total && callback) callback(); }
+
+  // ── 旧フォーマット（hata_master）からの移行 ──────────────────────────────
   _fbDb.collection('masters').doc('hata_master').get()
     .then(function(doc) {
-      if (doc.exists) {
-        var d = doc.data();
-        if (d && d.data) {
-          var allHata = d.data;
-          // ローカルに既存データがある場合は上書きしない（Firebase保存失敗時の損失防止）
-          if (allHata._global && allHata._global.length > 0) {
-            var localGlobal = localStorage.getItem('hata_master');
-            if (!localGlobal || JSON.parse(localGlobal||'[]').length === 0)
-              localStorage.setItem('hata_master', JSON.stringify(allHata._global));
+      if (doc.exists && doc.data().data) {
+        var allHata = doc.data().data;
+        var needsMigration = false;
+        if (allHata._global && allHata._global.length > 0) {
+          var localGlobal = localStorage.getItem('hata_master');
+          if (!localGlobal || JSON.parse(localGlobal||'[]').length === 0) {
+            localStorage.setItem('hata_master', JSON.stringify(allHata._global));
+            needsMigration = true;
           }
-          Object.keys(allHata).forEach(function(k) {
-            if (k !== '_global') {
-              var siteArr = allHata[k];
-              if (siteArr && siteArr.length > 0) {
-                var localSite = localStorage.getItem('hata_master_' + k);
-                if (!localSite || JSON.parse(localSite||'[]').length === 0)
-                  localStorage.setItem('hata_master_' + k, JSON.stringify(siteArr));
-              }
+        }
+        Object.keys(allHata).forEach(function(k) {
+          if (k === '_global') return;
+          var siteArr = allHata[k];
+          if (siteArr && siteArr.length > 0) {
+            var localSite = localStorage.getItem('hata_master_' + k);
+            if (!localSite || JSON.parse(localSite||'[]').length === 0) {
+              localStorage.setItem('hata_master_' + k, JSON.stringify(siteArr));
+              needsMigration = true;
             }
-          });
+          }
+        });
+        // 旧データを新フォーマットへ移行保存（一回だけ）
+        if (needsMigration) {
+          console.log('[FB] hata_master 旧フォーマット → 現場別ドキュメントへ移行');
+          setTimeout(fbSaveAllHataMasters, 800);
         }
       }
       finish();
     }).catch(finish);
+
+  // ── 新フォーマット: グローバル（現場未割当） ─────────────────────────────
+  _fbDb.collection('masters').doc('hata_master_global').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        var arr = doc.data().data;
+        if (arr.length > 0) {
+          var localArr = [];
+          try { localArr = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
+          // 新フォーマット優先（件数が同等以上なら上書き）
+          if (arr.length >= localArr.length) {
+            localStorage.setItem('hata_master', JSON.stringify(arr));
+          }
+        }
+      }
+      finish();
+    }).catch(finish);
+
+  // ── 新フォーマット: 現場別 ────────────────────────────────────────────────
+  if (sites.length === 0) {
+    // 現場なし → total=2 なので上の 2 つで完結
+    return;
+  }
+  sites.forEach(function(s) {
+    _fbDb.collection('masters').doc('hata_master_' + s.id).get()
+      .then(function(doc) {
+        if (doc.exists && doc.data().data) {
+          var arr = doc.data().data;
+          if (arr.length > 0) {
+            var localArr = [];
+            try { localArr = JSON.parse(localStorage.getItem('hata_master_' + s.id)||'[]'); } catch(e) {}
+            if (arr.length >= localArr.length) {
+              localStorage.setItem('hata_master_' + s.id, JSON.stringify(arr));
+            }
+          }
+        }
+        finish();
+      }).catch(finish);
+  });
 }
 
 function fbSaveMaster(key, data) {
@@ -1797,7 +1859,7 @@ function fbSaveMaster(key, data) {
   var _payload = { data: data, updatedAt: new Date().toISOString() };
   try {
     var _sz = new Blob([JSON.stringify(_payload)]).size;
-    if (_sz > 950000) {
+    if (_sz > 990000) {  // 1ドキュメント1MB制限（現場別なので余裕）
       console.warn('[FB] ' + key + ': ' + Math.round(_sz/1024) + 'KB — Firestore上限超過のため保存スキップ');
       return;
     }
@@ -1808,15 +1870,19 @@ function fbSaveMaster(key, data) {
 
 function fbSaveAllHataMasters() {
   if (!_fbDb || !_isAdmin) return;
-  var allHata = { _global: [] };
-  try { allHata._global = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e){}
+  // グローバル（現場未割当）
+  var globalArr = [];
+  try { globalArr = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
+  fbSaveMaster('hata_master_global', globalArr);
+  // 現場別（1現場 = 1ドキュメント → 1MB制限を回避）
   try {
     var sites = JSON.parse(localStorage.getItem('site_master')||'[]');
-    sites.forEach(function(s){
-      try { allHata[s.id] = JSON.parse(localStorage.getItem('hata_master_'+s.id)||'[]'); } catch(e){}
+    sites.forEach(function(s) {
+      var siteArr = [];
+      try { siteArr = JSON.parse(localStorage.getItem('hata_master_'+s.id)||'[]'); } catch(e) {}
+      fbSaveMaster('hata_master_' + s.id, siteArr);
     });
   } catch(e) {}
-  fbSaveMaster('hata_master', allHata);
 }
 
 function fbSaveRecord(collectionName, record) {
@@ -1844,15 +1910,21 @@ function migrateToFirebase() {
     }
   } catch(e) { results.push('現場マスタ: エラー ' + e); }
   try {
-    var allHata = { _global: [] };
-    allHata._global = JSON.parse(localStorage.getItem('hata_master') || '[]');
+    var totalHata = 0;
+    // グローバル
+    var globalHata = JSON.parse(localStorage.getItem('hata_master') || '[]');
+    totalHata += globalHata.length;
+    fbSaveMaster('hata_master_global', globalHata);
+    // 現場別（1現場1ドキュメント）
     var sites2 = JSON.parse(localStorage.getItem('site_master') || '[]');
-    var totalHata = allHata._global.length;
     sites2.forEach(function(s) {
-      try { var sh = JSON.parse(localStorage.getItem('hata_master_' + s.id) || '[]'); if (sh.length > 0) { allHata[s.id] = sh; totalHata += sh.length; } } catch(e) {}
+      try {
+        var sh = JSON.parse(localStorage.getItem('hata_master_' + s.id) || '[]');
+        totalHata += sh.length;
+        fbSaveMaster('hata_master_' + s.id, sh);
+      } catch(e) {}
     });
-    _fbDb.collection('masters').doc('hata_master').set({ data: allHata, updatedAt: new Date().toISOString() });
-    results.push('旗揚げマスタ: ' + totalHata + '件');
+    results.push('旗揚げマスタ: ' + totalHata + '件（現場別ドキュメントで保存）');
   } catch(e) { results.push('旗揚げマスタ: エラー ' + e); }
   try {
     var presets = JSON.parse(localStorage.getItem('road_presets') || '[]');
@@ -1916,6 +1988,7 @@ function updateAdminBadge() {
   if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
   if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
   var mb=document.getElementById('migrateBtn'); if(mb) mb.style.display=_isAdmin?'':'none';
+  var chb=document.getElementById('clearHistBtn'); if(chb) chb.style.display=_isAdmin?'':'none';
 }
 // =====================================================
 // Firebase END
@@ -2822,15 +2895,28 @@ function saveRecord(typeKey) {
   };
 
   const h = getHistory();
-  h.push(record);
-  h.sort((a,b) => a.date < b.date ? -1 : 1);
-  saveHistory(h);
-  renderHistory();
-
-  const badge = document.getElementById('saveBadge');
-  badge.style.display = 'block';
-  setTimeout(() => badge.style.display = 'none', 2500);
-  alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${site ? ' / ' + site : ''}`);
+  // 重複チェック：同日付・同旗揚げ・同現場
+  const dupIdx = h.findIndex(r =>
+    r.date === date && String(r.hata) === String(hata) && (r.site||'') === (site||''));
+  function _doSave(replace) {
+    if (replace) h.splice(h.findIndex(r =>
+      r.date === date && String(r.hata) === String(hata) && (r.site||'') === (site||'')), 1);
+    h.push(record);
+    saveHistory(_sortHistory(h));
+    renderHistory();
+    const badge = document.getElementById('saveBadge');
+    badge.style.display = 'block';
+    setTimeout(() => badge.style.display = 'none', 2500);
+  }
+  if (dupIdx >= 0) {
+    showDupModal(h[dupIdx], record, function(choice) {
+      if (choice === 'cancel') return;
+      _doSave(choice === 'replace');
+    });
+  } else {
+    _doSave(false);
+    alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${site ? ' / ' + site : ''}`);
+  }
 }
 
 function getResults(typeKey) {
@@ -2849,6 +2935,7 @@ function getResults(typeKey) {
 }
 
 function deleteRecord(id) {
+  if (!_isAdmin) { alert('削除は管理者のみ操作できます。'); return; }
   if (!confirm('この記録を削除しますか？')) return;
   const h = getHistory().filter(r => r.id !== id);
   saveHistory(h);
@@ -2856,6 +2943,7 @@ function deleteRecord(id) {
 }
 
 function clearAllHistory() {
+  if (!_isAdmin) { alert('全履歴削除は管理者のみ操作できます。'); return; }
   if (!confirm('全ての発注履歴を削除しますか？')) return;
   saveHistory([]);
   renderHistory();
@@ -2916,7 +3004,7 @@ function renderHistory() {
       <td class="num">${fmt(r.sandOrd)}</td>
       <td class="num">${fmt(r.sandSoilSum)}</td>
       <td>${r.author}</td>
-      <td><button class="del-btn" onclick="deleteRecord(${r.id})">✕</button></td>
+      <td>${_isAdmin ? `<button class="del-btn" onclick="deleteRecord(${r.id})">✕</button>` : ''}</td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -5661,14 +5749,29 @@ function saveDynRecord(tid, typeKey) {
   };
 
   const h = getHistory();
-  h.push(record);
-  h.sort((a,b) => a.date < b.date ? -1 : 1);
-  saveHistory(h);
-  renderHistory();
-  const badge = document.getElementById('saveBadge');
-  badge.style.display = 'block';
-  setTimeout(() => badge.style.display = 'none', 2500);
-  alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${siteName?' / '+siteName:''}`);
+  // 重複チェック：同日付・同旗揚げ・同現場
+  const _dSite = siteName || '';
+  const dupIdx = h.findIndex(r =>
+    r.date === date && String(r.hata) === String(hata) && (r.site||'') === _dSite);
+  function _doSaveDyn(replace) {
+    if (replace) h.splice(h.findIndex(r =>
+      r.date === date && String(r.hata) === String(hata) && (r.site||'') === _dSite), 1);
+    h.push(record);
+    saveHistory(_sortHistory(h));
+    renderHistory();
+    const badge = document.getElementById('saveBadge');
+    badge.style.display = 'block';
+    setTimeout(() => badge.style.display = 'none', 2500);
+  }
+  if (dupIdx >= 0) {
+    showDupModal(h[dupIdx], record, function(choice) {
+      if (choice === 'cancel') return;
+      _doSaveDyn(choice === 'replace');
+    });
+  } else {
+    _doSaveDyn(false);
+    alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${siteName?' / '+siteName:''}`);
+  }
 }
 
 function resetDynForm(tid) {
@@ -5827,6 +5930,7 @@ function clearMasterForm() {
 }
 
 function deleteMaster(hata) {
+  if (!_isAdmin) { alert('削除は管理者のみ操作できます。'); return; }
   if (!confirm(`旗揚げ番号 ${hata} を削除しますか？`)) return;
   saveMasterData(getMaster().filter(r => String(r.hata) !== String(hata)));
   renderMasterList();
@@ -5973,7 +6077,7 @@ function renderMasterCards(arr) {
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="showDiagram('${r.hata}')">📐 図面</button>
         <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="editMaster('${r.hata}')">✏️ 編集</button>
-        <button class="del-btn" onclick="deleteMaster('${r.hata}')">✕</button>
+        ${_isAdmin ? `<button class="del-btn" onclick="deleteMaster('${r.hata}')">✕</button>` : ''}
       </div>
     </div></div>`;
   }
@@ -7082,6 +7186,72 @@ function exportCSVData(h, filename) {
   a.download = filename;
   a.click()
 }
+
+// =====================================================================
+// 重複記録ダイアログ
+// =====================================================================
+var _dupResolve = null;
+
+function _sortHistory(h) {
+  // 日付昇順、同日は記録時刻(id = Date.now())昇順
+  h.sort(function(a, b) {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return  1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  return h;
+}
+
+function showDupModal(oldRec, newRec, callback) {
+  _dupResolve = callback;
+  var fmt2 = function(r) {
+    return r.date + ' ／ 旗揚げ <strong>' + r.hata + '</strong>'
+      + (r.site   ? ' ／ ' + r.site   : '')
+      + (r.author ? ' ／ ' + r.author : '')
+      + ' ／ ' + (r.typeLabel || r.typeKey);
+  };
+  document.getElementById('dupModalMsg').innerHTML =
+    '<span style="color:var(--text3);font-size:11px;">既存</span><br>' + fmt2(oldRec) +
+    '<br><span style="color:var(--text3);font-size:11px;margin-top:6px;display:inline-block;">新規</span><br>' + fmt2(newRec);
+  var modal = document.getElementById('dupModal');
+  modal.style.display = 'flex';
+}
+
+function resolveDup(choice) {
+  document.getElementById('dupModal').style.display = 'none';
+  if (_dupResolve) { _dupResolve(choice); _dupResolve = null; }
+}
+
+// モーダル背景クリックでキャンセル
+document.addEventListener('click', function(e) {
+  var modal = document.getElementById('dupModal');
+  if (modal && modal.style.display === 'flex' && e.target === modal) resolveDup('cancel');
+});
+
 </script>
+
+<!-- ================================================================
+     重複記録ダイアログ
+     ================================================================ -->
+<div id="dupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px 22px;max-width:400px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+    <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:var(--text1);">⚠️ 同じ記録が既にあります</div>
+    <div id="dupModalMsg" style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.75;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;"></div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button onclick="resolveDup('both')"
+        style="padding:11px 14px;border-radius:8px;border:1px solid rgba(79,142,247,0.5);background:rgba(79,142,247,0.12);color:var(--accent);font-weight:700;cursor:pointer;font-family:var(--sans);font-size:13px;">
+        📋 両方残す（どちらも保存）
+      </button>
+      <button onclick="resolveDup('replace')"
+        style="padding:11px 14px;border-radius:8px;border:1px solid rgba(239,68,68,0.45);background:rgba(239,68,68,0.1);color:var(--red);font-weight:700;cursor:pointer;font-family:var(--sans);font-size:13px;">
+        🔄 新しいもので上書きする
+      </button>
+      <button onclick="resolveDup('cancel')"
+        style="padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--sans);font-size:13px;">
+        ✕ キャンセル（記録しない）
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
