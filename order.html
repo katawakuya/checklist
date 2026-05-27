@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1117">
-<title>現場資材発注計算書 v4.1</title>
+<title>現場資材発注計算書 v4.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
@@ -1658,17 +1658,14 @@ function autoRegisterDefaultRoadbeds() {
         }
       }
     });
-    // 路盤マスタがロードされたので動的タブのラベルを必ず更新
-    setTimeout(function() {
-      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-    }, 100);
+    // 常に localStorage を最新にしてラベルを再描画
+    localStorage.setItem('roadbed_masters', JSON.stringify(existing));
+    try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
     if (!changed) return; // Firestoreへの書き込みは変更ありの場合のみ
     _fbDb.collection('masters').doc('roadbed_masters').set({
       data: existing, updatedAt: new Date().toISOString()
     }).then(function() {
-      localStorage.setItem('roadbed_masters', JSON.stringify(existing));
       try { renderRoadbedMasterList(); } catch(e) {}
-      // 動的型パネルを再描画して更新されたラベルを即時反映
       try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
       console.log('[FB] 小田原扇町計画 路盤マスタ を自動登録/更新しました');
     }).catch(function(e){ console.warn('[FB] autoRegister err:', e); });
@@ -1682,10 +1679,7 @@ function loadRoadbedForCurrentSite(siteId) {
   if (siteData) {
     localStorage.setItem('roadbed_masters', JSON.stringify(siteData));
     try { renderRoadbedMasterList(); } catch(e) {}
-    // 路盤マスタ更新後、動的タブのラベルも再描画
-    setTimeout(function() {
-      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-    }, 50);
+    try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
     return;
   }
   if (!_fbDb) return;
@@ -1698,10 +1692,7 @@ function loadRoadbedForCurrentSite(siteId) {
           localStorage.setItem(localKey, JSON.stringify(all[siteId]));
           localStorage.setItem('roadbed_masters', JSON.stringify(all[siteId]));
           try { renderRoadbedMasterList(); } catch(e) {}
-          // 路盤マスタ更新後、動的タブのラベルも再描画
-          setTimeout(function() {
-            try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-          }, 50);
+          try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
         } else if (!Array.isArray(all) && !all[siteId]) {
           // 新フォーマット：この現場のデータなし → 空にしない
           try { renderRoadbedMasterList(); } catch(e) {}
@@ -1730,9 +1721,8 @@ function fbSyncMasters(callback) {
       try { if(typeof updatePresetNameSiteSel==='function') updatePresetNameSiteSel(); } catch(e) {}
       try { if(typeof renderRoadbedMasterList==='function') renderRoadbedMasterList(); } catch(e) {}
       try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
-      setTimeout(function() {
-        try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-      }, 200);
+      // roadbed_masters は既に localStorage に書き込み済みなので直接ラベルを更新
+      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
       if (callback) callback();
     });
   }
@@ -2403,6 +2393,10 @@ var _RB_LABEL_OVERRIDES = {
     kariRmLayers: '既設路盤',
     honRmLayers:  '既設路盤',
   },
+  'rm_odawara_no1to4': {
+    kariRmLayers: 't=250mm',
+    honRmLayers:  't=250mm',
+  },
 };
 
 // ── 路盤ラベル動的生成ヘルパー ──────────────────────────────────────
@@ -2429,113 +2423,111 @@ function _resolveLayersStr(t, field) {
   if (!t) return undefined;
   var rmKey = (t.key || '').replace(/^type_import_/, '');
   // ────────────────────────────────────────────────────────────
-  // 最優先：ハードコードオーバーライドテーブル
-  // （type_import_ プレフィックスありの場合のみ適用し、
-  //   localStorage/Firestore 非同期競合・標準値上書きを回避）
-  if (rmKey && rmKey !== (t.key || '')) {
+  // 最優先：rmKey が判明している場合はオーバーライドテーブルを即確認
+  if (rmKey) {
     var _ov = (typeof _RB_LABEL_OVERRIDES !== 'undefined') && _RB_LABEL_OVERRIDES[rmKey];
-    if (_ov && _ov[field]) {
-      return _ov[field];
-    }
+    if (_ov && _ov[field]) return _ov[field];
   }
   // ────────────────────────────────────────────────────────────
   var v = t[field];
   // 空文字でない場合はそのまま返す
   if (v !== undefined && v !== '') return v;
-  // type_import_ キーを持つ型は路盤マスタから逆引き
-  if (rmKey && rmKey !== (t.key || '')) {
-    try {
-      var _allMasters = getRoadbedMasters();
-      var rm = _allMasters.find(function(r){ return r.key === rmKey; });
-      // exact key 失敗時: kariRmH/kariRcH/kariTotalH で高さ一致マスタを検索
-      if (!rm) {
-        var _rmH  = t.rmH    != null ? t.rmH    : (t.rmSize != null ? 0 : undefined);
-        var _rcH  = t.rcH    != null ? t.rcH    : undefined;
-        var _totH = t.totalH != null ? t.totalH : undefined;
-        rm = _allMasters.find(function(m) {
-          if (m[field] === undefined || m[field] === '') return false;
-          var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
-          var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
-          var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
-          var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
-          var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
-          var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
-          return rmMatch && rcMatch && totMatch;
-        });
+  // key が空でも必ず高さマッチングを実行（Firestoreから来たキーなし型対応）
+  try {
+    var _allMasters = getRoadbedMasters();
+    // ① rmKey がある場合はキー完全一致を優先
+    var rm = rmKey ? _allMasters.find(function(r){ return r.key === rmKey; }) : null;
+    // ② 一致なし → kariRmH / kariRcH / kariTotalH による高さマッチング
+    if (!rm) {
+      var _rmH  = t.rmH    != null ? t.rmH    : (t.rmSize != null ? 0 : undefined);
+      var _rcH  = t.rcH    != null ? t.rcH    : undefined;
+      var _totH = t.totalH != null ? t.totalH : undefined;
+      rm = _allMasters.find(function(m) {
+        if (m[field] === undefined || m[field] === '') return false;
+        var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
+        var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
+        var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
+        var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
+        var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
+        var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
+        return rmMatch && rcMatch && totMatch;
+      });
+    }
+    if (rm) {
+      // ③ 高さ一致マスタのキーでオーバーライドテーブルを再確認（NO5: 既設路盤 等）
+      if (rm.key) {
+        var _rmOv = (typeof _RB_LABEL_OVERRIDES !== 'undefined') && _RB_LABEL_OVERRIDES[rm.key];
+        if (_rmOv && _rmOv[field]) return _rmOv[field];
       }
-      if (rm) {
-        // マスタに非空のフィールドがあれば使用
-        if (rm[field] !== undefined && rm[field] !== '') return rm[field];
-        // kariRbLayers/honRbLayers からフリー層名を抽出
-        var _side = field.indexOf('kari') === 0 ? 'kari' : 'hon';
-        var _isRm = field.indexOf('Rm') !== -1;
-        var _rbLayers = rm[_side + 'RbLayers'] || [];
-        var _filterFn = _isRm
-          ? function(r){ var s = r.subcat || r.cat || ''; return s === 'rm' || s === 'rmfree' || String(s).indexOf('RM') === 0; }
-          : function(r){ var s = r.subcat || r.cat || ''; return s === 'rc' || s === 'rcfree' || String(s).indexOf('RC') === 0; };
-        var _matching = _rbLayers.filter(_filterFn);
-        var _free = _matching.find(function(r){
-          return (r.cat||'').indexOf('free') >= 0 || (r.subcat||'').indexOf('free') >= 0;
-        });
-        if (_free && _free.name) return _free.name;
-      }
-    } catch(e) { console.warn('[RB] _resolveLayersStr error:', e); }
-  }
+      // ④ マスタの field 値を使用
+      if (rm[field] !== undefined && rm[field] !== '') return rm[field];
+      // ⑤ kariRbLayers/honRbLayers からフリー層名を抽出
+      var _side = field.indexOf('kari') === 0 ? 'kari' : 'hon';
+      var _isRm = field.indexOf('Rm') !== -1;
+      var _rbLayers = rm[_side + 'RbLayers'] || [];
+      var _filterFn = _isRm
+        ? function(r){ var s = r.subcat || r.cat || ''; return s === 'rm' || s === 'rmfree' || String(s).indexOf('RM') === 0; }
+        : function(r){ var s = r.subcat || r.cat || ''; return s === 'rc' || s === 'rcfree' || String(s).indexOf('RC') === 0; };
+      var _matching = _rbLayers.filter(_filterFn);
+      var _free = _matching.find(function(r){
+        return (r.cat||'').indexOf('free') >= 0 || (r.subcat||'').indexOf('free') >= 0;
+      });
+      if (_free && _free.name) return _free.name;
+    }
+  } catch(e) { console.warn('[RB] _resolveLayersStr error:', e); }
   return v; // 空文字列 / undefined → 標準ラベル
 }
 // 型オブジェクトから kariRmSize を動的解決（_resolveLayersStr と同様の height-match）
 function _resolveRmSize(t) {
   if (!t) return 40;
   var rmKey = (t.key || '').replace(/^type_import_/, '');
-  if (rmKey && rmKey !== (t.key || '')) {
-    try {
-      var _allMasters = getRoadbedMasters();
-      var rm = _allMasters.find(function(r){ return r.key === rmKey; });
-      if (!rm) {
-        var _rmH  = t.rmH    != null ? t.rmH    : undefined;
-        var _rcH  = t.rcH    != null ? t.rcH    : undefined;
-        var _totH = t.totalH != null ? t.totalH : undefined;
-        rm = _allMasters.find(function(m) {
-          if (m.kariRmSize == null) return false;
-          var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
-          var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
-          var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
-          var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
-          var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
-          var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
-          return rmMatch && rcMatch && totMatch;
-        });
-      }
-      if (rm && rm.kariRmSize != null) return rm.kariRmSize;
-    } catch(e) {}
-  }
+  // key が空でも必ず高さマッチングを実行
+  try {
+    var _allMasters = getRoadbedMasters();
+    var rm = rmKey ? _allMasters.find(function(r){ return r.key === rmKey; }) : null;
+    if (!rm) {
+      var _rmH  = t.rmH    != null ? t.rmH    : undefined;
+      var _rcH  = t.rcH    != null ? t.rcH    : undefined;
+      var _totH = t.totalH != null ? t.totalH : undefined;
+      rm = _allMasters.find(function(m) {
+        if (m.kariRmSize == null) return false;
+        var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
+        var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
+        var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
+        var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
+        var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
+        var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
+        return rmMatch && rcMatch && totMatch;
+      });
+    }
+    if (rm && rm.kariRmSize != null) return rm.kariRmSize;
+  } catch(e) {}
   return t.rmSize || 40;
 }
 function _resolveRcSize(t) {
   if (!t) return 40;
   var rmKey = (t.key || '').replace(/^type_import_/, '');
-  if (rmKey && rmKey !== (t.key || '')) {
-    try {
-      var _allMasters = getRoadbedMasters();
-      var rm = _allMasters.find(function(r){ return r.key === rmKey; });
-      if (!rm) {
-        var _rmH  = t.rmH    != null ? t.rmH    : undefined;
-        var _rcH  = t.rcH    != null ? t.rcH    : undefined;
-        var _totH = t.totalH != null ? t.totalH : undefined;
-        rm = _allMasters.find(function(m) {
-          if (m.kariRcSize == null) return false;
-          var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
-          var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
-          var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
-          var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
-          var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
-          var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
-          return rmMatch && rcMatch && totMatch;
-        });
-      }
-      if (rm && rm.kariRcSize != null) return rm.kariRcSize;
-    } catch(e) {}
-  }
+  // key が空でも必ず高さマッチングを実行
+  try {
+    var _allMasters = getRoadbedMasters();
+    var rm = rmKey ? _allMasters.find(function(r){ return r.key === rmKey; }) : null;
+    if (!rm) {
+      var _rmH  = t.rmH    != null ? t.rmH    : undefined;
+      var _rcH  = t.rcH    != null ? t.rcH    : undefined;
+      var _totH = t.totalH != null ? t.totalH : undefined;
+      rm = _allMasters.find(function(m) {
+        if (m.kariRcSize == null) return false;
+        var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
+        var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
+        var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
+        var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
+        var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
+        var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
+        return rmMatch && rcMatch && totMatch;
+      });
+    }
+    if (rm && rm.kariRcSize != null) return rm.kariRcSize;
+  } catch(e) {}
   return t.rcSize || 40;
 }
 // typeConf と現在モードから RM/RC ラベルを返す
@@ -3219,6 +3211,31 @@ const ROADBED_MASTER_DEFAULTS = [
     honRmSize: 40, honRmH: 0, honRmLayers: '',
     honRcSize: 40, honRcH: 0.100, honRcLayers: 't=100mm',
     honTotalH: 0.140,
+    updatedAt: '2026-05-15', isDefault: true,
+  },
+  // ── 小田原扇町計画 専用（ラベル解決フォールバック用） ──────────────────
+  {
+    key: 'rm_odawara_no1to4', label: '小田原扇町計画NO1〜NO4', color: '#4f8ef7',
+    kariAsLayers: [{ name: 'As表層工（密粒度）', t: 50 }],
+    kariRmSize: 30, kariRmH: 0.25, kariRmLayers: 't=250mm',
+    kariRcSize: 40, kariRcH: 0, kariRcLayers: '', kariTotalH: 0.30,
+    honAsLayers:  [{ name: 'As表層工（密粒度）', t: 50 }],
+    honRmSize: 30,  honRmH: 0.25,  honRmLayers: 't=250mm',
+    honRcSize: 40,  honRcH: 0,     honRcLayers: '', honTotalH: 0.30,
+    updatedAt: '2026-05-15', isDefault: true,
+  },
+  {
+    key: 'rm_odawara_no5', label: '小田原扇町計画NO5+2.50', color: '#f59e0b',
+    kariAsLayers: [
+      { name: '密粒改良1', t: 50 }, { name: '粗粒度AS', t: 50 }, { name: '瀝青安定処理', t: 100 }
+    ],
+    kariRmSize: 40, kariRmH: 0.3, kariRmLayers: '既設路盤',
+    kariRcSize: 40, kariRcH: 0, kariRcLayers: '', kariTotalH: 0.50,
+    honAsLayers: [
+      { name: '密粒改良1', t: 50 }, { name: '粗粒度AS', t: 50 }, { name: '瀝青安定処理', t: 100 }
+    ],
+    honRmSize: 40, honRmH: 0.3, honRmLayers: '既設路盤',
+    honRcSize: 40, honRcH: 0, honRcLayers: '', honTotalH: 0.50,
     updatedAt: '2026-05-15', isDefault: true,
   },
 ];
@@ -3958,8 +3975,10 @@ function importFromRoadbedMasters(silent) {
       genkyoRM: r.honRmH || 0, genkyoRC: r.honRcH || 0,
       kariRM_layers: kariRM, kariRC_layers: kariRC,
       honRM_layers:  honRM,  honRC_layers:  honRC,
-      kariRmLayers: r.kariRmLayers || '', kariRcLayers: r.kariRcLayers || '',
-      honRmLayers:  r.honRmLayers  || '', honRcLayers:  r.honRcLayers  || '',
+      kariRmLayers: (_RB_LABEL_OVERRIDES[r.key]?.kariRmLayers) || r.kariRmLayers || '',
+      kariRcLayers: (_RB_LABEL_OVERRIDES[r.key]?.kariRcLayers) || r.kariRcLayers || '',
+      honRmLayers:  (_RB_LABEL_OVERRIDES[r.key]?.honRmLayers)  || r.honRmLayers  || '',
+      honRcLayers:  (_RB_LABEL_OVERRIDES[r.key]?.honRcLayers)  || r.honRcLayers  || '',
       extraMaterials: [
         {name:'', unitH:0, calcH:0, unit:'m³', includeInTotal:true, memo:''},
         {name:'', unitH:0, calcH:0, unit:'m³', includeInTotal:true, memo:''},
@@ -4096,10 +4115,14 @@ function renderPresetTypeEditor() {
 
             // 仮復旧列：asLayers（仮復旧用）を使用
             const kariRows = [];
-            asl2.forEach(a => {
+            const _tackD  = (t.asLayers||[]).find(a=>a.role==='tack'  && a.preset);
+            const _primeD = (t.asLayers||[]).find(a=>a.role==='prime' && a.preset);
+            asl2.forEach((a, _di) => {
               const nm = (a.custom && a.custom!=='') ? a.custom : (getAsLayerName(a)||'AS');
               kariRows.push({label:nm, val:'t='+a.t+'mm', c:'rgba(79,142,247,0.85)'});
+              if (_di < asl2.length-1 && _tackD) kariRows.push({label:_tackD.preset, val:'散布', c:'var(--text3)'});
             });
+            if (_primeD) kariRows.push({label:_primeD.preset, val:'散布', c:'var(--text3)'});
             if (kariRm>0) kariRows.push({label:'RM-'+rmS2, val:buildLayerStr(t.kariRM_layers,t.rmH), c:'var(--green)', b:true});
             kariRows.push({label:'RC-'+rcS2, val:buildLayerStr(t.kariRC_layers,t.rcH), c:'var(--green)', b:true});
             kariRows.push({label:'路盤合計H', val:Math.round(totalH*1000)+'mm', c:'#a78bfa', b:true, sep:true});
@@ -4193,17 +4216,35 @@ function renderPresetTypeEditor() {
           const tack  = asl[6] || { role:'tack',  preset:'タックコートアスファルト乳剤(PK-4)', custom:'', t:0, memo:true };
           const prime = asl[7] || { role:'prime', preset:'プライムコートアスファルト乳剤(PK-3)', custom:'', t:0, memo:true };
           html += `<div style="font-size:10px;font-weight:700;color:var(--text3);margin:10px 0 6px;letter-spacing:0.5px;">▶ コート類（メモ・計算対象外）</div>`;
-          html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" ${tack.preset?'checked':''} style="width:auto;"
-                onchange="_editingTypes[${i}].asLayers[6].preset=this.checked?'タックコートアスファルト乳剤(PK-4)':''">
-              タックコート(PK-4)
-            </label>
-            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" ${prime.preset?'checked':''} style="width:auto;"
-                onchange="_editingTypes[${i}].asLayers[7].preset=this.checked?'プライムコートアスファルト乳剤(PK-3)':''">
-              プライムコート(PK-3)
-            </label>
+          html += `<div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;white-space:nowrap;">
+                <input type="checkbox" ${tack.preset?'checked':''} style="width:auto;"
+                  onchange="
+                    var inp=this.nextElementSibling;
+                    if(this.checked){ _editingTypes[${i}].asLayers[6].preset=inp.value||'タックコートアスファルト乳剤(PK-4)'; inp.disabled=false; }
+                    else { _editingTypes[${i}].asLayers[6].preset=''; inp.disabled=true; }">
+                タックコート
+              </label>
+              <input type="text" value="${tack.preset||'タックコートアスファルト乳剤(PK-4)'}" ${tack.preset?'':'disabled'}
+                style="flex:1;font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);"
+                placeholder="例: タックコートアスファルト乳剤(PK-4)"
+                oninput="_editingTypes[${i}].asLayers[6].preset=this.value">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;white-space:nowrap;">
+                <input type="checkbox" ${prime.preset?'checked':''} style="width:auto;"
+                  onchange="
+                    var inp=this.nextElementSibling;
+                    if(this.checked){ _editingTypes[${i}].asLayers[7].preset=inp.value||'プライムコートアスファルト乳剤(PK-3)'; inp.disabled=false; }
+                    else { _editingTypes[${i}].asLayers[7].preset=''; inp.disabled=true; }">
+                プライムコート
+              </label>
+              <input type="text" value="${prime.preset||'プライムコートアスファルト乳剤(PK-3)'}" ${prime.preset?'':'disabled'}
+                style="flex:1;font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);"
+                placeholder="例: プライムコートアスファルト乳剤(PK-3)"
+                oninput="_editingTypes[${i}].asLayers[7].preset=this.value">
+            </div>
           </div>`;
 
           return html;
@@ -5031,8 +5072,36 @@ function genRbRmCardsHTML(t, rmS, rcS) {
 
 // noticeバナー・RM/RCカードを再描画（マスタ更新後の反映に使用）
 function updateRbLabels(tid, typeConf) {
-  const t = TYPES[tid] || typeConf;
+  var t = TYPES[tid] || typeConf;
   if (!t) return;
+  // ── 路盤ラベルオーバーライドを t に直接適用（最終安全網） ──
+  var _bk = (t.key || '').replace(/^type_import_/, '');
+  var _tov = (typeof _RB_LABEL_OVERRIDES !== 'undefined') && (_RB_LABEL_OVERRIDES[_bk] || null);
+  // _bk が空の場合も高さマッチでオーバーライドを探す
+  if (!_tov && !_bk && typeof ROADBED_MASTER_DEFAULTS !== 'undefined') {
+    var _rmH2  = t.rmH    != null ? t.rmH    : undefined;
+    var _rcH2  = t.rcH    != null ? t.rcH    : undefined;
+    var _totH2 = t.totalH != null ? t.totalH : undefined;
+    var _matchM = ROADBED_MASTER_DEFAULTS.find(function(m) {
+      var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
+      var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
+      var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
+      var r1 = _rmH2  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH2)  < 0.001;
+      var r2 = _rcH2  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH2)  < 0.001;
+      var r3 = _totH2 === undefined || mTotH === undefined || Math.abs(mTotH - _totH2) < 0.001;
+      return r1 && r2 && r3;
+    });
+    if (_matchM && _matchM.key) {
+      _tov = (typeof _RB_LABEL_OVERRIDES !== 'undefined') && (_RB_LABEL_OVERRIDES[_matchM.key] || null);
+      if (!t.key && _matchM.key) { t = Object.assign({}, t); t.key = 'type_import_' + _matchM.key; _bk = _matchM.key; }
+    }
+  }
+  if (_tov) {
+    t = Object.assign({}, t);  // shallow copy to avoid mutating TYPES
+    Object.keys(_tov).forEach(function(k){ if (_tov[k]) t[k] = _tov[k]; });
+  }
+  // デバッグ（常に出力）
+  console.log('[RbLabel] tid='+tid+' key='+(t.key||'(none)')+' _bk='+_bk+' kariRmLayers='+t.kariRmLayers+' rmH='+t.rmH+' totalH='+t.totalH);
   const rmS = _resolveRmSize(t);
   const rcS = _resolveRcSize(t);
   const _kariRmMm = Math.round((t.rmH||0)*1000);
@@ -5073,6 +5142,41 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
     return;
   }
   if (noSiteMsg) noSiteMsg.style.display = 'none';
+
+  // ── ラベルオーバーライドを typeConf に直接注入（key なし型は高さマッチで補完） ──
+  types = types.map(function(tc) {
+    var baseKey = (tc.key || '').replace(/^type_import_/, '');
+    var ov = (typeof _RB_LABEL_OVERRIDES !== 'undefined') ? (_RB_LABEL_OVERRIDES[baseKey] || null) : null;
+    var defM = (typeof ROADBED_MASTER_DEFAULTS !== 'undefined')
+      ? ROADBED_MASTER_DEFAULTS.find(function(m){ return m.key === baseKey; }) : null;
+    // baseKey が空 or 一致なし → 高さマッチングでマスタを探す
+    if (!defM && typeof ROADBED_MASTER_DEFAULTS !== 'undefined') {
+      var _rmH  = tc.rmH    != null ? tc.rmH    : undefined;
+      var _rcH  = tc.rcH    != null ? tc.rcH    : undefined;
+      var _totH = tc.totalH != null ? tc.totalH : undefined;
+      defM = ROADBED_MASTER_DEFAULTS.find(function(m) {
+        var mRmH  = m.kariRmH  != null ? m.kariRmH  : undefined;
+        var mRcH  = m.kariRcH  != null ? m.kariRcH  : undefined;
+        var mTotH = m.kariTotalH != null ? m.kariTotalH : undefined;
+        var rmMatch  = _rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - _rmH)  < 0.001;
+        var rcMatch  = _rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - _rcH)  < 0.001;
+        var totMatch = _totH === undefined || mTotH === undefined || Math.abs(mTotH - _totH) < 0.001;
+        return rmMatch && rcMatch && totMatch;
+      });
+      // 高さ一致マスタのオーバーライドも取得
+      if (defM && defM.key && !ov) {
+        ov = (typeof _RB_LABEL_OVERRIDES !== 'undefined') ? (_RB_LABEL_OVERRIDES[defM.key] || null) : null;
+      }
+    }
+    if (!ov && !defM) return tc;
+    var patch = {};
+    if (ov) { Object.keys(ov).forEach(function(k){ if (ov[k]) patch[k] = ov[k]; }); }
+    if (defM && defM.kariRmSize != null && !tc.rmSize) patch.rmSize = defM.kariRmSize;
+    // key が空だった場合はマッチしたマスタのキーを設定（以降の解決に使用）
+    if (!tc.key && defM && defM.key) patch.key = 'type_import_' + defM.key;
+    console.log('[BuildTabs] tc.label='+tc.label+' baseKey='+baseKey+' defM='+(defM&&defM.key)+' ov='+JSON.stringify(ov)+' patch='+JSON.stringify(patch));
+    return Object.assign({}, tc, patch);
+  });
 
   types.forEach((typeConf, idx) => {
     const tabId = `dyntype_${typeConf.key}`;
@@ -5335,22 +5439,25 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     <!-- 仮復旧 -->
     <div style="font-size:11px;font-weight:700;color:${_rbDiff?'var(--orange)':' #a78bfa'};letter-spacing:0.5px;margin-bottom:8px;">${_rbDiff?'🔧 仮復旧（路盤先行）構成':'🏗 路盤構成'}　H=${totalH}mm</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);margin-bottom:${kariHonDiffers(t)?'12':'0'}px;">
-      ${_asLayers.filter(a=>a.role==='surface').map(a=>`<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
-        <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">${getAsLayerName(a)||a.name||''}</div>
-        <div style="color:var(--text);font-weight:700;">t = ${a.t}mm</div>
-      </div>`).join('')}
-      ${_asCoats.filter(c=>c.role==='tack').map(c=>`<div style="background:rgba(148,163,184,0.07);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
-        <div style="color:var(--text3);font-size:10px;margin-bottom:2px;">コート（メモ）</div>
-        <div style="color:var(--text3);font-size:11px;">${c.preset}</div>
-      </div>`).join('')}
-      ${_asLayers.filter(a=>a.role==='base'||a.role==='other').map(a=>`<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
-        <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">${getAsLayerName(a)||a.name||''}</div>
-        <div style="color:var(--text);font-weight:700;">t = ${a.t}mm</div>
-      </div>`).join('')}
-      ${_asCoats.filter(c=>c.role==='prime').map(c=>`<div style="background:rgba(148,163,184,0.07);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
-        <div style="color:var(--text3);font-size:10px;margin-bottom:2px;">コート（メモ）</div>
-        <div style="color:var(--text3);font-size:11px;">${c.preset}</div>
-      </div>`).join('')}
+      ${(()=>{
+        const _tack  = _asCoats.find(c=>c.role==='tack');
+        const _prime = _asCoats.find(c=>c.role==='prime');
+        const _coatCard = (name) => `<div style="background:rgba(148,163,184,0.07);border:1px solid var(--border);border-radius:8px;padding:8px 12px;align-self:center;">
+          <div style="color:var(--text3);font-size:10px;margin-bottom:2px;">コート（メモ）</div>
+          <div style="color:var(--text3);font-size:11px;">${name}</div>
+        </div>`;
+        const _layCard = (a) => `<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">${getAsLayerName(a)||a.name||''}</div>
+          <div style="color:var(--text);font-weight:700;">t = ${a.t}mm</div>
+        </div>`;
+        let _html = '';
+        _asLayers.forEach((a, idx) => {
+          _html += _layCard(a);
+          if (idx < _asLayers.length - 1 && _tack && _tack.preset) _html += _coatCard(_tack.preset);
+        });
+        if (_prime && _prime.preset) _html += _coatCard(_prime.preset);
+        return _html;
+      })()}
       <div id="${tid}-rb-rm-cards">${genRbRmCardsHTML(t, rmS, rcS)}</div>
       ${ex.filter(e=>e.name).map(e=>`
       <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;">
@@ -7114,6 +7221,7 @@ function saveMasterBySite(siteId, arr) {
   } catch {}
 }
 
+
 // =====================================================================
 // 現場別集計サマリー
 // =====================================================================
@@ -7180,7 +7288,7 @@ function exportCSVData(h, filename) {
       r.author
      ]);
   }
-  const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+  const csv = '﻿' + rows.map(r => r.join(',')).join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = filename;
@@ -7193,7 +7301,6 @@ function exportCSVData(h, filename) {
 var _dupResolve = null;
 
 function _sortHistory(h) {
-  // 日付昇順、同日は記録時刻(id = Date.now())昇順
   h.sort(function(a, b) {
     if (a.date < b.date) return -1;
     if (a.date > b.date) return  1;
@@ -7222,7 +7329,6 @@ function resolveDup(choice) {
   if (_dupResolve) { _dupResolve(choice); _dupResolve = null; }
 }
 
-// モーダル背景クリックでキャンセル
 document.addEventListener('click', function(e) {
   var modal = document.getElementById('dupModal');
   if (modal && modal.style.display === 'flex' && e.target === modal) resolveDup('cancel');
@@ -7238,18 +7344,8 @@ document.addEventListener('click', function(e) {
     <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:var(--text1);">⚠️ 同じ記録が既にあります</div>
     <div id="dupModalMsg" style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.75;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;"></div>
     <div style="display:flex;flex-direction:column;gap:9px;">
-      <button onclick="resolveDup('both')"
-        style="padding:11px 14px;border-radius:8px;border:1px solid rgba(79,142,247,0.5);background:rgba(79,142,247,0.12);color:var(--accent);font-weight:700;cursor:pointer;font-family:var(--sans);font-size:13px;">
-        📋 両方残す（どちらも保存）
-      </button>
-      <button onclick="resolveDup('replace')"
-        style="padding:11px 14px;border-radius:8px;border:1px solid rgba(239,68,68,0.45);background:rgba(239,68,68,0.1);color:var(--red);font-weight:700;cursor:pointer;font-family:var(--sans);font-size:13px;">
-        🔄 新しいもので上書きする
-      </button>
-      <button onclick="resolveDup('cancel')"
-        style="padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--sans);font-size:13px;">
-        ✕ キャンセル（記録しない）
-      </button>
+      <button onclick="resolveDup('overwrite')" style="width:100%;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;border-radius:8px;padding:10px;font-size:14px;font-weight:700;cursor:pointer;">上書き保存する</button>
+      <button onclick="resolveDup('cancel')" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:10px;font-size:13px;cursor:pointer;">キャンセル（両方保存）</button>
     </div>
   </div>
 </div>
