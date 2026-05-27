@@ -100,6 +100,11 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
 .modal .btn-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;float:right;margin-top:-4px;}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:300;display:none;white-space:pre-line;text-align:center;}
 .toast.show{display:block;}
+.viewer-search-bar{width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;}
+.viewer-search-bar.hidden{display:none!important;}
+.filter-sel{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:5px 8px;font-size:12px;cursor:pointer;}
+.filter-sel:disabled{opacity:0.4;cursor:default;}
+.filter-status{font-size:11px;color:var(--text3);white-space:nowrap;margin-left:2px;}
 </style>
 </head>
 <body>
@@ -126,6 +131,16 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
         <button onclick="changePage(-1)">◀</button>
         <span id="pageInfo">1 / 1</span>
         <button onclick="changePage(1)">▶</button>
+      </div>
+      <div class="viewer-search-bar hidden" id="viewerSearchBar">
+        <span style="font-size:11px;color:var(--text3);white-space:nowrap;flex-shrink:0;">&#128269; 図面検索</span>
+        <select class="filter-sel" id="filterRbSel" onchange="onFilterRbChange(this.value)" style="flex:1;min-width:100px;">
+          <option value="">&#8213; 型を選択 &#8213;</option>
+        </select>
+        <select class="filter-sel" id="filterHataSel" onchange="onFilterHataChange(this.value)" style="flex:1;min-width:100px;" disabled>
+          <option value="">&#8213; 旗揚げ番号 &#8213;</option>
+        </select>
+        <span class="filter-status" id="filterStatus"></span>
       </div>
     </div>
     <div class="viewer-area" id="viewerArea">
@@ -628,6 +643,7 @@ function onSiteChange(id){
   updateExistingConfigSel();
   initCrossSiteSel();
   loadHataForSite(id);
+  refreshViewerFilter();
 }
 
 // ======================================
@@ -1031,6 +1047,7 @@ function clearForm(){
 // ======================================
 function renderConfigList(configs){
   updateExistingConfigSel();
+  refreshViewerFilter();
   const el=document.getElementById('configList');
   const siteName=document.getElementById('siteSelect').options[document.getElementById('siteSelect').selectedIndex]?.text||'';
   document.getElementById('listTitle').textContent='登録済み路盤構成（'+siteName+'）';
@@ -1392,6 +1409,7 @@ function updateExistingHataSel(){
 
 function renderHataList(list){
   updateExistingHataSel();
+  refreshViewerFilter();
   const el=document.getElementById('hataList');if(!el)return;
   const siteName=document.getElementById('siteSelectHata')?.options[document.getElementById('siteSelectHata')?.selectedIndex]?.text||'';
   document.getElementById('hataListTitle').textContent='登録済み旗揚げマスタ（'+siteName+'）';
@@ -1548,6 +1566,104 @@ function closeModal(){document.getElementById('loginModal').classList.remove('op
 function showToast(msg,d=2500){
   const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),d);
+}
+
+// ======================================
+// 図面クイック検索（ビューアツールバー）
+// ======================================
+function refreshViewerFilter(){
+  var bar=document.getElementById('viewerSearchBar');
+  if(!bar)return;
+  if(!_selectedSiteId){bar.classList.add('hidden');return;}
+  bar.classList.remove('hidden');
+  var rbSel=document.getElementById('filterRbSel');
+  var curRb=rbSel.value;
+  var configs=getLocalRb(_selectedSiteId);
+  rbSel.innerHTML='<option value="">― 型を選択 ―</option>';
+  configs.forEach(function(r){
+    var o=document.createElement('option');
+    o.value=r.key; o.textContent=r.label||r.key;
+    if(curRb===r.key) o.selected=true;
+    rbSel.appendChild(o);
+  });
+  _refreshHataSel(document.getElementById('filterHataSel').value, curRb);
+}
+
+function _hataKey(r){ return r.key || String(r.hata || r.num || ''); }
+
+function _refreshHataSel(curHata, rbKey){
+  var hataSel=document.getElementById('filterHataSel');
+  var hataList=getLocalHata(_selectedSiteId);
+  hataSel.innerHTML='<option value="">&#x2015; 旗揚げ番号 &#x2015;</option>';
+  hataList.forEach(function(r){
+    var o=document.createElement('option');
+    var k=_hataKey(r);
+    o.value=k;
+    o.textContent='No.'+(r.num||r.hata||'?')+(r.name?' '+r.name:'');
+    if(curHata===k) o.selected=true;
+    hataSel.appendChild(o);
+  });
+  hataSel.disabled=hataList.length===0;
+}
+
+function onFilterRbChange(rbKey){
+  _refreshHataSel('', rbKey);
+  document.getElementById('filterHataSel').value='';
+  if(!rbKey){setFilterStatus('');return;}
+  var dwgList=getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey;});
+  if(dwgList.length>0){
+    _viewDwgEntry(dwgList[0]);
+    setFilterStatus('📋 図面 '+dwgList.length+'件');
+  } else {
+    setFilterStatus('図面未登録');
+  }
+}
+
+function onFilterHataChange(hataKey){
+  if(!hataKey){
+    var rbKey=document.getElementById('filterRbSel').value;
+    if(rbKey) onFilterRbChange(rbKey); else setFilterStatus('');
+    return;
+  }
+  var r=getLocalHata(_selectedSiteId).find(function(x){return _hataKey(x)===hataKey;});
+  if(!r){setFilterStatus('⚠️ 見つかりません');return;}
+  var imgSrc=r.img||r.imgData||'';
+  if(imgSrc){
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
+    document.getElementById('btnClearViewer').style.display='';
+    document.getElementById('pageNav').style.display='none';
+    _pdfDoc=null;
+    var dpStr=r.dp?'DP:'+r.dp+'m　':'';
+    var khStr=(r.kanH!=null&&r.kanH!=='')?'管下H:'+(r.kanH||r.dph||'')+'m':'';
+    setFilterStatus('📷 '+dpStr+khStr);
+  } else {
+    var rbKey2=document.getElementById('filterRbSel').value;
+    var dwgList2=rbKey2?getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey2;}):[];
+    if(dwgList2.length>0){
+      _viewDwgEntry(dwgList2[0]);
+      setFilterStatus('📋 図面（旗揚げ画像なし）');
+    } else {
+      setFilterStatus('⚠️ 画像・図面なし');
+    }
+  }
+}
+
+function _viewDwgEntry(d){
+  if(!d)return;
+  var embedUrl=d.embedUrl||toDriveEmbedUrl(d.url);
+  var va=document.getElementById('viewerArea');
+  va.innerHTML='<iframe src="'+embedUrl+'" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
+  _pdfDoc=null;
+  document.getElementById('pageNav').style.display='none';
+  document.getElementById('viewerTitle').textContent=d.name;
+  document.getElementById('btnClearViewer').style.display='';
+}
+
+function setFilterStatus(msg){
+  var el=document.getElementById('filterStatus');
+  if(el) el.textContent=msg;
 }
 
 // ======================================
