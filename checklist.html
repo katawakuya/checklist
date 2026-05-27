@@ -264,7 +264,7 @@ function initFirebase() {
 
 function fbSyncMasters(callback) {
   if (!_fbDb) { if(callback) callback(); return; }
-  var simpleKeys = ['site_master', 'road_presets', 'roadbed_masters'];
+  var simpleKeys = ['site_master', 'road_presets', 'roadbed_masters', 'checklist_pipe_settings'];
   var done = 0, total = simpleKeys.length + 1;
   function finish() {
     done++;
@@ -334,6 +334,40 @@ function updateAdminBadge() {
   var b=document.getElementById('adminBadge'), btn=document.getElementById('adminBtn');
   if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
   if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
+}
+// ─── 管種設定 Firestore同期 ───────────────────────────────────────────
+function loadPipeSettingsFromFb() {
+  // Firestoreから同期済みのlocalStorageキャッシュを読み込む
+  try {
+    var raw = localStorage.getItem('checklist_pipe_settings');
+    if (!raw) return false;
+    var allSettings = JSON.parse(raw);
+    var key = storeKey();
+    var s = allSettings && allSettings[key];
+    if (!s) return false;
+    if (s.pipeCount    !== undefined) _pipeCount     = s.pipeCount;
+    if (s.pipeTypes    !== undefined) _pipeTypes     = s.pipeTypes;
+    if (s.pipeCustomNames !== undefined) _pipeCustomNames = s.pipeCustomNames;
+    if (s.showDummy    !== undefined) _showDummy     = s.showDummy;
+    return true;
+  } catch(e) { console.warn('[FB] loadPipeSettings err', e); return false; }
+}
+
+function savePipeSettingsToFb() {
+  if (!_isAdmin) { alert('管理者のみ登録できます'); return; }
+  try {
+    var raw = localStorage.getItem('checklist_pipe_settings');
+    var allSettings = raw ? JSON.parse(raw) : {};
+    allSettings[storeKey()] = {
+      pipeCount:       _pipeCount,
+      pipeTypes:       _pipeTypes,
+      pipeCustomNames: _pipeCustomNames,
+      showDummy:       _showDummy
+    };
+    localStorage.setItem('checklist_pipe_settings', JSON.stringify(allSettings));
+    fbSaveMaster('checklist_pipe_settings', allSettings);
+    alert('✅ 管種設定をFirestoreに登録しました\n他端末でページを更新すると反映されます');
+  } catch(e) { alert('❌ 登録失敗: ' + e.message); }
 }
 // =====================================================
 // Firebase END
@@ -804,6 +838,86 @@ function normalizeMaterialName(name){
   return name; // マッチしなければそのまま
 }
 
+// ─── 路盤ラベルオーバーライド（order.htmlと共通） ────────────────────────
+var _CK_RB_LABEL_OVERRIDES = {
+  'rm_odawara_no5':    { kariRmLayers: '既設路盤' },
+  'rm_odawara_no1to4': { kariRmLayers: 't=250mm'  },
+};
+
+// 最低限の路盤マスタデフォルト（Firestoreに未登録の場合のフォールバック）
+var _CK_RB_DEFAULTS = [
+  { key:'rm_odawara_no5',    kariRmLayers:'既設路盤', kariRmH:0.3,  kariRcH:0,    kariTotalH:0.5 },
+  { key:'rm_odawara_no1to4', kariRmLayers:'t=250mm',  kariRmH:0.25, kariRcH:0.15, kariTotalH:0.5 },
+];
+
+/**
+ * kariRmLayers / kariRcLayers を解決する
+ * 優先順: ① presetTypeに直設定 ② keyでオーバーライド
+ *         ③ localStorageのroadbed_mastersで高さマッチング
+ *         ④ _CK_RB_DEFAULTSで高さマッチング
+ */
+function _ckResolveLayersStr(presetType, field) {
+  if (!presetType) return undefined;
+
+  // ① key が判明していればオーバーライドテーブルを確認
+  var rawKey = (presetType.key || '').replace(/^type_import_/, '');
+  if (rawKey) {
+    var ov = _CK_RB_LABEL_OVERRIDES[rawKey];
+    if (ov && ov[field] !== undefined) return ov[field];
+  }
+
+  // ② presetTypeに直接設定されていれば使用
+  var direct = presetType[field];
+  if (direct !== undefined && direct !== '') return direct;
+
+  // ③④ 高さマッチング（localStorageのroadbed_masters → _CK_RB_DEFAULTS）
+  var rmH   = presetType.rmH   != null ? presetType.rmH   : undefined;
+  var rcH   = presetType.rcH   != null ? presetType.rcH   : undefined;
+  var totH  = presetType.totalH!= null ? presetType.totalH: undefined;
+
+  function _heightMatch(masters) {
+    return (masters || []).find(function(m) {
+      if (m[field] === undefined || m[field] === '') return false;
+      var mRmH  = m.kariRmH   != null ? m.kariRmH   : undefined;
+      var mRcH  = m.kariRcH   != null ? m.kariRcH   : undefined;
+      var mTotH = m.kariTotalH!= null ? m.kariTotalH: undefined;
+      var rmOk  = rmH  === undefined || mRmH  === undefined || Math.abs(mRmH  - rmH)  < 0.001;
+      var rcOk  = rcH  === undefined || mRcH  === undefined || Math.abs(mRcH  - rcH)  < 0.001;
+      var totOk = totH === undefined || mTotH === undefined || Math.abs(mTotH - totH) < 0.001;
+      return rmOk && rcOk && totOk;
+    });
+  }
+
+  // ③ localStorageのroadbed_masters
+  try {
+    var raw = localStorage.getItem('roadbed_masters');
+    if (raw) {
+      var lsMasters = JSON.parse(raw);
+      var lsMatch = _heightMatch(Array.isArray(lsMasters) ? lsMasters : (lsMasters.data || []));
+      if (lsMatch) {
+        // keyが分かったのでオーバーライドテーブルも確認
+        if (lsMatch.key) {
+          var lsOv = _CK_RB_LABEL_OVERRIDES[lsMatch.key];
+          if (lsOv && lsOv[field] !== undefined) return lsOv[field];
+        }
+        if (lsMatch[field] !== undefined && lsMatch[field] !== '') return lsMatch[field];
+      }
+    }
+  } catch(e) {}
+
+  // ④ _CK_RB_DEFAULTS
+  var defMatch = _heightMatch(_CK_RB_DEFAULTS);
+  if (defMatch) {
+    if (defMatch.key) {
+      var defOv = _CK_RB_LABEL_OVERRIDES[defMatch.key];
+      if (defOv && defOv[field] !== undefined) return defOv[field];
+    }
+    if (defMatch[field] !== undefined && defMatch[field] !== '') return defMatch[field];
+  }
+
+  return direct; // 最終フォールバック（undefined or ''）
+}
+
 
 function buildChecklistFromPreset(presetType){
   var asTotal  = ((presetType.asT密粒||0) + (presetType.asT粗粒||0)) / 1000;
@@ -816,6 +930,12 @@ function buildChecklistFromPreset(presetType){
   var asLayers = [];
   // 特殊層：瀝青安定処理・既設路盤など転圧対象の特殊舗装層
   var specialAsLayers = [];
+
+  // RM/RCラベルを事前解決（specialAsLayersとの重複挙動を防ぐ）
+  var _preRmLabel = _ckResolveLayersStr(presetType, 'kariRmLayers') || '';
+  var _preRcLabel = _ckResolveLayersStr(presetType, 'kariRcLayers') || '';
+  var _preRmIsCustom = _preRmLabel && !(/t=\d|\d+mm/i.test(_preRmLabel));
+  var _preRcIsCustom = _preRcLabel && !(/t=\d|\d+mm/i.test(_preRcLabel));
 
   if(presetType.asLayers && presetType.asLayers.length){
     presetType.asLayers.forEach(function(a){
@@ -836,7 +956,10 @@ function buildChecklistFromPreset(presetType){
         name.indexOf('コンクリート')>=0 || name.indexOf('調整')>=0
       );
       if(isSpecial){
-        specialAsLayers.push({ name:name, t:t/1000 });
+        // RM/RCラベルの素材はspecialAsLayersに含めない
+        var _isRmMat = _preRmIsCustom && (_preRmLabel.indexOf(name)>=0 || name.indexOf(_preRmLabel)>=0);
+        var _isRcMat = _preRcIsCustom && (_preRcLabel.indexOf(name)>=0 || name.indexOf(_preRcLabel)>=0);
+        if(!_isRmMat && !_isRcMat) specialAsLayers.push({ name:name, t:t/1000 });
       } else {
         // 表層・基層（通常AS）
         asLayers.push({ name:name, t:t/1000 });
@@ -872,9 +995,20 @@ function buildChecklistFromPreset(presetType){
   if(totalH <= 0) totalH = asTotal + rcH + rmH + specialTotal;
 
   // 路盤構成情報（バッジ表示用）
+  // rmLabel/rcLabel for badge display（高さマッチングで解決）
+  var _rmLayersStr = _ckResolveLayersStr(presetType, 'kariRmLayers');
+  var _rcLayersStr = _ckResolveLayersStr(presetType, 'kariRcLayers');
+  var rmBadgeLabel = (_rmLayersStr && !_isStdLayersStr(_rmLayersStr))
+    ? _rmLayersStr
+    : ('RM-'+rmS);
+  var rcBadgeLabel = (_rcLayersStr && !_isStdLayersStr(_rcLayersStr))
+    ? _rcLayersStr
+    : ('RC-'+rcS);
+
   var roadbedInfo = {
     asLayers: asLayers, hasTack: hasTack, hasPrime: hasPrime,
     rmH: rmH, rmSize: rmS, rcH: rcH, rcSize: rcS,
+    rmLabel: rmBadgeLabel, rcLabel: rcBadgeLabel,
     totalH: totalH,
     hasImprovedSoil: presetType.hasImprovedSoil||false,
     extraMaterials: presetType.extraMaterials||[],
@@ -910,8 +1044,17 @@ function buildChecklistFromPreset(presetType){
   // RC転圧ポイント：RC上端=totalH-rcH、RC総厚=rcH
   var rcCompact = [];
   var rcLayers = [];
+  // カスタムラベル判定（標準厚み表記でなければカスタムとみなす）
+  function _isStdLayersStr(s) {
+    if (!s) return true;
+    return /t=\d|\d+mm/i.test(s);
+  }
+
   if(rcH > 0){
-    var rcLabel = '下層路盤転圧　RC-'+rcS;
+    var _rcLayers = _ckResolveLayersStr(presetType, 'kariRcLayers');
+    var rcLabel = (_rcLayers && !_isStdLayersStr(_rcLayers))
+      ? (_rcLayers + '転圧')
+      : ('下層路盤転圧　RC-'+rcS);
     rcLayers = compactLayers(totalH - rcH, rcH, rcLabel);
     rcCompact = rcLayers.map(function(l){ return l.dim; });
   }
@@ -920,7 +1063,10 @@ function buildChecklistFromPreset(presetType){
   var rmCompact = [];
   var rmLayers = [];
   if(rmH > 0){
-    var rmLabel = '上層路盤転圧　RM-'+rmS;
+    var _rmLayers = _ckResolveLayersStr(presetType, 'kariRmLayers');
+    var rmLabel = (_rmLayers && !_isStdLayersStr(_rmLayers))
+      ? (_rmLayers + '転圧')
+      : ('上層路盤転圧　RM-'+rmS);
     rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel);
     rmCompact = rmLayers.map(function(l){ return l.dim; });
   }
@@ -978,6 +1124,7 @@ function buildChecklistFromPreset(presetType){
 
   // ── 値を動的に上書き ──
   sections.forEach(function(sec){
+    var _rcIdx = 0, _rmIdx = 0, _simpleRbIdx = 0;
     sec.items.forEach(function(item){
       var n = item.n || '';
 
@@ -1001,8 +1148,8 @@ function buildChecklistFromPreset(presetType){
       // RC下層路盤転圧：rcLayersから順番に割り当て
       if(n.indexOf('下層路盤転圧') >= 0){
         if(rcLayers.length > 0){
-          var idx = sec.items.filter(function(x){ return x.n&&x.n.indexOf('下層路盤転圧')>=0; }).indexOf(item);
-          if(idx >= 0 && idx < rcLayers.length){
+          var idx = _rcIdx++;
+          if(idx < rcLayers.length){
             item.dim = rcLayers[idx].dim;
             item.n   = rcLayers[idx].n;
             item.note = 'ランマーで転圧している状況とスケールで確認している状況を撮影。';
@@ -1017,8 +1164,8 @@ function buildChecklistFromPreset(presetType){
       // RM上層路盤転圧：rmLayersから順番に割り当て
       if(n.indexOf('上層路盤転圧') >= 0){
         if(rmLayers.length > 0){
-          var idx2 = sec.items.filter(function(x){ return x.n&&x.n.indexOf('上層路盤転圧')>=0; }).indexOf(item);
-          if(idx2 >= 0 && idx2 < rmLayers.length){
+          var idx2 = _rmIdx++;
+          if(idx2 < rmLayers.length){
             item.dim = rmLayers[idx2].dim;
             item.n   = rmLayers[idx2].n;
             item.note = 'ランマーで転圧している状況とスケールで確認している状況を撮影。';
@@ -1033,8 +1180,8 @@ function buildChecklistFromPreset(presetType){
       // RMのない型で「路盤転圧」の場合（30/20/14型など）
       if(n.indexOf('路盤転圧') >= 0 && n.indexOf('上層')<0 && n.indexOf('下層')<0){
         if(rcLayers.length > 0){
-          var idx3 = sec.items.filter(function(x){ return x.n&&x.n.indexOf('路盤転圧')>=0&&x.n.indexOf('上層')<0&&x.n.indexOf('下層')<0; }).indexOf(item);
-          if(idx3 >= 0 && idx3 < rcLayers.length){
+          var idx3 = _simpleRbIdx++;
+          if(idx3 < rcLayers.length){
             item.dim = rcLayers[idx3].dim;
             item.n   = rcLayers[idx3].n;
             item.note = 'ランマーで転圧している状況とスケールで確認している状況を撮影。';
@@ -1054,7 +1201,7 @@ function buildChecklistFromPreset(presetType){
       // 基層転圧：基層がない場合は削除
       if(n.indexOf('基層転圧') >= 0){
         if(baseMm > 0){
-          item.dim = 'GL-'+(asTotal - asLayers[0].t).toFixed(3)+'m（基層 t='+baseMm+'mm）';
+          item.dim = 'GL-'+asLayers[0].t.toFixed(3)+'m（基層 t='+baseMm+'mm）';
         } else {
           item._remove = true;
         }
@@ -1182,7 +1329,12 @@ function buildChecklistFromPreset(presetType){
     }
 
     // ── RM層がある場合、転圧項目を動的に追加 ──
-    var rmItems = sec.items.filter(function(x){ return x.n&&x.n.indexOf('上層路盤転圧')>=0; });
+    // 名前置換済み（例: '既設路盤転圧'）の項目も含めて検索
+    var rmItems = sec.items.filter(function(x){
+      if(!x.n) return false;
+      if(x.n.indexOf('上層路盤転圧')>=0) return true;
+      return rmLayers.some(function(rl){ return x.n === rl.n; });
+    });
     if(rmH > 0 && rmItems.length === 0){
       // ベースにRM項目がない型（30/20/14）にRM層を追加
       var insertIdx = -1;
@@ -1203,7 +1355,7 @@ function buildChecklistFromPreset(presetType){
       // 既存RM項目が足りない場合は末尾に追加
       var lastRmIdx = -1;
       for(var ii3=0; ii3<sec.items.length; ii3++){
-        if(sec.items[ii3].n && sec.items[ii3].n.indexOf('上層路盤転圧')>=0) lastRmIdx = ii3;
+        if(sec.items[ii3].n && (sec.items[ii3].n.indexOf('上層路盤転圧')>=0 || rmLayers.some(function(rl){ return sec.items[ii3].n === rl.n; }))) lastRmIdx = ii3;
       }
       for(var ri4=rmItems.length; ri4<rmLayers.length; ri4++){
         sec.items.splice(lastRmIdx+1+(ri4-rmItems.length), 0,
@@ -1212,11 +1364,16 @@ function buildChecklistFromPreset(presetType){
     }
 
     // RC転圧項目数調整（既存より多い場合は追加）
-    var rcItems = sec.items.filter(function(x){ return x.n&&(x.n.indexOf('下層路盤転圧')>=0||(x.n.indexOf('路盤転圧')>=0&&x.n.indexOf('上層')<0&&x.n.indexOf('下層')<0)); });
+    var rcItems = sec.items.filter(function(x){
+      if(!x.n) return false;
+      if(x.n.indexOf('下層路盤転圧')>=0) return true;
+      if(x.n.indexOf('路盤転圧')>=0&&x.n.indexOf('上層')<0&&x.n.indexOf('下層')<0) return true;
+      return rcLayers.some(function(rl){ return x.n === rl.n; });
+    });
     if(rcLayers.length > rcItems.length && rcItems.length > 0){
       var lastRcIdx = -1;
       for(var ii2=0; ii2<sec.items.length; ii2++){
-        if(sec.items[ii2].n && (sec.items[ii2].n.indexOf('下層路盤転圧')>=0||(sec.items[ii2].n.indexOf('路盤転圧')>=0&&sec.items[ii2].n.indexOf('上層')<0&&sec.items[ii2].n.indexOf('下層')<0))){
+        if(sec.items[ii2].n && (sec.items[ii2].n.indexOf('下層路盤転圧')>=0||(sec.items[ii2].n.indexOf('路盤転圧')>=0&&sec.items[ii2].n.indexOf('上層')<0&&sec.items[ii2].n.indexOf('下層')<0)||rcLayers.some(function(rl){ return sec.items[ii2].n===rl.n; }))){
           lastRcIdx = ii2;
         }
       }
@@ -1251,6 +1408,10 @@ var _checks = {};   // {itemKey: bool}
 var _naItems = {};  // {itemKey: bool} 対象外
 var _hataEntry = null;
 var _gl1 = ''; var _gl2 = '';
+var _pipeCount = 1;            // 表示中の管種行数（1 or 2）
+var _pipeTypes = ['通信管', '電力管']; // 各行の管種名（空文字 = DPのみ）
+var _pipeCustomNames = ['', ''];      // 「その他」選択時のフリー入力名
+var _showDummy = false;                // ダミー管項目表示フラグ（trueの場合のみ表示）
 var _history = [];
 
 // アイテムキー生成
@@ -1418,7 +1579,7 @@ function saveState(){
   if(!_siteId||!_typeKey) return;
   var data = {
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
-    dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),bh:$v('inBH'),extra:$v('inExtra'),
+    dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,
     hata:$v('hataInput'),checks:_checks,na:_naItems,kojiKbn:_kojiKbn
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
@@ -1429,6 +1590,10 @@ function restoreState(){
   try{
     var d = JSON.parse(raw);
     sv('inDate',d.date); sv('inMgmtNo',d.mgmt); sv('inRecorder',d.rec);
+    if(d.pipeCount) _pipeCount = d.pipeCount;
+    if(d.pipeTypes) _pipeTypes = d.pipeTypes;
+    if(d.pipeCustomNames) _pipeCustomNames = d.pipeCustomNames;
+    if(d.showDummy !== undefined) _showDummy = d.showDummy;
     // GL計算欄・旗揚げ番号は起動時にクリア（前回の情報を引き継がない）
     ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
@@ -1464,8 +1629,8 @@ function renderMain(){
       badges += '<span style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'
         +a.name+' '+Math.round(a.t*1000)+'mm</span>';
     });
-    if(rb.rmH>0) badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">RM-'+rb.rmSize+' '+Math.round(rb.rmH*1000)+'mm</span>';
-    badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">RC-'+rb.rcSize+' '+Math.round(rb.rcH*1000)+'mm</span>';
+    if(rb.rmH>0) badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+(rb.rmLabel||'RM-'+rb.rmSize)+' '+Math.round(rb.rmH*1000)+'mm</span>';
+    badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+(rb.rcLabel||'RC-'+rb.rcSize)+' '+Math.round(rb.rcH*1000)+'mm</span>';
     rb.extraMaterials.forEach(function(em){
       if(em.name&&(em.unitH||0)>0) badges += '<span style="background:#ffedd5;color:#c2410c;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+em.name+' '+em.unitH+'mm</span>';
     });
@@ -1492,8 +1657,8 @@ function renderMain(){
       '<div class="field">' +
         '<label>施工区分</label>' +
         '<div class="seg-wrap">' +
-          '<button class="seg-btn' + (_kojiKbn==='kari'?' active kari':'') + '" id="btnKari" onclick="setKojiKbn(\'kari\')">仮復旧のみ</button>' +
-          '<button class="seg-btn' + (_kojiKbn==='hon'?' active hon':'') + '" id="btnHon" onclick="setKojiKbn(\'hon\')">本復旧あり</button>' +
+          '<button class="seg-btn' + (_kojiKbn==='kari'?' active kari':'') + '" id="btnKari" onclick="setKojiKbn(\'kari\')">仮復旧</button>' +
+          '<button class="seg-btn' + (_kojiKbn==='hon'?' active hon':'') + '" id="btnHon" onclick="setKojiKbn(\'hon\')">本復旧</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -1518,49 +1683,8 @@ function renderMain(){
     '</div>';
 
   if(ck){
-    // GL計算パネル
-    html += '<div class="input-panel">' +
-      '<div class="panel-title">GL 計算</div>' +
-      '<div class="field-row c2">' +
-        '<div class="field"><label>①通信管 DP (m)</label><input class="hl" type="number" id="inDP1" step="0.01" placeholder="例:1.10" oninput="recalcGL()"></div>' +
-        '<div class="field"><label>①通信管 管下H (m)</label><input class="hl" type="number" id="inDPH" step="0.001" placeholder="例:0.285" oninput="recalcGL()"></div>' +
-      '</div>' +
-      '<div class="field-row c2">' +
-        '<div class="field"><label>②電力管 DP (m)</label><input type="number" id="inDP2" step="0.01" placeholder="例:1.10" oninput="recalcGL()"></div>' +
-        '<div class="field"><label>②電力管 管下H (m)</label><input type="number" id="inDPH2" step="0.001" placeholder="例:0.285" oninput="recalcGL()"></div>' +
-      '</div>' +
-
-      // 管下H計算補助
-      '<details id="dphCalcWrap" style="margin-top:8px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">' +
-        '<summary style="background:#f8fafc;padding:7px 12px;font-size:11px;font-weight:700;color:#475569;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">' +
-          '📐 管下H 計算補助（管径・管台から自動計算）' +
-        '</summary>' +
-        '<div style="padding:10px 12px;background:#fff;">' +
-          '<div style="font-size:10px;color:#64748b;margin-bottom:8px;">管下H = 管径1 ＋ 管台 ＋ 管径2（2条の場合）<br>例：130φ＋管台25＋130φ ＝ 285mm</div>' +
-          '<div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">①通信管</div>' +
-          '<div class="field-row c3" style="margin-bottom:6px;">' +
-            '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe1" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>' +
-            '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase1" step="1" placeholder="例:25" oninput="calcDPH(1)"></div>' +
-            '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe2" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>' +
-          '</div>' +
-          '<div id="dphResult1" style="font-size:11px;color:#0369a1;font-weight:700;margin-bottom:10px;min-height:16px;"></div>' +
-          '<div style="border-top:1px solid #f1f5f9;margin:8px 0 10px;"></div>' +
-          '<div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">②電力管（異なる場合のみ）</div>' +
-          '<div class="field-row c3" style="margin-bottom:6px;">' +
-            '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe3" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>' +
-            '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase2" step="1" placeholder="例:25" oninput="calcDPH(2)"></div>' +
-            '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe4" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>' +
-          '</div>' +
-          '<div id="dphResult2" style="font-size:11px;color:#0369a1;font-weight:700;min-height:16px;"></div>' +
-        '</div>' +
-      '</details>' +
-
-      '<div id="glResult" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;line-height:1.8;"></div>' +
-      '<div class="field-row c2" style="margin-top:8px">' +
-        '<div class="field"><label>BH バケット径 (m)</label><input type="number" id="inBH" step="0.01" placeholder="0.50" value="0.50" oninput="recalcGL()"></div>' +
-        '<div class="field"><label>追加深さ (m)</label><input type="number" id="inExtra" step="0.01" placeholder="0.00" oninput="recalcGL()"></div>' +
-      '</div>' +
-    '</div>';
+    // GL計算パネル（動的管種セレクタ）
+    html += renderGLPanel();
     html += '<button class="btn-calc" onclick="recalcGL()">▶ 計算してリストを更新</button>';
   }
 
@@ -1593,7 +1717,17 @@ function renderMain(){
   // 状態復元（ここでloadHata→imgBtn操作が走る）
   _hataEntry = null; // 一旦クリアしてloadHataで再セット
   restoreState();
+  // Firestore管種設定（管理者登録済みの場合はそちらを優先）
+  // localStorage個人設定よりFirestore共通設定を優先して上書き
+  loadPipeSettingsFromFb();
+  // pipe2Wrap の初期表示制御（_pipeCountに基づく）
+  var _p2w = document.getElementById('pipe2Wrap');
+  var _aBtn = document.getElementById('addPipeBtn');
+  if(_p2w) _p2w.style.display = _pipeCount >= 2 ? 'contents' : 'none';
+  if(_aBtn) _aBtn.style.display = _pipeCount >= 2 ? 'none' : 'inline-block';
   recalcGL();
+  updatePipeItems();
+  updateDummyItems();
   updateProgress();
 }
 
@@ -1646,7 +1780,21 @@ function renderSection(sec, si, isHon){
       ? '<div class="'+noteClass+'"'+noteAttr+'>'+item.note+'</div>'
       : '';
 
-    html += '<div class="'+cls+'" onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'">' +
+    // 管種スロット検出
+    var _pipeSlot = 0;
+    var _PIPE_SLOT_TYPES = ['通信管', '電力管'];
+    for(var _pi=0; _pi<_PIPE_SLOT_TYPES.length; _pi++){
+      if(item.n.indexOf(_PIPE_SLOT_TYPES[_pi]+'\u3000')===0 || item.n.indexOf(_PIPE_SLOT_TYPES[_pi]+' ')===0){
+        _pipeSlot = _pi+1; break;
+      }
+    }
+    var _pipeSlotAttr = _pipeSlot > 0
+      ? ' data-pipe-slot="'+_pipeSlot+'" data-orig-n="'+item.n.replace(/"/g,'&quot;')+'"' : '';
+    // ダミー管項目の検出
+    var _isDummyItem = item.n.indexOf('ダミー管') >= 0;
+    var _dummyAttr = _isDummyItem ? ' data-dummy-item="1"' : '';
+    var _dummyStyle = (_isDummyItem && !_showDummy) ? ' style="display:none;"' : '';
+    html += '<div class="'+cls+'"'+_dummyStyle+' onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'"'+_pipeSlotAttr+_dummyAttr+'>' +
       '<div class="check-box">'+(isNA?'－':(isDone?'✓':''))+'</div>' +
       '<div class="check-label">' +
         '<div class="cname">'+item.n+'</div>' +
@@ -1763,6 +1911,178 @@ var EMBED_MM = {'85':300,'40':300,'30':200,'20':200,'14':200};
 // 型ごとの路盤構成変更点 GL値（負の値）
 var ROADBED_GL = {'85':-0.85,'40':-0.40,'30':-0.30,'20':-0.20,'14':-0.14};
 
+// ─── 管種セレクタ ヘルパー ───────────────────────────────────────────
+var PIPE_OPTIONS = ['通信管', '電力管', 'ガス管', '水道管', '下水管', 'その他'];
+
+function getPipeLbl(idx) {
+  var nums = ['①', '②', '③'];
+  var t = _pipeTypes[idx] !== undefined ? _pipeTypes[idx] : '';
+  // 「その他」の場合はカスタム名を優先
+  if (t === 'その他') {
+    var custom = (_pipeCustomNames[idx] || '').trim();
+    t = custom || 'その他';
+  }
+  return (nums[idx] || (idx+1)+'') + (t ? t : '');
+}
+
+function setPipeType(idx, val) {
+  _pipeTypes[idx] = val;
+  // 「その他」フリー入力欄の表示切替
+  var customWrap = document.getElementById('pipeCustomWrap'+idx);
+  if (customWrap) customWrap.style.display = (val === 'その他') ? '' : 'none';
+  if (val !== 'その他') _pipeCustomNames[idx] = ''; // リセット
+  _refreshPipeLabels(idx);
+  updatePipeItems();
+  recalcGL();
+}
+
+function setPipeCustomName(idx, val) {
+  _pipeCustomNames[idx] = val;
+  _refreshPipeLabels(idx);
+  updatePipeItems();
+  recalcGL();
+}
+
+function _refreshPipeLabels(idx) {
+  var prefix = getPipeLbl(idx);
+  var lpDP  = document.getElementById('lblDP'+(idx+1));
+  var lpDPH = document.getElementById('lblDPH'+(idx+1));
+  if (lpDP)  lpDP.textContent  = prefix + ' DP (m)';
+  if (lpDPH) lpDPH.textContent = prefix + ' 管下H (m)';
+  var dphHdr = document.getElementById('dphHdr'+(idx+1));
+  if (dphHdr) dphHdr.textContent = prefix + (idx===0?'':'（異なる場合のみ）');
+}
+
+function addPipeRow() {
+  _pipeCount = 2;
+  var wrap = document.getElementById('pipe2Wrap');
+  if (wrap) { wrap.style.display = 'contents'; } // grid子要素として展開
+  var addBtn = document.getElementById('addPipeBtn');
+  if (addBtn) addBtn.style.display = 'none';
+  updatePipeItems();
+  recalcGL();
+}
+
+function removePipeRow() {
+  _pipeCount = 1;
+  var wrap = document.getElementById('pipe2Wrap');
+  if (wrap) wrap.style.display = 'none';
+  var addBtn = document.getElementById('addPipeBtn');
+  if (addBtn) addBtn.style.display = 'inline-block';
+  var el2 = document.getElementById('inDP2');  if(el2) el2.value = '';
+  var el3 = document.getElementById('inDPH2'); if(el3) el3.value = '';
+  updatePipeItems();
+  recalcGL();
+}
+
+function makePipeSelect(idx) {
+  var cur = (_pipeTypes[idx] !== undefined && _pipeTypes[idx] !== null) ? _pipeTypes[idx] : (idx===0?'通信管':'電力管');
+  var customVal = _pipeCustomNames[idx] || '';
+  var isOther = cur === 'その他';
+  var s = '<select onchange="setPipeType('+idx+',this.value)"'
+    + ' style="width:100%;padding:4px 4px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text1);height:34px;box-sizing:border-box;">';
+  s += '<option value=""'+(cur===''?' selected':'')+'>（管種なし）</option>';
+  PIPE_OPTIONS.forEach(function(o){
+    s += '<option value="'+o+'"'+(cur===o?' selected':'')+'>'+o+'</option>';
+  });
+  s += '</select>';
+  // 「その他」フリー入力欄（常にDOMに存在、表示のみ切替）
+  s += '<div id="pipeCustomWrap'+idx+'" style="display:'+(isOther?'':'none')+';margin-top:3px;">'
+    +  '<input type="text" id="pipeCustom'+idx+'" placeholder="管種名を入力" value="'+customVal.replace(/"/g,'&quot;')+'"'
+    +  ' oninput="setPipeCustomName('+idx+',this.value)"'
+    +  ' style="width:100%;box-sizing:border-box;padding:4px 6px;border:1.5px solid #fbbf24;border-radius:5px;font-size:11px;background:#fffbeb;">'
+    +  '</div>';
+  return s;
+}
+
+function makePipeRow(idx, isHL) {
+  var lbl     = getPipeLbl(idx);
+  var dp_id   = idx===0 ? 'inDP1'  : 'inDP2';
+  var dph_id  = idx===0 ? 'inDPH'  : 'inDPH2';
+  var hl      = isHL ? ' class="hl"' : '';
+  // grid: セレクト80px | DP 1fr | 管下H 1fr | (✕ボタン 28px if idx>0)
+  var cols    = idx===0 ? '80px 1fr 1fr' : '80px 1fr 1fr 28px';
+  var row = '<div style="display:grid;grid-template-columns:'+cols+';gap:5px;align-items:end;margin-bottom:5px;">';
+  row += '<div style="display:flex;flex-direction:column;gap:2px;">'
+    +    '<label style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">管種</label>'
+    +    makePipeSelect(idx)
+    +  '</div>';
+  row += '<div style="display:flex;flex-direction:column;gap:2px;">'
+    +    '<label id="lblDP'+(idx+1)+'" style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">'+lbl+' DP (m)</label>'
+    +    '<input'+hl+' type="number" id="'+dp_id+'" step="0.01" placeholder="1.10" oninput="recalcGL()"'
+    +    ' style="width:100%;box-sizing:border-box;">'
+    +  '</div>';
+  row += '<div style="display:flex;flex-direction:column;gap:2px;">'
+    +    '<label id="lblDPH'+(idx+1)+'" style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">'+lbl+' 管下H (m)</label>'
+    +    '<input'+hl+' type="number" id="'+dph_id+'" step="0.001" placeholder="0.285" oninput="recalcGL()"'
+    +    ' style="width:100%;box-sizing:border-box;">'
+    +  '</div>';
+  if(idx > 0){
+    row += '<div style="display:flex;align-items:flex-end;padding-bottom:1px;">'
+      +  '<button onclick="removePipeRow()" title="削除"'
+      +  ' style="width:28px;height:34px;padding:0;font-size:14px;background:transparent;border:1px solid #e2e8f0;border-radius:5px;cursor:pointer;color:var(--text3);line-height:1;">✕</button>'
+      +  '</div>';
+  }
+  row += '</div>';
+  return row;
+}
+
+function renderGLPanel() {
+  var lbl1 = getPipeLbl(0);
+  var lbl2 = getPipeLbl(1);
+  var addVis = _pipeCount >= 2 ? 'none' : 'inline-block';
+  var p2disp = _pipeCount >= 2 ? 'grid' : 'none';
+
+  var h = '<div class="input-panel">'
+    + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
+    +   'GL 計算'
+    +   '<span style="display:flex;gap:6px;align-items:center;">'
+    +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
+    +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:10px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
+    +   '</span>'
+    + '</div>'
+    + makePipeRow(0, true)
+    // ── 管 2 ──（追加後のみ表示。display:noneの初期化はJSで制御）
+    + '<div id="pipe2Wrap">' + makePipeRow(1, false) + '</div>'
+    // ── ダミー管チェック ──
+    + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:11px;color:var(--text2);">'
+    +   '<input type="checkbox" id="chkDummyGlobal" onchange="toggleDummy(this.checked)"'+(_showDummy?' checked':'')+' style="width:14px;height:14px;accent-color:#f59e0b;">'
+    +   '<span>ダミー管の撮影項目を表示する</span>'
+    + '</label>'
+    // ── 管下H計算補助 ──
+    + '<details id="dphCalcWrap" style="margin-top:8px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">'
+    +   '<summary style="background:#f8fafc;padding:7px 12px;font-size:11px;font-weight:700;color:#475569;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">'
+    +     '📐 管下H 計算補助（管径・管台から自動計算）'
+    +   '</summary>'
+    +   '<div style="padding:10px 12px;background:#fff;">'
+    +     '<div style="font-size:10px;color:#64748b;margin-bottom:8px;">管下H = 管径1 ＋ 管台 ＋ 管径2（2条の場合）<br>例：130φ＋管台25＋130φ ＝ 285mm</div>'
+    +     '<div id="dphHdr1" style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl1+'</div>'
+    +     '<div class="field-row c3" style="margin-bottom:6px;">'
+    +       '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe1" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
+    +       '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase1" step="1" placeholder="例:25" oninput="calcDPH(1)"></div>'
+    +       '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe2" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
+    +     '</div>'
+    +     '<div id="dphResult1" style="font-size:11px;color:#0369a1;font-weight:700;margin-bottom:10px;min-height:16px;"></div>'
+    +     '<div style="border-top:1px solid #f1f5f9;margin:8px 0 10px;"></div>'
+    +     '<div id="dphHdr2" style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl2+'（異なる場合のみ）</div>'
+    +     '<div class="field-row c3" style="margin-bottom:6px;">'
+    +       '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe3" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
+    +       '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase2" step="1" placeholder="例:25" oninput="calcDPH(2)"></div>'
+    +       '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe4" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
+    +     '</div>'
+    +     '<div id="dphResult2" style="font-size:11px;color:#0369a1;font-weight:700;min-height:16px;"></div>'
+    +   '</div>'
+    + '</details>'
+    + '<div id="glResult" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;line-height:1.8;"></div>'
+    + '<div class="field-row c2" style="margin-top:8px">'
+    +   '<div class="field"><label>BH バケット径 (m)</label><input type="number" id="inBH" step="0.01" placeholder="0.50" value="0.50" oninput="recalcGL()"></div>'
+    +   '<div class="field"><label>追加深さ (m)</label><input type="number" id="inExtra" step="0.01" placeholder="0.00" oninput="recalcGL()"></div>'
+    + '</div>'
+    + '</div>';
+
+  return h;
+}
+
 function recalcGL(){
   var dp1  = parseFloat($v('inDP1'))  || 0;
   var dph1 = parseFloat($v('inDPH'))  || 0;
@@ -1782,8 +2102,8 @@ function recalcGL(){
   if(res){
     if(dp1 > 0 || dp2 > 0){
       var lines = [];
-      if(dp1 > 0) lines.push('①通信管　土被り DP=' + dp1.toFixed(2) + 'm　床付け H=' + yuka1 + 'm');
-      if(dp2 > 0) lines.push('②電力管　土被り DP=' + dp2.toFixed(2) + 'm　床付け H=' + yuka2 + 'm');
+      if(dp1 > 0) lines.push(getPipeLbl(0)+'　土被り DP=' + dp1.toFixed(2) + 'm　床付け H=' + yuka1 + 'm');
+      if(dp2 > 0) lines.push(getPipeLbl(1)+'　土被り DP=' + dp2.toFixed(2) + 'm　床付け H=' + yuka2 + 'm');
       res.innerHTML = lines.join('<br>');
       res.style.display = '';
     } else {
@@ -1843,16 +2163,17 @@ function recalcGL(){
   // ── ヘルパー ──
   function fmtGL(v){ return 'GL-' + Math.abs(parseFloat(v)).toFixed(2) + 'm'; }
   function glLbl(pipe, v){
-    var lbl = pipe === 1 ? '①通信' : '②電力';
+    var lbl = getPipeLbl(pipe - 1);
     return v !== '' ? lbl + ' ' + fmtGL(v) : lbl + ' DP入力後に計算';
   }
 
   // 土被り確認タグ（DP値のみ）
+  var _lbl1 = getPipeLbl(0); var _lbl2 = getPipeLbl(1);
   document.querySelectorAll('.tag-blue').forEach(function(el){
-    el.textContent = dp1 > 0 ? '①通信 DP=' + dp1.toFixed(2) + 'm' : '①通信 DP入力後に計算';
+    el.textContent = dp1 > 0 ? _lbl1 + ' DP=' + dp1.toFixed(2) + 'm' : _lbl1 + ' DP入力後に計算';
   });
   document.querySelectorAll('.tag-green').forEach(function(el){
-    el.textContent = dp2 > 0 ? '②電力 DP=' + dp2.toFixed(2) + 'm' : '②電力 DP入力後に計算';
+    el.textContent = dp2 > 0 ? _lbl2 + ' DP=' + dp2.toFixed(2) + 'm' : _lbl2 + ' DP入力後に計算';
   });
   document.querySelectorAll('.tag-yellow').forEach(function(el){
     el.textContent = 'BH掘削 GL-' + fmtBH() + 'm';
@@ -1897,8 +2218,8 @@ function recalcGL(){
       if(dp1 > 0 || dp2 > 0){
         // midList空 → 路盤変更点GLを中間転圧として表示（例: 85型DP=1.1）
         var suffix = embSameAsF40 ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
-        if(dp1 > 0) html += '<span class="tag tag-blue">①通信 ' + fmtGL(f40) + suffix + '</span>';
-        if(dp2 > 0) html += '<span class="tag tag-green">②電力 ' + fmtGL(f40) + suffix + '</span>';
+        if(dp1 > 0) html += '<span class="tag tag-blue">'+getPipeLbl(0)+' ' + fmtGL(f40) + suffix + '</span>';
+        if(dp2 > 0) html += '<span class="tag tag-green">'+getPipeLbl(1)+' ' + fmtGL(f40) + suffix + '</span>';
       } else {
         html = '<span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span>';
       }
@@ -1911,13 +2232,14 @@ function recalcGL(){
     wrap.innerHTML = html;
   });
 
+  updatePipeItems();
   saveState();
 }
 
 function glTagStr(pipe){
   var v = pipe===1 ? _gl1 : _gl2;
-  var lbl = pipe===1 ? '①通信 GL-' : '②電力 GL-';
-  return v ? lbl+v+'m' : (pipe===1?'①通信':'②電力')+' DP入力後に計算';
+  var lbl = getPipeLbl(pipe-1);
+  return v ? lbl+' GL-'+v+'m' : lbl+' DP入力後に計算';
 }
 function fmtBH(){
   var dp1=parseFloat($v('inDP1'))||0, dp2=parseFloat($v('inDP2'))||0;
@@ -1932,6 +2254,52 @@ function fmtBH(){
 // =====================================================
 // 進捗
 // =====================================================
+// ─── 管種に応じてチェック項目の表示・名称を更新 ───────────────────────
+var _PIPE_SLOT_ORIG = ['通信管', '電力管']; // スロット別・元の管種名
+
+function updatePipeItems() {
+  document.querySelectorAll('[data-pipe-slot]').forEach(function(el) {
+    var slot = parseInt(el.getAttribute('data-pipe-slot')); // 1 or 2
+    var idx  = slot - 1;
+    var origN = el.getAttribute('data-orig-n') || '';
+    var origType = _PIPE_SLOT_ORIG[idx] || '';
+
+    // ── 表示制御 ──
+    // スロット2は管種追加時のみ
+    if (slot >= 2 && _pipeCount < 2) { el.style.display = 'none'; return; }
+    el.style.display = '';
+
+    // ── 管種名の解決（「その他」はカスタム名を使用） ──
+    var rawType = (_pipeTypes[idx] !== undefined && _pipeTypes[idx] !== null)
+      ? _pipeTypes[idx] : origType;
+    var curType = (rawType === 'その他')
+      ? ((_pipeCustomNames[idx] || '').trim() || 'その他')
+      : rawType;
+
+    // 項目名を現在の管種に変換
+    var cname = el.querySelector('.cname');
+    if (cname && origN) {
+      var newN = curType
+        ? origN.replace(origType, curType)
+        : origN.replace(origType + '\u3000', '').replace(origType + ' ', '');
+      cname.textContent = newN;
+    }
+  });
+}
+
+function toggleDummy(checked) {
+  _showDummy = checked;
+  updateDummyItems();
+  saveState();
+}
+
+function updateDummyItems() {
+  // 「ダミー管」を含む撮影項目の表示制御
+  document.querySelectorAll('[data-dummy-item]').forEach(function(el) {
+    el.style.display = _showDummy ? '' : 'none';
+  });
+}
+
 function updateProgress(){
   var _presetType2 = getPresetTypeData(_siteId, _typeKey, _presetTypeKey);
   var _dynCk2 = _presetType2 ? buildChecklistFromPreset(_presetType2) : null;
