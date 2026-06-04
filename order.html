@@ -534,7 +534,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
   <!-- 型サブタブナビ -->
   <div id="type-subnav" style="
-    display:flex;overflow-x:auto;scrollbar-width:none;
+    display:flex;flex-wrap:wrap;overflow-x:auto;scrollbar-width:none;
     background:var(--surface2);border:1px solid var(--border);
     border-radius:10px;margin-bottom:12px;padding:4px;gap:4px;
   "></div>
@@ -1679,6 +1679,14 @@ function loadRoadbedForCurrentSite(siteId) {
   if (siteData) {
     localStorage.setItem('roadbed_masters', JSON.stringify(siteData));
     try { renderRoadbedMasterList(); } catch(e) {}
+    // 路盤マスタが更新されたらタブを再構築
+    if (_lastSiteId === siteId) {
+      var _newMasters = _getMastersAsTypes(siteId);
+      if (_newMasters.length !== _lastMergedCount) {
+        _lastMergedCount = _newMasters.length;
+        buildDynamicCalcTabs(siteId, _lastSiteName, _newMasters);
+      }
+    }
     try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
     return;
   }
@@ -2105,9 +2113,10 @@ const TYPES = {
 // =====================================================================
 // 計算定数（デフォルト値）
 // =====================================================================
-const AS_DENSITY    = 2.35;  // t/m³（発注・廃材共通 密度）
-const WASTE_AS_BULK = 1.15;  // 廃AS嵩増率（破砕後も密度高いため1.15）
-const WASTE_RB_BULK = 1.25;  // 廃路盤材嵩増率（RM/RC 掘削膨れ1.25）
+const AS_DENSITY       = 2.35;  // t/m³（発注・廃材共通 密度）
+const WASTE_AS_BULK    = 1.15;  // 廃AS嵩増率（破砕後も密度高いため1.15）
+const WASTE_RB_BULK    = 1.25;  // 廃路盤材嵩増率（RM/RC 掘削膨れ1.25）
+const CONCRETE_DENSITY = 2.3;   // t/m³ コンクリート密度（廃材重量計算用）
 
 const CALC_DEFAULTS = {
   asDensity:   2.35,  // AS密度 t/m³
@@ -4711,7 +4720,9 @@ function buildRoadbedChips(t, mode) {
     if ((t.genkyoRM||0)>0) chips.push({ label:'上層路盤 RM-'+rmS, val: buildLayerStr(t.honRM_layers, t.genkyoRM), color:'rgba(34,197,94,0.08)', border:'rgba(34,197,94,0.4)', textColor:'var(--green)' });
     const honRcH = Math.round((t.genkyoRC||0)*1000);
     if (honRcH > 0) chips.push({ label:'下層路盤 RC-'+rcS, val: buildLayerStr(t.honRC_layers, t.genkyoRC), color:'rgba(34,197,94,0.08)', border:'rgba(34,197,94,0.4)', textColor:'var(--green)' });
-    const honTotal = honAsH + Math.round((t.genkyoRM||0)*1000) + Math.round((t.genkyoRC||0)*1000);
+    const honCnMm = Math.round((t.genkyoCnH||0)*1000);
+    if (honCnMm > 0) chips.push({ label:'コンクリート', val:'t='+honCnMm+'mm', color:'rgba(249,115,22,0.08)', border:'rgba(249,115,22,0.4)', textColor:'#f97316' });
+    const honTotal = honAsH + Math.round((t.genkyoRM||0)*1000) + Math.round((t.genkyoRC||0)*1000) + honCnMm;
     chips.push({ label:'路盤合計H', val: honTotal+'mm', color:'rgba(124,58,237,0.08)', border:'rgba(124,58,237,0.4)', textColor:'#a78bfa' });
   }
   return chips.map(c =>
@@ -5018,15 +5029,21 @@ function onGlobalSiteChange() {
   if (!site) return;
 
   const preset = site.presetId ? getPresets().find(p => p.id === site.presetId) : null;
-  const types  = preset ? preset.types : KANJYO2_PRESET.types;
 
   badge.textContent   = preset ? `📐 ${preset.name}` : '📐 デフォルト（環状2号線）';
   badge.style.display = '';
 
-  // 動的タブを生成
-  buildDynamicCalcTabs(siteId, site.name, types);
+  // グローバル保持（Firestore同期後の再構築用）
+  _lastSiteId    = siteId;
+  _lastSiteName  = site.name;
+  _lastBaseTypes = []; // プリセットはひな形専用・タブには使用しない
 
-  // 路盤構成マスタを現場連動でロード
+  // 路盤マスタ登録分のみでタブ生成
+  var _mastersOnly = _getMastersAsTypes(siteId);
+  _lastMergedCount = _mastersOnly.length;
+  buildDynamicCalcTabs(siteId, site.name, _mastersOnly);
+
+  // 路盤構成マスタを現場連動でロード（Firestore同期）
   loadRoadbedForCurrentSite(siteId);
 
   // 路盤マスタフォームの現場セレクトも同期
@@ -5042,8 +5059,12 @@ let _dynamicBound = {}; // typeKeyごとのバインド済みフラグ
 function genRbRmCardsHTML(t, rmS, rcS) {
   const _rmS = rmS || _resolveRmSize(t);
   const _rcS = rcS || _resolveRcSize(t);
-  const _kariRmMm = Math.round((t.rmH||0)*1000);
-  const _kariRcMm = Math.round((t.rcH||0)*1000);
+  // _kariBackup が存在する場合（hon モード切替後）は元のkari値を使用
+  const _bk = t._kariBackup || {};
+  const _rmH = (_bk.rmH != null) ? _bk.rmH : (t.rmH||0);
+  const _rcH = (_bk.rcH != null) ? _bk.rcH : (t.rcH||0);
+  const _kariRmMm = Math.round(_rmH*1000);
+  const _kariRcMm = Math.round(_rcH*1000);
   const _rmLayersStr = _resolveLayersStr(t, 'kariRmLayers');
   const _rcLayersStr = _resolveLayersStr(t, 'kariRcLayers');
   const _rmLabel  = getRmLabel(_rmS, _rmLayersStr);
@@ -5053,11 +5074,11 @@ function genRbRmCardsHTML(t, rmS, rcS) {
   return (
     ((t.rmH||0) > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">上層路盤工 RM-${_rmS}</div>
-      <div style="color:var(--green);font-weight:700;">${_rmIsCustom ? 't = 0mm' : buildLayerStr(t.kariRM_layers, t.rmH)}</div>
+      <div style="color:var(--green);font-weight:700;">${_rmIsCustom ? 't = 0mm' : buildLayerStr(t.kariRM_layers, _rmH)}</div>
     </div>` : '') +
     `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">下層路盤工 RC-${_rcS}</div>
-      <div style="color:var(--green);font-weight:700;">${_rcIsCustom ? 't = 0mm' : buildLayerStr(t.kariRC_layers, t.rcH)}</div>
+      <div style="color:var(--green);font-weight:700;">${_rcIsCustom ? 't = 0mm' : buildLayerStr(t.kariRC_layers, _rcH)}</div>
     </div>` +
     (_rmIsCustom && _kariRmMm > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">その他路盤構成（${_rmLabel}）</div>
@@ -5127,6 +5148,150 @@ function updateRbLabels(tid, typeConf) {
 }
 // ────────────────────────────────────────────────────────────────────
 
+
+// =====================================================================
+// 路盤マスタ → typeConf 変換（カスタム型タブ追加用）
+// =====================================================================
+var _lastSiteId   = '';
+var _lastSiteName = '';
+var _lastBaseTypes = [];
+var _lastMergedCount = 0;
+
+function _rbMasterToTypeObj(m) {
+  var sumAS = function(layers, roles) {
+    if (!Array.isArray(layers)) return 0;
+    return layers.filter(function(a){ return roles.indexOf(a.role||'surface') >= 0; })
+                 .reduce(function(s,a){ return s+(a.t||0); }, 0);
+  };
+  return {
+    key:        'type_import_' + m.key,
+    label:      m.label || m.key,
+    color:      m.color || '#7c3aed',
+    rmH:        m.kariRmH  || 0,
+    rcH:        m.kariRcH  || 0,
+    rmSize:     m.kariRmSize || 40,
+    rcSize:     m.kariRcSize || 40,
+    asT密粒:    sumAS(m.kariAsLayers, ['surface']),
+    asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
+    totalH:     m.kariTotalH || 0,
+    kariRmH:    m.kariRmH  || 0,
+    kariRcH:    m.kariRcH  || 0,
+    kariTotalH: m.kariTotalH || 0,
+    honRmH:     m.honRmH   || 0,
+    honRcH:     m.honRcH   || 0,
+    honTotalH:  m.honTotalH || 0,
+    kariAsLayers:  m.kariAsLayers  || [],
+    honAsLayers:   m.honAsLayers   || [],
+    kariRbLayers:  m.kariRbLayers  || [],
+    honRbLayers:   m.honRbLayers   || [],
+    kariRmLayers:  m.kariRmLayers  || '',
+    kariRcLayers:  m.kariRcLayers  || '',
+    honRmLayers:   m.honRmLayers   || '',
+    honRcLayers:   m.honRcLayers   || '',
+    kariFreeMode:  m.kariFreeMode  || false,
+    kariFreeRows:  m.kariFreeRows  || [],
+    honFreeMode:   m.honFreeMode   || false,
+    honFreeRows:   m.honFreeRows   || [],
+    genkyoAsH: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        return m.honFreeRows.filter(function(r){return r.type==='surface'||r.type==='base';})
+                            .reduce(function(s,r){return s+(r.t||0);},0)/1000;
+      }
+      return (m.honAsLayers||[]).reduce(function(s,a){return s+(a.t||0);},0)/1000;
+    })(),
+    genkyoRM: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        // upper_rb 優先、lower_rb で subcat が RM 系ならこちらにも算入
+        return m.honFreeRows.filter(function(r){
+          if (r.type==='upper_rb') return true;
+          if (r.type==='lower_rb') { var sc=r.subcat||''; return sc==='RM-30'||sc==='RM-40'; }
+          return false;
+        }).reduce(function(s,r){return s+(r.t||0);},0)/1000;
+      }
+      return m.honRmH || 0;
+    })(),
+    genkyoRC: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        // lower_rb（RC系 subcat を含む）+ upper_rb で subcat が RC 系のもの
+        return m.honFreeRows.filter(function(r){
+          if (r.type==='lower_rb') { var sc=r.subcat||''; return sc!=='RM-30'&&sc!=='RM-40'; }
+          if (r.type==='upper_rb') { var sc=r.subcat||''; return sc==='RC-30'||sc==='RC-40'; }
+          return false;
+        }).reduce(function(s,r){return s+(r.t||0);},0)/1000;
+      }
+      return m.honRcH || 0;
+    })(),
+    genkyoCnH: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        return m.honFreeRows.filter(function(r){return r.type==='concrete'||r.type==='コンクリート';})
+                            .reduce(function(s,r){return s+(r.t||0);},0)/1000;
+      }
+      return 0;
+    })(),
+    // hon路盤合計H: フリーモードは m.honTotalH を正とする
+    genkyoTotalH: m.honFreeMode ? (m.honTotalH||0) : 0,
+    // コンクリート間のRC行（廃材計算用）
+    // cn_rc 型を明示指定した行を優先。なければ旧ロジック（コンクリート間に挟まれたlower_rb行）で検出
+    genkyoCnRC: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        var rows=m.honFreeRows;
+        // cn_rc 型を明示指定した行が1行でもあればそちらを使う
+        var cnRcRows=rows.filter(function(r){return r.type==='cn_rc';});
+        if (cnRcRows.length>0) {
+          return cnRcRows.reduce(function(s,r){return s+(r.t||0);},0)/1000;
+        }
+        // 旧ロジック: コンクリート層に挟まれた lower_rb/upper_rb 行
+        var inCn=false; var cnRcT=0;
+        for (var i=0;i<rows.length;i++){
+          var t=rows[i].type||'';
+          if (t==='concrete'||t==='コンクリート') inCn=true;
+          else if ((t==='lower_rb'||t==='upper_rb') && inCn) cnRcT+=rows[i].t||0;
+        }
+        return cnRcT/1000;
+      }
+      return 0;
+    })(),
+    // cn_rc サイズ（廃材表示用）
+    genkyoCnRCSubcat: (function(){
+      if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+        var r=m.honFreeRows.find(function(r){return r.type==='cn_rc';});
+        if (r) return r.subcat||'RC-40';
+      }
+      return 'RC-40';
+    })(),
+    noGradient: false,
+    _fromRbMaster: true,
+  };
+}
+
+// 路盤マスタのみをタブ用 typeConf 配列として返す（プリセット不使用）
+function _getMastersAsTypes(siteId) {
+  var localKey = 'roadbed_masters_' + siteId;
+  var masters = JSON.parse(localStorage.getItem(localKey) || 'null');
+  if (!masters) masters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+  if (!Array.isArray(masters) || masters.length === 0) return [];
+  return masters.map(_rbMasterToTypeObj);
+}
+
+function _mergeRbMastersIntoTypes(baseTypes, siteId) {
+  // ローカルキー優先、グローバルキーをフォールバック
+  var localKey = 'roadbed_masters_' + siteId;
+  var masters  = JSON.parse(localStorage.getItem(localKey) || 'null');
+  if (!masters) masters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+  if (!Array.isArray(masters) || masters.length === 0) return baseTypes;
+  // ラベル完全一致のみでデュープ判定（キーが同じでもラベルが違えば別タブとして追加）
+  var existingLabels = baseTypes.map(function(t){ return (t.label||'').trim(); });
+  var extras = masters
+    .filter(function(m) {
+      if (!m.key) return false;
+      // 同一ラベルはスキップ
+      if (existingLabels.indexOf((m.label||'').trim()) >= 0) return false;
+      return true;
+    })
+    .map(_rbMasterToTypeObj);
+  return baseTypes.concat(extras);
+}
+
 function buildDynamicCalcTabs(siteId, siteName, types) {
   const container  = document.getElementById('dynamic-calc-tabs');
   const subNav     = document.getElementById('type-subnav');
@@ -5187,11 +5352,13 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
     btn.dataset.typetab = tabId;
     btn.textContent = typeConf.label;
     btn.style.cssText = `
-      padding:7px 14px;font-size:12px;font-weight:700;
+      padding:6px 12px;font-size:11px;font-weight:700;
       border:none;border-radius:7px;cursor:pointer;
+      flex-shrink:0;
       background:${idx===0?typeConf.color||'var(--accent)':'transparent'};
       color:${idx===0?'#fff':'var(--text2)'};
-      white-space:nowrap;font-family:var(--sans);
+      white-space:normal;word-break:keep-all;font-family:var(--sans);
+      max-width:120px;text-align:center;line-height:1.3;
       transition:background 0.15s,color 0.15s;
     `;
     btn.addEventListener('click', () => {
@@ -5264,6 +5431,10 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   const pipeCoeff = PIPE_COEFF_DEFAULT[normalizePipeKey(t.key)] ?? ((t.rmH||0) > 0 ? 0.3 : 0.2);
   const ex = t.extraMaterials || [];
   const tp = t.teppan || { use: false, pending: false, memo: '' };
+  // コンクリート層: フリーモード設定からコンクリート層合計厚さ（m）を取得
+  const _kariConcreteRows = (t.kariFreeMode && Array.isArray(t.kariFreeRows))
+    ? t.kariFreeRows.filter(r => r.type === 'コンクリート' && (r.t||0) > 0) : [];
+  const _kariConcreteT = _kariConcreteRows.reduce((s, r) => s + (r.t || 0), 0) / 1000;
 
   return `
   <!-- 基本情報 -->
@@ -5327,8 +5498,9 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <span style="font-size:11px;font-family:var(--mono);color:var(--text2);">
         AS:${Math.round((t.genkyoAsH||0)*1000)}mm
         ${(t.genkyoRM||0)>0?' RM:'+Math.round((t.genkyoRM||0)*1000)+'mm':''}
-        RC:${Math.round((t.genkyoRC||0)*1000)}mm
-        <span style="color:#a78bfa;font-weight:700;">＝${Math.round(((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0))*1000)}mm</span>
+        ${(t.genkyoRC||0)>0?' RC:'+Math.round((t.genkyoRC||0)*1000)+'mm':''}
+        ${(t.genkyoCnH||0)>0?' CN:'+Math.round((t.genkyoCnH||0)*1000)+'mm':''}
+        <span style="color:#a78bfa;font-weight:700;">＝${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnH||0)))*1000)}mm</span>
       </span>` : ''}
     </div>
     <button onclick="document.getElementById('${tid}-roadbed-card').scrollIntoView({behavior:'smooth',block:'start'})"
@@ -5346,6 +5518,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}n-genL" placeholder="0"></div>
+      <div id="${tid}n-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:11px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:11px;">W（m）</label><input type="number" step="0.01" id="${tid}n-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}n-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}n-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="${tid}n-DP" placeholder="1.1"></div>
@@ -5364,6 +5537,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}ns-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}ns-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}ns-genL" placeholder="0"></div>
+      <div id="${tid}ns-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:11px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:11px;">W（m）</label><input type="number" step="0.01" id="${tid}ns-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ns-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ns-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="${tid}ns-DP" placeholder="1.1"></div>
@@ -5388,6 +5562,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}k-genL" placeholder="0"></div>
+      <div id="${tid}k-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:11px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:11px;">W（m）</label><input type="number" step="0.01" id="${tid}k-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}k-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}k-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="${tid}k-DP1" placeholder="1.1"></div>
@@ -5410,6 +5585,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}ks-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}ks-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:11px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}ks-genL" placeholder="0"></div>
+      <div id="${tid}ks-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:11px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:11px;">W（m）</label><input type="number" step="0.01" id="${tid}ks-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ks-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"><label style="color:var(--text3);font-size:11px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ks-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:13px;"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="${tid}ks-DP1" placeholder="1.1"></div>
@@ -5477,7 +5653,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     <!-- 現況・本復旧（差異あり型のみ表示） -->
     ${kariHonDiffers(t) ? `
     <div style="border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;margin-top:12px;">
-      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">🏗 現況・本復旧 路盤構成　H=${Math.round(((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0))*1000)}mm</div>
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">🏗 現況・本復旧 路盤構成　H=${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnH||0)))*1000)}mm</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:var(--mono);">
         ${(t.genkyoAsH||0)>0 ? (() => {
           const _hal = getHonAsLayers(t);
@@ -5504,9 +5680,13 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
           <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">下層路盤 RC-${rcS}</div>
           <div style="color:var(--green);font-weight:700;">${buildLayerStr(t.honRC_layers, t.genkyoRC)}</div>
         </div>` : ''}
+        ${(t.genkyoCnH||0)>0 ? `<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">コンクリート層</div>
+          <div style="color:#f97316;font-weight:700;">t = ${Math.round((t.genkyoCnH||0)*1000)}mm</div>
+        </div>` : ''}
         <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
           <div style="color:var(--text2);font-size:11px;margin-bottom:4px;">路盤合計H（現況）</div>
-          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0))*1000)}mm</div>
+          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnH||0)))*1000)}mm</div>
         </div>
       </div>
     </div>` : ''}
@@ -5596,24 +5776,35 @@ function switchDynMode(tid, mode) {
         asLayers: t.asLayers,
       };
     }
-    const honSurfaceT = t.asT密粒;
-    const honBaseT    = Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT);
-    const honTotalH   = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0);
+    // honFreeMode: genkyoAsH がすでに honFreeRows の surface+base 合計 → それを使う
+    const honSurfaceT = t.honFreeMode
+      ? Math.round((t.genkyoAsH || 0) * 1000)  // honFreeRows から算出済みのAS合計(0なら0)
+      : t.asT密粒;                               // 通常モード: kari surface を踏襲
+    const honBaseT = t.honFreeMode ? 0 : Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT);
+    const honTotalH = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0) + (t.genkyoCnH || 0);
     t.asT密粒 = honSurfaceT;
     t.asT粗粒 = honBaseT;
     t.rmH    = t.genkyoRM || 0;
     t.rcH    = t.genkyoRC || 0;
     t.totalH = honTotalH;
-    if (t.honAsLayers && t.honAsLayers.length > 0) {
+    if (t.honFreeMode && Array.isArray(t.honFreeRows)) {
+      // フリーモード: honFreeRows の surface/base 行から asLayers を再構築
+      const _honAsRows = t.honFreeRows.filter(r => r.type === 'surface' || r.type === 'base');
+      t.asLayers = _honAsRows.length > 0
+        ? _honAsRows.map(r => ({ role: r.type, preset: r.preset || r.name || 'AS層', custom: '', t: r.t || 0 }))
+        : (honSurfaceT > 0 ? [{ role:'surface', preset:'表層 AS（本復旧）', custom:'', t: honSurfaceT }] : []);
+    } else if (t.honAsLayers && t.honAsLayers.length > 0) {
       t.asLayers = t.honAsLayers.map(a => ({
         role: a.role || (a === t.honAsLayers[0] ? 'surface' : 'base'),
         preset: a.name || a.preset || '', custom: '', t: a.t || 0,
       }));
     } else {
-      t.asLayers = [
-        { role:'surface', preset:'表層 AS（本復旧）', custom:'', t: honSurfaceT },
-        ...(honBaseT > 0 ? [{ role:'base', preset:'基層・路盤 AS（本復旧）', custom:'', t: honBaseT }] : []),
-      ];
+      t.asLayers = honSurfaceT > 0
+        ? [
+            { role:'surface', preset:'表層 AS（本復旧）', custom:'', t: honSurfaceT },
+            ...(honBaseT > 0 ? [{ role:'base', preset:'基層・路盤 AS（本復旧）', custom:'', t: honBaseT }] : []),
+          ]
+        : [];  // honFreeMode でAS=0の場合は空
     }
   } else {
     if (t._kariBackup) {
@@ -5725,12 +5916,27 @@ function renderDynTotal(tid, typeConf) {
   const kariHaibanWL = Math.max(0, totalWL - genWL);   // 仮復旧廃材面積 = パターンWL - 現況廃材WL
 
   // 廃材量：仮復旧廃材はkariHaibanWL、現況廃材はgenWLでそれぞれ計算
-  const _kariT       = typeConf;  // kari値は常にtypeConfから参照
+  // kari廃材計算は必ず元のkari値を使う（switchDynModeで上書きされていても_kariBackupから復元）
+  const _kariT_raw   = TYPES[tid] || typeConf;
+  const _kariT       = (_kariT_raw._kariBackup) ? Object.assign({}, _kariT_raw, _kariT_raw._kariBackup) : typeConf;
+  // コンクリート層: kari/honフリーモード両対応（type='concrete' と 'コンクリート' どちらも対応）
+  const _isCnType = r => r.type === 'concrete' || r.type === 'コンクリート';
+  const _kariCnFreeRows = (typeConf.kariFreeMode && Array.isArray(typeConf.kariFreeRows))
+    ? typeConf.kariFreeRows.filter(r => _isCnType(r) && (r.t||0) > 0) : [];
+  const _kariCnH = _kariCnFreeRows.reduce((s, r) => s + (r.t || 0), 0) / 1000;  // m（仮復旧）
+  // hon コンクリート: honFreeRows または genkyoCnH
+  const _honCnH = (typeConf.honFreeMode && Array.isArray(typeConf.honFreeRows))
+    ? typeConf.honFreeRows.filter(r => _isCnType(r) && (r.t||0) > 0).reduce((s,r)=>s+(r.t||0),0)/1000
+    : (typeConf.genkyoCnH || 0);
   const kariAsH      = (_kariT.asT密粒 + (_kariT.asT粗粒||0)) / 1000;
   const kariAsWaste  = kariAsH * kariHaibanWL * AS_DENSITY * WASTE_AS_BULK;
   const kariRcWaste  = _kariT.rcH * kariHaibanWL * WASTE_RB_BULK;
   const kariRmWaste  = _kariT.rmH * kariHaibanWL * WASTE_RB_BULK;
   const kariRcRmWaste = kariRcWaste + kariRmWaste;
+  const kariCnWasteVol = _kariCnH * kariHaibanWL;           // m³ 仮復旧コンクリート廃材
+  const kariCnWasteT   = kariCnWasteVol * CONCRETE_DENSITY;  // t
+  const honCnWasteVol  = _honCnH * genWL;                   // m³ 現況コンクリート廃材（honFreeRowsから）
+  const honCnWasteT    = honCnWasteVol * CONCRETE_DENSITY;   // t
   const honAsWaste   = _kariT.genkyoAsH * genWL * AS_DENSITY * WASTE_AS_BULK;
   const honRcWaste   = _kariT.genkyoRC * genWL * WASTE_RB_BULK;
   const honRmWaste   = _kariT.genkyoRM * genWL * WASTE_RB_BULK;
@@ -5794,6 +6000,11 @@ function renderDynTotal(tid, typeConf) {
   if (_effRmH > 0) html += add(`${getModeRmLabel(_effT2, tid, _effRmS)}合計`, s.rmOrd, 'm³', 'var(--green)');
   html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
   if (_effRmH > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
+  // 本復旧コンクリート発注量
+  if (_dynMode === 'hon' && (_honCnH||0) > 0) {
+    const _honCnOrd = _honCnH * totalWL;
+    html += add('コンクリート（本復旧）合計', _honCnOrd, 'm³', '#f97316');
+  }
   if (_effT2.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
   html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
   html += add('改良土+再生砂', s.sandSoilSum, 'm³', 'var(--orange)');
@@ -5807,14 +6018,50 @@ function renderDynTotal(tid, typeConf) {
       html += add(`廃材AS（${_kariT.asT密粒}${_kariT.asT粗粒>0?'＋'+_kariT.asT粗粒:''}mm）`, kariAsWaste, 't', 'rgba(249,115,22,0.85)');
       if (_kariT.rmH>0) html += add('廃路盤材（RC＋RM）合計', kariRcRmWaste, 'm³', 'var(--green)');
       else              html += add('廃路盤材 合計', kariRcWaste, 'm³', 'var(--green)');
+      if (_kariCnH > 0) {
+        html += add(`コンクリート廃材（${Math.round(_kariCnH*1000)}mm）`, kariCnWasteVol, 'm³', '#a78bfa');
+        html += add('コンクリート廃材 重量', kariCnWasteT, 't', '#c4b5fd');
+      }
     }
     if (genWL > 0.0001) {
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡`, 'rgba(124,58,237,0.75)');
-      html += add(`廃材AS（現況 ${Math.round((_kariT.genkyoAsH||0)*1000)}mm）`, honAsWaste, 't', 'rgba(249,115,22,0.85)');
-      if ((_kariT.genkyoRM||0)>0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
-      else                        html += add('廃路盤材 合計', honRcWaste, 'm³', 'var(--green)');
+      if ((_kariT.genkyoAsH||0)>0) html += add(`廃材AS（現況 ${Math.round((_kariT.genkyoAsH||0)*1000)}mm）`, honAsWaste, 't', 'rgba(249,115,22,0.85)');
+      const _honCnRcH  = (_kariT.genkyoCnRC||0);  // コンクリート間のRC
+      const _honCnRcWaste = _honCnRcH * genWL * WASTE_RB_BULK;
+      if ((_kariT.genkyoCnH||0)>0 && (_kariT.genkyoRC||0)>0) {
+        // コンクリートとRC両方ある場合
+        const _normalRcH = Math.max(0, (_kariT.genkyoRC||0) - _honCnRcH);
+        const _normalRcWaste = _normalRcH * genWL * WASTE_RB_BULK;
+        if (_honCnRcH > 0) { const _cnRcSubcat=(_kariT.genkyoCnRCSubcat||'RC-40'); const _cnRcLabel=_cnRcSubcat==='フリー'?'路盤材':_cnRcSubcat; html += add(`コンクリート間 ${_cnRcLabel}廃材（${Math.round(_honCnRcH*1000)}mm）`, _honCnRcWaste, 'm³', '#fb923c'); }
+        if (_normalRcH > 0) html += add(`RC-${_resolveRcSize(_kariT)}廃材（${Math.round(_normalRcH*1000)}mm）`, _normalRcWaste, 'm³', 'var(--green)');
+        if ((_kariT.genkyoRM||0)>0) html += add(`RM-${_resolveRmSize(_kariT)}廃材（${Math.round((_kariT.genkyoRM||0)*1000)}mm）`, honRmWaste, 'm³', 'var(--green)');
+      } else if ((_kariT.genkyoRM||0)>0) {
+        html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
+      } else if ((_kariT.genkyoRC||0)>0) {
+        html += add('廃路盤材 合計', honRcWaste, 'm³', 'var(--green)');
+      }
+      if (_honCnH > 0) {
+        html += add(`コンクリート廃材（現況 ${Math.round(_honCnH*1000)}mm）`, honCnWasteVol, 'm³', '#a78bfa');
+        html += add('コンクリート廃材 重量', honCnWasteT, 't', '#c4b5fd');
+      }
     }
   }
+
+  // ── 既設CN撤去（LO壊し） ──
+  const _cnPats = [`${tid}n`, `${tid}ns`, ...(typeConf.noGradient ? [] : [`${tid}k`, `${tid}ks`])];
+  let totalLoVol = 0;
+  _cnPats.forEach(p => {
+    const loW = parseFloat(document.getElementById(`${p}-loW`)?.value) || 0;
+    const loL = parseFloat(document.getElementById(`${p}-loL`)?.value) || 0;
+    const loT = parseFloat(document.getElementById(`${p}-loT`)?.value) || 0;
+    totalLoVol += loW * loL * (loT / 1000);
+  });
+  if (totalLoVol > 0) {
+    html += sep('🗑️ 既設CN撤去（LO壊し）', 'rgba(249,115,22,0.75)');
+    html += add('既設CN撤去量', totalLoVol, 'm³', '#fb923c');
+    html += add('既設CN廃材 重量', totalLoVol * CONCRETE_DENSITY, 't', '#fdba74');
+  }
+
   el.innerHTML = html;
 }
 
@@ -6571,18 +6818,10 @@ let _currentDiagType = null;
 function getDiagAvailableTypes() {
   const siteId = document.getElementById('global-site-sel')?.value;
   if (siteId) {
-    const site = getSites().find(s => s.id === siteId);
-    const preset = site?.presetId ? getPresets().find(p => p.id === site.presetId) : null;
-    if (preset?.types?.length > 0) return preset.types;
+    var masters = _getMastersAsTypes(siteId);
+    if (masters.length > 0) return masters;
   }
-  // フォールバック: 旧静的タブ5型
-  return [
-    { key:'85', label:'車道部 85型',      color:'#4f8ef7', noGradient:false },
-    { key:'40', label:'車道側道部 40型',   color:'#22c55e', noGradient:false },
-    { key:'30', label:'歩道切下部 30型',   color:'#f97316', noGradient:false },
-    { key:'20', label:'歩道切下部 20型',   color:'#eab308', noGradient:false },
-    { key:'14', label:'歩道部 14型',       color:'#a78bfa', noGradient:false },
-  ];
+  return [];
 }
 
 // 型ボタンを動的生成してハイライト切替 + パターンボタン更新

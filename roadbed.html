@@ -214,23 +214,43 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
 
         <!-- 仮復旧 -->
         <div id="formKari">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
-          <div id="kari-as-rows"></div>
-          <button class="add-btn" onclick="addAsRow('kari')">＋ AS層を追加</button>
-          <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
-          <div id="kari-rb-rows"></div>
-          <button class="add-btn" onclick="addRbRow('kari')">＋ 路盤層を追加</button>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button id="kari-mode-btn" onclick="toggleFreeMode('kari')" style="background:rgba(245,158,11,0.15);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">🔀 フリーモードに切替</button>
+          </div>
+          <div id="kari-normal-mode">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
+            <div id="kari-as-rows"></div>
+            <button class="add-btn" onclick="addAsRow('kari')">＋ AS層を追加</button>
+            <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
+            <div id="kari-rb-rows"></div>
+            <button class="add-btn" onclick="addRbRow('kari')">＋ 路盤層を追加</button>
+          </div>
+          <div id="kari-free-mode" style="display:none;">
+            <div style="font-size:11px;color:var(--orange);margin-bottom:6px;">▼ 舗装層（上から順に自由入力 — コンクリート舗装など）</div>
+            <div id="kari-free-rows"></div>
+            <button class="add-btn" onclick="addFreeRow('kari')">＋ 層を追加</button>
+          </div>
           <div class="total-chip" id="kari-total">合計 H = <b>0 mm</b></div>
         </div>
 
         <!-- 本復旧 -->
         <div id="formHon" style="display:none">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
-          <div id="hon-as-rows"></div>
-          <button class="add-btn" onclick="addAsRow('hon')">＋ AS層を追加</button>
-          <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
-          <div id="hon-rb-rows"></div>
-          <button class="add-btn" onclick="addRbRow('hon')">＋ 路盤層を追加</button>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button id="hon-mode-btn" onclick="toggleFreeMode('hon')" style="background:rgba(245,158,11,0.15);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">🔀 フリーモードに切替</button>
+          </div>
+          <div id="hon-normal-mode">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
+            <div id="hon-as-rows"></div>
+            <button class="add-btn" onclick="addAsRow('hon')">＋ AS層を追加</button>
+            <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
+            <div id="hon-rb-rows"></div>
+            <button class="add-btn" onclick="addRbRow('hon')">＋ 路盤層を追加</button>
+          </div>
+          <div id="hon-free-mode" style="display:none;">
+            <div style="font-size:11px;color:var(--orange);margin-bottom:6px;">▼ 舗装層（上から順に自由入力 — コンクリート舗装など）</div>
+            <div id="hon-free-rows"></div>
+            <button class="add-btn" onclick="addFreeRow('hon')">＋ 層を追加</button>
+          </div>
           <div class="total-chip" id="hon-total">合計 H = <b>0 mm</b></div>
         </div>
 
@@ -262,13 +282,16 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
         <div class="row2">
           <div class="field">
             <label>種別</label>
-            <select id="dwgType">
+            <select id="dwgType" onchange="onDwgTypeChange(this.value)">
               <option>断面図</option>
               <option>平面図</option>
               <option>縦断図</option>
               <option>詳細図</option>
               <option>その他</option>
             </select>
+            <input type="text" id="dwgTypeOther" placeholder="種別を入力（例：施工図、竣工図）"
+              style="display:none;margin-top:6px;width:100%;box-sizing:border-box;"
+              oninput="onDwgTypeOtherInput(this.value)">
           </div>
           <div class="field">
             <label>関連路盤構成（任意）</label>
@@ -278,7 +301,16 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
           </div>
         </div>
         <div class="field">
-          <label>Google Drive 共有URL</label>
+          <label>ローカルファイル（PDF・画像）</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-cancel" style="padding:6px 14px;margin:0;flex-shrink:0;" onclick="document.getElementById('dwgFileInput').click()">📁 ファイルを選択</button>
+            <span id="dwgFileName" style="font-size:12px;color:var(--text3);">未選択</span>
+            <button type="button" id="btnClearDwgFile" onclick="clearDwgFile()" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;">✕</button>
+          </div>
+          <input type="file" id="dwgFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onDwgFileSelect(this)">
+        </div>
+        <div class="field">
+          <label>または Google Drive 共有URL <span style="color:var(--text3);font-size:11px;">（ファイル未選択時）</span></label>
           <input type="url" id="dwgUrl" placeholder="https://drive.google.com/file/d/...">
         </div>
         <div class="field">
@@ -437,6 +469,8 @@ let _fbDb=null,_fbAuth=null,_isAdmin=false;
 let _selectedSiteId='';
 let _kariAsRows=[],_honAsRows=[];
 let _kariRbRows=[],_honRbRows=[];
+let _kariFreeMode=false,_honFreeMode=false;
+let _kariFreeRows=[],_honFreeRows=[];
 let _pdfDoc=null,_pdfPage=1,_pdfTotal=0;
 let _currentMode='roadbed';
 
@@ -457,7 +491,7 @@ const AS_OPTIONS={
 // 路盤層 区分定義（cat = 'RM-30'|'RM-40'|'RC-30'|'RC-40'|'free'）
 // ======================================
 const CAT_COLOR={'RM-30':'rgba(34,197,94,0.2)','RM-40':'rgba(34,197,94,0.2)','RC-30':'rgba(167,139,250,0.2)','RC-40':'rgba(167,139,250,0.2)','上層':'rgba(79,142,247,0.2)','下層':'rgba(20,184,166,0.2)',free:'rgba(245,158,11,0.2)',rm:'rgba(34,197,94,0.2)',rc:'rgba(167,139,250,0.2)',rmfree:'rgba(34,197,94,0.15)',rcfree:'rgba(167,139,250,0.15)'};
-const CAT_TC   ={'RM-30':'var(--green)','RM-40':'var(--green)','RC-30':'var(--purple)','RC-40':'var(--purple)','上層':'var(--blue)','下層':'#14b8a6',free:'var(--orange)',rm:'var(--green)',rc:'var(--purple)',rmfree:'var(--green)',rcfree:'var(--purple)'};
+const CAT_TC   ={'RM-30':'var(--green)','RM-40':'var(--green)','RC-30':'var(--purple)','RC-40':'var(--purple)','上層':'var(--blue)','下層':'#14b8a6',free:'var(--orange)',blank:'var(--text3)',rm:'var(--green)',rc:'var(--purple)',rmfree:'var(--green)',rcfree:'var(--purple)'};
 const CAT_LBL  ={'RM-30':'RM-30','RM-40':'RM-40','RC-30':'RC-30','RC-40':'RC-40','上層':'上層','下層':'下層',free:'フリー',rm:'RM',rc:'RC',rmfree:'RM+自由',rcfree:'RC+自由'};
 
 // 小区分（subcat）定義
@@ -584,10 +618,14 @@ function importStandardPresets(){
       ...r,
       kariRmSize:40,kariRmH:sumCatMm(r.kariRbLayers,isRm)/1000,kariRmLayers:'',
       kariRcSize:40,kariRcH:sumCatMm(r.kariRbLayers,isRc)/1000,kariRcLayers:'',
-      kariTotalH:(kariAsT+kariRbT)/1000,
+      kariTotalH:_kariFreeMode?(kariFreeT/1000):(kariAsT+kariRbT)/1000,
       honRmSize:40,honRmH:sumCatMm(r.honRbLayers,isRm)/1000,honRmLayers:'',
       honRcSize:40,honRcH:sumCatMm(r.honRbLayers,isRc)/1000,honRcLayers:'',
-      honTotalH:(honAsT+honRbT)/1000,
+      honTotalH:_honFreeMode?(honFreeT/1000):(honAsT+honRbT)/1000,
+    kariFreeMode:_kariFreeMode||undefined,
+    kariFreeRows:_kariFreeMode?_kariFreeRows.filter(r=>r.name||r.t>0):undefined,
+    honFreeMode:_honFreeMode||undefined,
+    honFreeRows:_honFreeMode?_honFreeRows.filter(r=>r.name||r.t>0):undefined,
       updatedAt:now,
     };
   });
@@ -685,23 +723,24 @@ function renderAsRows(s){
   const fs='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:12px;';
   el.innerHTML=arr.map((a,i)=>{
     const role=a.role||'surface';
-    const opts=AS_OPTIONS[role]||AS_OPTIONS.surface;
+    const opts=role==='blank'?[]:AS_OPTIONS[role]||AS_OPTIONS.surface;
     const isOther=a.preset==='その他（自由入力）';
-    const rc=role==='surface'?'rgba(79,142,247,0.9)':role==='base'?'rgba(34,197,94,0.9)':'var(--orange)';
+    const rc=role==='surface'?'rgba(79,142,247,0.9)':role==='base'?'rgba(34,197,94,0.9)':role==='blank'?'var(--text3)':'var(--orange)';
     const optHtml=opts.map(o=>`<option value="${o}"${a.preset===o?' selected':''}>${o}</option>`).join('');
-    const preview=isOther?a.custom:a.preset;
+    const preview=(isOther||role==='blank')?a.custom:a.preset;
     return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <select style="${fs}width:72px;flex-shrink:0;color:${rc};font-weight:700;" onchange="updateAsRow('${s}',${i},'role',this.value)">
+        <select style="${fs}width:90px;flex-shrink:0;color:${rc};font-weight:700;" onchange="updateAsRow('${s}',${i},'role',this.value);renderAsRows('${s}')">
           <option value="surface"${role==='surface'?' selected':''}>表層</option>
           <option value="base"${role==='base'?' selected':''}>基層</option>
-          <option value="other"${role==='other'?' selected':''}>その他</option>
+          <option value="other"${role==='other'?' selected':''}>その他フリー入力</option>
+          <option value="blank"${role==='blank'?' selected':''}>未記入</option>
         </select>
-        <select style="${fs}flex:1;min-width:100px;" onchange="updateAsRow('${s}',${i},'preset',this.value);var ci=document.getElementById('aci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'">
+        ${role==='blank' ? '' : `<select style="${fs}flex:1;min-width:100px;" onchange="updateAsRow('${s}',${i},'preset',this.value);var ci=document.getElementById('aci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'">
           <option value="">― 選択 ―</option>${optHtml}
-        </select>
+        </select>`}
         <input id="aci-${s}-${i}" type="text" value="${a.custom||''}" placeholder="材料名"
-          style="${fs}flex:1;min-width:70px;${isOther?'':'display:none;'}"
+          style="${fs}flex:1;min-width:70px;${(isOther||role==='blank')?'':'display:none;'}"
           onchange="updateAsRow('${s}',${i},'custom',this.value)">
         <input type="number" value="${a.t||''}" placeholder="mm" min="0" step="5"
           style="${fs}width:58px;text-align:right;flex-shrink:0;"
@@ -709,7 +748,7 @@ function renderAsRows(s){
         <span style="font-size:11px;color:var(--text3);">mm</span>
         <button onclick="removeAsRow('${s}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;">✕</button>
       </div>
-      ${preview||a.t>0?`<div style="font-size:10px;color:var(--text3);margin-top:3px;margin-left:4px;">→ ${preview||'未入力'}${a.t>0?' t='+a.t+'mm':''}</div>`:''}
+      ${preview||a.t>0?`<div style="font-size:10px;color:var(--text3);margin-top:3px;margin-left:4px;">→ ${role==='blank'?'':role==='surface'?'[表層] ':role==='base'?'[基層] ':'[その他] '}${preview||'未入力'}${a.t>0?' t='+a.t+'mm':''}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -742,20 +781,21 @@ function renderRbRows(s){
   el.innerHTML=arr.map((r,i)=>{
     const cat=r.cat||'上層';
     const subcat=r.subcat||'RM-40';
-    const isCatFree=cat==='free';
+    const isCatFree=cat==='free'||cat==='blank';
     const isSubFree=subcat==='subfree';
     const catColor=CAT_TC[cat]||'var(--text2)';
     const subcatColor=SUBCAT_TC[subcat]||'var(--text2)';
     const rowMm=rbRowTotal(r);
-    const lblFull=isCatFree?(r.name||'フリー'):isSubFree?(cat+' '+(r.name||'フリー')):(cat+' '+subcat);
+    const lblFull=cat==='blank'?(r.name||'未記入'):isCatFree?(r.name||'フリー'):isSubFree?(cat+' '+(r.name||'フリー')):(cat+' '+subcat);
     const subcatSel=!isCatFree?`<select style="${fs}width:80px;flex-shrink:0;color:${subcatColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'subcat',this.value)"><option value="RM-30"${subcat==='RM-30'?' selected':''}>RM-30</option><option value="RM-40"${subcat==='RM-40'?' selected':''}>RM-40</option><option value="RC-30"${subcat==='RC-30'?' selected':''}>RC-30</option><option value="RC-40"${subcat==='RC-40'?' selected':''}>RC-40</option><option value="subfree"${isSubFree?' selected':''}>フリー</option></select>`:'';
     const nameInput=(isCatFree||isSubFree)?`<input type="text" value="${r.name||''}" placeholder="層名（例：既設路盤）" style="${fs}flex:1;min-width:80px;" onchange="updateRbRow('${s}',${i},'name',this.value)">`:'';
     return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-        <select style="${fs}width:68px;flex-shrink:0;color:${catColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'cat',this.value)">
-          <option value="上層"${cat==='上層'?' selected':''}>上層</option>
-          <option value="下層"${cat==='下層'?' selected':''}>下層</option>
-          <option value="free"${isCatFree?' selected':''}>フリー</option>
+        <select style="${fs}width:100px;flex-shrink:0;color:${catColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'cat',this.value);renderRbRows('${s}')">
+          <option value="上層"${cat==='上層'?' selected':''}>上層路盤</option>
+          <option value="下層"${cat==='下層'?' selected':''}>下層路盤</option>
+          <option value="free"${isCatFree?' selected':''}>その他フリー入力</option>
+          <option value="blank"${cat==='blank'?' selected':''}>未記入</option>
         </select>
         ${subcatSel}
         ${nameInput}
@@ -781,6 +821,30 @@ function renderRbRows(s){
 // 合計計算
 // ======================================
 function updateTotal(s){
+  if(s==='kari'&&_kariFreeMode){_updateFreeTotal('kari',_kariFreeRows);return;}
+  if(s==='hon'&&_honFreeMode){_updateFreeTotal('hon',_honFreeRows);return;}
+  _updateTotalNormal(s);
+}
+function _updateFreeTotal(s,arr){
+  const total=arr.reduce((a,r)=>a+(+r.t||0),0);
+  const _isAS=t=>!t||t==='AS'||t==='surface'||t==='base';
+  const _isRB=t=>t==='路盤'||t==='upper_rb'||t==='lower_rb';
+  const _isCN=t=>t==='コンクリート'||t==='concrete';
+  const _isCNRC=t=>t==='cn_rc';
+  const asT=arr.filter(r=>_isAS(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const rbT=arr.filter(r=>_isRB(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const cnT=arr.filter(r=>_isCN(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const cnrcT=arr.filter(r=>_isCNRC(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const parts=[];
+  if(asT>0) parts.push('<span style="color:var(--blue)">AS '+asT+'mm</span>');
+  if(rbT>0) parts.push('<span style="color:var(--green)">路盤 '+rbT+'mm</span>');
+  if(cnT>0) parts.push('<span style="color:var(--purple)">コンクリート '+cnT+'mm</span>');
+  if(cnrcT>0) parts.push('<span style="color:rgba(234,88,12,0.9)">CN間路盤 '+cnrcT+'mm</span>');
+  const breakdown=parts.length>1?' <span style="font-size:10px;color:var(--text3)">('+parts.join(' / ')+')</span>':'';
+  const el=document.getElementById(s+'-total');
+  if(el) el.innerHTML='合計 H = <b>'+total+' mm</b>'+breakdown;
+}
+function _updateTotalNormal(s){
   const asArr=s==='kari'?_kariAsRows:_honAsRows;
   const rbArr=s==='kari'?_kariRbRows:_honRbRows;
   const total=asArr.reduce((a,r)=>a+(r.t||0),0)+rbArr.reduce((a,r)=>a+rbRowTotal(r),0);
@@ -832,21 +896,27 @@ function saveConfig(){
   const firstSize=(arr,fn)=>{const r=arr.find(x=>fn(x.subcat||''));return r?parseInt(String(r.subcat||'').replace(/\D/g,''))||40:40;};
   const layerStr=(arr,fn)=>arr.filter(r=>fn(r.subcat||'')&&r.t>0).map(r=>{const lbl=(r.cat==='free'||r.subcat==='subfree')?(r.name||'フリー'):(r.cat+' '+r.subcat);return lbl+' t='+r.t+'mm'+((r.n||1)>1?'×'+r.n+'層':'');}).join('、');
 
-  const kariAsT=_kariAsRows.reduce((s,a)=>s+(a.t||0),0);
-  const honAsT =_honAsRows.reduce((s,a)=>s+(a.t||0),0);
-  const kariRbT=_kariRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
-  const honRbT =_honRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
+  const kariFreeT=_kariFreeRows.reduce((s,r)=>s+(+r.t||0),0);
+  const honFreeT =_honFreeRows.reduce((s,r)=>s+(+r.t||0),0);
+  const kariAsT=_kariFreeMode?0:_kariAsRows.reduce((s,a)=>s+(a.t||0),0);
+  const honAsT =_honFreeMode?0:_honAsRows.reduce((s,a)=>s+(a.t||0),0);
+  const kariRbT=_kariFreeMode?0:_kariRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
+  const honRbT =_honFreeMode?0:_honRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
 
   const entry={
     key:editKey||('rb_'+Date.now()),label,color,
     kariAsLayers:asFilter(_kariAsRows),kariRbLayers:rbToLayers(_kariRbRows),
     kariRmSize:firstSize(_kariRbRows,isRmCat),kariRmH:sumCat(_kariRbRows,isRmCat)/1000,kariRmLayers:layerStr(_kariRbRows,isRmCat),
     kariRcSize:firstSize(_kariRbRows,isRcCat),kariRcH:sumCat(_kariRbRows,isRcCat)/1000,kariRcLayers:layerStr(_kariRbRows,isRcCat),
-    kariTotalH:(kariAsT+kariRbT)/1000,
+    kariTotalH:_kariFreeMode?kariFreeT/1000:(kariAsT+kariRbT)/1000,
+    kariFreeMode:_kariFreeMode||undefined,
+    kariFreeRows:_kariFreeMode?_kariFreeRows.filter(r=>r.t>0||r.name||r.preset):undefined,
     honAsLayers:asFilter(_honAsRows),honRbLayers:rbToLayers(_honRbRows),
     honRmSize:firstSize(_honRbRows,isRmCat),honRmH:sumCat(_honRbRows,isRmCat)/1000,honRmLayers:layerStr(_honRbRows,isRmCat),
     honRcSize:firstSize(_honRbRows,isRcCat),honRcH:sumCat(_honRbRows,isRcCat)/1000,honRcLayers:layerStr(_honRbRows,isRcCat),
-    honTotalH:(honAsT+honRbT)/1000,
+    honTotalH:_honFreeMode?honFreeT/1000:(honAsT+honRbT)/1000,
+    honFreeMode:_honFreeMode||undefined,
+    honFreeRows:_honFreeMode?_honFreeRows.filter(r=>r.t>0||r.name||r.preset):undefined,
     updatedAt:new Date().toISOString().slice(0,10),
   };
 
@@ -874,6 +944,12 @@ function _loadConfigToForm(r){
   document.getElementById('editKey').value=r.key;
   document.getElementById('rbLabel').value=r.label||'';
   document.getElementById('rbColor').value=r.color||'#4f8ef7';
+  _kariFreeMode=!!r.kariFreeMode;
+  _honFreeMode =!!r.honFreeMode;
+  _kariFreeRows=_kariFreeMode?(r.kariFreeRows||[]).map(x=>({type:x.type||'surface',subcat:x.subcat||'',preset:x.preset||'',name:x.name||'',t:x.t||0})):[];
+  _honFreeRows =_honFreeMode ?(r.honFreeRows ||[]).map(x=>({type:x.type||'surface',subcat:x.subcat||'',preset:x.preset||'',name:x.name||'',t:x.t||0})):[];
+  _applyFreeMode('kari',_kariFreeMode);
+  _applyFreeMode('hon', _honFreeMode);
   _kariAsRows=(r.kariAsLayers||[]).map(_asRowFromSaved);
   _honAsRows =(r.honAsLayers ||[]).map(_asRowFromSaved);
   if(!_kariAsRows.length) _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
@@ -882,6 +958,8 @@ function _loadConfigToForm(r){
   _honRbRows =restoreRbRows(r,'hon');
   renderAsRows('kari');renderAsRows('hon');
   renderRbRows('kari');renderRbRows('hon');
+  if(_kariFreeMode) renderFreeRows('kari');
+  if(_honFreeMode)  renderFreeRows('hon');
   updateTotal('kari');updateTotal('hon');
   document.getElementById('btnCancel').style.display='';
   switchTab('kari');
@@ -1023,6 +1101,127 @@ function deleteConfig(key){
 }
 
 function cancelEdit(){clearForm();}
+// ── フリーレイヤーモード ──
+function _applyFreeMode(s, on){
+  const nm=document.getElementById(s+'-normal-mode');
+  const fm=document.getElementById(s+'-free-mode');
+  const btn=document.getElementById(s+'-mode-btn');
+  if(nm) nm.style.display=on?'none':'';
+  if(fm) fm.style.display=on?'':'none';
+  if(btn) btn.textContent=on?'🔀 通常モードに切替':'🔀 フリーモードに切替';
+}
+function toggleFreeMode(s){
+  const on=s==='kari'?!_kariFreeMode:!_honFreeMode;
+  if(s==='kari'){_kariFreeMode=on;if(!_kariFreeRows.length)_kariFreeRows=[{type:'surface',subcat:'',preset:'',name:'',t:0}];}
+  else           {_honFreeMode=on; if(!_honFreeRows.length) _honFreeRows=[{type:'surface',subcat:'',preset:'',name:'',t:0}];}
+  _applyFreeMode(s,on);
+  if(on) renderFreeRows(s);
+  updateTotal(s);
+}
+function addFreeRow(s){
+  (s==='kari'?_kariFreeRows:_honFreeRows).push({type:'surface',subcat:'RM-40',preset:'',name:'',t:0});
+  renderFreeRows(s);
+}
+function removeFreeRow(s,i){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  arr.splice(i,1);
+  renderFreeRows(s);
+  updateTotal(s);
+}
+function updateFreeRow(s,i,f,v){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  if(!arr[i])return;
+  arr[i][f]=f==='t'?Math.max(0,parseInt(v)||0):v;
+  updateTotal(s);
+}
+function _freeTypeColor(type){
+  if(type==='base') return 'rgba(79,142,247,0.7)';
+  if(type==='upper_rb'||type==='lower_rb'||type==='路盤') return 'var(--green)';
+  if(type==='concrete'||type==='コンクリート') return 'var(--purple)';
+  if(type==='cn_rc') return 'rgba(234,88,12,0.85)';
+  if(type==='other') return 'var(--orange)';
+  if(type==='blank') return 'var(--text3)';
+  return 'var(--blue)';  // surface / AS
+}
+function _freeTypeLabelShort(type){
+  if(type==='surface'||type==='AS') return '表層';
+  if(type==='base') return '基層';
+  if(type==='upper_rb') return '上層路盤';
+  if(type==='lower_rb') return '下層路盤';
+  if(type==='路盤') return '路盤';
+  if(type==='concrete'||type==='コンクリート') return 'コンクリート';
+  if(type==='cn_rc') return 'CN間路盤';
+  if(type==='other') return 'その他';
+  if(type==='blank') return '';
+  return type||'';
+}
+function renderFreeRows(s){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  const el=document.getElementById(s+'-free-rows');if(!el)return;
+  const fs='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:12px;';
+  const AS_TYPE_OPTS=[
+    {v:'surface',l:'表層'},
+    {v:'base',   l:'基層'},
+    {v:'upper_rb',l:'上層路盤'},
+    {v:'lower_rb',l:'下層路盤'},
+    {v:'concrete',l:'コンクリート'},
+    {v:'cn_rc',  l:'コンクリート間路盤材'},
+    {v:'other',  l:'その他フリー'},
+    {v:'blank',  l:'未記入'},
+  ];
+  el.innerHTML=arr.map((r,i)=>{
+    const tp=r.type||'surface';
+    const tc=_freeTypeColor(tp);
+    const typeSelOpts=AS_TYPE_OPTS.map(o=>`<option value="${o.v}"${tp===o.v?' selected':''}>${o.l}</option>`).join('');
+    // 材料名入力エリア: type によって変わる
+    const isAS=tp==='surface'||tp==='AS'||tp==='base';
+    const isRB=tp==='upper_rb'||tp==='lower_rb'||tp==='路盤';
+    const isCN=tp==='concrete'||tp==='コンクリート';
+    const isCNRC=tp==='cn_rc';
+    const isOther=tp==='other';
+    const isFree=isOther||tp==='blank';
+    let matHtml='';
+    if(isAS){
+      const aopts=tp==='base'?AS_OPTIONS.base:AS_OPTIONS.surface;
+      const pv=r.preset||'';
+      const isOtherP=pv==='その他（自由入力）';
+      const optHtml=aopts.map(o=>`<option value="${o}"${pv===o?' selected':''}>${o}</option>`).join('');
+      matHtml=`<select style="${fs}flex:1;min-width:90px;" onchange="updateFreeRow('${s}',${i},'preset',this.value);var ci=document.getElementById('faci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'"><option value="">― 選択 ―</option>${optHtml}</select>`
+        +`<input id="faci-${s}-${i}" type="text" value="${r.name||''}" placeholder="材料名" style="${fs}flex:1;min-width:60px;${isOtherP?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isRB){
+      const sc=r.subcat||'RM-40';
+      const subcatOpts=['RM-30','RM-40','RC-30','RC-40','フリー'].map(v=>`<option value="${v}"${sc===v?' selected':''}>${v}</option>`).join('');
+      const isSCFree=sc==='フリー';
+      matHtml=`<select style="${fs}width:80px;flex-shrink:0;" onchange="updateFreeRow('${s}',${i},'subcat',this.value);renderFreeRows('${s}')"><option value="">― ―</option>${subcatOpts}</select>`
+        +`<input type="text" value="${r.name||''}" placeholder="層名" style="${fs}flex:1;min-width:60px;${isSCFree?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isCNRC){
+      // コンクリート間路盤材: RC/RMサイズ選択 + オプション名称
+      const sc=r.subcat||'RC-40';
+      const subcatOpts=['RC-30','RC-40','RM-30','RM-40','フリー'].map(v=>`<option value="${v}"${sc===v?' selected':''}>${v}</option>`).join('');
+      const isSCFree=sc==='フリー';
+      matHtml=`<select style="${fs}width:80px;flex-shrink:0;" onchange="updateFreeRow('${s}',${i},'subcat',this.value);renderFreeRows('${s}')"><option value="">― ―</option>${subcatOpts}</select>`
+        +`<input type="text" value="${r.name||''}" placeholder="備考（省略可）" style="${fs}flex:1;min-width:60px;${isSCFree?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isOther){
+      // その他フリー: 材料名を自由入力
+      matHtml=`<input type="text" value="${r.name||''}" placeholder="材料名（自由入力）" style="${fs}flex:1;min-width:90px;" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else {
+      // concrete / blank: 直接テキスト入力
+      matHtml=`<input type="text" value="${r.name||''}" placeholder="${isCN?'コンクリート':'層名（省略可）'}" style="${fs}flex:1;min-width:90px;" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    }
+    // プレビューラベル
+    const prevLabel=isRB?(r.subcat&&r.subcat!=='フリー'?r.subcat:r.name||''):isCNRC?(r.subcat&&r.subcat!=='フリー'?r.subcat:r.name||''):isAS?(r.preset==='その他（自由入力）'?r.name:r.preset)||r.name:r.name;
+    const typeLabel=_freeTypeLabelShort(tp);
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:6px 8px;flex-wrap:wrap;">
+      <select style="${fs}width:100px;flex-shrink:0;color:${tc};font-weight:700;" onchange="updateFreeRow('${s}',${i},'type',this.value);renderFreeRows('${s}');updateTotal('${s}')">${typeSelOpts}</select>
+      ${matHtml}
+      <input style="${fs}width:60px;text-align:right;flex-shrink:0;" type="number" min="0" placeholder="厚さ" value="${r.t||''}" oninput="updateFreeRow('${s}',${i},'t',this.value)">
+      <span style="font-size:11px;color:var(--text3);white-space:nowrap;">mm</span>
+      <button onclick="removeFreeRow('${s}',${i})" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:12px;">✕</button>
+      ${prevLabel||r.t>0?`<div style="font-size:10px;color:var(--text3);width:100%;margin-top:2px;padding-left:2px;">→ ${typeLabel?'['+typeLabel+'] ':''}${prevLabel||'未入力'}${r.t>0?' t='+r.t+'mm':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 function clearForm(){
   document.getElementById('editKey').value='';
   document.getElementById('rbLabel').value='';
@@ -1031,6 +1230,9 @@ function clearForm(){
   _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
   _kariRbRows=[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
   _honRbRows =[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
+  _kariFreeMode=false;_honFreeMode=false;
+  _kariFreeRows=[];_honFreeRows=[];
+  _applyFreeMode('kari',false);_applyFreeMode('hon',false);
   renderAsRows('kari');renderAsRows('hon');
   renderRbRows('kari');renderRbRows('hon');
   document.getElementById('kari-total').innerHTML='合計 H = <b>0 mm</b>';
@@ -1056,6 +1258,14 @@ function renderConfigList(configs){
     const kariMm=Math.round((r.kariTotalH||0)*1000);
     const honMm =Math.round((r.honTotalH||0)*1000);
     const sub=kariMm!==honMm?'仮:'+kariMm+'mm ／ 本:'+honMm+'mm':'H='+kariMm+'mm';
+    if(r.kariFreeMode){
+      const freeStr=(r.kariFreeRows||[]).map(x=>x.name+(x.t?' t='+x.t+'mm':'')).join(' / ')||'（レイヤーなし）';
+      const totalMm=Math.round((r.kariTotalH||0)*1000);
+      const honTotalMm=Math.round((r.honTotalH||0)*1000);
+      const sub2=totalMm!==honTotalMm?'仮:'+totalMm+'mm ／ 本:'+honTotalMm+'mm':'H='+totalMm+'mm';
+      const adminBtns=_isAdmin?`<button class="btn-sm btn-edit" onclick="editConfig('${r.key}')">編集</button><button class="btn-sm btn-del" onclick="deleteConfig('${r.key}')">削除</button>`:'';
+      return`<div class="config-card"><div class="card-head"><div class="color-dot" style="background:${r.color||'#4f8ef7'};"></div><div style="flex:1;"><div class="name">${r.label} <span style="font-size:10px;color:var(--orange);border:1px solid var(--orange);border-radius:4px;padding:1px 5px;margin-left:4px;">フリー</span></div><div class="sub">${sub2}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">${freeStr}</div></div><div class="actions">${adminBtns}</div></div></div>`;
+    }
     const asStr=(r.kariAsLayers||[]).map(a=>a.name).filter(Boolean).join('＋')||'（AS層なし）';
     const rbDetail=(r.kariRbLayers||[]).map(rb=>{
       const isFree=rb.cat==='free'||rb.subcat==='subfree';
@@ -1113,18 +1323,22 @@ function saveDwg(){
   const name=document.getElementById('dwgName').value.trim();
   if(!name){showToast('⚠️ 図面名を入力してください');return;}
   const url=document.getElementById('dwgUrl').value.trim();
-  if(!url){showToast('⚠️ URLを入力してください');return;}
+  if(!url&&!_dwgPendingFileData){showToast('⚠️ ファイルを選択するかURLを入力してください');return;}
   const editKey=document.getElementById('dwgEditKey').value;
   const entry={
     key:editKey||('dwg_'+Date.now()),
     name:name,
-    type:document.getElementById('dwgType').value,
+    type:_getDwgType(),
     rbKey:document.getElementById('dwgRbKey').value,
     url:url,
     embedUrl:toDriveEmbedUrl(url),
     memo:document.getElementById('dwgMemo').value.trim(),
     updatedAt:new Date().toISOString().slice(0,10),
   };
+  if(_dwgPendingFileData){
+    entry.fileData=_dwgPendingFileData;
+    entry.fileType=_dwgPendingFileType||'';
+  }
   const list=getLocalDwg(_selectedSiteId);
   const idx=list.findIndex(d=>d.key===entry.key);
   if(idx>=0) list[idx]=entry; else list.push(entry);
@@ -1138,11 +1352,27 @@ function editDwg(key){
   const d=getLocalDwg(_selectedSiteId).find(x=>x.key===key);if(!d)return;
   document.getElementById('dwgEditKey').value=d.key;
   document.getElementById('dwgName').value=d.name||'';
-  document.getElementById('dwgType').value=d.type||'断面図';
+  const _stdTypes=['断面図','平面図','縦断図','詳細図','その他'];
+  if(_stdTypes.includes(d.type||'断面図')){
+    document.getElementById('dwgType').value=d.type||'断面図';
+    document.getElementById('dwgTypeOther').style.display='none';
+  } else {
+    document.getElementById('dwgType').value='その他';
+    document.getElementById('dwgTypeOther').style.display='';
+    document.getElementById('dwgTypeOther').value=d.type||'';
+  }
   document.getElementById('dwgUrl').value=d.url||'';
   document.getElementById('dwgMemo').value=d.memo||'';
   populateDwgRbSelect(d.rbKey);
   document.getElementById('btnCancelDwg').style.display='';
+  if(d.fileData){
+    _dwgPendingFileData=d.fileData;
+    _dwgPendingFileType=d.fileType||'';
+    document.getElementById('dwgFileName').textContent='（保存済みファイル）';
+    document.getElementById('btnClearDwgFile').style.display='';
+  } else {
+    clearDwgFile();
+  }
   document.getElementById('dwgName').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -1156,14 +1386,32 @@ function deleteDwg(key){
 }
 
 function cancelDwg(){clearDwgForm();}
+function _getDwgType(){
+  const sel=document.getElementById('dwgType');
+  if(sel.value==='その他'){
+    const ot=document.getElementById('dwgTypeOther').value.trim();
+    return ot||'その他';
+  }
+  return sel.value;
+}
+function onDwgTypeChange(val){
+  const el=document.getElementById('dwgTypeOther');
+  el.style.display=val==='その他'?'':'none';
+  if(val==='その他') el.focus();
+}
+function onDwgTypeOtherInput(val){}
+
 function clearDwgForm(){
   document.getElementById('dwgEditKey').value='';
   document.getElementById('dwgName').value='';
   document.getElementById('dwgType').value='断面図';
+  document.getElementById('dwgTypeOther').style.display='none';
+  document.getElementById('dwgTypeOther').value='';
   document.getElementById('dwgUrl').value='';
   document.getElementById('dwgMemo').value='';
   document.getElementById('btnCancelDwg').style.display='none';
   populateDwgRbSelect();
+  clearDwgFile();
 }
 
 function populateDwgRbSelect(selectedKey){
@@ -1197,13 +1445,36 @@ function renderDwgList(list){
 
 function viewDwg(key){
   const d=getLocalDwg(_selectedSiteId).find(x=>x.key===key);if(!d)return;
+  _showDwgInViewer(d);
+}
+async function _showDwgInViewer(d){
+  document.getElementById('viewerTitle').textContent=d.name;
+  document.getElementById('btnClearViewer').style.display='';
+  _pdfDoc=null;
+  if(d.fileData){
+    const isPdf=(d.fileType&&d.fileType.indexOf('pdf')>=0)||d.name.toLowerCase().endsWith('.pdf');
+    if(isPdf){
+      try{
+        const b64=d.fileData.split(',')[1];
+        const bin=atob(b64);
+        const buf=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+        _pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
+        _pdfTotal=_pdfDoc.numPages; _pdfPage=1;
+        renderPdfPage(1);
+        document.getElementById('pageNav').style.display=_pdfTotal>1?'':'none';
+        document.getElementById('pageInfo').textContent='1 / '+_pdfTotal;
+      }catch(e){showToast('❌ PDF読み込みエラー: '+e.message);}
+    } else {
+      document.getElementById('viewerArea').innerHTML='<img src="'+d.fileData+'" alt="'+d.name+'" style="max-width:100%;height:auto;">';
+      document.getElementById('pageNav').style.display='none';
+    }
+    return;
+  }
   const embedUrl=d.embedUrl||toDriveEmbedUrl(d.url);
   const va=document.getElementById('viewerArea');
   va.innerHTML='<iframe src="'+embedUrl+'" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
-  _pdfDoc=null;
   document.getElementById('pageNav').style.display='none';
-  document.getElementById('viewerTitle').textContent=d.name;
-  document.getElementById('btnClearViewer').style.display='';
 }
 
 // ======================================
@@ -1217,6 +1488,28 @@ async function handleFile(file){
   if(file.name.split('.').pop().toLowerCase()==='pdf') await loadPdf(file);
   else loadImage(file);
 }
+// ── 図面管理 ローカルファイル ──
+var _dwgPendingFileData=null, _dwgPendingFileType=null;
+function onDwgFileSelect(input){
+  const file=input.files[0];if(!file)return;
+  const MB=file.size/1024/1024;
+  if(MB>5){showToast('⚠️ ファイルが大きすぎます（'+MB.toFixed(1)+'MB）。5MB以下を推奨します');return;}
+  const fr=new FileReader();
+  fr.onload=function(e){
+    _dwgPendingFileData=e.target.result;
+    _dwgPendingFileType=file.type||(file.name.toLowerCase().endsWith('.pdf')?'application/pdf':'image/jpeg');
+    document.getElementById('dwgFileName').textContent=file.name+(MB>2?' ⚠️'+MB.toFixed(1)+'MB':'');
+    document.getElementById('btnClearDwgFile').style.display='';
+  };
+  fr.readAsDataURL(file);
+}
+function clearDwgFile(){
+  _dwgPendingFileData=null; _dwgPendingFileType=null;
+  document.getElementById('dwgFileName').textContent='未選択';
+  document.getElementById('btnClearDwgFile').style.display='none';
+  const fi=document.getElementById('dwgFileInput');if(fi)fi.value='';
+}
+
 async function loadPdf(file){
   const buf=await file.arrayBuffer();
   _pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
@@ -1652,13 +1945,7 @@ function onFilterHataChange(hataKey){
 
 function _viewDwgEntry(d){
   if(!d)return;
-  var embedUrl=d.embedUrl||toDriveEmbedUrl(d.url);
-  var va=document.getElementById('viewerArea');
-  va.innerHTML='<iframe src="'+embedUrl+'" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
-  _pdfDoc=null;
-  document.getElementById('pageNav').style.display='none';
-  document.getElementById('viewerTitle').textContent=d.name;
-  document.getElementById('btnClearViewer').style.display='';
+  _showDwgInViewer(d);
 }
 
 function setFilterStatus(msg){
