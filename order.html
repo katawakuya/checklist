@@ -1820,8 +1820,9 @@ function fbSyncHataMasters(callback) {
         if (arr.length > 0) {
           var localArr = [];
           try { localArr = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
-          // 新フォーマット優先（件数が同等以上なら上書き）
           if (arr.length >= localArr.length) {
+            // imgData は既存のローカルキャッシュから保持
+            arr = _mergeImgDataFromLocal(arr, localArr);
             localStorage.setItem('hata_master', JSON.stringify(arr));
           }
         }
@@ -1843,12 +1844,24 @@ function fbSyncHataMasters(callback) {
             var localArr = [];
             try { localArr = JSON.parse(localStorage.getItem('hata_master_' + s.id)||'[]'); } catch(e) {}
             if (arr.length >= localArr.length) {
+              arr = _mergeImgDataFromLocal(arr, localArr);
               localStorage.setItem('hata_master_' + s.id, JSON.stringify(arr));
             }
           }
         }
         finish();
       }).catch(finish);
+  });
+}
+
+// hasImg:true エントリの imgData を既存ローカルキャッシュから復元するヘルパー
+function _mergeImgDataFromLocal(newArr, localArr) {
+  return newArr.map(function(e) {
+    if (e.hasImg && !e.imgData) {
+      var loc = localArr.find(function(r){ return String(r.hata)===String(e.hata); });
+      if (loc && loc.imgData) { e = Object.assign({}, e, { imgData: loc.imgData }); }
+    }
+    return e;
   });
 }
 
@@ -1866,19 +1879,38 @@ function fbSaveMaster(key, data) {
     .catch(function(e){ console.warn('[FB] saveMaster err:', e); });
 }
 
+// hata配列の imgData を本体から分離して保存（Firestore 1MB制限対策）
+function _fbSaveHataArr(docKey, arr) {
+  if (!_fbDb || !_isAdmin) return;
+  // imgData を別ドキュメントに抜き出し、本体には hasImg フラグのみ残す
+  var stripped = arr.map(function(e) {
+    if (e.imgData) {
+      var imgDocKey = docKey + '_img_' + String(e.hata);
+      _fbDb.collection('masters').doc(imgDocKey).set({ imgData: e.imgData, updatedAt: new Date().toISOString() })
+        .catch(function(err){ console.warn('[FB] imgData save err', imgDocKey, err); });
+      var c = Object.assign({}, e);
+      delete c.imgData;
+      c.hasImg = true;
+      return c;
+    }
+    return e;
+  });
+  fbSaveMaster(docKey, stripped);
+}
+
 function fbSaveAllHataMasters() {
   if (!_fbDb || !_isAdmin) return;
   // グローバル（現場未割当）
   var globalArr = [];
   try { globalArr = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
-  fbSaveMaster('hata_master_global', globalArr);
+  _fbSaveHataArr('hata_master_global', globalArr);
   // 現場別（1現場 = 1ドキュメント → 1MB制限を回避）
   try {
     var sites = JSON.parse(localStorage.getItem('site_master')||'[]');
     sites.forEach(function(s) {
       var siteArr = [];
       try { siteArr = JSON.parse(localStorage.getItem('hata_master_'+s.id)||'[]'); } catch(e) {}
-      fbSaveMaster('hata_master_' + s.id, siteArr);
+      _fbSaveHataArr('hata_master_' + s.id, siteArr);
     });
   } catch(e) {}
 }

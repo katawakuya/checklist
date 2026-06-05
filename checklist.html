@@ -264,35 +264,89 @@ function initFirebase() {
 
 function fbSyncMasters(callback) {
   if (!_fbDb) { if(callback) callback(); return; }
+  // フェーズ1: 基本マスタ（site_master含む）を並列ロード
   var simpleKeys = ['site_master', 'road_presets', 'roadbed_masters', 'checklist_pipe_settings'];
-  var done = 0, total = simpleKeys.length + 1;
-  function finish() {
+  var done = 0, total = simpleKeys.length;
+  function phaseFinish() {
     done++;
     if (done < total) return;
-    try { loadSites(); } catch(e) {}
-    if (callback) callback();
+    // フェーズ2: site_master ロード済みの状態で旗揚げマスタをロード
+    fbSyncHataMasters(function() {
+      try { loadSites(); } catch(e) {}
+      if (callback) callback();
+    });
   }
   simpleKeys.forEach(function(k) {
     _fbDb.collection('masters').doc(k).get()
       .then(function(doc) {
         if (doc.exists) { var d=doc.data(); if(d&&d.data) localStorage.setItem(k, JSON.stringify(d.data)); }
-        finish();
-      }).catch(finish);
+        phaseFinish();
+      }).catch(phaseFinish);
   });
+}
+
+// 旗揚げマスタ同期: 旧形式(hata_master) + 新形式(hata_master_global / hata_master_{siteId})
+function fbSyncHataMasters(callback) {
+  if (!_fbDb) { if (callback) callback(); return; }
+  var sites = [];
+  try { sites = JSON.parse(localStorage.getItem('site_master') || '[]'); } catch(e) {}
+  var total = 2 + sites.length;
+  var done  = 0;
+  function finish() { done++; if (done >= total && callback) callback(); }
+
+  // ── 旧フォーマット（hata_master 単一ドキュメント）: 移行用 ─────────────
   _fbDb.collection('masters').doc('hata_master').get()
     .then(function(doc) {
-      if (doc.exists) {
-        var d = doc.data();
-        if (d && d.data) {
-          var allHata = d.data;
-          if (allHata._global) localStorage.setItem('hata_master', JSON.stringify(allHata._global));
-          Object.keys(allHata).forEach(function(k) {
-            if (k !== '_global') localStorage.setItem('hata_master_' + k, JSON.stringify(allHata[k]));
-          });
+      if (doc.exists && doc.data().data) {
+        var allHata = doc.data().data;
+        if (allHata._global && allHata._global.length > 0) {
+          var loc = localStorage.getItem('hata_master');
+          if (!loc || JSON.parse(loc||'[]').length === 0)
+            localStorage.setItem('hata_master', JSON.stringify(allHata._global));
+        }
+        Object.keys(allHata).forEach(function(k) {
+          if (k === '_global') return;
+          var arr = allHata[k];
+          if (arr && arr.length > 0) {
+            var loc2 = localStorage.getItem('hata_master_' + k);
+            if (!loc2 || JSON.parse(loc2||'[]').length === 0)
+              localStorage.setItem('hata_master_' + k, JSON.stringify(arr));
+          }
+        });
+      }
+      finish();
+    }).catch(finish);
+
+  // ── 新フォーマット: グローバル ────────────────────────────────────────────
+  _fbDb.collection('masters').doc('hata_master_global').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        var arr = doc.data().data;
+        if (arr.length > 0) {
+          var loc = [];
+          try { loc = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
+          if (arr.length >= loc.length) localStorage.setItem('hata_master', JSON.stringify(arr));
         }
       }
       finish();
     }).catch(finish);
+
+  // ── 新フォーマット: 現場別 ────────────────────────────────────────────────
+  if (sites.length === 0) { finish(); return; }  // sites=0でも total=2なのでfinish()×2で完結
+  sites.forEach(function(s) {
+    _fbDb.collection('masters').doc('hata_master_' + s.id).get()
+      .then(function(doc) {
+        if (doc.exists && doc.data().data) {
+          var arr = doc.data().data;
+          if (arr.length > 0) {
+            var loc = [];
+            try { loc = JSON.parse(localStorage.getItem('hata_master_' + s.id)||'[]'); } catch(e) {}
+            if (arr.length >= loc.length) localStorage.setItem('hata_master_' + s.id, JSON.stringify(arr));
+          }
+        }
+        finish();
+      }).catch(finish);
+  });
 }
 
 function fbSaveMaster(key, data) {
@@ -2362,10 +2416,36 @@ function loadHata(){
     entry.imgData.startsWith('data:image') ||
     entry.imgData.startsWith('data:application/pdf')
   );
-  // 図面をインライン展開
-  showDiagram(entry, hasImg);
-  recalcGL();
-  saveState();
+  if (hasImg) {
+    showDiagram(entry, true);
+    recalcGL();
+    saveState();
+  } else if (entry.hasImg && _fbDb) {
+    // imgData が別ドキュメントに保存されている場合、Firestore から取得
+    var _imgKey = (_siteId ? 'hata_img_' + _siteId : 'hata_img_global') + '_' + num;
+    _fbDb.collection('masters').doc(_imgKey).get()
+      .then(function(imgDoc) {
+        if (imgDoc.exists && imgDoc.data().imgData) {
+          entry.imgData = imgDoc.data().imgData;
+          // localStorageのエントリも更新してキャッシュ
+          var mkLocal = _siteId ? 'hata_master_' + _siteId : 'hata_master';
+          try {
+            var localArr = JSON.parse(localStorage.getItem(mkLocal)||'[]');
+            var idx = localArr.findIndex(function(r){ return String(r.hata)===String(num); });
+            if (idx >= 0) { localArr[idx].imgData = entry.imgData; localStorage.setItem(mkLocal, JSON.stringify(localArr)); }
+          } catch(e) {}
+          showDiagram(entry, true);
+        } else {
+          showDiagram(entry, false);
+        }
+      }).catch(function() { showDiagram(entry, false); });
+    recalcGL();
+    saveState();
+  } else {
+    showDiagram(entry, false);
+    recalcGL();
+    saveState();
+  }
 }
 
 function showDiagram(e, hasImg){
