@@ -296,7 +296,6 @@ function fbSyncMasters(callback) {
               Object.keys(d).forEach(function(sid) {
                 localStorage.setItem('roadbed_masters_' + sid, JSON.stringify(d[sid]));
               });
-              // 全現場マージしてグローバルキーにも保存
               var merged = [];
               Object.keys(d).forEach(function(sid) {
                 if (Array.isArray(d[sid])) merged = merged.concat(d[sid]);
@@ -2446,13 +2445,13 @@ function updateProgress(){
 // =====================================================
 // 旗揚げ読み込み
 // =====================================================
-function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var db=document.getElementById('debugBtn'); if(db)db.style.display='none'; var do2=document.getElementById('debugOut'); if(do2)do2.style.display='none'; closeDiagram(); }
+function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var _db=document.getElementById('debugBtn'); if(_db)_db.style.display='none'; var _do=document.getElementById('debugOut'); if(_do)_do.style.display='none'; closeDiagram(); }
 
 function debugHataEntry(){
   var out=document.getElementById('debugOut');
   if(!_hataEntry){out.textContent='_hataEntry is null';out.style.display='';return;}
   var lines=['keys: '+JSON.stringify(Object.keys(_hataEntry))];
-  ['dp','dph','dp1','dph1','dp_start','dp_end','dph2','depth','DPvalue'].forEach(function(k){
+  ['dp','dph','dp1','dph1','dp_start','dp_end','dph2'].forEach(function(k){
     if(_hataEntry[k]!==undefined) lines.push(k+'='+JSON.stringify(_hataEntry[k]));
   });
   out.textContent=lines.join('\n');
@@ -2824,3 +2823,10 @@ function ilRender(){
     c.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px;">該当する品目がありません</div>';
   }
 }
+</script>
+<!-- 管理者ログインモーダル -->
+<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#1a1a1a;">🔑 管理者ログイン</div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">メールアド�
