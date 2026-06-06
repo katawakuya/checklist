@@ -1790,6 +1790,8 @@ function renderMain(){
       '<input class="hata-input" type="number" id="hataInput" placeholder="例:35" inputmode="numeric" oninput="onHataInput()">' +
       '<button class="btn-sm btn-load" onclick="loadHata()">読込</button>' +
       '<div class="hata-info" id="hataInfo"></div>' +
+      '<button class="btn-sm" id="debugBtn" style="display:none;background:#555;font-size:11px;margin-top:4px" onclick="debugHataEntry()">🔍 DEBUG</button>' +
+      '<div id="debugOut" style="font-size:11px;color:#0f0;background:#111;padding:6px;border-radius:4px;word-break:break-all;white-space:pre-wrap;display:none;margin-top:4px"></div>' +
     '</div>' +
     // 図面展開エリア（旗揚げエリア直下）
     '<div class="hata-diagram" id="hataDiagram">' +
@@ -2450,7 +2452,18 @@ function updateProgress(){
 // =====================================================
 // 旗揚げ読み込み
 // =====================================================
-function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; closeDiagram(); }
+function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var db=document.getElementById('debugBtn'); if(db)db.style.display='none'; var do2=document.getElementById('debugOut'); if(do2)do2.style.display='none'; closeDiagram(); }
+
+function debugHataEntry(){
+  var out=document.getElementById('debugOut');
+  if(!_hataEntry){out.textContent='_hataEntry is null';out.style.display='';return;}
+  var lines=['keys: '+JSON.stringify(Object.keys(_hataEntry))];
+  ['dp','dph','dp1','dph1','dp_start','dp_end','dph2','depth','DPvalue'].forEach(function(k){
+    if(_hataEntry[k]!==undefined) lines.push(k+'='+JSON.stringify(_hataEntry[k]));
+  });
+  out.textContent=lines.join('\n');
+  out.style.display='';
+}
 
 function loadHata(){
   var num = $v('hataInput').trim();
@@ -2468,6 +2481,7 @@ function loadHata(){
   var entry = _allHataEntries.find(function(e){ return String(e.hata)===String(num); });
   if(!entry){ if(infoEl) infoEl.innerHTML='<span style="color:var(--text3)">No.'+num+' は未登録</span>'; return; }
   _hataEntry = entry;
+  var _dbBtn=document.getElementById('debugBtn'); if(_dbBtn)_dbBtn.style.display='';
   // dp/dph: 新フォーマット(dp/dph) → 旧フォーマット(dp1/dph1) → null の順でフォールバック
   var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1  != null ? entry.dp1  : null);
   var _dph = entry.dph != null ? entry.dph : (entry.dph1 != null ? entry.dph1 : null);
@@ -2801,25 +2815,4 @@ function ilRender(){
       '<div style="display:flex;align-items:flex-start;gap:8px;">'
       +'<span style="font-size:16px;font-weight:900;color:#94a3b8;min-width:26px;line-height:1.4;">'+no+'</span>'
       +'<div style="flex:1;min-width:0;">'
-      +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'
-      +'<span style="font-size:13px;font-weight:700;color:var(--text1);">'+d.name+'</span>'
-      +unitHtml
-      +'</div>'
-      +'<div style="margin-top:4px;">'+badgesHtml+'</div>'
-      +noteHtml
-      +'</div>'
-      +linkHtml
-      +'</div>';
-    c.appendChild(el);
-  });
-  if(no===0){
-    c.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px;">該当する品目がありません</div>';
-  }
-}
-</script>
-<!-- 管理者ログインモーダル -->
-<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
-    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#1a1a1a;">🔑 管理者ログイン</div>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">メールアド�
+      +'<div style="display:flex;align-items
