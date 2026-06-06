@@ -1941,20 +1941,20 @@ function migrateToFirebase() {
   } catch(e) { results.push('現場マスタ: エラー ' + e); }
   try {
     var totalHata = 0;
-    // グローバル
+    // グローバル（imgData分離保存）
     var globalHata = JSON.parse(localStorage.getItem('hata_master') || '[]');
     totalHata += globalHata.length;
-    fbSaveMaster('hata_master_global', globalHata);
-    // 現場別（1現場1ドキュメント）
+    _fbSaveHataArr('hata_master_global', globalHata);
+    // 現場別（1現場1ドキュメント・imgData分離保存）
     var sites2 = JSON.parse(localStorage.getItem('site_master') || '[]');
     sites2.forEach(function(s) {
       try {
         var sh = JSON.parse(localStorage.getItem('hata_master_' + s.id) || '[]');
         totalHata += sh.length;
-        fbSaveMaster('hata_master_' + s.id, sh);
+        _fbSaveHataArr('hata_master_' + s.id, sh);
       } catch(e) {}
     });
-    results.push('旗揚げマスタ: ' + totalHata + '件（現場別ドキュメントで保存）');
+    results.push('旗揚げマスタ: ' + totalHata + '件（imgData分離・現場別ドキュメントで保存）');
   } catch(e) { results.push('旗揚げマスタ: エラー ' + e); }
   try {
     var presets = JSON.parse(localStorage.getItem('road_presets') || '[]');
