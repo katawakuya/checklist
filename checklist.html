@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="撮影CL">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>📷 写真撮影チェックリスト v13</title>
+<title>📷 写真撮影チェックリスト v14</title>
 <style>
 :root {
   --bg: #f5f4f0; --bg2: #ffffff; --bg3: #f0efe9;
@@ -1542,6 +1542,8 @@ function loadSites(){
   if(lastSite && _sites.find(function(s){return s.id===lastSite;})){
     sel.value = lastSite; onSiteChange(true);
   } else {
+    // 現場未選択でもデフォルト5型を表示
+    buildTypeSelect('');
     renderMain();
   }
 }
@@ -1689,6 +1691,11 @@ function onTypeChange(silent){
   if(_siteId) localStorage.setItem('cl_last_type_'+_siteId, val);
   if(!silent){ _checks={}; _naItems={}; restoreState(); }
   renderMain();
+  // pendingSlope が onTypeChange 経路でセットされた場合も適用
+  if(_pendingSlope){
+    var _ps2 = _pendingSlope; _pendingSlope = null;
+    Object.keys(_ps2).forEach(function(id){ if(_ps2[id]) sv(id, _ps2[id]); });
+  }
 }
 
 // =====================================================
