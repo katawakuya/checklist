@@ -2151,7 +2151,7 @@ function renderGLPanel() {
     + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
     +   'GL 計算'
     +   '<span style="display:flex;gap:6px;align-items:center;">'
-    +     (_hataEntry && _isAdmin ? '<button onclick="saveDpDphToMaster()" style="font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>' : '')
+    +     '<button id="saveDpBtn" onclick="saveDpDphToMaster()" style="display:none;font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>'
     +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
     +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:10px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
     +   '</span>'
@@ -2493,7 +2493,7 @@ function updateProgress(){
 // =====================================================
 // 旗揚げ読み込み
 // =====================================================
-function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var _db=document.getElementById('debugBtn'); if(_db)_db.style.display='none'; var _do=document.getElementById('debugOut'); if(_do)_do.style.display='none'; closeDiagram(); }
+function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var _db=document.getElementById('debugBtn'); if(_db)_db.style.display='none'; var _dpb=document.getElementById('saveDpBtn'); if(_dpb)_dpb.style.display='none'; var _do=document.getElementById('debugOut'); if(_do)_do.style.display='none'; closeDiagram(); }
 
 function debugHataEntry(){
   var out=document.getElementById('debugOut');
@@ -2523,6 +2523,7 @@ function loadHata(){
   if(!entry){ if(infoEl) infoEl.innerHTML='<span style="color:var(--text3)">No.'+num+' は未登録</span>'; return; }
   _hataEntry = entry;
   var _dbBtn=document.getElementById('debugBtn'); if(_dbBtn)_dbBtn.style.display='';
+  var _dpBtn=document.getElementById('saveDpBtn'); if(_dpBtn)_dpBtn.style.display=(_isAdmin?'':'none');
   // dp/dph: 新フォーマット(dp/dph) → 旧フォーマット(dp1/dph1) → null の順でフォールバック
   var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1  != null ? entry.dp1  : null);
   var _dph = entry.dph != null ? entry.dph : (entry.dph1 != null ? entry.dph1 : null);
