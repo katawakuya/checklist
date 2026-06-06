@@ -274,9 +274,8 @@ function initFirebase() {
 function fbSyncMasters(callback) {
   if (!_fbDb) { if(callback) callback(); return; }
   // フェーズ1: 基本マスタ（site_master含む）を並列ロード
-  // roadbed_masters は現場別オブジェクト形式のため別処理
-  var simpleKeys = ['site_master', 'road_presets', 'checklist_pipe_settings'];
-  var done = 0, total = simpleKeys.length + 1; // +1: roadbed_masters
+  var simpleKeys = ['site_master', 'road_presets', 'roadbed_masters', 'checklist_pipe_settings'];
+  var done = 0, total = simpleKeys.length;
   function phaseFinish() {
     done++;
     if (done < total) return;
@@ -289,33 +288,28 @@ function fbSyncMasters(callback) {
   simpleKeys.forEach(function(k) {
     _fbDb.collection('masters').doc(k).get()
       .then(function(doc) {
-        if (doc.exists) { var d=doc.data(); if(d&&d.data) localStorage.setItem(k, JSON.stringify(d.data)); }
+        if (doc.exists && doc.data().data) {
+          var d = doc.data().data;
+          if (k === 'roadbed_masters' && !Array.isArray(d)) {
+            // 新フォーマット: { siteId: [...] } → 各現場キーに分配
+            try {
+              Object.keys(d).forEach(function(sid) {
+                localStorage.setItem('roadbed_masters_' + sid, JSON.stringify(d[sid]));
+              });
+              // 全現場マージしてグローバルキーにも保存
+              var merged = [];
+              Object.keys(d).forEach(function(sid) {
+                if (Array.isArray(d[sid])) merged = merged.concat(d[sid]);
+              });
+              if (merged.length) localStorage.setItem('roadbed_masters', JSON.stringify(merged));
+            } catch(e) {}
+          } else {
+            localStorage.setItem(k, JSON.stringify(d));
+          }
+        }
         phaseFinish();
       }).catch(phaseFinish);
   });
-  // roadbed_masters: 現場別オブジェクト形式 { siteId: [...] } と 旧フラット配列 両対応
-  _fbDb.collection('masters').doc('roadbed_masters').get()
-    .then(function(doc) {
-      if (doc.exists && doc.data().data) {
-        var rbData = doc.data().data;
-        if (Array.isArray(rbData)) {
-          // 旧フォーマット: フラット配列
-          localStorage.setItem('roadbed_masters', JSON.stringify(rbData));
-        } else {
-          // 新フォーマット: 現場別オブジェクト → 各現場キーに分配
-          Object.keys(rbData).forEach(function(sid) {
-            localStorage.setItem('roadbed_masters_' + sid, JSON.stringify(rbData[sid]));
-          });
-          // 全現場を結合してグローバルキーにも保存（型選択フォールバック用）
-          var merged = [];
-          Object.keys(rbData).forEach(function(sid) {
-            if (Array.isArray(rbData[sid])) merged = merged.concat(rbData[sid]);
-          });
-          if (merged.length) localStorage.setItem('roadbed_masters', JSON.stringify(merged));
-        }
-      }
-      phaseFinish();
-    }).catch(phaseFinish);
 }
 
 // 旗揚げマスタ同期: 旧形式 + 新形式グローバルを個別ドキュメントで取得
@@ -2815,4 +2809,18 @@ function ilRender(){
       '<div style="display:flex;align-items:flex-start;gap:8px;">'
       +'<span style="font-size:16px;font-weight:900;color:#94a3b8;min-width:26px;line-height:1.4;">'+no+'</span>'
       +'<div style="flex:1;min-width:0;">'
-      +'<div style="display:flex;align-items
+      +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'
+      +'<span style="font-size:13px;font-weight:700;color:var(--text1);">'+d.name+'</span>'
+      +unitHtml
+      +'</div>'
+      +'<div style="margin-top:4px;">'+badgesHtml+'</div>'
+      +noteHtml
+      +'</div>'
+      +linkHtml
+      +'</div>';
+    c.appendChild(el);
+  });
+  if(no===0){
+    c.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px;">該当する品目がありません</div>';
+  }
+}
