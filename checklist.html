@@ -2151,6 +2151,7 @@ function renderGLPanel() {
     + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
     +   'GL 計算'
     +   '<span style="display:flex;gap:6px;align-items:center;">'
+    +     (_hataEntry ? '<button onclick="saveDpDphToMaster()" style="font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>' : '')
     +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
     +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:10px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
     +   '</span>'
@@ -2195,6 +2196,53 @@ function renderGLPanel() {
     + '</div>';
 
   return h;
+}
+
+function saveDpDphToMaster(){
+  var num = $v('hataInput').trim();
+  if(!num){ alert('旗揚げ番号が未入力です'); return; }
+  var dp  = parseFloat($v('inDP1'));
+  var dph = parseFloat($v('inDPH'));
+  if(!dp || !dph){ alert('DP と 管下H を入力してください'); return; }
+
+  // localStorage を更新
+  var mkKey = _siteId ? 'hata_master_'+_siteId : 'hata_master';
+  var arr = [];
+  try{ arr = JSON.parse(localStorage.getItem(mkKey)||'[]'); }catch(e){}
+  var idx = arr.findIndex(function(e){ return String(e.hata)===String(num); });
+  if(idx < 0){ alert('No.'+num+' はマスタに見つかりません'); return; }
+
+  arr[idx].dp  = dp;
+  arr[idx].dph = dph;
+  arr[idx].updatedAt = new Date().toISOString().slice(0,10);
+  localStorage.setItem(mkKey, JSON.stringify(arr));
+
+  // メモリ上の_hataEntryも更新
+  if(_hataEntry){ _hataEntry.dp = dp; _hataEntry.dph = dph; }
+
+  // Firestore に保存（imgDataを除いて保存）
+  if(_fbDb){
+    var docKey = _siteId ? 'hata_master_'+_siteId : 'hata_master_global';
+    var stripped = arr.map(function(e){
+      if(e.imgData){
+        var c = Object.assign({}, e);
+        delete c.imgData;
+        c.hasImg = true;
+        return c;
+      }
+      return e;
+    });
+    var payload = { data: stripped, updatedAt: new Date().toISOString() };
+    var sz = 0;
+    try{ sz = new Blob([JSON.stringify(payload)]).size; }catch(e){}
+    if(sz > 990000){ alert('データが大きすぎて保存できません ('+Math.round(sz/1024)+'KB)'); return; }
+    _fbDb.collection('masters').doc(docKey).set(payload)
+      .then(function(){ alert('✅ No.'+num+' の DP/管下H をマスタに保存しました'); loadHata(); })
+      .catch(function(e){ alert('保存エラー: '+e.message); });
+  } else {
+    alert('✅ No.'+num+' の DP/管下H をローカルに保存しました（Firestore未接続）');
+    loadHata();
+  }
 }
 
 function recalcGL(){
