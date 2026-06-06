@@ -2444,14 +2444,17 @@ function loadHata(){
   var entry = _allHataEntries.find(function(e){ return String(e.hata)===String(num); });
   if(!entry){ if(infoEl) infoEl.innerHTML='<span style="color:var(--text3)">No.'+num+' は未登録</span>'; return; }
   _hataEntry = entry;
-  sv('inDP1',entry.dp); sv('inDPH',entry.dph);
+  // dp/dph: 新フォーマット(dp/dph) → 旧フォーマット(dp1/dph1) → null の順でフォールバック
+  var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1  != null ? entry.dp1  : null);
+  var _dph = entry.dph != null ? entry.dph : (entry.dph1 != null ? entry.dph1 : null);
+  sv('inDP1', _dp); sv('inDPH', _dph);
   var dp2val = entry.dp2 || entry.dp_end || '';
   if(dp2val) sv('inDP2', dp2val);
   var dph2val = entry.dph2 || entry.dph_end || '';
   if(dph2val) sv('inDPH2', dph2val);
   var info = entry.name?entry.name+'　':'';
-  info += '①DP:'+entry.dp+'m 管下H:'+entry.dph+'m';
-  if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||entry.dph)+'m';
+  info += '①DP:'+(_dp!=null?_dp+'m':'未登録')+' 管下H:'+(_dph!=null?_dph+'m':'未登録');
+  if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
   if(infoEl) infoEl.innerHTML='<span style="color:#78350f">'+info+'</span>';
   // 図面ボタン: imgData が実際に画像データかチェック
   var hasImg = entry.imgData && (
@@ -2464,7 +2467,7 @@ function loadHata(){
     saveState();
   } else if (entry.hasImg && _fbDb) {
     // imgData が別ドキュメントに保存されている場合、Firestore から取得
-    var _imgKey = (_siteId ? 'hata_img_' + _siteId : 'hata_img_global') + '_' + num;
+    var _imgKey = (_siteId ? 'hata_master_' + _siteId : 'hata_master_global') + '_img_' + num;
     _fbDb.collection('masters').doc(_imgKey).get()
       .then(function(imgDoc) {
         if (imgDoc.exists && imgDoc.data().imgData) {
