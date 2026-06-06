@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="撮影CL">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>📷 写真撮影チェックリスト v12</title>
+<title>📷 写真撮影チェックリスト v13</title>
 <style>
 :root {
   --bg: #f5f4f0; --bg2: #ffffff; --bg3: #f0efe9;
@@ -1502,6 +1502,7 @@ var _pipeTypes = ['通信管', '電力管', '', '']; // 各行の管種名
 var _pipeCustomNames = ['', '', '', '']; // 「その他」選択時のフリー入力名
 var _showDummy = false;                // ダミー管項目表示フラグ（trueの場合のみ表示）
 var _pipeGradient = [false, false, false, false]; // 勾配モード per pipe slot
+var _pendingSlope = null; // restoreState→renderMain間の勾配DP仮保存
 var _history = [];
 
 // アイテムキー生成
@@ -1574,6 +1575,13 @@ function onSiteChange(silent){
     if(!silent){ _checks={}; _naItems={}; }
     restoreState();
     renderMain();
+    // renderMain後にDOMが生成されてから勾配②端DP値を復元
+    if(_pendingSlope){
+      var _ps = _pendingSlope; _pendingSlope = null;
+      var _applied = false;
+      Object.keys(_ps).forEach(function(id){ if(_ps[id]){ sv(id, _ps[id]); _applied=true; } });
+      if(_applied) recalcGL();
+    }
   });
 }
 
@@ -1693,6 +1701,7 @@ function saveState(){
   var data = {
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
+    dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
     hata:$v('hataInput'),checks:_checks,na:_naItems,kojiKbn:_kojiKbn
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
@@ -1708,6 +1717,13 @@ function restoreState(){
     if(d.pipeCustomNames) _pipeCustomNames = d.pipeCustomNames;
     if(d.showDummy !== undefined) _showDummy = d.showDummy;
     if(d.pipeGradient !== undefined) _pipeGradient = d.pipeGradient;
+    // 勾配②端DP値をDOM生成後（renderMain後）に適用するため仮保存
+    _pendingSlope = {
+      inDP1s:d.dp1s||'', inDPH1s:d.dph1s||'',
+      inDP2s:d.dp2s||'', inDPH2s:d.dph2s||'',
+      inDP3s:d.dp3s||'', inDPH3s:d.dph3s||'',
+      inDP4s:d.dp4s||'', inDPH4s:d.dph4s||''
+    };
     // GL計算欄・旗揚げ番号は起動時にクリア（前回の情報を引き継がない）
     ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
@@ -2200,8 +2216,10 @@ function toggleGradient(idx, checked) {
   if(lblDP)  lblDP.textContent  = (checked ? '①' : '') + lbl + ' DP (m)';
   if(lblDPH) lblDPH.textContent = (checked ? '①' : '') + lbl + ' 管下H (m)';
   if (!checked) {
-    var dpEl  = document.getElementById(idx===0 ? 'inDP1s'  : 'inDP2s');
-    var dphEl = document.getElementById(idx===0 ? 'inDPH1s' : 'inDPH2s');
+    var dpsId  = idx===0 ? 'inDP1s'  : idx===1 ? 'inDP2s'  : 'inDP' +(idx+1)+'s';
+    var dphsId = idx===0 ? 'inDPH1s' : idx===1 ? 'inDPH2s' : 'inDPH'+(idx+1)+'s';
+    var dpEl  = document.getElementById(dpsId);
+    var dphEl = document.getElementById(dphsId);
     if(dpEl)  dpEl.value  = '';
     if(dphEl) dphEl.value = '';
   }
@@ -2271,6 +2289,7 @@ function renderGLPanel() {
 }
 
 function saveDpDphToMaster(){
+  if(!_isAdmin){ alert('管理者のみDP/管下Hを保存できます'); return; }
   var num = $v('hataInput').trim();
   if(!num){ alert('旗揚げ番号が未入力です'); return; }
   var dp  = parseFloat($v('inDP1'));
@@ -2284,13 +2303,22 @@ function saveDpDphToMaster(){
   var idx = arr.findIndex(function(e){ return String(e.hata)===String(num); });
   if(idx < 0){ alert('No.'+num+' はマスタに見つかりません'); return; }
 
-  arr[idx].dp  = dp;
-  arr[idx].dph = dph;
+  arr[idx].dp   = dp;
+  arr[idx].dph  = dph;
+  // 勾配②端DP値も保存（入力があれば）
+  var dp1sVal  = parseFloat($v('inDP1s'))  || null;
+  var dph1sVal = parseFloat($v('inDPH1s')) || null;
+  if(dp1sVal  !== null) arr[idx].dp1s  = dp1sVal;
+  if(dph1sVal !== null) arr[idx].dph1s = dph1sVal;
   arr[idx].updatedAt = new Date().toISOString().slice(0,10);
   localStorage.setItem(mkKey, JSON.stringify(arr));
 
   // メモリ上の_hataEntryも更新
-  if(_hataEntry){ _hataEntry.dp = dp; _hataEntry.dph = dph; }
+  if(_hataEntry){
+    _hataEntry.dp = dp; _hataEntry.dph = dph;
+    if(dp1sVal  !== null) _hataEntry.dp1s  = dp1sVal;
+    if(dph1sVal !== null) _hataEntry.dph1s = dph1sVal;
+  }
 
   // Firestore に保存（imgDataを除いて保存）
   if(_fbDb){
@@ -2749,9 +2777,15 @@ function loadHata(){
   if(dp2val) sv('inDP2', dp2val);
   var dph2val = entry.dph2 || entry.dph_end || '';
   if(dph2val) sv('inDPH2', dph2val);
+  // 勾配②端DP値をマスタから復元
+  if(_pipeGradient[0] && entry.dp1s != null)  sv('inDP1s',  entry.dp1s);
+  if(_pipeGradient[0] && entry.dph1s != null) sv('inDPH1s', entry.dph1s);
+  if(_pipeGradient[1] && entry.dp2s != null)  sv('inDP2s',  entry.dp2s);
+  if(_pipeGradient[1] && entry.dph2s != null) sv('inDPH2s', entry.dph2s);
   var info = entry.name?entry.name+'　':'';
   info += '①DP:'+(_dp!=null?_dp+'m':'未登録')+' 管下H:'+(_dph!=null?_dph+'m':'未登録');
   if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
+  if(entry.dp1s != null) info += '　勾配②端DP:'+entry.dp1s+'m';
   if(infoEl) infoEl.innerHTML='<span style="color:#78350f">'+info+'</span>';
   // 図面ボタン: imgData が実際に画像データかチェック
   var hasImg = entry.imgData && (
