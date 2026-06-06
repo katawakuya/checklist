@@ -285,68 +285,67 @@ function fbSyncMasters(callback) {
   });
 }
 
-// 旗揚げマスタ同期: 旧形式(hata_master) + 新形式(hata_master_global / hata_master_{siteId})
+// 旗揚げマスタ同期: masters コレクションを全スキャンして hata_master_* を全取得
+// （サイトID逆引き不要→site_masterの状態に依存しない）
 function fbSyncHataMasters(callback) {
   if (!_fbDb) { if (callback) callback(); return; }
-  var sites = [];
-  try { sites = JSON.parse(localStorage.getItem('site_master') || '[]'); } catch(e) {}
-  var total = 2 + sites.length;
-  var done  = 0;
-  var _called=false; function finish() { done++; if (done >= total && callback && !_called){ _called=true; callback(); } }
 
-  // ── 旧フォーマット（hata_master 単一ドキュメント）: 移行用 ─────────────
-  _fbDb.collection('masters').doc('hata_master').get()
-    .then(function(doc) {
-      if (doc.exists && doc.data().data) {
-        var allHata = doc.data().data;
-        if (allHata._global && allHata._global.length > 0) {
-          var loc = localStorage.getItem('hata_master');
-          if (!loc || JSON.parse(loc||'[]').length === 0)
-            localStorage.setItem('hata_master', JSON.stringify(allHata._global));
-        }
-        Object.keys(allHata).forEach(function(k) {
-          if (k === '_global') return;
-          var arr = allHata[k];
-          if (arr && arr.length > 0) {
-            var loc2 = localStorage.getItem('hata_master_' + k);
-            if (!loc2 || JSON.parse(loc2||'[]').length === 0)
-              localStorage.setItem('hata_master_' + k, JSON.stringify(arr));
+  _fbDb.collection('masters').get()
+    .then(function(snapshot) {
+      snapshot.forEach(function(doc) {
+        var id  = doc.id;
+        var dat = doc.data();
+        if (!dat || !dat.data) return;
+
+        // 旧フォーマット: hata_master 単一ドキュメント（{_global:[...], siteId:[...]}）
+        if (id === 'hata_master') {
+          var allHata = dat.data;
+          if (allHata._global && allHata._global.length > 0) {
+            var locG = localStorage.getItem('hata_master');
+            if (!locG || JSON.parse(locG||'[]').length === 0)
+              localStorage.setItem('hata_master', JSON.stringify(allHata._global));
           }
-        });
-      }
-      finish();
-    }).catch(finish);
-
-  // ── 新フォーマット: グローバル ────────────────────────────────────────────
-  _fbDb.collection('masters').doc('hata_master_global').get()
-    .then(function(doc) {
-      if (doc.exists && doc.data().data) {
-        var arr = doc.data().data;
-        if (arr.length > 0) {
-          var loc = [];
-          try { loc = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
-          if (arr.length >= loc.length) localStorage.setItem('hata_master', JSON.stringify(arr));
+          Object.keys(allHata).forEach(function(k) {
+            if (k === '_global') return;
+            var arr = allHata[k];
+            if (arr && arr.length > 0) {
+              var locK = localStorage.getItem('hata_master_' + k);
+              if (!locK || JSON.parse(locK||'[]').length === 0)
+                localStorage.setItem('hata_master_' + k, JSON.stringify(arr));
+            }
+          });
+          return;
         }
-      }
-      finish();
-    }).catch(finish);
 
-  // ── 新フォーマット: 現場別 ────────────────────────────────────────────────
-  if (sites.length === 0) { return; }  // total=2 → hata_masterとhata_master_globalのfinish()×2で完結
-  sites.forEach(function(s) {
-    _fbDb.collection('masters').doc('hata_master_' + s.id).get()
-      .then(function(doc) {
-        if (doc.exists && doc.data().data) {
-          var arr = doc.data().data;
-          if (arr.length > 0) {
-            var loc = [];
-            try { loc = JSON.parse(localStorage.getItem('hata_master_' + s.id)||'[]'); } catch(e) {}
-            if (arr.length >= loc.length) localStorage.setItem('hata_master_' + s.id, JSON.stringify(arr));
+        // 新フォーマット: hata_master_global
+        if (id === 'hata_master_global') {
+          var arr = dat.data;
+          if (Array.isArray(arr) && arr.length > 0) {
+            var locGl = [];
+            try { locGl = JSON.parse(localStorage.getItem('hata_master')||'[]'); } catch(e) {}
+            if (arr.length >= locGl.length)
+              localStorage.setItem('hata_master', JSON.stringify(arr));
+          }
+          return;
+        }
+
+        // 新フォーマット: hata_master_{siteId}（imgDataなし・hasImgフラグ付き）
+        if (id.indexOf('hata_master_') === 0 && id.indexOf('_img_') < 0) {
+          var arr2 = dat.data;
+          if (Array.isArray(arr2) && arr2.length > 0) {
+            var locS = [];
+            try { locS = JSON.parse(localStorage.getItem(id)||'[]'); } catch(e) {}
+            if (arr2.length >= locS.length)
+              localStorage.setItem(id, JSON.stringify(arr2));
           }
         }
-        finish();
-      }).catch(finish);
-  });
+      });
+      if (callback) callback();
+    })
+    .catch(function(e) {
+      console.warn('[FB] fbSyncHataMasters scan err:', e);
+      if (callback) callback();
+    });
 }
 
 function fbSaveMaster(key, data) {
