@@ -292,7 +292,7 @@ function fbSyncHataMasters(callback) {
   try { sites = JSON.parse(localStorage.getItem('site_master') || '[]'); } catch(e) {}
   var total = 2 + sites.length;
   var done  = 0;
-  function finish() { done++; if (done >= total && callback) callback(); }
+  var _called=false; function finish() { done++; if (done >= total && callback && !_called){ _called=true; callback(); } }
 
   // ── 旧フォーマット（hata_master 単一ドキュメント）: 移行用 ─────────────
   _fbDb.collection('masters').doc('hata_master').get()
@@ -332,7 +332,7 @@ function fbSyncHataMasters(callback) {
     }).catch(finish);
 
   // ── 新フォーマット: 現場別 ────────────────────────────────────────────────
-  if (sites.length === 0) { finish(); return; }  // sites=0でも total=2なのでfinish()×2で完結
+  if (sites.length === 0) { return; }  // total=2 → hata_masterとhata_master_globalのfinish()×2で完結
   sites.forEach(function(s) {
     _fbDb.collection('masters').doc('hata_master_' + s.id).get()
       .then(function(doc) {
@@ -1574,7 +1574,27 @@ function buildTypeSelect(siteId){
     }catch(e){}
   }
 
-  // 3) どこにもなければデフォルト5型
+  // 3) roadbed_masters_{siteId} または roadbed_masters から登録済みマスタを読む
+  if(!types || !types.length){
+    try{
+      var _rbRaw = siteId
+        ? (localStorage.getItem('roadbed_masters_'+siteId) || localStorage.getItem('roadbed_masters'))
+        : localStorage.getItem('roadbed_masters');
+      var _rbMasters = _rbRaw ? JSON.parse(_rbRaw) : null;
+      if(!_rbMasters || !_rbMasters.length){
+        // グローバルキーもフォールバック
+        var _rbRaw2 = localStorage.getItem('roadbed_masters');
+        _rbMasters = _rbRaw2 ? JSON.parse(_rbRaw2) : null;
+      }
+      if(_rbMasters && _rbMasters.length){
+        types = _rbMasters.map(function(m){
+          return { key: m.key||m.label, name: m.label||m.key };
+        });
+      }
+    }catch(e){}
+  }
+
+  // 4) どこにもなければデフォルト5型
   if(!types || !types.length){
     types = [
       {key:'85',name:'車道部 85型'},{key:'40',name:'車道/乗入れ 40型'},
@@ -2390,16 +2410,17 @@ function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInf
 function loadHata(){
   var num = $v('hataInput').trim();
   if(!num) return;
-  // キー確認済み: v20は 'hata_master' に保存（現場ID問わず共通）
-  var master = null;
-  var keys = ['hata_master'];
-  if(_siteId) keys.push('hata_master_'+_siteId);
-  for(var i=0;i<keys.length;i++){
-    try{ var r=localStorage.getItem(keys[i]); if(r){ var parsed=JSON.parse(r); if(parsed&&parsed.length){master=parsed;break;} } }catch(e){}
+  // 現場別 + グローバル を全結合して検索（breakで途中離脱しない）
+  var _allHataEntries = [];
+  // 現場別を優先して追加
+  if(_siteId){
+    try{ var _sr=localStorage.getItem('hata_master_'+_siteId); if(_sr){var _sp=JSON.parse(_sr);if(Array.isArray(_sp))_allHataEntries=_allHataEntries.concat(_sp);} }catch(e){}
   }
+  // グローバルも追加（重複は hata番号で後から dedup）
+  try{ var _gr=localStorage.getItem('hata_master'); if(_gr){var _gp=JSON.parse(_gr);if(Array.isArray(_gp))_allHataEntries=_allHataEntries.concat(_gp);} }catch(e){}
   var infoEl = document.getElementById('hataInfo');
-  if(!master){ if(infoEl) infoEl.innerHTML='<span style="color:var(--yellow)">⚠ 旗揚げマスタ未登録（発注アプリで登録してください）</span>'; return; }
-  var entry = master.find(function(e){ return String(e.hata)===String(num); });
+  if(!_allHataEntries.length){ if(infoEl) infoEl.innerHTML='<span style="color:var(--yellow)">⚠ 旗揚げマスタ未登録（発注アプリで登録してください）</span>'; return; }
+  var entry = _allHataEntries.find(function(e){ return String(e.hata)===String(num); });
   if(!entry){ if(infoEl) infoEl.innerHTML='<span style="color:var(--text3)">No.'+num+' は未登録</span>'; return; }
   _hataEntry = entry;
   sv('inDP1',entry.dp); sv('inDPH',entry.dph);
