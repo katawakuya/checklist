@@ -3136,4 +3136,18 @@ function ilRender(){
   <div style="background:#fff;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
     <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#1a1a1a;">🔑 管理者ログイン</div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">メールアド�
+      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">メールアドレス</label>
+      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;" placeholder="管理者メールアドレス">
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">パスワード</label>
+      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;" placeholder="パスワード">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ログイン</button>
+      <button onclick="closeFbModal()" style="padding:11px 16px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;cursor:pointer;">×</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
