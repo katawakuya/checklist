@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="撮影CL">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>📷 写真撮影チェックリスト v11</title>
+<title>📷 写真撮影チェックリスト v12</title>
 <style>
 :root {
   --bg: #f5f4f0; --bg2: #ffffff; --bg3: #f0efe9;
@@ -1498,10 +1498,10 @@ var _naItems = {};  // {itemKey: bool} 対象外
 var _hataEntry = null;
 var _gl1 = ''; var _gl2 = '';
 var _pipeCount = 1;            // 表示中の管種行数（1 or 2）
-var _pipeTypes = ['通信管', '電力管']; // 各行の管種名（空文字 = DPのみ）
-var _pipeCustomNames = ['', ''];      // 「その他」選択時のフリー入力名
+var _pipeTypes = ['通信管', '電力管', '', '']; // 各行の管種名
+var _pipeCustomNames = ['', '', '', '']; // 「その他」選択時のフリー入力名
 var _showDummy = false;                // ダミー管項目表示フラグ（trueの場合のみ表示）
-var _pipeGradient = [false, false];    // 勾配モード per pipe slot（管ごとに①②の2端点入力）
+var _pipeGradient = [false, false, false, false]; // 勾配モード per pipe slot
 var _history = [];
 
 // アイテムキー生成
@@ -1692,7 +1692,7 @@ function saveState(){
   if(!_siteId||!_typeKey) return;
   var data = {
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
-    dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
+    dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     hata:$v('hataInput'),checks:_checks,na:_naItems,kojiKbn:_kojiKbn
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
@@ -2009,6 +2009,20 @@ function applyDPH(pipe, val){
 
 
 
+// 管種名（スロット番号①②なし）を返す
+function getPipeBaseName(idx){
+  var rawType = (_pipeTypes && _pipeTypes[idx]!=null) ? _pipeTypes[idx] : '';
+  if(!rawType) return idx===0?'通信管':idx===1?'電力管':'管'+(idx+1);
+  if(rawType==='その他') return (_pipeCustomNames[idx]||'').trim()||'その他';
+  return rawType;
+}
+// 勾配①端/②端用ラベル生成（DP①通信管 GL-Xm 形式）
+function glGradLbl(pipeIdx, endNum, v){
+  var bn = getPipeBaseName(pipeIdx);
+  var ep = endNum===1 ? 'DP①' : 'DP②';
+  return v!=='' ? ep+bn+' '+fmtGL(v) : ep+bn+' DP入力後に計算';
+}
+
 // 中間転圧GLリスト生成（start自体を含み、limit未満まで@200）
 function midList(start, limit, max){
   max = max || 8;
@@ -2070,25 +2084,35 @@ function _refreshPipeLabels(idx) {
 }
 
 function addPipeRow() {
-  _pipeCount = 2;
-  var wrap = document.getElementById('pipe2Wrap');
-  if (wrap) { wrap.style.display = 'contents'; } // grid子要素として展開
-  var addBtn = document.getElementById('addPipeBtn');
-  if (addBtn) addBtn.style.display = 'none';
+  if(_pipeCount>=4) return;
+  _pipeCount++;
+  var wId = 'pipe'+_pipeCount+'Wrap';
+  var w = document.getElementById(wId);
+  if(w) w.style.display = 'contents';
+  var btn = document.getElementById('addPipeBtn');
+  if(btn) btn.style.display = _pipeCount>=4 ? 'none' : 'inline-block';
   updatePipeItems();
-  recalcGL();
+  recalcGL(); saveState();
 }
 
 function removePipeRow() {
-  _pipeCount = 1;
-  var wrap = document.getElementById('pipe2Wrap');
-  if (wrap) wrap.style.display = 'none';
-  var addBtn = document.getElementById('addPipeBtn');
-  if (addBtn) addBtn.style.display = 'inline-block';
-  var el2 = document.getElementById('inDP2');  if(el2) el2.value = '';
-  var el3 = document.getElementById('inDPH2'); if(el3) el3.value = '';
+  if(_pipeCount<=1) return;
+  var idx = _pipeCount - 1;
+  var dpId  = idx===1 ? 'inDP2'  : 'inDP'+(idx+1);
+  var dphId = idx===1 ? 'inDPH2' : 'inDPH'+(idx+1);
+  var dpsId = idx===1 ? 'inDP2s' : 'inDP'+(idx+1)+'s';
+  var dphsId= idx===1 ? 'inDPH2s': 'inDPH'+(idx+1)+'s';
+  [dpId,dphId,dpsId,dphsId].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  _pipeGradient[idx] = false;
+  var sf = document.getElementById('slopeFields'+idx); if(sf) sf.style.display='none';
+  var ck = document.getElementById('chkGrad'+idx); if(ck) ck.checked=false;
+  var wId = 'pipe'+_pipeCount+'Wrap';
+  var w = document.getElementById(wId); if(w) w.style.display='none';
+  _pipeCount--;
+  var btn = document.getElementById('addPipeBtn');
+  if(btn) btn.style.display = 'inline-block';
   updatePipeItems();
-  recalcGL();
+  recalcGL(); saveState();
 }
 
 function makePipeSelect(idx) {
@@ -2113,10 +2137,10 @@ function makePipeSelect(idx) {
 
 function makePipeRow(idx, isHL) {
   var lbl     = getPipeLbl(idx);
-  var dp_id   = idx===0 ? 'inDP1'  : 'inDP2';
-  var dph_id  = idx===0 ? 'inDPH'  : 'inDPH2';
-  var dps_id  = idx===0 ? 'inDP1s' : 'inDP2s';
-  var dphs_id = idx===0 ? 'inDPH1s': 'inDPH2s';
+  var dp_id   = idx===0 ? 'inDP1'  : idx===1 ? 'inDP2'  : 'inDP' +(idx+1);
+  var dph_id  = idx===0 ? 'inDPH'  : idx===1 ? 'inDPH2' : 'inDPH'+(idx+1);
+  var dps_id  = idx===0 ? 'inDP1s' : idx===1 ? 'inDP2s' : 'inDP'+(idx+1)+'s';
+  var dphs_id = idx===0 ? 'inDPH1s': idx===1 ? 'inDPH2s': 'inDPH'+(idx+1)+'s';
   var hl      = isHL ? ' class="hl"' : '';
   var isGrad  = !!_pipeGradient[idx];
   // grid: セレクト80px | DP 1fr | 管下H 1fr | (✕ボタン 28px if idx>0)
@@ -2188,8 +2212,10 @@ function toggleGradient(idx, checked) {
 function renderGLPanel() {
   var lbl1 = getPipeLbl(0);
   var lbl2 = getPipeLbl(1);
-  var addVis = _pipeCount >= 2 ? 'none' : 'inline-block';
+  var addVis = _pipeCount >= 4 ? 'none' : 'inline-block';
   var p2disp = _pipeCount >= 2 ? 'grid' : 'none';
+  var p3disp = _pipeCount >= 3 ? 'grid' : 'none';
+  var p4disp = _pipeCount >= 4 ? 'grid' : 'none';
 
   var h = '<div class="input-panel">'
     + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
@@ -2202,7 +2228,9 @@ function renderGLPanel() {
     + '</div>'
     + makePipeRow(0, true)
     // ── 管 2 ──（追加後のみ表示。display:noneの初期化はJSで制御）
-    + '<div id="pipe2Wrap">' + makePipeRow(1, false) + '</div>'
+    + '<div id="pipe2Wrap" style="display:'+p2disp+';">' + makePipeRow(1, false) + '</div>'
+    + '<div id="pipe3Wrap" style="display:'+p3disp+';">' + makePipeRow(2, false) + '</div>'
+    + '<div id="pipe4Wrap" style="display:'+p4disp+';">' + makePipeRow(3, false) + '</div>'
     // ── ダミー管チェック ──
     + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:11px;color:var(--text2);">'
     +   '<input type="checkbox" id="chkDummyGlobal" onchange="toggleDummy(this.checked)"'+(_showDummy?' checked':'')+' style="width:14px;height:14px;accent-color:#f59e0b;">'
@@ -2294,15 +2322,25 @@ function recalcGL(){
   var dph1 = parseFloat($v('inDPH'))  || 0;
   var dp2  = parseFloat($v('inDP2'))  || 0;
   var dph2 = parseFloat($v('inDPH2')) || 0;
-  // 勾配②端（浅側）
+  // 勾配②端（深側）
   var dp1s  = (_pipeGradient[0] ? parseFloat($v('inDP1s'))  : 0) || 0;
   var dph1s = (_pipeGradient[0] ? parseFloat($v('inDPH1s')) : 0) || 0;
   var dp2s  = (_pipeGradient[1] ? parseFloat($v('inDP2s'))  : 0) || 0;
   var dph2s = (_pipeGradient[1] ? parseFloat($v('inDPH2s')) : 0) || 0;
+  var dp3   = _pipeCount>=3 ? (parseFloat($v('inDP3'))  || 0) : 0;
+  var dph3  = _pipeCount>=3 ? (parseFloat($v('inDPH3')) || 0) : 0;
+  var dp3s  = (_pipeCount>=3 && _pipeGradient[2]) ? (parseFloat($v('inDP3s')) || 0) : 0;
+  var dph3s = (_pipeCount>=3 && _pipeGradient[2]) ? (parseFloat($v('inDPH3s'))|| 0) : 0;
+  var dp4   = _pipeCount>=4 ? (parseFloat($v('inDP4'))  || 0) : 0;
+  var dph4  = _pipeCount>=4 ? (parseFloat($v('inDPH4')) || 0) : 0;
+  var dp4s  = (_pipeCount>=4 && _pipeGradient[3]) ? (parseFloat($v('inDP4s')) || 0) : 0;
+  var dph4s = (_pipeCount>=4 && _pipeGradient[3]) ? (parseFloat($v('inDPH4s'))|| 0) : 0;
 
   // ② 土被り = DP値のみ（管上端からGL）
   _gl1 = dp1 > 0 ? dp1.toFixed(2) : '';
   _gl2 = dp2 > 0 ? dp2.toFixed(2) : '';
+  _gl3 = dp3 > 0 ? dp3.toFixed(2) : '';
+  _gl4 = dp4 > 0 ? dp4.toFixed(2) : '';
 
   // 床付け = DP + 管下H
   var yuka1 = dp1 > 0 ? (dp1 + dph1).toFixed(2) : '';
@@ -2311,24 +2349,18 @@ function recalcGL(){
   // 計算結果表示
   var res = document.getElementById('glResult');
   if(res){
-    if(dp1 > 0 || dp2 > 0){
+    if(dp1 > 0 || dp2 > 0 || dp3 > 0 || dp4 > 0){
       var lines = [];
-      if(dp1 > 0){
-        var line1 = getPipeLbl(0)+'　土被り DP=' + dp1.toFixed(2) + 'm　床付け H=' + yuka1 + 'm';
-        if(_pipeGradient[0] && dp1s > 0){
-          var yuka1s = (dp1s + dph1s).toFixed(2);
-          line1 += '　／　②端 DP=' + dp1s.toFixed(2) + 'm　床付け H=' + yuka1s + 'm';
-        }
-        lines.push(line1);
+      function makeLine(piIdx, dpV, dphV, dpSv, dphSv){
+        var line = getPipeLbl(piIdx)+'　土被り DP='+dpV.toFixed(2)+'m　床付け H='+(dpV+dphV).toFixed(2)+'m';
+        if(_pipeGradient[piIdx] && dpSv>0)
+          line += '　／　DP②端='+dpSv.toFixed(2)+'m　床付け H='+(dpSv+dphSv).toFixed(2)+'m';
+        return line;
       }
-      if(dp2 > 0){
-        var line2 = getPipeLbl(1)+'　土被り DP=' + dp2.toFixed(2) + 'm　床付け H=' + yuka2 + 'm';
-        if(_pipeGradient[1] && dp2s > 0){
-          var yuka2s = (dp2s + dph2s).toFixed(2);
-          line2 += '　／　②端 DP=' + dp2s.toFixed(2) + 'm　床付け H=' + yuka2s + 'm';
-        }
-        lines.push(line2);
-      }
+      if(dp1>0) lines.push(makeLine(0, dp1, dph1, dp1s, dph1s));
+      if(dp2>0) lines.push(makeLine(1, dp2, dph2, dp2s, dph2s));
+      if(dp3>0) lines.push(makeLine(2, dp3, dph3, dp3s, dph3s));
+      if(dp4>0) lines.push(makeLine(3, dp4, dph4, dp4s, dph4s));
       res.innerHTML = lines.join('<br>');
       res.style.display = '';
     } else {
@@ -2386,30 +2418,57 @@ function recalcGL(){
   var rawG30s = g25s !== '' ? parseFloat((g25s + emb).toFixed(4)) : '';
   var g30s = rawG30s !== '' ? (rawG30s > f40 ? f40 : rawG30s) : '';
 
-  // 中間転圧リスト
-  var fs = f28 !== '' ? parseFloat((f28 + 0.2).toFixed(4)) : '';
-  var gs = g28 !== '' ? parseFloat((g28 + 0.2).toFixed(4)) : '';
-  // 勾配時：深側@200ベース + 浅側水締めGL注入
-  var f_mid_base = fs !== '' ? midList(fs, f40) : [];
-  var f_mid;
-  if(_pipeGradient[0] && f28s !== '' && dp1s > 0 && f28s > f40){
-    var fInj = f_mid_base.slice();
-    var alreadyInF = fInj.some(function(v){ return Math.abs(v - f28s) < 0.005; });
-    if(!alreadyInF) fInj.push(f28s);
-    f_mid = fInj.sort(function(a,b){ return a-b; });
-  } else {
-    f_mid = f_mid_base;
+  // ── pipe3 GL ──
+  var h23  = dp3  > 0 ? parseFloat((-dp3 ).toFixed(4)) : '';
+  var h28  = h23  !== '' ? parseFloat((h23 +0.1).toFixed(4)) : '';
+  var rawH30 = h23!==''  ? parseFloat((h23 +emb).toFixed(4)) : '';
+  var h30  = rawH30!=='' ? (rawH30>f40?f40:rawH30) : '';
+  var h23s = dp3s > 0 ? parseFloat((-dp3s).toFixed(4)) : '';
+  var h28s = h23s !== '' ? parseFloat((h23s+0.1).toFixed(4)) : '';
+  var rawH30s=h23s!==''  ? parseFloat((h23s+emb).toFixed(4)) : '';
+  var h30s = rawH30s!==''? (rawH30s>f40?f40:rawH30s) : '';
+  // ── pipe4 GL ──
+  var i23  = dp4  > 0 ? parseFloat((-dp4 ).toFixed(4)) : '';
+  var i28  = i23  !== '' ? parseFloat((i23 +0.1).toFixed(4)) : '';
+  var rawI30 = i23!==''  ? parseFloat((i23 +emb).toFixed(4)) : '';
+  var i30  = rawI30!=='' ? (rawI30>f40?f40:rawI30) : '';
+  var i23s = dp4s > 0 ? parseFloat((-dp4s).toFixed(4)) : '';
+  var i28s = i23s !== '' ? parseFloat((i23s+0.1).toFixed(4)) : '';
+  var rawI30s=i23s!==''  ? parseFloat((i23s+emb).toFixed(4)) : '';
+  var i30s = rawI30s!==''? (rawI30s>f40?f40:rawI30s) : '';
+
+  // ── 中間転圧リスト（勾配時：②深側@200 → ①浅側の路盤変更点を追加）──
+  function buildMidGrad(dpShallow, dpDeep, f28Sh, f28De, f30Sh){
+    // 勾配あり: ②深側水締め+0.2 スタートの@200リスト
+    var fss = parseFloat((f28De+0.2).toFixed(4));
+    var deepList = midList(fss, f40);
+    var shList   = f28Sh!=='' ? midList(parseFloat((f28Sh+0.2).toFixed(4)), f40) : [];
+    var merged   = deepList.slice();
+    shList.forEach(function(v){
+      if(!merged.some(function(m){return Math.abs(m-v)<0.005;})) merged.push(v);
+    });
+    // 浅側リストが空なら路盤変更点(f40)を①として追加
+    if(shList.length===0 && dpShallow>0){
+      if(!merged.some(function(m){return Math.abs(m-f40)<0.005;})) merged.push(f40);
+    }
+    return merged.sort(function(a,b){return a-b;});
   }
-  var g_mid_base = gs !== '' ? midList(gs, f40) : [];
-  var g_mid;
-  if(_pipeGradient[1] && g28s !== '' && dp2s > 0 && g28s > f40){
-    var gInj = g_mid_base.slice();
-    var alreadyInG = gInj.some(function(v){ return Math.abs(v - g28s) < 0.005; });
-    if(!alreadyInG) gInj.push(g28s);
-    g_mid = gInj.sort(function(a,b){ return a-b; });
-  } else {
-    g_mid = g_mid_base;
+  function buildMidSimple(f28Sh){
+    var fs = f28Sh!=='' ? parseFloat((f28Sh+0.2).toFixed(4)) : '';
+    return fs!=='' ? midList(fs, f40) : [];
   }
+  var f_mid = (_pipeGradient[0] && dp1s>0 && f28s!=='')
+    ? buildMidGrad(dp1, dp1s, f28, f28s, f30)
+    : buildMidSimple(f28);
+  var g_mid = (_pipeGradient[1] && dp2s>0 && g28s!=='')
+    ? buildMidGrad(dp2, dp2s, g28, g28s, g30)
+    : buildMidSimple(g28);
+  var h_mid = (_pipeGradient[2] && dp3s>0 && h28s!=='')
+    ? buildMidGrad(dp3, dp3s, h28, h28s, h30)
+    : buildMidSimple(h28);
+  var i_mid = (_pipeGradient[3] && dp4s>0 && i28s!=='')
+    ? buildMidGrad(dp4, dp4s, i28, i28s, i30)
+    : buildMidSimple(i28);
 
   // 埋設シート = 路盤変更点 同値判定
   var embSameAsF40 = (f30 !== '' && String(f30) === String(f40)) ||
@@ -2426,8 +2485,9 @@ function recalcGL(){
   var _lbl1 = getPipeLbl(0); var _lbl2 = getPipeLbl(1);
   document.querySelectorAll('.gl1-dp-wrap').forEach(function(wrap){
     if(_pipeGradient[0] && dp1s > 0 && dp1 > 0){
-      wrap.innerHTML = '<span class="tag tag-blue">①' + _lbl1 + ' DP=' + dp1.toFixed(2) + 'm</span>'
-        + ' <span class="tag tag-blue">②' + _lbl1 + ' DP=' + dp1s.toFixed(2) + 'm</span>';
+      var bn=getPipeBaseName(0);
+      wrap.innerHTML = '<span class="tag tag-blue">DP①'+bn+' DP='+dp1.toFixed(2)+'m</span>'
+        + ' <span class="tag tag-blue">DP②'+bn+' DP='+dp1s.toFixed(2)+'m</span>';
     } else {
       wrap.innerHTML = '<span class="tag tag-blue">'
         + (dp1 > 0 ? _lbl1 + ' DP=' + dp1.toFixed(2) + 'm' : _lbl1 + ' DP入力後に計算')
@@ -2444,22 +2504,19 @@ function recalcGL(){
   // 水締めタグ（.tag-mizu）
   document.querySelectorAll('.tag-mizu').forEach(function(el){
     var t = '';
-    if(dp1 > 0 && f28 !== ''){
-      if(_pipeGradient[0] && f28s !== '' && dp1s > 0){
-        t += '<span class="tag tag-blue">①' + glLbl(1, f28) + '</span>';
-        t += ' <span class="tag tag-blue">②' + glLbl(1, f28s) + '</span>';
+    function addMizuTag(piIdx, dpV, dpSv, f28v, f28sv, cls){
+      if(dpV<=0 || f28v==='') return;
+      if(_pipeGradient[piIdx] && f28sv!=='' && dpSv>0){
+        t += '<span class="tag '+cls+'">'+glGradLbl(piIdx,1,f28v)+'</span>';
+        t += ' <span class="tag '+cls+'">'+glGradLbl(piIdx,2,f28sv)+'</span>';
       } else {
-        t += '<span class="tag tag-blue">' + glLbl(1, f28) + '</span>';
+        t += '<span class="tag '+cls+'">'+glLbl(piIdx+1,f28v)+'</span>';
       }
     }
-    if(dp2 > 0 && g28 !== ''){
-      if(_pipeGradient[1] && g28s !== '' && dp2s > 0){
-        t += '<span class="tag tag-green">①' + glLbl(2, g28) + '</span>';
-        t += ' <span class="tag tag-green">②' + glLbl(2, g28s) + '</span>';
-      } else {
-        t += '<span class="tag tag-green">' + glLbl(2, g28) + '</span>';
-      }
-    }
+    addMizuTag(0, dp1, dp1s, f28, f28s, 'tag-blue');
+    addMizuTag(1, dp2, dp2s, g28, g28s, 'tag-green');
+    if(_pipeCount>=3) addMizuTag(2, dp3, dp3s, h28, h28s, 'tag-gray');
+    if(_pipeCount>=4) addMizuTag(3, dp4, dp4s, i28, i28s, 'tag-gray');
     if(!t) t = '<span class="tag tag-blue">①通信 DP入力後に計算</span>';
     el.innerHTML = t;
   });
@@ -2467,22 +2524,19 @@ function recalcGL(){
   // 埋設シートタグ（.tag-sheet）
   document.querySelectorAll('.tag-sheet').forEach(function(el){
     var t = '';
-    if(dp1 > 0 && f30 !== ''){
-      if(_pipeGradient[0] && f30s !== '' && dp1s > 0){
-        t += '<span class="tag tag-blue">①' + glLbl(1, f30) + '</span>';
-        t += ' <span class="tag tag-blue">②' + glLbl(1, f30s) + '</span>';
+    function addSheetTag(piIdx, dpV, dpSv, f30v, f30sv, cls){
+      if(dpV<=0 || f30v==='') return;
+      if(_pipeGradient[piIdx] && f30sv!=='' && dpSv>0){
+        t += '<span class="tag '+cls+'">'+glGradLbl(piIdx,1,f30v)+'</span>';
+        t += ' <span class="tag '+cls+'">'+glGradLbl(piIdx,2,f30sv)+'</span>';
       } else {
-        t += '<span class="tag tag-blue">' + glLbl(1, f30) + '</span>';
+        t += '<span class="tag '+cls+'">'+glLbl(piIdx+1,f30v)+'</span>';
       }
     }
-    if(dp2 > 0 && g30 !== ''){
-      if(_pipeGradient[1] && g30s !== '' && dp2s > 0){
-        t += '<span class="tag tag-green">①' + glLbl(2, g30) + '</span>';
-        t += ' <span class="tag tag-green">②' + glLbl(2, g30s) + '</span>';
-      } else {
-        t += '<span class="tag tag-green">' + glLbl(2, g30) + '</span>';
-      }
-    }
+    addSheetTag(0, dp1, dp1s, f30, f30s, 'tag-blue');
+    addSheetTag(1, dp2, dp2s, g30, g30s, 'tag-green');
+    if(_pipeCount>=3) addSheetTag(2, dp3, dp3s, h30, h30s, 'tag-gray');
+    if(_pipeCount>=4) addSheetTag(3, dp4, dp4s, i30, i30s, 'tag-gray');
     if(!t) t = '<span class="tag tag-blue">①通信 DP入力後に計算</span>';
     el.innerHTML = t;
   });
@@ -2498,34 +2552,59 @@ function recalcGL(){
 
   // 中間転圧リスト（.mid-list-wrap）
   document.querySelectorAll('.mid-list-wrap').forEach(function(wrap){
+    // 全管種のmidリストを統合
+    var allPipes = [
+      {pi:0, dpV:dp1,  dpSv:dp1s,  midArr:f_mid,  f28v:f28,  f28sv:f28s,  f40ref:f40, cls:'tag-blue'},
+      {pi:1, dpV:dp2,  dpSv:dp2s,  midArr:g_mid,  f28v:g28,  f28sv:g28s,  f40ref:f40, cls:'tag-green'},
+      {pi:2, dpV:dp3,  dpSv:dp3s,  midArr:h_mid,  f28v:h28,  f28sv:h28s,  f40ref:f40, cls:'tag-gray'},
+      {pi:3, dpV:dp4,  dpSv:dp4s,  midArr:i_mid,  f28v:i28,  f28sv:i28s,  f40ref:f40, cls:'tag-gray'}
+    ];
+    var activePipes = allPipes.filter(function(p){ return p.dpV>0 && p.pi<_pipeCount; });
+
+    // 統合マップ
     var merged = {};
-    f_mid.forEach(function(v){ var k=v.toFixed(4); merged[k]=merged[k]||{v:v,p1:false,p2:false}; merged[k].p1=true; });
-    g_mid.forEach(function(v){ var k=v.toFixed(4); merged[k]=merged[k]||{v:v,p1:false,p2:false}; merged[k].p2=true; });
-    var entries = Object.values(merged).sort(function(a,b){ return a.v - b.v; });
+    activePipes.forEach(function(p){
+      p.midArr.forEach(function(v){
+        var k=v.toFixed(4)+'_'+p.pi;
+        merged[k]={v:v, p:p};
+      });
+    });
+    var entries = Object.values(merged).sort(function(a,b){ return a.v-b.v; });
 
     var html = '';
     if(entries.length === 0){
-      if(dp1 > 0 || dp2 > 0){
-        // midList空 → 路盤変更点GLを中間転圧として表示（例: 85型DP=1.1）
-        var suffix = embSameAsF40 ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
-        if(dp1 > 0) html += '<span class="tag tag-blue">'+getPipeLbl(0)+' ' + fmtGL(f40) + suffix + '</span>';
-        if(dp2 > 0) html += '<span class="tag tag-green">'+getPipeLbl(1)+' ' + fmtGL(f40) + suffix + '</span>';
+      if(activePipes.length>0){
+        activePipes.forEach(function(p){
+          var suffix = (embSameAsF40||(p.dpSv>0&&_pipeGradient[p.pi])) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
+          html += '<span class="tag '+p.cls+'">'+getPipeLbl(p.pi)+' '+fmtGL(f40)+suffix+'</span>';
+        });
       } else {
         html = '<span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span>';
       }
     } else {
-      entries.forEach(function(m){
-        if(m.p1 && dp1 > 0){
-          // 勾配浅側注入値かチェック（水締めレベル = f28s）
-          var isSlopeInj1 = _pipeGradient[0] && f28s !== '' && Math.abs(m.v - f28s) < 0.005;
-          var tagTxt1 = isSlopeInj1 ? ('②端 ' + glLbl(1, m.v)) : glLbl(1, m.v);
-          html += '<span class="tag tag-blue">' + tagTxt1 + '</span>';
+      entries.forEach(function(e){
+        var p = e.p;
+        var grad = _pipeGradient[p.pi] && p.dpSv>0;
+        // どちらの端点由来か判定
+        var isDeepEnd  = grad && p.f28sv!=='' && p.midArr.indexOf!==undefined
+          && (e.v <= parseFloat((p.f28sv+0.2).toFixed(4))+0.001); // deep側@200の最初付近
+        // f40に近い値はDP①端（浅側）とみなす
+        var isShallowF40 = grad && Math.abs(e.v - f40) < 0.005;
+        var lbl;
+        if(grad && isShallowF40){
+          lbl = glGradLbl(p.pi, 1, e.v)+'（路盤変更点・埋設シートと同GL）';
+        } else if(grad && p.f28sv!==''){
+          // 深側起点@200は「DP②」、浅側由来はDP①
+          var startDeep = parseFloat((p.f28sv+0.2).toFixed(4));
+          var fromDeep = (e.v <= startDeep+0.001) || (e.v >= startDeep-0.001 && e.v <= f40-0.001);
+          // すべての深側リストエントリを確認
+          var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), f40);
+          var inDeepList = deepListRef.some(function(dv){ return Math.abs(dv-e.v)<0.005; });
+          lbl = inDeepList ? glGradLbl(p.pi, 2, e.v) : glGradLbl(p.pi, 1, e.v);
+        } else {
+          lbl = glLbl(p.pi+1, e.v);
         }
-        if(m.p2 && dp2 > 0){
-          var isSlopeInj2 = _pipeGradient[1] && g28s !== '' && Math.abs(m.v - g28s) < 0.005;
-          var tagTxt2 = isSlopeInj2 ? ('②端 ' + glLbl(2, m.v)) : glLbl(2, m.v);
-          html += '<span class="tag tag-green">' + tagTxt2 + '</span>';
-        }
+        html += '<span class="tag '+p.cls+'">'+lbl+'</span>';
       });
     }
     wrap.innerHTML = html;
@@ -2535,8 +2614,9 @@ function recalcGL(){
   saveState();
 }
 
+var _gl3='', _gl4='';
 function glTagStr(pipe){
-  var v = pipe===1 ? _gl1 : _gl2;
+  var v = pipe===1?_gl1:pipe===2?_gl2:pipe===3?_gl3:_gl4;
   var lbl = getPipeLbl(pipe-1);
   return v ? lbl+' GL-'+v+'m' : lbl+' DP入力後に計算';
 }
