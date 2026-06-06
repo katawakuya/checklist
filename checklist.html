@@ -2151,7 +2151,7 @@ function renderGLPanel() {
     + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
     +   'GL 計算'
     +   '<span style="display:flex;gap:6px;align-items:center;">'
-    +     (_hataEntry ? '<button onclick="saveDpDphToMaster()" style="font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>' : '')
+    +     (_hataEntry && _isAdmin ? '<button onclick="saveDpDphToMaster()" style="font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>' : '')
     +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
     +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:10px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
     +   '</span>'
