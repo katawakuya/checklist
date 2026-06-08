@@ -1278,7 +1278,7 @@ function buildChecklistFromPreset(presetType){
 
       // 路盤構成変更点
       if(n.indexOf('路盤構成変更') >= 0){
-        item.dim = 'GL-'+totalH.toFixed(2)+'m';
+        item.dim = 'GL-'+totalH.toFixed(3)+'m';
         item.note = '路盤構成変更箇所（床付けGL）';
       }
 
@@ -2135,7 +2135,7 @@ function getPipeBaseName(idx){
   return rawType;
 }
 // GL値フォーマット（例: -1.50 → "GL-1.50m"）
-function fmtGL(v){ return 'GL-' + Math.abs(parseFloat(v)).toFixed(2) + 'm'; }
+function fmtGL(v){ return 'GL-' + Math.abs(parseFloat(v)).toFixed(3) + 'm'; }
 // 勾配①端/②端用ラベル生成（DP①通信管 GL-Xm 形式）
 function glGradLbl(pipeIdx, endNum, v){
   var bn = getPipeBaseName(pipeIdx);
@@ -2469,14 +2469,14 @@ function recalcGL(){
   var dph4s = (_pipeCount>=4 && _pipeGradient[3]) ? (parseFloat($v('inDPH4s'))|| 0) : 0;
 
   // ② 土被り = DP値のみ（管上端からGL）
-  _gl1 = dp1 > 0 ? dp1.toFixed(2) : '';
-  _gl2 = dp2 > 0 ? dp2.toFixed(2) : '';
-  _gl3 = dp3 > 0 ? dp3.toFixed(2) : '';
-  _gl4 = dp4 > 0 ? dp4.toFixed(2) : '';
+  _gl1 = dp1 > 0 ? dp1.toFixed(3) : '';
+  _gl2 = dp2 > 0 ? dp2.toFixed(3) : '';
+  _gl3 = dp3 > 0 ? dp3.toFixed(3) : '';
+  _gl4 = dp4 > 0 ? dp4.toFixed(3) : '';
 
   // 床付け = DP + 管下H
-  var yuka1 = dp1 > 0 ? (dp1 + dph1).toFixed(2) : '';
-  var yuka2 = dp2 > 0 ? (dp2 + dph2).toFixed(2) : '';
+  var yuka1 = dp1 > 0 ? (dp1 + dph1).toFixed(3) : '';
+  var yuka2 = dp2 > 0 ? (dp2 + dph2).toFixed(3) : '';
 
   // 計算結果表示
   var res = document.getElementById('glResult');
@@ -2484,9 +2484,9 @@ function recalcGL(){
     if(dp1 > 0 || dp2 > 0 || dp3 > 0 || dp4 > 0){
       var lines = [];
       function makeLine(piIdx, dpV, dphV, dpSv, dphSv){
-        var line = getPipeLbl(piIdx)+'　土被り DP='+dpV.toFixed(2)+'m　床付け H='+(dpV+dphV).toFixed(2)+'m';
+        var line = getPipeLbl(piIdx)+'　土被り DP='+dpV.toFixed(3)+'m　床付け H='+(dpV+dphV).toFixed(3)+'m';
         if(_pipeGradient[piIdx] && dpSv>0)
-          line += '　／　DP②端='+dpSv.toFixed(2)+'m　床付け H='+(dpSv+dphSv).toFixed(2)+'m';
+          line += '　／　DP②端='+dpSv.toFixed(3)+'m　床付け H='+(dpSv+dphSv).toFixed(3)+'m';
         return line;
       }
       if(dp1>0) lines.push(makeLine(0, dp1, dph1, dp1s, dph1s));
@@ -2579,15 +2579,18 @@ function recalcGL(){
     shList.forEach(function(v){
       if(!merged.some(function(m){return Math.abs(m-v)<0.005;})) merged.push(v);
     });
-    // 浅側リストが空なら路盤変更点(f40)を①として追加
-    if(shList.length===0 && dpShallow>0){
-      if(!merged.some(function(m){return Math.abs(m-f40)<0.005;})) merged.push(f40);
-    }
+    // 路盤変更点(f40)は＠200ステップが届かなくても必ず最終転圧箇所として追加（路盤変更点は必ず撮影）
+    if(!merged.some(function(m){return Math.abs(m-f40)<0.005;})) merged.push(f40);
     return merged.sort(function(a,b){return a-b;});
   }
   function buildMidSimple(f28Sh){
     var fs = f28Sh!=='' ? parseFloat((f28Sh+0.2).toFixed(4)) : '';
-    return fs!=='' ? midList(fs, f40) : [];
+    var arr = fs!=='' ? midList(fs, f40) : [];
+    // 路盤変更点(f40)は＠200ステップが届かなくても（リストが空でも）必ず最終転圧箇所として追加（路盤変更点は必ず撮影）
+    if(fs!=='' && !arr.some(function(v){return Math.abs(v-f40)<0.005;})){
+      arr.push(f40);
+    }
+    return arr;
   }
   var f_mid = (_pipeGradient[0] && dp1s>0 && f28s!=='')
     ? buildMidGrad(dp1, dp1s, f28, f28s, f30)
@@ -2676,7 +2679,7 @@ function recalcGL(){
         } else if(sheetValueMatch(e.v)){
           note = '（中間転圧・埋設シートと同GL）';
         } else {
-          note = '（＠200ルールで'+Math.abs(e.v).toFixed(2)+'m）';
+          note = '（＠200ルールで'+Math.abs(e.v).toFixed(3)+'m）';
         }
       }
       result.push({piIdx:p.pi, v:e.v, cls:p.cls, lbl:lbl, note:note});
@@ -2695,17 +2698,17 @@ function recalcGL(){
   document.querySelectorAll('.gl1-dp-wrap').forEach(function(wrap){
     if(_pipeGradient[0] && dp1s > 0 && dp1 > 0){
       var bn=getPipeBaseName(0);
-      var t1='<span class="tag tag-blue">DP①'+bn+' DP='+dp1.toFixed(2)+'m</span>';
-      var t2='<span class="tag tag-blue">DP②'+bn+' DP='+dp1s.toFixed(2)+'m</span>';
+      var t1='<span class="tag tag-blue">DP①'+bn+' DP='+dp1.toFixed(3)+'m</span>';
+      var t2='<span class="tag tag-blue">DP②'+bn+' DP='+dp1s.toFixed(3)+'m</span>';
       wrap.innerHTML = subChkSpan('soil_p0_e1', t1) + ' ' + subChkSpan('soil_p0_e2', t2);
     } else {
       wrap.innerHTML = '<span class="tag tag-blue">'
-        + (dp1 > 0 ? _lbl1 + ' DP=' + dp1.toFixed(2) + 'm' : _lbl1 + ' DP入力後に計算')
+        + (dp1 > 0 ? _lbl1 + ' DP=' + dp1.toFixed(3) + 'm' : _lbl1 + ' DP入力後に計算')
         + '</span>';
     }
   });
   document.querySelectorAll('.tag-green').forEach(function(el){
-    el.textContent = dp2 > 0 ? _lbl2 + ' DP=' + dp2.toFixed(2) + 'm' : _lbl2 + ' DP入力後に計算';
+    el.textContent = dp2 > 0 ? _lbl2 + ' DP=' + dp2.toFixed(3) + 'm' : _lbl2 + ' DP入力後に計算';
   });
   document.querySelectorAll('.tag-yellow').forEach(function(el){
     el.textContent = 'BH掘削 GL-' + fmtBH() + 'm';
@@ -2830,7 +2833,7 @@ function fmtBH(){
   // 床付けの深い方を基準にBH掘削GL算出
   var yuka1=dp1>0?dp1+dph1:0, yuka2=dp2>0?dp2+dph2:0;
   var md=Math.max(yuka1,yuka2);
-  return md>0?(md+bh+ext).toFixed(2):'??';
+  return md>0?(md+bh+ext).toFixed(3):'??';
 }
 
 // =====================================================
