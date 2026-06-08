@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="撮影CL">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>📷 写真撮影チェックリスト v14</title>
+<title>📷 写真撮影チェックリスト v16</title>
 <style>
 :root {
   --bg: #f5f4f0; --bg2: #ffffff; --bg3: #f0efe9;
@@ -90,11 +90,22 @@ main{padding:10px 14px 90px;}
 .check-label .cdim{font-size:11px;color:#b45309;font-weight:600;margin-top:2px;}
 .check-label .cnote{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.5;}
 .check-label .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
-.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;}
+.tag{display:inline-block;font-size:13px;font-weight:700;padding:2px 7px;border-radius:4px;}
 .tag-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
 .tag-green{background:#d1fae5;color:#059669;border:1px solid #a7f3d0;}
 .tag-yellow{background:#fef3c7;color:#b45309;border:1px solid #fde68a;}
 .tag-gray{background:#f3f4f6;color:var(--text3);border:1px solid var(--border2);}
+.subchk-item{display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:2px 6px 2px 2px;border-radius:6px;transition:.12s;}
+.subchk-item:hover{background:#f3f4f6;}
+.subchk-item.on{background:#ecfdf5;}
+.subchk-box{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-width:18px;border:2px solid #93c5fd;border-radius:5px;font-size:12px;font-weight:700;color:#fff;background:#fff;transition:.15s;}
+.subchk-item.on .subchk-box{background:#059669;border-color:#059669;color:#fff;}
+.combo-seq{display:flex;flex-direction:column;gap:5px;margin-top:6px;}
+.combo-seq .subchk-item{align-self:flex-start;max-width:100%;white-space:normal;}
+.combo-kind{display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:5px;white-space:nowrap;vertical-align:middle;}
+.combo-kind-sheet{background:#fef9c3;color:#854d0e;border:1px solid #fde68a;}
+.combo-kind-mid{background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;}
+.combo-extra-note{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border2);}
 
 /* na切り替えボタン */
 .btn-na{padding:3px 8px;background:#f9fafb;color:var(--text3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;margin-left:auto;white-space:nowrap;}
@@ -540,8 +551,8 @@ var TYPE_CHECKLISTS = {
         {n:'中間転圧（水締め）', gl:1, gl2:2, glType:'mizu', note:'ランマー（転圧機）が入らない配管直隣の狭い箇所は水を注いで土を締め固める（水締め）。管の上面から100mm上がった位置をスケールで確認している状況を撮影。ランマーで転圧している状況も同時に撮影すること。黒板に「中間転圧（水締め）GL-○m」を記載して撮影。'},
         {n:'埋設シート敷設', gl:1, gl2:2, glType:'sheet', note:'埋設シート（管埋設位置を示す識別シート）を敷設した状態を撮影。車道は管上300mm の位置に敷設。路盤構成（砕石層）の中に入ってしまう場合は路盤材の一番下（路盤構成変更点）に敷くこと。シート幅は管幅に応じて400mm・600mm・800mm（400mm×2枚貼り）を選択。スケールで確認している状況を撮影してから、シート全体が広がっている状態を撮影する。'},
         {n:'中間転圧', gl:'mid', glType:'midList', note:'水締め（管上100mm）後から路盤構成変更点まで200mm以内ごとに転圧を繰り返す。ランマーで転圧している状況とスケールで確認している状況を撮影。黒板は「中間転圧」のまま共通で使い、高さの数値だけ変更して各GLで繰り返し撮影すること。'},
-        {n:'仮復旧　路盤転圧', dim:'GL-0.10m', note:'@200mm以内'},
-        {n:'仮復旧　路盤転圧', dim:'GL-0.05m', note:'ランマー転圧状況も撮影'},
+        {n:'仮復旧　下層路盤転圧', dim:'GL-0.200m（t=200mm）', note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'},
+        {n:'仮復旧　上層路盤転圧', dim:'GL-0.050m（t=150mm）', note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'},
         {n:'仮復旧　鉄板設置', dim:'仕様未定', note:'鉄板の仕様が確定次第、設置状況を撮影。設置位置・枚数・寸法を黒板に記載して撮影すること。', na:true},
         {n:'仮復旧　プライムコート散布', note:'路盤面（砕石天端）にプライムコート（PK-3乳剤）を散布している状況を撮影。散布直後の濡れた状態で全景を撮影する。'},
         {n:'仮復旧工　表層転圧', dim:'t＝0.05m', note:'表層（密粒度アスファルト）をローラー（振動ローラーまたはランマー）で転圧している状況を撮影。転圧後の仕上がり面も撮影すること。'},
@@ -1008,6 +1019,49 @@ function _ckResolveLayersStr(presetType, field) {
 }
 
 
+// ─── 路盤構成 簡易／詳細 表示ヘルパー（orderと同じ層数表現に統一） ───
+// 簡易表示：「（150×3層）450mm」（写真は層ごとに撮るため層数が分かるように）
+function ckLayerCompactStr(layers, totalMm){
+  var tot = Math.round(totalMm||0);
+  if(!layers || !layers.length) return tot+'mm';
+  var parts = layers.filter(function(l){ return l && l.t > 0 && l.n > 0; });
+  if(!parts.length) return tot+'mm';
+  if(parts.length === 1 && parts[0].n <= 1) return tot+'mm';
+  var desc = parts.map(function(l){ return l.n > 1 ? (l.t+'×'+l.n+'層') : (''+l.t); }).join('+');
+  return '（'+desc+'）'+tot+'mm';
+}
+// 詳細表示：「150mm+150mm+150mm＝450mm」（roadbedの「厚さ×層数＝合計」を加算式に展開）
+function ckLayerAdditionStr(layers, totalMm){
+  var tot = Math.round(totalMm||0);
+  if(!layers || !layers.length) return tot+'mm';
+  var parts = layers.filter(function(l){ return l && l.t > 0 && l.n > 0; });
+  if(!parts.length) return tot+'mm';
+  if(parts.length === 1 && parts[0].n === 1) return parts[0].t+'mm';
+  var expanded = [];
+  parts.forEach(function(l){ for(var i=0;i<l.n;i++) expanded.push(l.t+'mm'); });
+  return expanded.join('+') + '＝' + tot + 'mm';
+}
+// 仮復旧と現況・本復旧で路盤構成が異なるか（⚠️バッジ表示判定／orderのkariHonDiffersと同等）
+function _ckKariHonDiffers(presetType){
+  if(!presetType) return false;
+  var kariRM = Math.round((presetType.rmH||0)*1000);
+  var honRM  = Math.round((presetType.genkyoRM||0)*1000);
+  var kariRC = Math.round((presetType.rcH||0)*1000);
+  var honRC  = Math.round((presetType.genkyoRC||0)*1000);
+  var kariAS = (presetType.asT密粒||0) + (presetType.asT粗粒||0);
+  var honAS  = Math.round((presetType.genkyoAsH||0)*1000);
+  return kariRM !== honRM || kariRC !== honRC || kariAS !== honAS;
+}
+// 路盤構成 詳細パネルの開閉
+function toggleCkRoadbedDetail(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  var show = (el.style.display === 'none' || !el.style.display);
+  el.style.display = show ? 'block' : 'none';
+  var btn = document.getElementById(id+'-btn');
+  if(btn) btn.textContent = show ? '詳細を閉じる ▲' : '詳細を見る ▼';
+}
+
 function buildChecklistFromPreset(presetType){
   var asTotal  = ((presetType.asT密粒||0) + (presetType.asT粗粒||0)) / 1000;
   var rcH      = presetType.rcH || 0;
@@ -1353,8 +1407,9 @@ function buildChecklistFromPreset(presetType){
         if(teppanInsertIdx >= 0){
           sec.items.splice(teppanInsertIdx+1, 0, {
             n:'仮復旧　鉄板設置',
-            dim:'仕様未定',
+            dim: (presetType.teppan && presetType.teppan.memo) ? presetType.teppan.memo : '仕様未定',
             note:'鉄板の仕様が確定次第、設置状況を撮影。設置位置・枚数・寸法を黒板に記載して撮影すること。',
+            na: !!(presetType.teppan && presetType.teppan.pending),
             _isTeppan:true
           });
         }
@@ -1495,6 +1550,7 @@ var _presetTypeKey = '';  // プリセット型の元キー（type_XXXXX等）
 var _sites = [];
 var _checks = {};   // {itemKey: bool}
 var _naItems = {};  // {itemKey: bool} 対象外
+var _subChecks = {}; // {subChkKey: bool} DP個別チェック（土被り・水締め複数DP用）
 var _hataEntry = null;
 var _gl1 = ''; var _gl2 = '';
 var _pipeCount = 1;            // 表示中の管種行数（1 or 2）
@@ -1574,7 +1630,7 @@ function onSiteChange(silent){
   // 現場別の旗揚げマスタを Firestore から確実にロード（遅延取得）
   fbSyncHataMasterForSite(_siteId, function() {
     buildTypeSelect(_siteId);
-    if(!silent){ _checks={}; _naItems={}; }
+    if(!silent){ _checks={}; _naItems={}; _subChecks={}; }
     restoreState();
     renderMain();
     // renderMain後にDOMが生成されてから勾配②端DP値を復元
@@ -1689,7 +1745,7 @@ function onTypeChange(silent){
   _typeKey = parts[0];                          // TYPE_CHECKLISTSキー（85/40等）
   _presetTypeKey = parts.length>=3 ? parts[1] : parts[0]; // プリセット元キー
   if(_siteId) localStorage.setItem('cl_last_type_'+_siteId, val);
-  if(!silent){ _checks={}; _naItems={}; restoreState(); }
+  if(!silent){ _checks={}; _naItems={}; _subChecks={}; restoreState(); }
   renderMain();
   // pendingSlope が onTypeChange 経路でセットされた場合も適用
   if(_pendingSlope){
@@ -1709,7 +1765,7 @@ function saveState(){
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
-    hata:$v('hataInput'),checks:_checks,na:_naItems,kojiKbn:_kojiKbn
+    hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
 }
@@ -1739,7 +1795,7 @@ function restoreState(){
     if(hataEl) hataEl.value = '';
     _hataEntry = null;
     closeDiagram();
-    _checks = d.checks||{}; _naItems = d.na||{};
+    _checks = d.checks||{}; _naItems = d.na||{}; _subChecks = d.subChecks||{};
     if(d.kojiKbn) _kojiKbn = d.kojiKbn;
   }catch(e){}
 }
@@ -1758,24 +1814,33 @@ function renderMain(){
 
   var html = '<main>';
 
-  // 路盤構成バッジ（プリセットがある場合）
+  // 路盤構成 簡易表示＋詳細ボタン（orderの表示と統一・写真は層ごとに撮るため層数を明示）
   if(_dynChecklist && _dynChecklist.roadbedInfo){
     var rb = _dynChecklist.roadbedInfo;
-    var badges = '';
-    rb.asLayers.forEach(function(a){
-      badges += '<span style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'
-        +a.name+' '+Math.round(a.t*1000)+'mm</span>';
-    });
-    if(rb.rmH>0) badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+(rb.rmLabel||'RM-'+rb.rmSize)+' '+Math.round(rb.rmH*1000)+'mm</span>';
-    badges += '<span style="background:#d1fae5;color:#059669;border:1px solid #a7f3d0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+(rb.rcLabel||'RC-'+rb.rcSize)+' '+Math.round(rb.rcH*1000)+'mm</span>';
+    var _rbDiffers = _ckKariHonDiffers(_presetType);
+    var _rbTitle = _rbDiffers ? '仮復旧・路盤先行 構成（固定値）' : '路盤構成';
+    var _asDesc = rb.asLayers.map(function(a){ return a.name+' t='+Math.round(a.t*1000)+'mm'; }).join(' ／ ');
+    var _noticeParts = [];
+    if(_asDesc) _noticeParts.push(_asDesc);
+    if(rb.rmH>0) _noticeParts.push('<span style="color:#0284c7;font-weight:700;">'+(rb.rmLabel||'RM-'+rb.rmSize)+' '+ckLayerCompactStr(_presetType.kariRM_layers, rb.rmH*1000)+'</span>');
+    if(rb.rcH>0) _noticeParts.push('<span style="color:#059669;font-weight:700;">'+(rb.rcLabel||'RC-'+rb.rcSize)+' '+ckLayerCompactStr(_presetType.kariRC_layers, rb.rcH*1000)+'</span>');
     rb.extraMaterials.forEach(function(em){
-      if(em.name&&(em.unitH||0)>0) badges += '<span style="background:#ffedd5;color:#c2410c;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">'+em.name+' '+em.unitH+'mm</span>';
+      if(em.name&&(em.unitH||0)>0) _noticeParts.push('<span style="color:#c2410c;font-weight:700;">'+em.name+' '+em.unitH+'mm</span>');
     });
-    if(rb.teppan&&rb.teppan.use) badges += '<span style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;">🔩 鉄板'+(rb.teppan.pending?'（仕様未定）':'')+'</span>';
+    if(rb.teppan&&rb.teppan.use) _noticeParts.push('<span style="color:#b45309;font-weight:700;">🔩 鉄板'+(rb.teppan.pending?'（仕様未定）':'')+'</span>');
+    var _rbDetailId = 'ckRbDetail_'+(_presetType.key||_typeKey||'x');
     html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;">'
-      +'<div style="font-size:10px;font-weight:700;color:#0369a1;letter-spacing:.5px;margin-bottom:6px;">📐 路盤構成（'+(_presetType.label||'')+'）</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:5px;">'+badges+'</div>'
-      +'<div style="font-size:10px;color:#0369a1;margin-top:5px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
+      +'<div style="font-size:12px;color:#0369a1;line-height:1.7;">📐 <strong>'+_rbTitle+' H='+Math.round(rb.totalH*1000)+'mm</strong>： '+_noticeParts.join(' ／ ')
+        +(_rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '')
+      +'</div>'
+      +'<button id="'+_rbDetailId+'-btn" type="button" onclick="toggleCkRoadbedDetail(\''+_rbDetailId+'\')" style="margin-top:6px;font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:5px;padding:3px 10px;cursor:pointer;">詳細を見る ▼</button>'
+      +'<div id="'+_rbDetailId+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #bae6fd;">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+          +(rb.rmH>0 ? '<div style="background:#d1fae5;border:1px solid #a7f3d0;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#065f46;margin-bottom:3px;">上層路盤工 RM-'+rb.rmSize+'</div><div style="font-weight:700;font-size:12px;color:#059669;font-family:monospace;">'+ckLayerAdditionStr(_presetType.kariRM_layers, rb.rmH*1000)+'</div></div>' : '')
+          +(rb.rcH>0 ? '<div style="background:#d1fae5;border:1px solid #a7f3d0;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#065f46;margin-bottom:3px;">下層路盤工 RC-'+rb.rcSize+'</div><div style="font-weight:700;font-size:12px;color:#059669;font-family:monospace;">'+ckLayerAdditionStr(_presetType.kariRC_layers, rb.rcH*1000)+'</div></div>' : '')
+        +'</div>'
+        +'<div style="font-size:10px;color:#0369a1;margin-top:6px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
+      +'</div>'
       +'</div>';
   }
 
@@ -1888,6 +1953,10 @@ function renderSection(sec, si, isHon){
     '</div><div class="check-items">';
 
   sec.items.forEach(function(item, ii){
+    // 埋設シート敷設の直後の中間転圧は、深さ順インターリーブ表示のため埋設シート行に統合（個別行は省略）
+    if(item.glType === 'midList' && ii>0 && sec.items[ii-1] && sec.items[ii-1].glType === 'sheet'){
+      return;
+    }
     var k = itemKey(si,ii);
     var isDone = !!_checks[k];
     var isNA = !!_naItems[k];
@@ -1895,9 +1964,14 @@ function renderSection(sec, si, isHon){
 
     var tags = '';
     var gt = item.glType || '';
+    // 埋設シート敷設の直後に中間転圧が続く場合は1行に統合表示（深さ順インターリーブ）
+    var _comboPair = (gt === 'sheet' && sec.items[ii+1] && sec.items[ii+1].glType === 'midList');
 
     if(gt === 'mizu'){
       tags = '<div class="tags"><span class="tag-mizu"><span class="tag tag-blue">①通信 DP入力後に計算</span></span></div>';
+    } else if(_comboPair){
+      var _midNote = (sec.items[ii+1].note||'').replace(/"/g,'&quot;');
+      tags = '<div class="tags combo-wrap" data-si="'+si+'" data-ii="'+ii+'" data-mid-note="'+_midNote+'"><span class="tag tag-yellow">DP入力後に順序を計算</span></div>';
     } else if(gt === 'sheet'){
       tags = '<div class="tags"><span class="tag-sheet"><span class="tag tag-blue">①通信 DP入力後に計算</span></span></div>';
     } else if(gt === 'midList'){
@@ -1936,7 +2010,7 @@ function renderSection(sec, si, isHon){
     html += '<div class="'+cls+'"'+_dummyStyle+' onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'"'+_pipeSlotAttr+_dummyAttr+'>' +
       '<div class="check-box">'+(isNA?'－':(isDone?'✓':''))+'</div>' +
       '<div class="check-label">' +
-        '<div class="cname">'+item.n+'</div>' +
+        '<div class="cname">'+(_comboPair ? '埋設シート・中間転圧' : item.n)+'</div>' +
         (item.dim && gt!=='roadbedChg' ? '<div class="cdim">'+item.dim+'</div>':'') +
         tags +
         noteHtml +
@@ -1991,6 +2065,27 @@ function toggleNA(e, si, ii){
   saveState();
 }
 
+// 個別DP用サブチェック（例：□DP①通信管DP=00m □DP②通信管DP=00m）
+// 撮影済みかどうかを個別に記録・保存できるチェックボックス
+function subChkSpan(key, innerHtml){
+  var on = !!_subChecks[key];
+  return '<span class="subchk-item'+(on?' on':'')+'" data-subchk-key="'+key+'" onclick="toggleSubChk(event,this)">'
+       + '<span class="subchk-box">'+(on?'✓':'')+'</span>'
+       + innerHtml
+       + '</span>';
+}
+function toggleSubChk(e, el){
+  e.stopPropagation();
+  if(!el) return;
+  var key = el.getAttribute('data-subchk-key');
+  if(!key) return;
+  _subChecks[key] = !_subChecks[key];
+  el.classList.toggle('on', !!_subChecks[key]);
+  var box = el.querySelector('.subchk-box');
+  if(box) box.textContent = _subChecks[key] ? '✓' : '';
+  saveState();
+}
+
 // =====================================================
 // 管下H 計算補助
 // =====================================================
@@ -2039,6 +2134,8 @@ function getPipeBaseName(idx){
   if(rawType==='その他') return (_pipeCustomNames[idx]||'').trim()||'その他';
   return rawType;
 }
+// GL値フォーマット（例: -1.50 → "GL-1.50m"）
+function fmtGL(v){ return 'GL-' + Math.abs(parseFloat(v)).toFixed(2) + 'm'; }
 // 勾配①端/②端用ラベル生成（DP①通信管 GL-Xm 形式）
 function glGradLbl(pipeIdx, endNum, v){
   var bn = getPipeBaseName(pipeIdx);
@@ -2509,8 +2606,85 @@ function recalcGL(){
   var embSameAsF40 = (f30 !== '' && String(f30) === String(f40)) ||
                      (g30 !== '' && String(g30) === String(f40));
 
+  // 埋設シートGL値一覧（深い順ソート・中間転圧との同GL判定に共用）
+  function collectSheetEntries(){
+    var arr = [];
+    function add(piIdx, dpV, dpSv, f30v, f30sv, cls){
+      if(dpV<=0 || f30v==='') return;
+      if(_pipeGradient[piIdx] && f30sv!=='' && dpSv>0){
+        arr.push({piIdx:piIdx, end:1, v:f30v, cls:cls});
+        arr.push({piIdx:piIdx, end:2, v:f30sv, cls:cls});
+      } else {
+        arr.push({piIdx:piIdx, end:0, v:f30v, cls:cls});
+      }
+    }
+    add(0, dp1, dp1s, f30, f30s, 'tag-blue');
+    add(1, dp2, dp2s, g30, g30s, 'tag-green');
+    if(_pipeCount>=3) add(2, dp3, dp3s, h30, h30s, 'tag-gray');
+    if(_pipeCount>=4) add(3, dp4, dp4s, i30, i30s, 'tag-gray');
+    arr.sort(function(a,b){ return a.v-b.v; }); // 深い順（GL値が小さい=深い）
+    return arr;
+  }
+  var _sheetEntries = collectSheetEntries();
+  function sheetValueMatch(v){
+    return _sheetEntries.some(function(e){ return Math.abs(e.v - v) < 0.005; });
+  }
+
+  // 中間転圧エントリ一覧（GL深い順・ラベル/動的注記つき）。.mid-list-wrap と統合表示(.combo-wrap)で共用
+  function buildMidEntries(){
+    var allPipes = [
+      {pi:0, dpV:dp1, dpSv:dp1s, midArr:f_mid, f28v:f28, f28sv:f28s, cls:'tag-blue'},
+      {pi:1, dpV:dp2, dpSv:dp2s, midArr:g_mid, f28v:g28, f28sv:g28s, cls:'tag-green'},
+      {pi:2, dpV:dp3, dpSv:dp3s, midArr:h_mid, f28v:h28, f28sv:h28s, cls:'tag-gray'},
+      {pi:3, dpV:dp4, dpSv:dp4s, midArr:i_mid, f28v:i28, f28sv:i28s, cls:'tag-gray'}
+    ];
+    var activePipes = allPipes.filter(function(p){ return p.dpV>0 && p.pi<_pipeCount; });
+    var merged = {};
+    activePipes.forEach(function(p){
+      p.midArr.forEach(function(v){
+        var k=v.toFixed(4)+'_'+p.pi;
+        merged[k]={v:v, p:p};
+      });
+    });
+    var entries = Object.values(merged).sort(function(a,b){ return a.v-b.v; });
+    var result = [];
+    if(entries.length === 0){
+      activePipes.forEach(function(p){
+        var note = (embSameAsF40||(p.dpSv>0&&_pipeGradient[p.pi])) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
+        result.push({piIdx:p.pi, v:f40, cls:p.cls, lbl:getPipeLbl(p.pi)+' '+fmtGL(f40), note:note});
+      });
+      return result;
+    }
+    entries.forEach(function(e){
+      var p = e.p;
+      var grad = _pipeGradient[p.pi] && p.dpSv>0;
+      var isShallowF40 = grad && Math.abs(e.v - f40) < 0.005;
+      var lbl, note = '';
+      if(grad && isShallowF40){
+        lbl = glGradLbl(p.pi, 1, e.v);
+        note = '（路盤変更点・埋設シートと同GL）';
+      } else if(grad && p.f28sv!==''){
+        var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), f40);
+        var inDeepList = deepListRef.some(function(dv){ return Math.abs(dv-e.v)<0.005; });
+        lbl = inDeepList ? glGradLbl(p.pi, 2, e.v) : glGradLbl(p.pi, 1, e.v);
+      } else {
+        lbl = glLbl(p.pi+1, e.v);
+      }
+      if(!note){
+        if(Math.abs(e.v - f40) < 0.005){
+          note = sheetValueMatch(e.v) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
+        } else if(sheetValueMatch(e.v)){
+          note = '（中間転圧・埋設シートと同GL）';
+        } else {
+          note = '（＠200ルールで'+Math.abs(e.v).toFixed(2)+'m）';
+        }
+      }
+      result.push({piIdx:p.pi, v:e.v, cls:p.cls, lbl:lbl, note:note});
+    });
+    return result;
+  }
+
   // ── ヘルパー ──
-  function fmtGL(v){ return 'GL-' + Math.abs(parseFloat(v)).toFixed(2) + 'm'; }
   function glLbl(pipe, v){
     var lbl = getPipeLbl(pipe - 1);
     return v !== '' ? lbl + ' ' + fmtGL(v) : lbl + ' DP入力後に計算';
@@ -2521,8 +2695,9 @@ function recalcGL(){
   document.querySelectorAll('.gl1-dp-wrap').forEach(function(wrap){
     if(_pipeGradient[0] && dp1s > 0 && dp1 > 0){
       var bn=getPipeBaseName(0);
-      wrap.innerHTML = '<span class="tag tag-blue">DP①'+bn+' DP='+dp1.toFixed(2)+'m</span>'
-        + ' <span class="tag tag-blue">DP②'+bn+' DP='+dp1s.toFixed(2)+'m</span>';
+      var t1='<span class="tag tag-blue">DP①'+bn+' DP='+dp1.toFixed(2)+'m</span>';
+      var t2='<span class="tag tag-blue">DP②'+bn+' DP='+dp1s.toFixed(2)+'m</span>';
+      wrap.innerHTML = subChkSpan('soil_p0_e1', t1) + ' ' + subChkSpan('soil_p0_e2', t2);
     } else {
       wrap.innerHTML = '<span class="tag tag-blue">'
         + (dp1 > 0 ? _lbl1 + ' DP=' + dp1.toFixed(2) + 'm' : _lbl1 + ' DP入力後に計算')
@@ -2542,8 +2717,9 @@ function recalcGL(){
     function addMizuTag(piIdx, dpV, dpSv, f28v, f28sv, cls){
       if(dpV<=0 || f28v==='') return;
       if(_pipeGradient[piIdx] && f28sv!=='' && dpSv>0){
-        t += '<span class="tag '+cls+'">'+glGradLbl(piIdx,1,f28v)+'</span>';
-        t += ' <span class="tag '+cls+'">'+glGradLbl(piIdx,2,f28sv)+'</span>';
+        var m1='<span class="tag '+cls+'">'+glGradLbl(piIdx,1,f28v)+'</span>';
+        var m2='<span class="tag '+cls+'">'+glGradLbl(piIdx,2,f28sv)+'</span>';
+        t += subChkSpan('mizu_p'+piIdx+'_e1', m1) + ' ' + subChkSpan('mizu_p'+piIdx+'_e2', m2);
       } else {
         t += '<span class="tag '+cls+'">'+glLbl(piIdx+1,f28v)+'</span>';
       }
@@ -2556,91 +2732,83 @@ function recalcGL(){
     el.innerHTML = t;
   });
 
-  // 埋設シートタグ（.tag-sheet）
+  // 埋設シートタグ（.tag-sheet）…GL深い順に表示（勾配時は動的に順序入替）
   document.querySelectorAll('.tag-sheet').forEach(function(el){
     var t = '';
-    function addSheetTag(piIdx, dpV, dpSv, f30v, f30sv, cls){
-      if(dpV<=0 || f30v==='') return;
-      if(_pipeGradient[piIdx] && f30sv!=='' && dpSv>0){
-        t += '<span class="tag '+cls+'">'+glGradLbl(piIdx,1,f30v)+'</span>';
-        t += ' <span class="tag '+cls+'">'+glGradLbl(piIdx,2,f30sv)+'</span>';
-      } else {
-        t += '<span class="tag '+cls+'">'+glLbl(piIdx+1,f30v)+'</span>';
-      }
+    if(_sheetEntries.length){
+      _sheetEntries.forEach(function(e){
+        var lbl = e.end===0 ? glLbl(e.piIdx+1, e.v) : glGradLbl(e.piIdx, e.end, e.v);
+        t += '<span class="tag '+e.cls+'">'+lbl+'</span>';
+      });
+    } else {
+      t = '<span class="tag tag-blue">①通信 DP入力後に計算</span>';
     }
-    addSheetTag(0, dp1, dp1s, f30, f30s, 'tag-blue');
-    addSheetTag(1, dp2, dp2s, g30, g30s, 'tag-green');
-    if(_pipeCount>=3) addSheetTag(2, dp3, dp3s, h30, h30s, 'tag-gray');
-    if(_pipeCount>=4) addSheetTag(3, dp4, dp4s, i30, i30s, 'tag-gray');
-    if(!t) t = '<span class="tag tag-blue">①通信 DP入力後に計算</span>';
     el.innerHTML = t;
   });
 
-  // 埋設シートnote（同値時に注記）
+  // 埋設シートnote（【埋設シート】見出しを付与し、同GL注記は改行して別段落で表示）
   document.querySelectorAll('.note-sheet').forEach(function(el){
     var base = el.getAttribute('data-base-note') || el.textContent;
     el.setAttribute('data-base-note', base);
-    el.textContent = embSameAsF40
-      ? base + '　※埋設シート敷設（' + fmtGL(f40) + '）と中間転圧（路盤構成変更）が同じGL値。下の「中間転圧」と合わせて同じタイミングで2種類撮影すること。'
-      : base;
+    var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var headed = /^【埋設シート】/.test(base) ? base : '【埋設シート】' + base;
+    var html = esc(headed);
+    if(embSameAsF40){
+      html += '<br><br>※埋設シート敷設（' + fmtGL(f40) + '）と中間転圧（路盤構成変更）が同じGL値。下の「中間転圧」と合わせて同じタイミングで2種類撮影すること。';
+    }
+    el.innerHTML = html;
   });
 
-  // 中間転圧リスト（.mid-list-wrap）
+  // 中間転圧リスト（.mid-list-wrap）…埋設シートと統合されない場合のフォールバック表示
   document.querySelectorAll('.mid-list-wrap').forEach(function(wrap){
-    // 全管種のmidリストを統合
-    var allPipes = [
-      {pi:0, dpV:dp1,  dpSv:dp1s,  midArr:f_mid,  f28v:f28,  f28sv:f28s,  f40ref:f40, cls:'tag-blue'},
-      {pi:1, dpV:dp2,  dpSv:dp2s,  midArr:g_mid,  f28v:g28,  f28sv:g28s,  f40ref:f40, cls:'tag-green'},
-      {pi:2, dpV:dp3,  dpSv:dp3s,  midArr:h_mid,  f28v:h28,  f28sv:h28s,  f40ref:f40, cls:'tag-gray'},
-      {pi:3, dpV:dp4,  dpSv:dp4s,  midArr:i_mid,  f28v:i28,  f28sv:i28s,  f40ref:f40, cls:'tag-gray'}
-    ];
-    var activePipes = allPipes.filter(function(p){ return p.dpV>0 && p.pi<_pipeCount; });
-
-    // 統合マップ
-    var merged = {};
-    activePipes.forEach(function(p){
-      p.midArr.forEach(function(v){
-        var k=v.toFixed(4)+'_'+p.pi;
-        merged[k]={v:v, p:p};
-      });
-    });
-    var entries = Object.values(merged).sort(function(a,b){ return a.v-b.v; });
-
+    var midEntries = buildMidEntries();
     var html = '';
-    if(entries.length === 0){
-      if(activePipes.length>0){
-        activePipes.forEach(function(p){
-          var suffix = (embSameAsF40||(p.dpSv>0&&_pipeGradient[p.pi])) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
-          html += '<span class="tag '+p.cls+'">'+getPipeLbl(p.pi)+' '+fmtGL(f40)+suffix+'</span>';
-        });
-      } else {
-        html = '<span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span>';
+    if(!midEntries.length){
+      html = '<span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span>';
+    } else {
+      midEntries.forEach(function(e){
+        html += '<span class="tag '+e.cls+'">'+e.lbl+e.note+'</span>';
+      });
+    }
+    wrap.innerHTML = html;
+  });
+
+  // 埋設シート敷設＋中間転圧 統合表示（.combo-wrap）
+  // GL深い順（数値が小さい=深い）に1本のシーケンスとしてインターリーブし、
+  // 勾配時はDP①／DP②の実測値に応じて動的に順序が入れ替わる。各エントリは個別にチェック可能。
+  document.querySelectorAll('.combo-wrap').forEach(function(wrap){
+    var combo = [];
+    _sheetEntries.forEach(function(e){
+      var lbl = e.end===0 ? glLbl(e.piIdx+1, e.v) : glGradLbl(e.piIdx, e.end, e.v);
+      combo.push({kind:'sheet', piIdx:e.piIdx, end:(e.end||0), v:e.v, cls:e.cls, lbl:lbl, note:''});
+    });
+    buildMidEntries().forEach(function(e){
+      combo.push({kind:'mid', piIdx:e.piIdx, end:0, v:e.v, cls:e.cls, lbl:e.lbl, note:e.note});
+    });
+    // 深い順（GL値が小さい順）。同GLの場合は埋設シート→中間転圧の順（敷設してから転圧するため）
+    combo.sort(function(a,b){
+      if(Math.abs(a.v-b.v) > 0.0005) return a.v - b.v;
+      if(a.kind !== b.kind) return a.kind==='sheet' ? -1 : 1;
+      return 0;
+    });
+    var si = wrap.getAttribute('data-si'), ii = wrap.getAttribute('data-ii');
+    var html = '';
+    if(combo.length){
+      html += '<div class="combo-seq">';
+      combo.forEach(function(e){
+        var kindLbl = e.kind==='sheet' ? '埋設シート敷設' : '中間転圧';
+        var kindCls = e.kind==='sheet' ? 'combo-kind-sheet' : 'combo-kind-mid';
+        var key = 'combo_'+si+'_'+ii+'_'+e.kind+'_p'+e.piIdx+'_e'+e.end+'_'+e.v.toFixed(4);
+        var rowLbl = '<span class="combo-kind '+kindCls+'">'+kindLbl+'</span><span class="tag '+e.cls+'">'+e.lbl+e.note+'</span>';
+        html += subChkSpan(key, rowLbl);
+      });
+      html += '</div>';
+      var midNote = wrap.getAttribute('data-mid-note');
+      if(midNote){
+        html += '<div class="cnote combo-extra-note">【中間転圧】'+midNote+'</div>';
       }
     } else {
-      entries.forEach(function(e){
-        var p = e.p;
-        var grad = _pipeGradient[p.pi] && p.dpSv>0;
-        // どちらの端点由来か判定
-        var isDeepEnd  = grad && p.f28sv!=='' && p.midArr.indexOf!==undefined
-          && (e.v <= parseFloat((p.f28sv+0.2).toFixed(4))+0.001); // deep側@200の最初付近
-        // f40に近い値はDP①端（浅側）とみなす
-        var isShallowF40 = grad && Math.abs(e.v - f40) < 0.005;
-        var lbl;
-        if(grad && isShallowF40){
-          lbl = glGradLbl(p.pi, 1, e.v)+'（路盤変更点・埋設シートと同GL）';
-        } else if(grad && p.f28sv!==''){
-          // 深側起点@200は「DP②」、浅側由来はDP①
-          var startDeep = parseFloat((p.f28sv+0.2).toFixed(4));
-          var fromDeep = (e.v <= startDeep+0.001) || (e.v >= startDeep-0.001 && e.v <= f40-0.001);
-          // すべての深側リストエントリを確認
-          var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), f40);
-          var inDeepList = deepListRef.some(function(dv){ return Math.abs(dv-e.v)<0.005; });
-          lbl = inDeepList ? glGradLbl(p.pi, 2, e.v) : glGradLbl(p.pi, 1, e.v);
-        } else {
-          lbl = glLbl(p.pi+1, e.v);
-        }
-        html += '<span class="tag '+p.cls+'">'+lbl+'</span>';
-      });
+      html = '<span class="tag tag-yellow">DP入力後に順序を計算</span>';
     }
     wrap.innerHTML = html;
   });
@@ -2724,6 +2892,7 @@ function updateProgress(){
   _upSections.forEach(function(sec,si){
     if(sec._locked) return; // ロックセクションはカウント外
     sec.items.forEach(function(item,ii){
+      if(item.glType === 'midList' && ii>0 && sec.items[ii-1] && sec.items[ii-1].glType === 'sheet') return; // 統合表示のため非表示
       var k=itemKey(si,ii);
       if(_naItems[k]) return;
       total++;
@@ -2882,7 +3051,7 @@ function saveRecord(){
   var total=0, done=0;
   if(ck){
     var recSecs = getEffectiveSections(ck, _typeKey);
-    recSecs.forEach(function(sec,si){ if(sec._locked) return; sec.items.forEach(function(item,ii){ var k=itemKey(si,ii); if(!_naItems[k]){total++;if(_checks[k])done++;} }); });
+    recSecs.forEach(function(sec,si){ if(sec._locked) return; sec.items.forEach(function(item,ii){ if(item.glType==='midList'&&ii>0&&sec.items[ii-1]&&sec.items[ii-1].glType==='sheet') return; var k=itemKey(si,ii); if(!_naItems[k]){total++;if(_checks[k])done++;} }); });
   }
 
   var siteName=''; var typeName='';
