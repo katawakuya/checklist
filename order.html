@@ -1731,7 +1731,8 @@ function fbSyncMasters(callback) {
       try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
       // roadbed_masters は既に localStorage に書き込み済みなので直接ラベルを更新
       try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
-      // プリセット一覧を再描画（同期後にhonFreeRows補完が有効になる）
+      // road_presetsのhonFreeRows欠落を補完してからプリセット一覧を再描画
+      try { _enrichPresetsFromMasters(); } catch(e) {}
       try { if(typeof renderPresetList==='function') renderPresetList(); } catch(e) {}
       if (callback) callback();
     });
@@ -4787,6 +4788,43 @@ function deletePreset(id) {
 }
 
 // 1行コンパクトチップ（プリセット一覧・現場プレビュー用）
+// Firestoreから同期直後にroad_presetsのhonFreeRowsをroadbed_mastersで補完して保存する
+// （外部端末対応：レンダリング前にlocalStorageを修正する）
+function _enrichPresetsFromMasters() {
+  var presets = [];
+  try { presets = JSON.parse(localStorage.getItem('road_presets') || '[]'); } catch(e) { return; }
+  var masters = [];
+  try { masters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]'); } catch(e) {}
+  // 現場別マスタも試す（グローバルが空の場合のフォールバック）
+  if (!masters.length) {
+    var siteId = '';
+    try { var sel = document.getElementById('global-site-sel'); if (sel) siteId = sel.value||''; } catch(e) {}
+    if (siteId) try { masters = JSON.parse(localStorage.getItem('roadbed_masters_'+siteId) || '[]'); } catch(e) {}
+  }
+  if (!masters.length || !presets.length) return;
+  var changed = false;
+  presets.forEach(function(p) {
+    (p.types||[]).forEach(function(t) {
+      if ((t.genkyoCnRC||0) > 0 || (t.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; })) return;
+      var rbKey = (t.key||'').replace(/^type_import_/, '');
+      var m = masters.find(function(m){ return m.key === rbKey; });
+      if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
+      if (!m || !m.honFreeMode) return;
+      var frs = m.honFreeRows || [];
+      var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+      if (!cnRcRows.length) return;
+      t.honFreeMode = true;
+      t.honFreeRows = frs;
+      t.genkyoCnRC       = cnRcRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+      t.genkyoCnRCSubcat = (cnRcRows[0]||{}).subcat || 'RM-40';
+      t.genkyoCnH        = frs.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+      t.genkyoTotalH     = m.honTotalH || 0;
+      changed = true;
+    });
+  });
+  if (changed) localStorage.setItem('road_presets', JSON.stringify(presets));
+}
+
 // プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
 function _enrichPresetTypeFromMasters(t) {
   // cn_rc データが既にある場合はスキップ（honFreeRowsがあってもcn_rcがなければ補完が必要）

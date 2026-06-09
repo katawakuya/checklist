@@ -292,6 +292,8 @@ function fbSyncMasters(callback) {
     if (done < total) return;
     // フェーズ2: site_master ロード済みの状態で旗揚げマスタをロード
     fbSyncHataMasters(function() {
+      // road_presetsのhonFreeRows欠落を補完（レンダリング前）
+      try { _ckEnrichPresetsFromMasters(); } catch(e) {}
       try { loadSites(); } catch(e) {}
       if (callback) callback();
     });
@@ -1317,6 +1319,36 @@ function _ckArchiveRoadbedInfo(typeKey){
     honAsLayers: d.honAsLayers||[], genkyoAsH: d.genkyoAsH||0, genkyoRM: d.genkyoRM||0, genkyoRC: d.genkyoRC||0,
     _honRM_layers: d.honRM_layers||[], _honRC_layers: d.honRC_layers||[]
   };
+}
+
+// Firestoreから同期直後にroad_presetsのhonFreeRowsをroadbed_mastersで補完して保存する
+function _ckEnrichPresetsFromMasters() {
+  var presets = [];
+  try { presets = JSON.parse(localStorage.getItem('road_presets') || '[]'); } catch(e) { return; }
+  var masters = [];
+  try { masters = JSON.parse(localStorage.getItem('roadbed_masters_'+_siteId) || localStorage.getItem('roadbed_masters') || '[]'); } catch(e) {}
+  if (!masters.length || !presets.length) return;
+  var changed = false;
+  presets.forEach(function(p) {
+    (p.types||[]).forEach(function(t) {
+      if ((t.genkyoCnRC||0) > 0 || (t.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; })) return;
+      var rbKey = (t.key||'').replace(/^type_import_/, '');
+      var m = masters.find(function(m){ return m.key === rbKey; });
+      if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
+      if (!m || !m.honFreeMode) return;
+      var frs = m.honFreeRows || [];
+      var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+      if (!cnRcRows.length) return;
+      t.honFreeMode = true;
+      t.honFreeRows = frs;
+      t.genkyoCnRC       = cnRcRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+      t.genkyoCnRCSubcat = (cnRcRows[0]||{}).subcat || 'RM-40';
+      t.genkyoCnH        = frs.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+      t.genkyoTotalH     = m.honTotalH || 0;
+      changed = true;
+    });
+  });
+  if (changed) localStorage.setItem('road_presets', JSON.stringify(presets));
 }
 
 // プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
