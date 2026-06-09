@@ -828,7 +828,10 @@ function getEffectiveSections(ck, typeKey){
   if(_kojiKbn !== 'hon') return base;
 
   var hk = typeKey || '40';
-  var honBurial = HON_BURIAL_SECTIONS[hk] || HON_BURIAL_SECTIONS['40'];
+  // 動的チェックリストから _dynHonBurial が生成されていればそれを優先使用
+  var honBurial = (ck && ck._dynHonBurial)
+    ? ck._dynHonBurial
+    : (HON_BURIAL_SECTIONS[hk] || HON_BURIAL_SECTIONS['40']);
 
   // base[0] = 施工前・施工中（そのまま）
   // base[1] = 埋戻し・仮復旧（ロック版に置き換え）
@@ -870,7 +873,7 @@ function getAllPresets(){
 
 // siteId・typeKeyからプリセット型データを取得
 // presetTypeKey: プリセット上の元キー（type_XXXXX等）を優先使用
-function getPresetTypeData(siteId, typeKey, presetTypeKey){
+function _ckGetPresetTypeDataRaw(siteId, typeKey, presetTypeKey){
   var site = _sites.find(function(s){ return s.id===siteId; });
   if(!site || !site.presetId) return null;
   var presets = getAllPresets();
@@ -909,6 +912,208 @@ function getPresetTypeData(siteId, typeKey, presetTypeKey){
 
   // 4) 先頭の型を返す（最終フォールバック）
   return preset.types[0] || null;
+}
+
+// ─── ライブ路盤マスタによる路盤構成の最新化 ────────────────────────────
+// 永続化済み preset.types[] のスナップショットは、roadbed.html でマスタを
+// 編集した後も古いまま残ることがある（例: 中央分離帯110型で本復旧側の
+// コンクリート間路盤材を後から追加登録したのにスナップショットが未更新）。
+// roadbed.html の roadbed_masters_<siteId> こそが正のデータであるため、
+// 対応するライブマスタが見つかればそちらの値で路盤構成フィールドを
+// 上書きする（order.html の _rbMasterToTypeObj と同一ロジックを使用、
+// かつコンクリート間路盤材(cn_rc)層をRM/RC集計に含める）。
+function _ckGetRoadbedMasters(siteId){
+  try{
+    var raw = siteId
+      ? (localStorage.getItem('roadbed_masters_'+siteId) || localStorage.getItem('roadbed_masters'))
+      : localStorage.getItem('roadbed_masters');
+    var arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+
+function _ckParseLayerNotation(str, totalMm) {
+  if (!str) return null;
+  var s = String(str).trim();
+  var m1 = s.match(/^(\d+)\s*[×xｘ✕]\s*(\d+)\s*層?$/);
+  if (m1) return [{t: parseInt(m1[1],10), n: parseInt(m1[2],10)}];
+  var m2 = s.match(/^t\s*=\s*(\d+)\s*m+m?$/i);
+  if (m2) return [{t: parseInt(m2[1],10), n: 1}];
+  if (/m+m?\s*[＋+]\s*\d/i.test(s)) {
+    var parts = s.split(/[＋+]/).map(function(p){
+      var mm = p.trim().match(/(\d+)\s*m+m?/i);
+      return mm ? {t: parseInt(mm[1],10), n: 1} : null;
+    }).filter(Boolean);
+    if (parts.length) return parts;
+  }
+  var m3 = s.match(/^(\d+)\s*m+m?$/i);
+  if (m3) return [{t: parseInt(m3[1],10), n: 1}];
+  return null;
+}
+
+function _ckDeriveLayersArr(rbLayers, filterFn, layersStr, heightM, alwaysInclude) {
+  var mm = Math.round((heightM||0)*1000);
+  if (Array.isArray(rbLayers) && rbLayers.length) {
+    var arr = rbLayers.filter(function(x){ return filterFn(x.subcat||x.cat||'') && (x.t||0) > 0; })
+                      .map(function(x){ return {t: x.t||0, n: x.n||1}; });
+    if (arr.length) return arr;
+  }
+  var parsed = _ckParseLayerNotation(layersStr, mm);
+  if (parsed && parsed.length) return parsed;
+  if (alwaysInclude) return [{t: mm, n: 1}];
+  return mm > 0 ? [{t: mm, n: 1}] : [];
+}
+
+function _ckIsRmCat(c){ return String(c||'').startsWith('RM') || c==='rm' || c==='rmfree'; }
+function _ckIsRcCat(c){ return String(c||'').startsWith('RC') || c==='rc' || c==='rcfree'; }
+
+// ロードベッドマスタ m から最新の路盤構成情報を生成する
+// cn_rc（コンクリート間路盤材）は上層路盤RM・下層路盤RCとは独立した別枠管理。
+// 仮復旧廃材の計算対象外、コンクリート工事時に別途発注する路盤材。
+function _ckRbMasterToTypeObj(m){
+  var sumAS = function(layers, roles){
+    if (!Array.isArray(layers)) return 0;
+    return layers.filter(function(a){ return roles.indexOf(a.role||'surface') >= 0; })
+                 .reduce(function(s,a){ return s+(a.t||0); }, 0);
+  };
+  var honFreeMode = !!m.honFreeMode;
+  var honFreeRows = Array.isArray(m.honFreeRows) ? m.honFreeRows : [];
+
+  var genkyoAsH = honFreeMode
+    ? honFreeRows.filter(function(r){ return r.type==='surface'||r.type==='base'; })
+                 .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
+    : (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); }, 0)/1000;
+
+  var genkyoRM = honFreeMode
+    ? honFreeRows.filter(function(r){
+        if (r.type==='upper_rb') return true;
+        if (r.type==='lower_rb') { var sc=r.subcat||''; return sc==='RM-30'||sc==='RM-40'; }
+        return false;
+      }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
+    : (m.honRmH || 0);
+
+  var genkyoRC = honFreeMode
+    ? honFreeRows.filter(function(r){
+        if (r.type==='lower_rb') { var sc=r.subcat||''; return sc!=='RM-30'&&sc!=='RM-40'; }
+        if (r.type==='upper_rb') { var sc=r.subcat||''; return sc==='RC-30'||sc==='RC-40'; }
+        return false;
+      }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
+    : (m.honRcH || 0);
+
+  var genkyoCnH = honFreeMode
+    ? honFreeRows.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; })
+                 .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
+    : 0;
+
+  // CN間路盤材（cn_rc）: RM/RCとは独立。honFreeRowsにcn_rc型行があればその合計
+  var genkyoCnRC = honFreeMode
+    ? (function(){
+        var rows = honFreeRows.filter(function(r){ return r.type==='cn_rc'; });
+        return rows.reduce(function(s,r){ return s+(r.t||0); }, 0)/1000;
+      })()
+    : 0;
+  var genkyoCnRCSubcat = honFreeMode
+    ? (function(){
+        var r = honFreeRows.find(function(r){ return r.type==='cn_rc'; });
+        return r ? (r.subcat||'RC-40') : 'RC-40';
+      })()
+    : 'RC-40';
+
+  return {
+    key:        'type_import_' + m.key,
+    label:      m.label || m.key,
+    color:      m.color || '#7c3aed',
+    rmH:        m.kariRmH  || 0,
+    rcH:        m.kariRcH  || 0,
+    rmSize:     m.kariRmSize || 40,
+    rcSize:     m.kariRcSize || 40,
+    asT密粒:    sumAS(m.kariAsLayers, ['surface']),
+    asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
+    totalH:     m.kariTotalH || 0,
+    asLayers: (m.kariAsLayers||[]).map(function(a, idx){
+      return { role: idx===0?'surface':'base', preset:'', custom: a.name||'', t: a.t||0 };
+    }),
+    honAsLayers: m.honAsLayers || [],
+    hasImprovedSoil: false,
+    extraMaterials: m.extraMaterials || [],
+    teppan: m.teppan || {use:false},
+    genkyoAsH: genkyoAsH,
+    genkyoRM: genkyoRM,
+    genkyoRC: genkyoRC,
+    genkyoCnH: genkyoCnH,
+    genkyoCnRC: genkyoCnRC,
+    genkyoCnRCSubcat: genkyoCnRCSubcat,
+    genkyoTotalH: honFreeMode ? (m.honTotalH||0) : 0,
+    honFreeRows: honFreeRows,
+    kariRM_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRmCat, m.kariRmLayers, m.kariRmH, false),
+    kariRC_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRcCat, m.kariRcLayers, m.kariRcH, true),
+    honRM_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRmCat, m.honRmLayers,  m.honRmH,  false),
+    honRC_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRcCat, m.honRcLayers,  m.honRcH,  true),
+    kariRmLayers:  m.kariRmLayers || '',
+    kariRcLayers:  m.kariRcLayers || '',
+    honRmLayers:   m.honRmLayers  || '',
+    honRcLayers:   m.honRcLayers  || '',
+  };
+}
+
+// presetType（永続化済みスナップショット）に対応するライブ路盤マスタが
+// 見つかれば、その最新データで路盤構成関連フィールドを上書きする
+function _ckFindLiveRbMaster(masters, presetType, typeKey, presetTypeKey){
+  // 選択中の型を一意に特定するための候補キーを、
+  // 「getPresetTypeDataに渡された元の引数（typeKey/presetTypeKey）」を最優先に集める。
+  // ※ presetType.key はスナップショット解決が失敗/誤爆した場合に信用できないため最後に回す。
+  var rawCandidates = [presetTypeKey, typeKey];
+  if (presetType) rawCandidates.push(presetType.key);
+  var bareCandidates = [];
+  rawCandidates.filter(Boolean).forEach(function(k){
+    var s = String(k);
+    bareCandidates.push(s);
+    bareCandidates.push(s.replace(/^dyntype_/, ''));
+    bareCandidates.push(s.replace(/^dyntype_/, '').replace(/^type_import_/, ''));
+    bareCandidates.push(s.replace(/^type_import_/, ''));
+  });
+  for (var i=0;i<bareCandidates.length;i++){
+    var c = bareCandidates[i];
+    if(!c) continue;
+    var m = masters.find(function(mm){ return mm.key===c; });
+    if(m) return m;
+  }
+  // ラベル一致でのフォールバック（presetTypeKeyにラベル文字列が入っているケースも含む）
+  var labelCandidates = [presetType && presetType.label, presetTypeKey, typeKey].filter(Boolean).map(String);
+  for (var j=0;j<labelCandidates.length;j++){
+    var lc = labelCandidates[j];
+    var lm = masters.find(function(mm){ return mm.label && mm.label===lc; });
+    if(lm) return lm;
+  }
+  return null;
+}
+
+function _ckApplyLiveRbOverride(presetType, siteId, typeKey, presetTypeKey){
+  try{
+    var masters = _ckGetRoadbedMasters(siteId);
+    if(!masters.length) return presetType;
+    var master = _ckFindLiveRbMaster(masters, presetType, typeKey, presetTypeKey);
+    if(!master) return presetType;
+    var fresh = _ckRbMasterToTypeObj(master);
+    // 永続スナップショットが無い/誤った型を指している場合は、
+    // ライブマスタから生成した内容をそのまま採用する（roadbedが正のため）。
+    if(!presetType) return fresh;
+    var merged = {};
+    for(var k in presetType){ merged[k] = presetType[k]; }
+    var overrideKeys = [
+      'key','label','rmH','rcH','rmSize','rcSize','asT密粒','asT粗粒','totalH','asLayers',
+      'honAsLayers','genkyoAsH','genkyoRM','genkyoRC','genkyoCnH','genkyoCnRC','genkyoCnRCSubcat','honFreeRows','genkyoTotalH',
+      'kariRM_layers','kariRC_layers','honRM_layers','honRC_layers',
+      'kariRmLayers','kariRcLayers','honRmLayers','honRcLayers',
+    ];
+    overrideKeys.forEach(function(k){ merged[k] = fresh[k]; });
+    return merged;
+  }catch(e){ return presetType; }
+}
+
+function getPresetTypeData(siteId, typeKey, presetTypeKey){
+  var raw = _ckGetPresetTypeDataRaw(siteId, typeKey, presetTypeKey);
+  return _ckApplyLiveRbOverride(raw, siteId, typeKey, presetTypeKey);
 }
 
 // =====================================================
@@ -1050,7 +1255,9 @@ function _ckKariHonDiffers(presetType){
   var honRC  = Math.round((presetType.genkyoRC||0)*1000);
   var kariAS = (presetType.asT密粒||0) + (presetType.asT粗粒||0);
   var honAS  = Math.round((presetType.genkyoAsH||0)*1000);
-  return kariRM !== honRM || kariRC !== honRC || kariAS !== honAS;
+  var hasCnH  = (presetType.genkyoCnH||0) > 0;
+  var hasCnRC = (presetType.genkyoCnRC||0) > 0;
+  return kariRM !== honRM || kariRC !== honRC || kariAS !== honAS || hasCnH || hasCnRC;
 }
 // 路盤構成 詳細パネルの開閉
 function toggleCkRoadbedDetail(id){
@@ -1060,6 +1267,56 @@ function toggleCkRoadbedDetail(id){
   el.style.display = show ? 'block' : 'none';
   var btn = document.getElementById(id+'-btn');
   if(btn) btn.textContent = show ? '詳細を閉じる ▲' : '詳細を見る ▼';
+}
+
+// ─── アーカイブ型（環状2号線・固定5型）の路盤構成データ ───
+// order.html の静的 TYPES['85'..'14'] と同じ層内訳（PDF図面参照の固定値）。
+// アーカイブ現場では getPresetTypeData() が null を返す仕様のため、
+// ここで層数表示用のロードベッド情報をフォールバック提供する。
+var _CK_ARCHIVE_RB = {
+  '85': { asLayers:[{name:'密粒度AS（表層）',t:0.050},{name:'粗粒度AS（基層）',t:0.050}],
+          rmH:0.450, rmSize:40, rcH:0.300, rcSize:40,
+          kariRM_layers:[{t:150,n:3}], kariRC_layers:[{t:150,n:2}],
+          honAsLayers:[{name:'表層 ポーラスAS（透水性）',t:50},{name:'基層 粗粒度AS（改質Ⅱ型）',t:50},{name:'基層 再生粗粒度AS',t:50},{name:'上層路盤 瀝青安定処理',t:100},{name:'上層路盤 瀝青安定処理',t:100}],
+          genkyoAsH:0.350, genkyoRM:0.200, genkyoRC:0.300,
+          honRM_layers:[{t:200,n:1}], honRC_layers:[{t:300,n:1}],
+          totalH:0.850, differs:true },
+  '40': { asLayers:[{name:'密粒度AS（表層）',t:0.050}],
+          rmH:0.150, rmSize:40, rcH:0.200, rcSize:40,
+          kariRM_layers:[{t:150,n:1}], kariRC_layers:[{t:200,n:1}],
+          honAsLayers:[], genkyoAsH:0.050, genkyoRM:0.150, genkyoRC:0.200,
+          honRM_layers:[{t:150,n:1}], honRC_layers:[{t:200,n:1}],
+          totalH:0.400, differs:false },
+  '30': { asLayers:[{name:'密粒度AS（表層）',t:0.050}],
+          rmH:0, rmSize:40, rcH:0.250, rcSize:40,
+          kariRM_layers:[], kariRC_layers:[{t:100,n:1},{t:150,n:1}],
+          honAsLayers:[], genkyoAsH:0.050, genkyoRM:0, genkyoRC:0.250,
+          honRM_layers:[], honRC_layers:[{t:100,n:1},{t:150,n:1}],
+          totalH:0.300, differs:false },
+  '20': { asLayers:[{name:'密粒度AS（表層）',t:0.050}],
+          rmH:0, rmSize:40, rcH:0.150, rcSize:40,
+          kariRM_layers:[], kariRC_layers:[{t:150,n:1}],
+          honAsLayers:[], genkyoAsH:0.050, genkyoRM:0, genkyoRC:0.150,
+          honRM_layers:[], honRC_layers:[{t:150,n:1}],
+          totalH:0.200, differs:false },
+  '14': { asLayers:[{name:'密粒度AS（表層）',t:0.040}],
+          rmH:0, rmSize:40, rcH:0.100, rcSize:40,
+          kariRM_layers:[], kariRC_layers:[{t:100,n:1}],
+          honAsLayers:[], genkyoAsH:0.040, genkyoRM:0, genkyoRC:0.100,
+          honRM_layers:[], honRC_layers:[{t:100,n:1}],
+          totalH:0.140, differs:false },
+};
+function _ckArchiveRoadbedInfo(typeKey){
+  var d = _CK_ARCHIVE_RB[typeKey];
+  if(!d) return null;
+  return {
+    asLayers: d.asLayers, rmH: d.rmH, rmSize: d.rmSize, rcH: d.rcH, rcSize: d.rcSize,
+    rmLabel: 'RM-'+d.rmSize, rcLabel: 'RC-'+d.rcSize,
+    totalH: d.totalH, hasImprovedSoil:false, extraMaterials:[], teppan:{use:false},
+    _kariRM_layers: d.kariRM_layers, _kariRC_layers: d.kariRC_layers, _differs: d.differs,
+    honAsLayers: d.honAsLayers||[], genkyoAsH: d.genkyoAsH||0, genkyoRM: d.genkyoRM||0, genkyoRC: d.genkyoRC||0,
+    _honRM_layers: d.honRM_layers||[], _honRC_layers: d.honRC_layers||[]
+  };
 }
 
 function buildChecklistFromPreset(presetType){
@@ -1156,19 +1413,35 @@ function buildChecklistFromPreset(presetType){
     hasImprovedSoil: presetType.hasImprovedSoil||false,
     extraMaterials: presetType.extraMaterials||[],
     teppan: presetType.teppan||{use:false},
+    // 層内訳（写真は層ごとに撮影するため層数表示に必要／簡易・詳細表示で共通参照）
+    _kariRM_layers: presetType.kariRM_layers||[],
+    _kariRC_layers: presetType.kariRC_layers||[],
+    _differs: _ckKariHonDiffers(presetType),
+    // 現況・本復旧（hon/genkyo）側のデータ（orderのbuildTypeRoadbedDetailHTMLと統一表示するため）
+    honAsLayers: presetType.honAsLayers||[],
+    genkyoAsH: presetType.genkyoAsH||0,
+    genkyoRM: presetType.genkyoRM||0,
+    genkyoRC: presetType.genkyoRC||0,
+    genkyoCnH: presetType.genkyoCnH||0,
+    genkyoCnRC: presetType.genkyoCnRC||0,
+    genkyoCnRCSubcat: presetType.genkyoCnRCSubcat||'RC-40',
+    honFreeRows: presetType.honFreeRows||[],
+    _honRM_layers: presetType.honRM_layers||[],
+    _honRC_layers: presetType.honRC_layers||[],
   };
 
   // ── GL転圧ポイントを路盤構成から計算（@200mm以内・路盤層ごと） ──
   // 各路盤層を200mm以内で分割し、天端（上面）GLを転圧ポイントとする
   // 例: RC t=350mm → 200mm+150mmで2分割 → GL-(totalH-150mm), GL-(totalH-0mm=路盤変更点)
 
-  function compactLayers(topGL, thickness, name){
+  // maxStep: 1層あたりの最大転圧厚（省略=0.200m）。RC=0.200, RM=0.150が標準
+  function compactLayers(topGL, thickness, name, maxStep){
     // topGL: この路盤層の上端（天端）GL深さ（正の値、m単位）
     // thickness: 路盤層の総厚（m）
     // 下から積み上げ、各分割の天端GLを転圧ポイントとする
-    // 200mm以内なら1層、超えたら均等分割。dimには元の総層厚を表示
+    // maxStep以内なら1層、超えたら均等分割。dimには元の総層厚を表示
     var layers = [];
-    var maxT = 0.200;
+    var maxT = maxStep || 0.200;
     var n = Math.max(1, Math.ceil(thickness / maxT));
     var tEach = thickness / n;
     var tLabel = Math.round(thickness * 1000);
@@ -1182,6 +1455,16 @@ function buildChecklistFromPreset(presetType){
       });
     }
     return layers;
+  }
+
+  // kariRM_layersの層定義から転圧ステップ（m）を取得。未定義なら0.150（RM標準）
+  function _rmCompactStep(layersDef) {
+    if (!Array.isArray(layersDef) || !layersDef.length) return 0.150;
+    // 単一エントリーで n=1 → 標準@150mm にフォールバック
+    if (layersDef.length === 1 && (layersDef[0].n || 1) === 1) return 0.150;
+    // 複数エントリーまたは n>1 → 均等割りステップを取得
+    var t0 = (layersDef[0].t || 150);
+    return t0 / 1000;
   }
 
   // RC転圧ポイント：RC上端=totalH-rcH、RC総厚=rcH
@@ -1210,9 +1493,116 @@ function buildChecklistFromPreset(presetType){
     var rmLabel = (_rmLayers && !_isStdLayersStr(_rmLayers))
       ? (_rmLayers + '転圧')
       : ('上層路盤転圧　RM-'+rmS);
-    rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel);
+    var _rmStep = _rmCompactStep(presetType.kariRM_layers);
+    rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel, _rmStep);
     rmCompact = rmLayers.map(function(l){ return l.dim; });
   }
+
+  // ── 本復旧（現況）路盤転圧ポイント ──
+  // genkyoRC/genkyoRM（m）を使い、現況路盤構成に合ったGL転圧ポイントを動的算出する
+  var genRcH = presetType.genkyoRC || 0;  // m
+  var genRmH = presetType.genkyoRM || 0;  // m
+  // 本復旧 総深さ: honFreeRowsがある場合は合算、ない場合はgenkyo各値から計算
+  var _frsHon2 = (presetType.honFreeRows || []).filter(function(r){ return (r.t||0) > 0; });
+  var honTotalH = 0;
+  if (_frsHon2.length > 0) {
+    honTotalH = _frsHon2.reduce(function(s, r){ return s + (r.t||0)/1000; }, 0);
+  } else {
+    honTotalH = (presetType.genkyoAsH||0) + genRcH + genRmH
+              + (presetType.genkyoCnH||0) + (presetType.genkyoCnRC||0);
+  }
+  // 本復旧 RC/RM 転圧レイヤー（名前プレフィクスを「本復旧　」に変換）
+  var honRcLayers = [];
+  var honRmLayers = [];
+  if (genRcH > 0) {
+    var _hRcTop = Math.max(0, honTotalH - genRcH);
+    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+rcS, 0.200).map(function(l){
+      return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
+    });
+  }
+  if (genRmH > 0) {
+    var _hRmTop = Math.max(0, honTotalH - genRcH - genRmH);
+    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+rmS, 0.200).map(function(l){
+      return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
+    });
+  }
+  // 本復旧 コンクリート・CN間路盤材 打設写真項目（honFreeRows の lower_rb/upper_rb 以外の層）
+  // 中央分離帯110型などhonFreeModeの場合、RM上のコンクリート・CN間を底から順に撮影
+  var _honExtraItems = [];
+  if (_frsHon2.length > 0) {
+    var _cumulHm = 0; // 下から積み上げた深さ（m）
+    var _frsRev = _frsHon2.slice().reverse(); // 下層から順
+    _frsRev.forEach(function(r){
+      var _t = (r.t || 0) / 1000;
+      if (r.type === 'lower_rb' || r.type === 'upper_rb') {
+        _cumulHm = Math.round((_cumulHm + _t) * 10000) / 10000;
+        return; // RC/RM は転圧レイヤーで処理済み
+      }
+      _cumulHm = Math.round((_cumulHm + _t) * 10000) / 10000;
+      var _topGLm = Math.round((honTotalH - _cumulHm) * 1000) / 1000;
+      var _layerName;
+      if (r.type === 'cn_rc') {
+        _layerName = '本復旧　CN間路盤材打設　' + (r.subcat || 'RM-40') + '（別途発注）';
+      } else {
+        _layerName = '本復旧　' + (r.name || 'コンクリート') + '打設';
+      }
+      var _dimStr = (_topGLm <= 0.001)
+        ? ('t＝' + (r.t||0) + 'mm')
+        : ('GL-' + _topGLm.toFixed(3) + 'm（t=' + (r.t||0) + 'mm）');
+      _honExtraItems.push({ n: _layerName, dim: _dimStr, note: '' });
+    });
+  }
+
+  // 動的 本復旧 埋戻しセクション: 静的テンプレートの固定RC/RM項目を上記で置換
+  var _honBaseKey = resolveBaseKey(presetType.key);
+  var _honStaticSec = HON_BURIAL_SECTIONS[_honBaseKey] || HON_BURIAL_SECTIONS['40'];
+  var _dynHonItems = [];
+  _honStaticSec.items.forEach(function(item){
+    var n = item.n || '';
+    // 固定GLを持つ路盤転圧項目はすべてスキップ（動的レイヤーで置き換える）
+    if (n.indexOf('下層路盤転圧') >= 0) return;
+    if (n.indexOf('上層路盤転圧') >= 0) return;
+    if (n.indexOf('路盤転圧') >= 0 && n.indexOf('上層') < 0 && n.indexOf('下層') < 0) return;
+    // honFreeMode（中央分離帯110型等）ではプライムコートと表層転圧は不要
+    if (_frsHon2.length > 0 && n.indexOf('プライムコート') >= 0) return;
+    if (_frsHon2.length > 0 && n.indexOf('表層転圧') >= 0) return;
+    _dynHonItems.push(Object.assign({}, item));
+  });
+  // 挿入位置: プライムコート直前、なければ「仕上げ系」項目（白線・復旧延長・施工後）の直前
+  var _primeIdx = -1;
+  for (var _hi = 0; _hi < _dynHonItems.length; _hi++) {
+    if (_dynHonItems[_hi].n && _dynHonItems[_hi].n.indexOf('プライムコート') >= 0) {
+      _primeIdx = _hi; break;
+    }
+  }
+  var _insIdx = _primeIdx;
+  if (_insIdx < 0) {
+    // プライムコートが除去されている場合は仕上げ系項目の直前を探す
+    for (var _fi = 0; _fi < _dynHonItems.length; _fi++) {
+      var _fn = _dynHonItems[_fi].n || '';
+      if (_fn.indexOf('白線') >= 0 || _fn.indexOf('復旧延長') >= 0 || _fn.indexOf('施工後') >= 0) {
+        _insIdx = _fi; break;
+      }
+    }
+  }
+  if (_insIdx < 0) _insIdx = _dynHonItems.length;
+  var _honRbItems = [];
+  honRcLayers.forEach(function(l){
+    _honRbItems.push({n:l.n, dim:l.dim,
+      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
+  });
+  honRmLayers.forEach(function(l){
+    _honRbItems.push({n:l.n, dim:l.dim,
+      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
+  });
+  // コンクリート・CN間打設写真項目（honFreeRows がある場合のみ）
+  _honExtraItems.forEach(function(item){ _honRbItems.push(item); });
+  _dynHonItems.splice.apply(_dynHonItems, [_insIdx, 0].concat(_honRbItems));
+  var _dynHonBurialSection = {
+    phase: _honStaticSec.phase,
+    _isHonBurial: true,
+    items: _dynHonItems
+  };
 
   // extraMaterials転圧ポイント（コンクリート層・調整層など）
   // totalHからAS・RM・RCを引いた残りがextra層の合計
@@ -1528,7 +1918,7 @@ function buildChecklistFromPreset(presetType){
     }
   });
 
-  return { sections: sections, roadbedInfo: roadbedInfo };
+  return { sections: sections, roadbedInfo: roadbedInfo, _dynHonBurial: _dynHonBurialSection };
 }
 
 // typeKeyからTYPE_CHECKLISTSの対応キーを取得
@@ -1611,7 +2001,13 @@ function setKojiKbn(kbn){
   var btnHon  = document.getElementById('btnHon');
   if(btnKari){ btnKari.className = 'seg-btn' + (kbn==='kari'?' active kari':''); }
   if(btnHon){  btnHon.className  = 'seg-btn' + (kbn==='hon' ?' active hon' :''); }
+  // DP/管下H値をrenderMain前に退避し、DOM再生成後に復元する
+  var _dpIds = ['inDP1','inDPH','inDP2','inDPH2','inDP3','inDPH3','inDP4','inDPH4','inBH','inExtra'];
+  var _dpSaved = {};
+  _dpIds.forEach(function(id){ _dpSaved[id] = $v(id); });
   renderMain();
+  _dpIds.forEach(function(id){ sv(id, _dpSaved[id]); });
+  if (_dpSaved['inDP1'] || _dpSaved['inDPH'] || _dpSaved['inBH']) recalcGL();
   saveState();
 }
 
@@ -1814,37 +2210,6 @@ function renderMain(){
 
   var html = '<main>';
 
-  // 路盤構成 簡易表示＋詳細ボタン（orderの表示と統一・写真は層ごとに撮るため層数を明示）
-  if(_dynChecklist && _dynChecklist.roadbedInfo){
-    var rb = _dynChecklist.roadbedInfo;
-    var _rbDiffers = _ckKariHonDiffers(_presetType);
-    var _rbTitle = _rbDiffers ? '仮復旧・路盤先行 構成（固定値）' : '路盤構成';
-    var _asDesc = rb.asLayers.map(function(a){ return a.name+' t='+Math.round(a.t*1000)+'mm'; }).join(' ／ ');
-    var _noticeParts = [];
-    if(_asDesc) _noticeParts.push(_asDesc);
-    if(rb.rmH>0) _noticeParts.push('<span style="color:#0284c7;font-weight:700;">'+(rb.rmLabel||'RM-'+rb.rmSize)+' '+ckLayerCompactStr(_presetType.kariRM_layers, rb.rmH*1000)+'</span>');
-    if(rb.rcH>0) _noticeParts.push('<span style="color:#059669;font-weight:700;">'+(rb.rcLabel||'RC-'+rb.rcSize)+' '+ckLayerCompactStr(_presetType.kariRC_layers, rb.rcH*1000)+'</span>');
-    rb.extraMaterials.forEach(function(em){
-      if(em.name&&(em.unitH||0)>0) _noticeParts.push('<span style="color:#c2410c;font-weight:700;">'+em.name+' '+em.unitH+'mm</span>');
-    });
-    if(rb.teppan&&rb.teppan.use) _noticeParts.push('<span style="color:#b45309;font-weight:700;">🔩 鉄板'+(rb.teppan.pending?'（仕様未定）':'')+'</span>');
-    var _rbDetailId = 'ckRbDetail_'+(_presetType.key||_typeKey||'x');
-    html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;">'
-      +'<div style="font-size:12px;color:#0369a1;line-height:1.7;">📐 <strong>'+_rbTitle+' H='+Math.round(rb.totalH*1000)+'mm</strong>： '+_noticeParts.join(' ／ ')
-        +(_rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '')
-      +'</div>'
-      +'<button id="'+_rbDetailId+'-btn" type="button" onclick="toggleCkRoadbedDetail(\''+_rbDetailId+'\')" style="margin-top:6px;font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:5px;padding:3px 10px;cursor:pointer;">詳細を見る ▼</button>'
-      +'<div id="'+_rbDetailId+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #bae6fd;">'
-        +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-          +(rb.rmH>0 ? '<div style="background:#d1fae5;border:1px solid #a7f3d0;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#065f46;margin-bottom:3px;">上層路盤工 RM-'+rb.rmSize+'</div><div style="font-weight:700;font-size:12px;color:#059669;font-family:monospace;">'+ckLayerAdditionStr(_presetType.kariRM_layers, rb.rmH*1000)+'</div></div>' : '')
-          +(rb.rcH>0 ? '<div style="background:#d1fae5;border:1px solid #a7f3d0;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#065f46;margin-bottom:3px;">下層路盤工 RC-'+rb.rcSize+'</div><div style="font-weight:700;font-size:12px;color:#059669;font-family:monospace;">'+ckLayerAdditionStr(_presetType.kariRC_layers, rb.rcH*1000)+'</div></div>' : '')
-        +'</div>'
-        +'<div style="font-size:10px;color:#0369a1;margin-top:6px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
-      +'</div>'
-      +'</div>';
-  }
-
-
   // 基本情報パネル（最上部）
   html += '<div class="input-panel">' +
     '<div class="panel-title">基本情報</div>' +
@@ -1890,6 +2255,109 @@ function renderMain(){
     // GL計算パネル（動的管種セレクタ）
     html += renderGLPanel();
     html += '<button class="btn-calc" onclick="recalcGL()">▶ 計算してリストを更新</button>';
+
+    // 路盤構成 簡易表示＋詳細ボタン（orderの表示と統一・写真は層ごとに撮るため層数を明示／計算リストの直下に表示）
+    var _rbInfo = (_dynChecklist && _dynChecklist.roadbedInfo) ? _dynChecklist.roadbedInfo : _ckArchiveRoadbedInfo(_typeKey);
+    if(_rbInfo){
+      var rb = _rbInfo;
+      var _rbDiffers = (rb._differs !== undefined) ? rb._differs : _ckKariHonDiffers(_presetType);
+      var _rbTitle = _rbDiffers ? '仮復旧・路盤先行 構成（固定値）' : '路盤構成';
+      var _asDesc = rb.asLayers.map(function(a){ return a.name+' t='+Math.round(a.t*1000)+'mm'; }).join(' ／ ');
+      var _noticeParts = [];
+      if(_asDesc) _noticeParts.push(_asDesc);
+      if(rb.rmH>0) _noticeParts.push('<span style="color:#0284c7;font-weight:700;">'+(rb.rmLabel||'RM-'+rb.rmSize)+' '+ckLayerCompactStr(rb._kariRM_layers, rb.rmH*1000)+'</span>');
+      if(rb.rcH>0) _noticeParts.push('<span style="color:#059669;font-weight:700;">'+(rb.rcLabel||'RC-'+rb.rcSize)+' '+ckLayerCompactStr(rb._kariRC_layers, rb.rcH*1000)+'</span>');
+      (rb.extraMaterials||[]).forEach(function(em){
+        if(em.name&&(em.unitH||0)>0) _noticeParts.push('<span style="color:#c2410c;font-weight:700;">'+em.name+' '+em.unitH+'mm</span>');
+      });
+      if(rb.teppan&&rb.teppan.use) _noticeParts.push('<span style="color:#b45309;font-weight:700;">🔩 鉄板'+(rb.teppan.pending?'（仕様未定）':'')+'</span>');
+      var _rbDetailId = 'ckRbDetail_'+((_presetType&&_presetType.key)||_typeKey||'x');
+      // 詳細パネル用チップ生成（仮復旧／現況・本復旧 共通フォーマット・orderのbuildRoadbedChipsに準拠）
+      var _ckRbAsChip = function(name, tmm){
+        return '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#1e40af;margin-bottom:3px;">'+name+'</div><div style="font-weight:700;font-size:12px;color:#2563eb;font-family:monospace;">t = '+tmm+'mm</div></div>';
+      };
+      var _ckRbRmcChip = function(label, val, tone){
+        var bg = (tone==='hon') ? '#ede9fe' : '#d1fae5';
+        var bd = (tone==='hon') ? '#ddd6fe' : '#a7f3d0';
+        var lc = (tone==='hon') ? '#5b21b6' : '#065f46';
+        var vc = (tone==='hon') ? '#7c3aed' : '#059669';
+        return '<div style="background:'+bg+';border:1px solid '+bd+';border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:'+lc+';margin-bottom:3px;">'+label+'</div><div style="font-weight:700;font-size:12px;color:'+vc+';font-family:monospace;">'+val+'</div></div>';
+      };
+      // 🔧 仮復旧（路盤先行）側チップ：AS層 → 上層路盤工RM → 下層路盤工RC
+      var _kariChips = [];
+      (rb.asLayers||[]).forEach(function(a){ _kariChips.push(_ckRbAsChip(a.name, Math.round((a.t||0)*1000))); });
+      if(rb.rmH>0) _kariChips.push(_ckRbRmcChip('上層路盤工 RM-'+rb.rmSize, ckLayerAdditionStr(rb._kariRM_layers, rb.rmH*1000), 'kari'));
+      if(rb.rcH>0) _kariChips.push(_ckRbRmcChip('下層路盤工 RC-'+rb.rcSize, ckLayerAdditionStr(rb._kariRC_layers, rb.rcH*1000), 'kari'));
+      // 🏗 現況・本復旧側チップ：honAsLayersが無い場合はgenkyoAsHから単層フォールバック
+      var _honAsArr = (rb.honAsLayers && rb.honAsLayers.length) ? rb.honAsLayers
+        : ((rb.genkyoAsH||0) > 0 ? [{name:'AS混合物', t: Math.round(rb.genkyoAsH*1000)}] : []);
+      // 現況・本復旧チップ: honFreeRows があれば層順に展開
+      var _honChips = [];
+      var _frsHon = (rb.honFreeRows||[]).filter(function(r){ return (r.t||0)>0; });
+      if(_frsHon.length > 0){
+        _frsHon.forEach(function(r){
+          if(r.type==='concrete'||r.type==='コンクリート'){
+            _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">'+(r.name||'コンクリート')+'</div><div style="font-weight:700;font-size:12px;color:#f97316;font-family:monospace;">'+r.t+'mm</div></div>');
+          } else if(r.type==='cn_rc'){
+            _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+(r.subcat||'RC-40')+'（別途発注）</div><div style="font-weight:700;font-size:12px;color:#fb923c;font-family:monospace;">'+r.t+'mm</div></div>');
+          } else if(r.type==='upper_rb'){
+            _honChips.push(_ckRbRmcChip('上層路盤工 '+(r.subcat||'RM-40'), ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
+          } else if(r.type==='lower_rb'){
+            _honChips.push(_ckRbRmcChip('下層路盤工 '+(r.subcat||'RC-40'), ckLayerAdditionStr(rb._honRC_layers, rb.genkyoRC*1000), 'hon'));
+          }
+        });
+      } else {
+        _honAsArr.forEach(function(a){ _honChips.push(_ckRbAsChip(a.name, a.t)); });
+        if((rb.genkyoCnH||0)>0) _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">コンクリート層</div><div style="font-weight:700;font-size:12px;color:#f97316;font-family:monospace;">'+Math.round(rb.genkyoCnH*1000)+'mm</div></div>');
+        if((rb.genkyoCnRC||0)>0){ var _cnRcSub=rb.genkyoCnRCSubcat||'RC-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSub+'（別途発注）</div><div style="font-weight:700;font-size:12px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
+        if((rb.genkyoRM||0)>0) _honChips.push(_ckRbRmcChip('上層路盤工 RM-'+rb.rmSize, ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
+        if((rb.genkyoRC||0)>0) _honChips.push(_ckRbRmcChip('下層路盤工 RC-'+rb.rcSize, ckLayerAdditionStr(rb._honRC_layers, rb.genkyoRC*1000), 'hon'));
+      }
+      // 現況・本復旧 notice用 層展開ヘルパー
+      var _buildHonNotice = function(rb){
+        var frs = (rb.honFreeRows||[]).filter(function(r){ return (r.t||0)>0; });
+        var parts = [];
+        if(frs.length){
+          frs.forEach(function(r){
+            if(r.type==='concrete'||r.type==='コンクリート')
+              parts.push('<span style="color:#f97316;font-weight:700;">'+(r.name||'コンクリート')+' '+r.t+'mm</span>');
+            else if(r.type==='cn_rc')
+              parts.push('<span style="color:#fb923c;font-weight:700;">CN間路盤材 '+(r.subcat||'RC-40')+' '+r.t+'mm（別途発注）</span>');
+            else if(r.type==='upper_rb')
+              parts.push('<span style="color:#0284c7;font-weight:700;">'+(r.subcat||'RM-40')+' '+r.t+'mm</span>');
+            else if(r.type==='lower_rb')
+              parts.push('<span style="color:#059669;font-weight:700;">'+(r.subcat||'RC-40')+' '+r.t+'mm</span>');
+          });
+        } else {
+          if((rb.genkyoCnH||0)>0) parts.push('<span style="color:#f97316;font-weight:700;">コンクリート '+Math.round(rb.genkyoCnH*1000)+'mm</span>');
+          if((rb.genkyoCnRC||0)>0) parts.push('<span style="color:#fb923c;font-weight:700;">CN間路盤材 '+(rb.genkyoCnRCSubcat||'RC-40')+' '+Math.round(rb.genkyoCnRC*1000)+'mm（別途発注）</span>');
+          if((rb.genkyoRM||0)>0) parts.push('<span style="color:#0284c7;font-weight:700;">RM-'+(rb.rmSize||40)+' '+Math.round(rb.genkyoRM*1000)+'mm</span>');
+          if((rb.genkyoRC||0)>0) parts.push('<span style="color:#059669;font-weight:700;">RC-'+(rb.rcSize||40)+' '+Math.round(rb.genkyoRC*1000)+'mm</span>');
+        }
+        return parts.join(' ／ ');
+      };
+      var _honTotalMm = Math.round(((rb.genkyoTotalH||0)||((rb.genkyoAsH||0)+(rb.genkyoRM||0)+(rb.genkyoRC||0)+(rb.genkyoCnRC||0)+(rb.genkyoCnH||0)))*1000)||Math.round(rb.totalH*1000);
+      var _kariWarnBadge = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '';
+      var _honWarnBadge  = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:rgba(239,68,68,0.2);color:#b91c1c;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 仮復旧路盤は異なる</span>' : '';
+      html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin:10px 0;">'
+        +'<div style="font-size:12px;color:#0369a1;line-height:1.7;">📐 <strong>仮復旧・路盤先行 構成（固定値） H='+Math.round(rb.totalH*1000)+'mm</strong>： '+_noticeParts.join(' ／ ')+_kariWarnBadge
+        +'</div>'
+        +(_rbDiffers
+          ? '<div style="font-size:12px;color:#7c3aed;line-height:1.7;margin-top:4px;">🏗 <strong>現況・本復旧 H='+_honTotalMm+'mm</strong>： '+_buildHonNotice(rb)+_honWarnBadge+'</div>'
+          : '')
+        +'</div>'
+        +'<button id="'+_rbDetailId+'-btn" type="button" onclick="toggleCkRoadbedDetail(\''+_rbDetailId+'\')" style="margin-top:6px;font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:5px;padding:3px 10px;cursor:pointer;">詳細を見る ▼</button>'
+        +'<div id="'+_rbDetailId+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #bae6fd;">'
+          +((_rbDiffers && _honChips.length)
+            ? ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                +'<div><div style="font-size:9px;font-weight:700;color:#ea580c;letter-spacing:1px;margin-bottom:5px;">🔧 仮復旧（路盤先行）</div><div style="display:flex;flex-direction:column;gap:5px;">'+_kariChips.join('')+'</div></div>'
+                +'<div><div style="font-size:9px;font-weight:700;color:#7c3aed;letter-spacing:1px;margin-bottom:5px;">🏗 現況・本復旧</div><div style="display:flex;flex-direction:column;gap:5px;">'+_honChips.join('')+'</div></div>'
+              +'</div>')
+            : ('<div style="display:flex;flex-wrap:wrap;gap:6px;">'+_kariChips.join('')+'</div>'))
+          +'<div style="font-size:10px;color:#0369a1;margin-top:6px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
+        +'</div>'
+        +'</div>';
+    }
   }
 
   // 進捗
