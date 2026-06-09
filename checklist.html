@@ -1321,18 +1321,23 @@ function _ckArchiveRoadbedInfo(typeKey){
 
 // プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
 function _ckEnrichPresetType(presetType) {
-  if ((presetType.honFreeRows||[]).length > 0 || (presetType.genkyoCnRC||0) > 0) return presetType;
+  // cn_rc データが既にある場合はスキップ（honFreeRowsがあってもcn_rcがなければ補完が必要）
+  if ((presetType.genkyoCnRC||0) > 0) return presetType;
+  if ((presetType.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; })) return presetType;
+  // キーでマスタを検索（type_import_プレフィックスを除去）
   var rbKey = (presetType.key||'').replace(/^type_import_/, '');
-  if (rbKey === (presetType.key||'')) return presetType;
   var raw = null;
   try { raw = localStorage.getItem('roadbed_masters_'+_siteId) || localStorage.getItem('roadbed_masters'); } catch(e) {}
   var masters = null;
   try { if (raw) masters = JSON.parse(raw); } catch(e) {}
   if (!Array.isArray(masters)) return presetType;
+  // キーで照合、なければラベルで照合（手動作成型にも対応）
   var m = masters.find(function(m){ return m.key === rbKey; });
+  if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (presetType.label||'').trim(); });
   if (!m || !m.honFreeMode) return presetType;
   var frs = m.honFreeRows || [];
   var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+  if (!cnRcRows.length) return presetType;
   return Object.assign({}, presetType, {
     honFreeMode:      true,
     honFreeRows:      frs,

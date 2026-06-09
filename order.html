@@ -1731,6 +1731,8 @@ function fbSyncMasters(callback) {
       try { if(typeof populateGlobalSiteDropdown==='function') populateGlobalSiteDropdown(); } catch(e) {}
       // roadbed_masters は既に localStorage に書き込み済みなので直接ラベルを更新
       try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+      // プリセット一覧を再描画（同期後にhonFreeRows補完が有効になる）
+      try { if(typeof renderPresetList==='function') renderPresetList(); } catch(e) {}
       if (callback) callback();
     });
   }
@@ -1754,12 +1756,17 @@ function fbSyncMasters(callback) {
           Object.keys(rbData).forEach(function(sid) {
             localStorage.setItem('roadbed_masters_' + sid, JSON.stringify(rbData[sid]));
           });
-          // 現在選択中の現場があればそのデータをセット
+          // 全現場のマスタをマージして roadbed_masters（グローバル）に保存
+          // ＋現在選択中の現場があればそのデータも優先セット
+          var _allRbMasters = [];
+          Object.keys(rbData).forEach(function(sid) {
+            if (Array.isArray(rbData[sid])) _allRbMasters = _allRbMasters.concat(rbData[sid]);
+          });
+          if (_allRbMasters.length) localStorage.setItem('roadbed_masters', JSON.stringify(_allRbMasters));
           var curSite = document.getElementById('global-site-sel')?.value || '';
           if (curSite && rbData[curSite]) {
             localStorage.setItem('roadbed_masters', JSON.stringify(rbData[curSite]));
           }
-          // 現場未選択 or 対応データなし → roadbed_masters は変更しない（既存データ保持）
         }
       }
       finish();
@@ -4782,9 +4789,11 @@ function deletePreset(id) {
 // 1行コンパクトチップ（プリセット一覧・現場プレビュー用）
 // プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
 function _enrichPresetTypeFromMasters(t) {
-  if ((t.honFreeRows||[]).length > 0 || (t.genkyoCnRC||0) > 0) return t;
+  // cn_rc データが既にある場合はスキップ（honFreeRowsがあってもcn_rcがなければ補完が必要）
+  if ((t.genkyoCnRC||0) > 0) return t;
+  if ((t.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; })) return t;
+  // キーでマスタを検索（type_import_プレフィックスを除去）
   var rbKey = (t.key||'').replace(/^type_import_/, '');
-  if (rbKey === (t.key||'')) return t; // プレフィックスなし＝非インポート型
   var siteId = '';
   try { var sel = document.getElementById('global-site-sel'); if (sel) siteId = sel.value||''; } catch(e) {}
   var masters = null;
@@ -4793,10 +4802,13 @@ function _enrichPresetTypeFromMasters(t) {
     try { masters = JSON.parse(localStorage.getItem('roadbed_masters') || 'null'); } catch(e) {}
   }
   if (!Array.isArray(masters)) return t;
+  // キーで照合、なければラベルで照合（手動作成型にも対応）
   var m = masters.find(function(m){ return m.key === rbKey; });
+  if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
   if (!m || !m.honFreeMode) return t;
   var frs = m.honFreeRows || [];
   var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+  if (!cnRcRows.length) return t; // cn_rc行がなければ補完不要
   return Object.assign({}, t, {
     honFreeMode:      true,
     honFreeRows:      frs,
