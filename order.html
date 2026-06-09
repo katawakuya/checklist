@@ -4074,6 +4074,19 @@ function importFromRoadbedMasters(silent) {
       hasImprovedSoil: false, noGradient: false,
       genkyoAsH: honAsArr.reduce((s,a) => s+(a.t||0), 0) / 1000,
       genkyoRM: r.honRmH || 0, genkyoRC: r.honRcH || 0,
+      honFreeMode: r.honFreeMode || false,
+      honFreeRows: r.honFreeMode ? (r.honFreeRows||[]) : [],
+      genkyoTotalH: r.honFreeMode ? (r.honTotalH||0) : 0,
+      genkyoCnH: (function(){
+        if (!r.honFreeMode || !Array.isArray(r.honFreeRows)) return 0;
+        return r.honFreeRows.filter(function(x){ return x.type==='concrete'||x.type==='コンクリート'; }).reduce(function(s,x){ return s+(x.t||0); }, 0) / 1000;
+      })(),
+      genkyoCnRC: (function(){
+        if (!r.honFreeMode || !Array.isArray(r.honFreeRows)) return 0;
+        var rows = r.honFreeRows.filter(function(x){ return x.type==='cn_rc'; });
+        return rows.reduce(function(s,x){ return s+(x.t||0); }, 0) / 1000;
+      })(),
+      genkyoCnRCSubcat: r.honFreeMode ? ((r.honFreeRows||[]).find(function(x){ return x.type==='cn_rc'; })||{}).subcat||'RM-40' : 'RM-40',
       kariRM_layers: kariRM, kariRC_layers: kariRC,
       honRM_layers:  honRM,  honRC_layers:  honRC,
       kariRmLayers: (_RB_LABEL_OVERRIDES[r.key]?.kariRmLayers) || r.kariRmLayers || '',
@@ -4767,7 +4780,35 @@ function deletePreset(id) {
 }
 
 // 1行コンパクトチップ（プリセット一覧・現場プレビュー用）
+// プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
+function _enrichPresetTypeFromMasters(t) {
+  if ((t.honFreeRows||[]).length > 0 || (t.genkyoCnRC||0) > 0) return t;
+  var rbKey = (t.key||'').replace(/^type_import_/, '');
+  if (rbKey === (t.key||'')) return t; // プレフィックスなし＝非インポート型
+  var siteId = '';
+  try { var sel = document.getElementById('global-site-sel'); if (sel) siteId = sel.value||''; } catch(e) {}
+  var masters = null;
+  try { masters = JSON.parse(localStorage.getItem('roadbed_masters_'+siteId) || 'null'); } catch(e) {}
+  if (!Array.isArray(masters) || !masters.length) {
+    try { masters = JSON.parse(localStorage.getItem('roadbed_masters') || 'null'); } catch(e) {}
+  }
+  if (!Array.isArray(masters)) return t;
+  var m = masters.find(function(m){ return m.key === rbKey; });
+  if (!m || !m.honFreeMode) return t;
+  var frs = m.honFreeRows || [];
+  var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+  return Object.assign({}, t, {
+    honFreeMode:      true,
+    honFreeRows:      frs,
+    genkyoCnRC:       cnRcRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000,
+    genkyoCnRCSubcat: (cnRcRows[0]||{}).subcat || 'RM-40',
+    genkyoCnH:        frs.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000,
+    genkyoTotalH:     m.honTotalH || 0,
+  });
+}
+
 function buildRoadbedInlineChips(t, mode) {
+  t = _enrichPresetTypeFromMasters(t);
   const rmS = _resolveRmSize(t);
   const rcS = _resolveRcSize(t);
   const rows = [];
@@ -4801,6 +4842,7 @@ function buildRoadbedInlineChips(t, mode) {
 // 路盤構成チップ生成ヘルパー（プリセット一覧・流用確認共通）
 // =====================================================================
 function buildRoadbedChips(t, mode) {
+  t = _enrichPresetTypeFromMasters(t);
   // mode: 'kari'=仮復旧, 'hon'=現況・本復旧
   const rmS  = t.rmSize || 40;
   const rcS  = t.rcSize || 40;

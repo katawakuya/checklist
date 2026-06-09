@@ -1319,7 +1319,32 @@ function _ckArchiveRoadbedInfo(typeKey){
   };
 }
 
+// プリセット型からhonFreeRows/genkyoCnRC等が欠落している場合、路盤マスタから補完
+function _ckEnrichPresetType(presetType) {
+  if ((presetType.honFreeRows||[]).length > 0 || (presetType.genkyoCnRC||0) > 0) return presetType;
+  var rbKey = (presetType.key||'').replace(/^type_import_/, '');
+  if (rbKey === (presetType.key||'')) return presetType;
+  var raw = null;
+  try { raw = localStorage.getItem('roadbed_masters_'+_siteId) || localStorage.getItem('roadbed_masters'); } catch(e) {}
+  var masters = null;
+  try { if (raw) masters = JSON.parse(raw); } catch(e) {}
+  if (!Array.isArray(masters)) return presetType;
+  var m = masters.find(function(m){ return m.key === rbKey; });
+  if (!m || !m.honFreeMode) return presetType;
+  var frs = m.honFreeRows || [];
+  var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
+  return Object.assign({}, presetType, {
+    honFreeMode:      true,
+    honFreeRows:      frs,
+    genkyoCnRC:       cnRcRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000,
+    genkyoCnRCSubcat: (cnRcRows[0]||{}).subcat || 'RM-40',
+    genkyoCnH:        frs.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000,
+    genkyoTotalH:     m.honTotalH || 0,
+  });
+}
+
 function buildChecklistFromPreset(presetType){
+  presetType = _ckEnrichPresetType(presetType);
   var asTotal  = ((presetType.asT密粒||0) + (presetType.asT粗粒||0)) / 1000;
   var rcH      = presetType.rcH || 0;
   var rmH      = presetType.rmH || 0;
