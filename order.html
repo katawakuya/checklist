@@ -4936,6 +4936,10 @@ function buildRoadbedChips(t, mode) {
         else if (r.type==='lower_rb')
           chips.push({ label:'下層路盤 '+(r.subcat||'RC-40'), val:buildLayerStr(t.honRC_layers,t.genkyoRC), color:'rgba(34,197,94,0.08)', border:'rgba(34,197,94,0.4)', textColor:'var(--green)' });
       });
+      // cn_rc型行が無くてもgenkyoCnRCが設定されている場合（旧ロジック計算値）はCN間チップを追加
+      if (!_frsH.some(r=>r.type==='cn_rc') && (t.genkyoCnRC||0)>0) {
+        chips.push({ label:'CN間路盤材 '+(t.genkyoCnRCSubcat||'RM-40')+'（別途発注）', val:Math.round((t.genkyoCnRC||0)*1000)+'mm', color:'rgba(251,146,60,0.08)', border:'rgba(251,146,60,0.5)', textColor:'#fb923c' });
+      }
     } else {
       const honAsH = Math.round((t.genkyoAsH||0)*1000);
       if (honAsH > 0) chips.push({ label:'表層 AS合計', val:'t='+honAsH+'mm', color:'rgba(79,142,247,0.15)', border:'rgba(79,142,247,0.4)', textColor:'var(--text)' });
@@ -5800,13 +5804,18 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         ${(function(){
           var frs=(t.honFreeRows||[]).filter(function(r){return (r.t||0)>0;});
           if(frs.length){
-            return frs.map(function(r){
+            var _pts = frs.map(function(r){
               if(r.type==='concrete'||r.type==='コンクリート') return '<span style=\'color:#f97316;\'>'+(r.name||'CN')+' '+r.t+'mm</span>';
               if(r.type==='cn_rc') return '<span style=\'color:#fb923c;\'>CN間路盤 '+(r.subcat||'RC-40')+' '+r.t+'mm</span>';
               if(r.type==='upper_rb') return (r.subcat||'RM-40')+' '+r.t+'mm';
               if(r.type==='lower_rb') return (r.subcat||'RC-40')+' '+r.t+'mm';
               return '';
-            }).filter(Boolean).join(' ／ ');
+            }).filter(Boolean);
+            // cn_rc型行が無くてもgenkyoCnRCがある場合（旧ロジック計算値）は追記
+            var _hasCnRcRow = frs.some(function(r){return r.type==='cn_rc';});
+            if(!_hasCnRcRow && (t.genkyoCnRC||0)>0)
+              _pts.push('<span style=\'color:#fb923c;\'>CN間路盤 '+(t.genkyoCnRCSubcat||'RM-40')+' '+Math.round((t.genkyoCnRC||0)*1000)+'mm（別途発注）</span>');
+            return _pts.join(' ／ ');
           }
           var pts=[];
           if((t.genkyoAsH||0)>0) pts.push('AS:'+Math.round((t.genkyoAsH||0)*1000)+'mm');
