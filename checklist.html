@@ -184,6 +184,7 @@ main{padding:10px 14px 90px;}
   <h1>写真撮影チェックリスト</h1>
   <span class="sub" id="hdDate"></span>
   <span id="adminBadge" style="display:none;font-size:10px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;margin-left:4px;"></span>
+  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;margin-left:4px;" title="既存データをFirebaseへ移行">📤 移行</button>
   <button id="adminBtn" onclick="openFbModal()" title="管理者ログイン" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;margin-left:4px;">🔑</button>
 </header>
 
@@ -277,6 +278,7 @@ function initFirebase() {
       _fbUser  = user;
       _isAdmin = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
+      if (_isAdmin && !localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
     });
     fbSyncMasters();
   } catch(e) { console.warn('[FB] init error', e); }
@@ -436,6 +438,98 @@ function updateAdminBadge() {
   var b=document.getElementById('adminBadge'), btn=document.getElementById('adminBtn');
   if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
   if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
+  _updateSyncBadge();
+}
+
+// ─── 未同期バッジ ─────────────────────────────────────────────────────────
+var _SYNC_MOD_KEY='__masterModifiedAt', _SYNC_AT_KEY='__fbSyncedAt';
+function _markLocalModified(){localStorage.setItem(_SYNC_MOD_KEY,Date.now().toString());_updateSyncBadge();}
+function _markSynced(){localStorage.setItem(_SYNC_AT_KEY,Date.now().toString());_updateSyncBadge();}
+function _isSyncPending(){
+  if(!_isAdmin)return false;
+  var mod=parseInt(localStorage.getItem(_SYNC_MOD_KEY)||'0');
+  var syn=parseInt(localStorage.getItem(_SYNC_AT_KEY)||'0');
+  return mod>syn;
+}
+function _updateSyncBadge(){
+  var btn=document.getElementById('migrateBtn');
+  if(!btn)return;
+  if(!_isAdmin){btn.style.display='none';return;}
+  btn.style.display='';
+  var p=_isSyncPending();
+  btn.style.background =p?'rgba(239,68,68,.25)':'rgba(34,197,94,.2)';
+  btn.style.border     =p?'1px solid rgba(239,68,68,.5)':'1px solid rgba(34,197,94,.4)';
+  btn.style.color      =p?'#fca5a5':'#86efac';
+  btn.textContent      =p?'⚠️ 未同期':'📤 移行';
+  btn.title            =p?'Firestoreと未同期のデータがあります（クリックでアップロード）':'既存データをFirebaseへ移行';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function migrateToFirebase() {
+  if (!_isAdmin) { alert('管理者ログインが必要です'); return; }
+  if (!_fbDb) { alert('Firebase未接続です'); return; }
+  if (!confirm('このPCのlocalStorageにある\n現場・旗揚げ・路盤マスタをFirebaseにアップロードします。\nよろしいですか？')) return;
+  var results = [];
+  // 現場マスタ
+  try {
+    var sites = JSON.parse(localStorage.getItem('site_master') || '[]');
+    if (sites.length > 0) {
+      _fbDb.collection('masters').doc('site_master').set({ data: sites, updatedAt: new Date().toISOString() });
+      results.push('現場マスタ: ' + sites.length + '件');
+    }
+  } catch(e) { results.push('現場マスタ: エラー ' + e); }
+  // 旗揚げマスタ
+  try {
+    var totalHata = 0;
+    var globalHata = JSON.parse(localStorage.getItem('hata_master') || '[]');
+    if (globalHata.length > 0) {
+      totalHata += globalHata.length;
+      _fbDb.collection('masters').doc('hata_master_global').set({ data: globalHata, updatedAt: new Date().toISOString() });
+    }
+    var mSites = JSON.parse(localStorage.getItem('site_master') || '[]');
+    mSites.forEach(function(s) {
+      try {
+        var sh = JSON.parse(localStorage.getItem('hata_master_' + s.id) || '[]');
+        if (sh.length > 0) { totalHata += sh.length; _fbDb.collection('masters').doc('hata_master_' + s.id).set({ data: sh, updatedAt: new Date().toISOString() }); }
+      } catch(e) {}
+    });
+    if (totalHata > 0) results.push('旗揚げマスタ: ' + totalHata + '件');
+  } catch(e) { results.push('旗揚げマスタ: エラー ' + e); }
+  // 路盤プリセット
+  try {
+    var presets = JSON.parse(localStorage.getItem('road_presets') || '[]');
+    if (presets.length > 0) {
+      _fbDb.collection('masters').doc('road_presets').set({ data: presets, updatedAt: new Date().toISOString() });
+      results.push('路盤プリセット: ' + presets.length + '件');
+    }
+  } catch(e) { results.push('路盤プリセット: エラー ' + e); }
+  // 路盤マスタ（現場別）
+  try {
+    var allRb = {}, totalRb = 0;
+    var rbGlobal = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+    var mSites2 = JSON.parse(localStorage.getItem('site_master') || '[]');
+    mSites2.forEach(function(s) {
+      var rb = JSON.parse(localStorage.getItem('roadbed_masters_' + s.id) || 'null');
+      if (rb && rb.length > 0) { allRb[s.id] = rb; totalRb += rb.length; }
+    });
+    if (totalRb > 0) {
+      _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc) {
+        var existing = (doc.exists && doc.data().data && !Array.isArray(doc.data().data)) ? doc.data().data : {};
+        Object.keys(allRb).forEach(function(sid) { existing[sid] = allRb[sid]; });
+        return _fbDb.collection('masters').doc('roadbed_masters').set({ data: existing, updatedAt: new Date().toISOString() });
+      });
+      results.push('路盤マスタ: ' + totalRb + '件（' + Object.keys(allRb).length + '現場）');
+    }
+  } catch(e) { results.push('路盤マスタ: エラー ' + e); }
+  // 管種設定
+  try {
+    var ps = JSON.parse(localStorage.getItem('checklist_pipe_settings') || 'null');
+    if (ps) {
+      _fbDb.collection('masters').doc('checklist_pipe_settings').set({ data: ps, updatedAt: new Date().toISOString() });
+      results.push('管種設定: アップロード完了');
+    }
+  } catch(e) { results.push('管種設定: エラー ' + e); }
+  setTimeout(function() { alert('✅ Firebaseへのアップロード完了\n\n' + results.join('\n')); _markSynced(); }, 800);
 }
 // ─── 管種設定 Firestore同期 ───────────────────────────────────────────
 function loadPipeSettingsFromFb() {

@@ -115,6 +115,7 @@ header h1{font-size:16px;font-weight:700;white-space:nowrap;}
     <option value="">― 現場を選択 ―</option>
   </select>
   <span class="admin-badge" id="adminBadge">👑 管理者</span>
+  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;" title="既存データをFirebaseへ移行">📤 移行</button>
   <button class="btn-admin" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
 </header>
 
@@ -643,7 +644,11 @@ function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbDb=firebase.firestore(); _fbAuth=firebase.auth();
-    _fbAuth.onAuthStateChanged(u=>{_isAdmin=!!(u&&u.email===ADMIN_EMAIL); updateAdminUI();});
+    _fbAuth.onAuthStateChanged(u=>{
+    _isAdmin=!!(u&&u.email===ADMIN_EMAIL);
+    updateAdminUI();
+    if(_isAdmin&&!localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
+  });
     loadSitesFromFirebase();
   }catch(e){console.warn('[FB]',e);loadSitesLocal();}
 }
@@ -700,10 +705,11 @@ function loadRoadbedsForSite(id){
 }
 function saveRbForSite(id,configs){
   localStorage.setItem(getRbKey(id),JSON.stringify(configs));
-  if(!_fbDb||!_isAdmin)return;
+  if(!_fbDb||!_isAdmin){_markLocalModified();return;}
   _fbDb.collection('masters').doc('roadbed_masters').get()
     .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=configs;return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()});})
-    .catch(e=>console.warn('[FB]',e));
+    .then(()=>_markSynced())
+    .catch(e=>{console.warn('[FB]',e);_markLocalModified();});
 }
 
 // ======================================
@@ -1844,7 +1850,75 @@ function updateAdminUI(){
   document.getElementById('btnAdmin').textContent=_isAdmin?'🔓':'🔑';
   document.getElementById('btnAdmin').className=_isAdmin?'btn-admin active':'btn-admin';
   if(_selectedSiteId){renderConfigList(getLocalRb(_selectedSiteId));renderDwgList(getLocalDwg(_selectedSiteId));}
+  _updateSyncBadge();
 }
+
+// ─── 未同期バッジ ─────────────────────────────────────────────────────────
+var _SYNC_MOD_KEY='__masterModifiedAt', _SYNC_AT_KEY='__fbSyncedAt';
+function _markLocalModified(){localStorage.setItem(_SYNC_MOD_KEY,Date.now().toString());_updateSyncBadge();}
+function _markSynced(){localStorage.setItem(_SYNC_AT_KEY,Date.now().toString());_updateSyncBadge();}
+function _isSyncPending(){
+  if(!_isAdmin)return false;
+  var mod=parseInt(localStorage.getItem(_SYNC_MOD_KEY)||'0');
+  var syn=parseInt(localStorage.getItem(_SYNC_AT_KEY)||'0');
+  return mod>syn;
+}
+function _updateSyncBadge(){
+  var btn=document.getElementById('migrateBtn');
+  if(!btn)return;
+  if(!_isAdmin){btn.style.display='none';return;}
+  btn.style.display='';
+  var p=_isSyncPending();
+  btn.style.background =p?'rgba(239,68,68,.25)':'rgba(34,197,94,.2)';
+  btn.style.border     =p?'1px solid rgba(239,68,68,.5)':'1px solid rgba(34,197,94,.4)';
+  btn.style.color      =p?'#fca5a5':'#86efac';
+  btn.textContent      =p?'⚠️ 未同期':'📤 移行';
+  btn.title            =p?'Firestoreと未同期のデータがあります（クリックでアップロード）':'既存データをFirebaseへ移行';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function migrateToFirebase(){
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  if(!_fbDb){showToast('⚠️ Firebase未接続です');return;}
+  if(!confirm('このPCのlocalStorageにある\n現場・旗揚げ・路盤マスタをFirebaseにアップロードします。\nよろしいですか？'))return;
+  var results=[];
+  // 現場マスタ
+  try{
+    var sites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    if(sites.length>0){_fbDb.collection('masters').doc('site_master').set({data:sites,updatedAt:new Date().toISOString()});results.push('現場マスタ: '+sites.length+'件');}
+  }catch(e){results.push('現場マスタ: エラー '+e);}
+  // 旗揚げマスタ
+  try{
+    var totalHata=0;
+    var mSites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    mSites.forEach(function(s){
+      var sh=JSON.parse(localStorage.getItem('hata_master_'+s.id)||'[]');
+      if(sh.length>0){totalHata+=sh.length;_fbDb.collection('masters').doc('hata_master_'+s.id).set({data:sh,updatedAt:new Date().toISOString()});}
+    });
+    var hg=JSON.parse(localStorage.getItem('hata_master')||'[]');
+    if(hg.length>0){totalHata+=hg.length;_fbDb.collection('masters').doc('hata_master_global').set({data:hg,updatedAt:new Date().toISOString()});}
+    if(totalHata>0)results.push('旗揚げマスタ: '+totalHata+'件');
+  }catch(e){results.push('旗揚げマスタ: エラー '+e);}
+  // 路盤マスタ
+  try{
+    var allRb={},totalRb=0;
+    var mSites2=JSON.parse(localStorage.getItem('site_master')||'[]');
+    mSites2.forEach(function(s){
+      var rb=JSON.parse(localStorage.getItem('roadbed_masters_'+s.id)||'null');
+      if(rb&&rb.length>0){allRb[s.id]=rb;totalRb+=rb.length;}
+    });
+    if(totalRb>0){
+      _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc){
+        var existing=(doc.exists&&doc.data().data&&!Array.isArray(doc.data().data))?doc.data().data:{};
+        Object.keys(allRb).forEach(function(sid){existing[sid]=allRb[sid];});
+        return _fbDb.collection('masters').doc('roadbed_masters').set({data:existing,updatedAt:new Date().toISOString()});
+      });
+      results.push('路盤マスタ: '+totalRb+'件（'+Object.keys(allRb).length+'現場）');
+    }
+  }catch(e){results.push('路盤マスタ: エラー '+e);}
+  setTimeout(function(){alert('✅ Firebaseへのアップロード完了\n\n'+results.join('\n'));_markSynced();},800);
+}
+
 function onAdminBtn(){if(_isAdmin){if(confirm('ログアウトしますか？'))_fbAuth.signOut();}else document.getElementById('loginModal').classList.add('open');}
 function doLogin(){
   _fbAuth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(),document.getElementById('loginPass').value)
