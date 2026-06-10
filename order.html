@@ -4809,6 +4809,11 @@ function _enrichPresetsFromMasters() {
       var rbKey = (t.key||'').replace(/^type_import_/, '');
       var m = masters.find(function(m){ return m.key === rbKey; });
       if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
+      // 最終フォールバック: cn_rc行を持つhonFreeModeマスタが1つだけなら使用
+      if (!m) {
+        var _hfm2 = masters.filter(function(x){ return x.honFreeMode && (x.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; }); });
+        if (_hfm2.length === 1) m = _hfm2[0];
+      }
       if (!m || !m.honFreeMode) return;
       var frs = m.honFreeRows || [];
       var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
@@ -4843,6 +4848,11 @@ function _enrichPresetTypeFromMasters(t) {
   // キーで照合、なければラベルで照合（手動作成型にも対応）
   var m = masters.find(function(m){ return m.key === rbKey; });
   if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
+  // 最終フォールバック: cn_rc行を持つhonFreeModeマスタが1つだけなら使用
+  if (!m) {
+    var _hfm = masters.filter(function(x){ return x.honFreeMode && (x.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; }); });
+    if (_hfm.length === 1) m = _hfm[0];
+  }
   if (!m || !m.honFreeMode) return t;
   var frs = m.honFreeRows || [];
   var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
@@ -4877,7 +4887,9 @@ function buildRoadbedInlineChips(t, mode) {
     if (honRc>0) rows.push({label:'RC-'+rcS, val:buildLayerStr(t.honRC_layers,t.genkyoRC), color:'var(--green)'});
     const honCnRcMm = Math.round((t.genkyoCnRC||0)*1000);
     if (honCnRcMm>0) rows.push({label:'CN間路盤 '+(t.genkyoCnRCSubcat||'RC-40'), val:honCnRcMm+'mm ★別途発注', color:'#fb923c'});
-    const honTotal = honAs+Math.round((t.genkyoRM||0)*1000)+honRc+honCnRcMm;
+    const honCnHMm = Math.round((t.genkyoCnH||0)*1000);
+    // genkyoTotalH があればそれを優先（honFreeMode時は各層合計をFirestoreから取得）
+    const honTotal = Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000) || (honAs+Math.round((t.genkyoRM||0)*1000)+honRc+honCnRcMm+honCnHMm);
     rows.push({label:'合計H', val:honTotal+'mm', color:'#a78bfa', bold:true});
   }
   return rows.map(r =>

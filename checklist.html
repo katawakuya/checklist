@@ -1087,6 +1087,9 @@ function _ckFindLiveRbMaster(masters, presetType, typeKey, presetTypeKey){
     var lm = masters.find(function(mm){ return mm.label && mm.label===lc; });
     if(lm) return lm;
   }
+  // 最終フォールバック: cn_rc行を持つhonFreeModeマスタが1つだけなら使用
+  var _hfmAll = masters.filter(function(mm){ return mm.honFreeMode && (mm.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; }); });
+  if (_hfmAll.length === 1) return _hfmAll[0];
   return null;
 }
 
@@ -1335,6 +1338,11 @@ function _ckEnrichPresetsFromMasters() {
       var rbKey = (t.key||'').replace(/^type_import_/, '');
       var m = masters.find(function(m){ return m.key === rbKey; });
       if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (t.label||'').trim(); });
+      // 最終フォールバック: cn_rc行を持つhonFreeModeマスタが1つだけなら使用
+      if (!m) {
+        var _hfm2 = masters.filter(function(x){ return x.honFreeMode && (x.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; }); });
+        if (_hfm2.length === 1) m = _hfm2[0];
+      }
       if (!m || !m.honFreeMode) return;
       var frs = m.honFreeRows || [];
       var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
@@ -1366,6 +1374,11 @@ function _ckEnrichPresetType(presetType) {
   // キーで照合、なければラベルで照合（手動作成型にも対応）
   var m = masters.find(function(m){ return m.key === rbKey; });
   if (!m) m = masters.find(function(m){ return (m.label||'').trim() === (presetType.label||'').trim(); });
+  // 最終フォールバック: cn_rc行を持つhonFreeModeマスタが1つだけなら使用
+  if (!m) {
+    var _hfm = masters.filter(function(x){ return x.honFreeMode && (x.honFreeRows||[]).some(function(r){ return r.type==='cn_rc'; }); });
+    if (_hfm.length === 1) m = _hfm[0];
+  }
   if (!m || !m.honFreeMode) return presetType;
   var frs = m.honFreeRows || [];
   var cnRcRows = frs.filter(function(r){ return r.type==='cn_rc'; });
