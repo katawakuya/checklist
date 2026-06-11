@@ -697,17 +697,42 @@ function getLocalRb(id){return JSON.parse(localStorage.getItem(getRbKey(id))||'[
 
 function loadRoadbedsForSite(id){
   if(!_fbDb){renderConfigList(getLocalRb(id));return;}
-  _fbDb.collection('masters').doc('roadbed_masters').get()
+  // 現場別ドキュメントを優先して読む
+  _fbDb.collection('masters').doc('roadbed_masters_'+id).get()
     .then(doc=>{
-      if(doc.exists&&doc.data().data){const all=doc.data().data;if(all[id])localStorage.setItem(getRbKey(id),JSON.stringify(all[id]));}
-      renderConfigList(getLocalRb(id));
-    }).catch(()=>renderConfigList(getLocalRb(id)));
+      if(doc.exists&&doc.data().data&&doc.data().data.length>0){
+        localStorage.setItem(getRbKey(id),JSON.stringify(doc.data().data));
+        renderConfigList(getLocalRb(id));
+        return;
+      }
+      // フォールバック: モノリシック形式
+      return _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(doc2=>{
+          if(doc2.exists&&doc2.data().data){const all=doc2.data().data;if(all[id])localStorage.setItem(getRbKey(id),JSON.stringify(all[id]));}
+          renderConfigList(getLocalRb(id));
+        });
+    }).catch(()=>{
+      _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(doc2=>{
+          if(doc2.exists&&doc2.data().data){const all=doc2.data().data;if(all[id])localStorage.setItem(getRbKey(id),JSON.stringify(all[id]));}
+          renderConfigList(getLocalRb(id));
+        }).catch(()=>renderConfigList(getLocalRb(id)));
+    });
 }
 function saveRbForSite(id,configs){
   localStorage.setItem(getRbKey(id),JSON.stringify(configs));
   if(!_fbDb||!_isAdmin){_markLocalModified();return;}
+  // undefined を含むフィールドを除去（Firebase は undefined を拒否する）
+  var safe;
+  try{safe=JSON.parse(JSON.stringify(configs));}catch(e){safe=configs;}
+  // 現場別ドキュメントに保存（推奨フォーマット）
+  try{
+    _fbDb.collection('masters').doc('roadbed_masters_'+id).set({data:safe,updatedAt:new Date().toISOString()})
+      .catch(e=>console.warn('[FB rb per-site save]',e));
+  }catch(e){console.warn('[FB rb per-site save sync]',e);}
+  // モノリシック形式にも保存（後方互換）
   _fbDb.collection('masters').doc('roadbed_masters').get()
-    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=configs;return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()});})
+    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=safe;return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()});})
     .then(()=>_markSynced())
     .catch(e=>{console.warn('[FB]',e);_markLocalModified();});
 }
@@ -1562,8 +1587,17 @@ function getLocalSites(){return JSON.parse(localStorage.getItem('site_master')||
 
 function fbSaveAllHata(id,list){
   if(!_fbDb||!_isAdmin)return;
+  // undefined を除去
+  var safeList;
+  try{safeList=JSON.parse(JSON.stringify(list));}catch(e){safeList=list;}
+  // 現場別ドキュメントに保存（checklist.html の fbSyncHataMasterForSite が読む形式）
+  try{
+    _fbDb.collection('masters').doc('hata_master_'+id).set({data:safeList,updatedAt:new Date().toISOString()})
+      .catch(e=>console.warn('[FB hata per-site save]',e));
+  }catch(e){console.warn('[FB hata per-site save sync]',e);}
+  // モノリシック形式にも保存（後方互換）
   _fbDb.collection('masters').doc('hata_master').get()
-    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=list;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
+    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
     .catch(e=>console.warn('[FB hata save]',e));
 }
 
