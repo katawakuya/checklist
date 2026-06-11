@@ -3598,23 +3598,26 @@ function loadHata(){
   _hataEntry = entry;
   var _dbBtn=document.getElementById('debugBtn'); if(_dbBtn)_dbBtn.style.display='';
   var _dpBtn=document.getElementById('saveDpBtn'); if(_dpBtn)_dpBtn.style.display=(_isAdmin?'':'none');
-  // dp/dph: 新フォーマット(dp/dph) → 旧フォーマット(dp1/dph1) → null の順でフォールバック
-  var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1  != null ? entry.dp1  : null);
-  var _dph = entry.dph != null ? entry.dph : (entry.dph1 != null ? entry.dph1 : null);
+  // dp/dph: 新フォーマット(dp/dph) → roadbed.html形式(kanH) → 旧フォーマット(dp1) → null
+  var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1 != null ? entry.dp1 : null);
+  var _dph = entry.dph != null ? entry.dph : (entry.kanH != null ? entry.kanH : null);
   sv('inDP1', _dp); sv('inDPH', _dph);
-  var dp2val = entry.dp2 || entry.dp_end || '';
-  if(dp2val) sv('inDP2', dp2val);
+  // dp2/dph2: 新フォーマット → roadbed.html形式(rangeTo) → 旧形式(dp_end)
+  var dp2val  = entry.dp2  || entry.rangeTo  || entry.dp_end  || '';
   var dph2val = entry.dph2 || entry.dph_end || '';
+  if(dp2val)  sv('inDP2', dp2val);
   if(dph2val) sv('inDPH2', dph2val);
-  // 勾配②端DP値をマスタから復元
-  if(_pipeGradient[0] && entry.dp1s != null)  sv('inDP1s',  entry.dp1s);
-  if(_pipeGradient[0] && entry.dph1s != null) sv('inDPH1s', entry.dph1s);
-  if(_pipeGradient[1] && entry.dp2s != null)  sv('inDP2s',  entry.dp2s);
+  // 勾配②端DP値: 新フォーマット(dp1s/dph1s) → roadbed.html形式(rangeFrom/dph1)
+  var _dp1s  = entry.dp1s  != null ? entry.dp1s  : (entry.rangeFrom != null ? entry.rangeFrom : null);
+  var _dph1s = entry.dph1s != null ? entry.dph1s : (entry.dph1     != null ? entry.dph1     : null);
+  if(_pipeGradient[0] && _dp1s  != null) sv('inDP1s',  _dp1s);
+  if(_pipeGradient[0] && _dph1s != null) sv('inDPH1s', _dph1s);
+  if(_pipeGradient[1] && entry.dp2s  != null) sv('inDP2s',  entry.dp2s);
   if(_pipeGradient[1] && entry.dph2s != null) sv('inDPH2s', entry.dph2s);
   var info = entry.name?entry.name+'　':'';
   info += '①DP:'+(_dp!=null?_dp+'m':'未登録')+' 管下H:'+(_dph!=null?_dph+'m':'未登録');
   if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
-  if(entry.dp1s != null) info += '　勾配②端DP:'+entry.dp1s+'m';
+  if(_dp1s != null) info += '　勾配②端DP:'+_dp1s+'m';
   if(infoEl) infoEl.innerHTML='<span style="color:#78350f">'+info+'</span>';
   // 図面ボタン: imgData が実際に画像データかチェック
   var hasImg = entry.imgData && (
