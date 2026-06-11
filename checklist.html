@@ -19,24 +19,24 @@
   --radius: 10px; --header-h: 56px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text1);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:14px;min-height:100vh;}
+body{background:var(--bg);color:var(--text1);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:18px;min-height:100vh;}
 header{position:sticky;top:0;z-index:100;height:var(--header-h);background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;display:flex;align-items:center;gap:10px;padding:0 14px;}
-.logo{font-size:20px;}
-header h1{font-size:14px;font-weight:700;color:#fff;letter-spacing:.04em;}
-header .sub{font-size:11px;color:rgba(255,255,255,.7);margin-left:auto;}
+.logo{font-size:26px;}
+header h1{font-size:18px;font-weight:700;color:#fff;letter-spacing:.04em;}
+header .sub{font-size:14px;color:rgba(255,255,255,.7);margin-left:auto;}
 .tab-bar{position:sticky;top:var(--header-h);z-index:90;display:flex;background:#fff;border-bottom:2px solid var(--border);}
-.tab-btn{flex:1;padding:11px 4px;text-align:center;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;transition:.15s;}
+.tab-btn{flex:1;padding:11px 4px;text-align:center;font-size:14px;color:var(--text3);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;transition:.15s;}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
 .tab-pane{display:none;} .tab-pane.active{display:block;}
 
 /* サイトバー */
 .site-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:6px;}
 .site-row{display:flex;align-items:center;gap:8px;}
-.site-row label{font-size:11px;color:var(--text2);white-space:nowrap;min-width:36px;}
-select{background:#fff;color:var(--text1);border:1.5px solid var(--border);border-radius:6px;padding:7px 28px 7px 10px;font-size:13px;flex:1;min-width:0;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+.site-row label{font-size:14px;color:var(--text2);white-space:nowrap;min-width:36px;}
+select{background:#fff;color:var(--text1);border:1.5px solid var(--border);border-radius:6px;padding:7px 28px 7px 10px;font-size:17px;flex:1;min-width:0;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
 select:focus{outline:none;border-color:var(--accent);}
-.linked-badge{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;background:#dcfce7;color:#059669;border:1px solid #bbf7d0;}
-.no-site-msg{text-align:center;padding:30px 20px;color:var(--text3);font-size:13px;}
+.linked-badge{font-size:13px;padding:2px 7px;border-radius:4px;white-space:nowrap;background:#dcfce7;color:#059669;border:1px solid #bbf7d0;}
+.no-site-msg{text-align:center;padding:30px 20px;color:var(--text3);font-size:17px;}
 
 /* メイン */
 main{padding:10px 14px 90px;}
@@ -44,53 +44,53 @@ main{padding:10px 14px 90px;}
 /* 旗揚げ */
 .hata-area{background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:0;}
 .hata-area.diagram-open{border-radius:8px 8px 0 0;border-bottom-color:#bfdbfe;}
-.hata-area label{font-size:11px;color:#92400e;font-weight:600;}
-.hata-input{width:70px;background:#fff;color:#92400e;border:1.5px solid #fbbf24;border-radius:6px;padding:6px 8px;font-size:14px;font-weight:700;text-align:center;}
+.hata-area label{font-size:14px;color:#92400e;font-weight:600;}
+.hata-input{width:70px;background:#fff;color:#92400e;border:1.5px solid #fbbf24;border-radius:6px;padding:6px 8px;font-size:18px;font-weight:700;text-align:center;}
 .hata-input:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(251,191,36,.25);}
 
 /* 入力パネル */
 .input-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-.panel-title{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+.panel-title{font-size:13px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
 .field-row{display:grid;gap:8px;margin-bottom:8px;}
 .field-row.c2{grid-template-columns:1fr 1fr;}
 .field-row.c3{grid-template-columns:1fr 1fr 1fr;}
 .field-row.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
 .field{display:flex;flex-direction:column;gap:3px;}
-.field label{font-size:10px;color:var(--text2);font-weight:600;}
-.field input{background:#fff;color:var(--text1);border:1.5px solid var(--border);border-radius:6px;padding:8px 9px;font-size:14px;width:100%;-webkit-appearance:none;}
+.field label{font-size:13px;color:var(--text2);font-weight:600;}
+.field input{background:#fff;color:var(--text1);border:1.5px solid var(--border);border-radius:6px;padding:8px 9px;font-size:18px;width:100%;-webkit-appearance:none;}
 .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(29,78,216,.12);}
 .field input.hl{border-color:#fbbf24;background:#fffbeb;}
 
 /* 計算ボタン */
-.btn-calc{width:100%;padding:11px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 2px 6px rgba(29,78,216,.3);}
+.btn-calc{width:100%;padding:11px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 2px 6px rgba(29,78,216,.3);}
 .btn-calc:active{transform:scale(.98);}
 
 /* 進捗 */
 .progress-wrap{margin-bottom:10px;}
 .progress-bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;}
 .progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#059669);border-radius:3px;transition:.3s;}
-.progress-text{font-size:11px;color:var(--text2);text-align:right;margin-top:4px;}
+.progress-text{font-size:14px;color:var(--text2);text-align:right;margin-top:4px;}
 
 /* チェックセクション */
 .checklist-section{margin-bottom:8px;}
 .section-header{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:#1e3a8a;border-radius:8px 8px 0 0;cursor:pointer;user-select:none;}
-.section-header .stitle{font-size:12px;font-weight:700;color:#fff;}
-.section-header .sarrow{color:rgba(255,255,255,.7);font-size:12px;transition:.2s;}
+.section-header .stitle{font-size:16px;font-weight:700;color:#fff;}
+.section-header .sarrow{color:rgba(255,255,255,.7);font-size:16px;transition:.2s;}
 .section-header.open .sarrow{transform:rotate(180deg);}
 .check-items{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;}
 .check-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border2);background:#fff;cursor:pointer;user-select:none;transition:.1s;}
 .check-item:last-child{border-bottom:none;}
 .check-item.checked{background:#f0fdf4;}
 .check-item.na{opacity:.5;}
-.check-box{width:22px;height:22px;min-width:22px;border:2px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s;margin-top:1px;}
+.check-box{width:22px;height:22px;min-width:22px;border:2px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:17px;transition:.15s;margin-top:1px;}
 .check-item.checked .check-box{background:#059669;border-color:#059669;color:#fff;}
 .check-item.na .check-box{background:#f3f4f6;border-color:#d1d5db;}
 .check-label{flex:1;}
-.check-label .cname{font-size:13px;line-height:1.4;color:var(--text1);}
-.check-label .cdim{font-size:11px;color:#b45309;font-weight:600;margin-top:2px;}
-.check-label .cnote{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.5;}
+.check-label .cname{font-size:17px;line-height:1.4;color:var(--text1);}
+.check-label .cdim{font-size:14px;color:#b45309;font-weight:600;margin-top:2px;}
+.check-label .cnote{font-size:13px;color:var(--text3);margin-top:2px;line-height:1.5;}
 .check-label .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
-.tag{display:inline-block;font-size:13px;font-weight:700;padding:2px 7px;border-radius:4px;}
+.tag{display:inline-block;font-size:17px;font-weight:700;padding:2px 7px;border-radius:4px;}
 .tag-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
 .tag-green{background:#d1fae5;color:#059669;border:1px solid #a7f3d0;}
 .tag-yellow{background:#fef3c7;color:#b45309;border:1px solid #fde68a;}
@@ -98,25 +98,25 @@ main{padding:10px 14px 90px;}
 .subchk-item{display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:2px 6px 2px 2px;border-radius:6px;transition:.12s;}
 .subchk-item:hover{background:#f3f4f6;}
 .subchk-item.on{background:#ecfdf5;}
-.subchk-box{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-width:18px;border:2px solid #93c5fd;border-radius:5px;font-size:12px;font-weight:700;color:#fff;background:#fff;transition:.15s;}
+.subchk-box{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-width:18px;border:2px solid #93c5fd;border-radius:5px;font-size:16px;font-weight:700;color:#fff;background:#fff;transition:.15s;}
 .subchk-item.on .subchk-box{background:#059669;border-color:#059669;color:#fff;}
 .combo-seq{display:flex;flex-direction:column;gap:5px;margin-top:6px;}
 .combo-seq .subchk-item{align-self:flex-start;max-width:100%;white-space:normal;}
-.combo-kind{display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:5px;white-space:nowrap;vertical-align:middle;}
+.combo-kind{display:inline-block;font-size:14px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:5px;white-space:nowrap;vertical-align:middle;}
 .combo-kind-sheet{background:#fef9c3;color:#854d0e;border:1px solid #fde68a;}
 .combo-kind-mid{background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;}
 .combo-extra-note{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border2);}
 
 /* na切り替えボタン */
-.btn-na{padding:3px 8px;background:#f9fafb;color:var(--text3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;margin-left:auto;white-space:nowrap;}
+.btn-na{padding:3px 8px;background:#f9fafb;color:var(--text3);border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer;margin-left:auto;white-space:nowrap;}
 
 /* 保存ボタン */
-.btn-save{position:fixed;bottom:0;left:0;right:0;padding:14px;background:linear-gradient(135deg,#065f46,#047857);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;border-top:1px solid #059669;z-index:80;}
+.btn-save{position:fixed;bottom:0;left:0;right:0;padding:14px;background:linear-gradient(135deg,#065f46,#047857);color:#fff;border:none;font-size:18px;font-weight:700;cursor:pointer;border-top:1px solid #059669;z-index:80;}
 .btn-save:active{transform:scale(.99);}
 
 /* 施工区分セグメントボタン */
 .seg-wrap{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;}
-.seg-btn{flex:1;padding:8px 6px;background:#f8f9fa;color:var(--text2);border:none;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;border-right:1px solid var(--border);}
+.seg-btn{flex:1;padding:8px 6px;background:#f8f9fa;color:var(--text2);border:none;font-size:16px;font-weight:700;cursor:pointer;transition:.15s;border-right:1px solid var(--border);}
 .seg-btn:last-child{border-right:none;}
 .seg-btn.active.kari{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;}
 .seg-btn.active.hon{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;}
@@ -126,7 +126,7 @@ main{padding:10px 14px 90px;}
 /* ロックセクション（本復旧モード時の仮復旧セクション = ヘッダーのみ表示） */
 .section-header.locked-hdr{background:#9ca3af;cursor:default;opacity:.6;}
 .section-header.locked-hdr .sarrow{display:none;}
-.locked-note{font-size:10px;color:rgba(255,255,255,.8);margin-left:auto;white-space:nowrap;}
+.locked-note{font-size:13px;color:rgba(255,255,255,.8);margin-left:auto;white-space:nowrap;}
 /* 埋戻し・本復旧セクションヘッダー */
 .section-header.hon-burial-hdr{background:linear-gradient(135deg,#0f766e,#0d9488);}
 
@@ -135,21 +135,21 @@ main{padding:10px 14px 90px;}
 
 /* 汎用ボタン */
 /* 品目一覧フィルターボタン */
-.il-btn{padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:11px;font-weight:700;color:var(--text2);background:#fff;cursor:pointer;transition:.15s;white-space:nowrap;}
+.il-btn{padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:14px;font-weight:700;color:var(--text2);background:#fff;cursor:pointer;transition:.15s;white-space:nowrap;}
 .il-btn.active{background:#7030a0;color:#fff;border-color:#7030a0;}
-.btn-sm{padding:6px 12px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-sm{padding:6px 12px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;}
 .btn-load{background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;}
 .btn-diagram{background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;}
-.hata-info{font-size:11px;color:#78350f;width:100%;}
+.hata-info{font-size:14px;color:#78350f;width:100%;}
 
 /* 履歴 */
 .history-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
 .history-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
-.history-meta{font-size:11px;color:var(--text2);}
-.history-title{font-size:13px;font-weight:700;margin-bottom:2px;}
-.btn-del{background:#fee2e2;color:var(--red);border:1px solid #fca5a5;border-radius:5px;font-size:11px;padding:3px 8px;cursor:pointer;}
+.history-meta{font-size:14px;color:var(--text2);}
+.history-title{font-size:17px;font-weight:700;margin-bottom:2px;}
+.btn-del{background:#fee2e2;color:var(--red);border:1px solid #fca5a5;border-radius:5px;font-size:14px;padding:3px 8px;cursor:pointer;}
 .history-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
-.chip{font-size:10px;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
+.chip{font-size:13px;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
 .chip.done{background:#d1fae5;color:#059669;}
 .chip.pct{background:#fef3c7;color:#b45309;}
 
@@ -157,13 +157,13 @@ main{padding:10px 14px 90px;}
 .hata-diagram{display:none;margin-top:-4px;margin-bottom:10px;width:100%;border-radius:0 0 8px 8px;overflow:hidden;}
 .hata-diagram.show{display:block;}
 .diagram-head{display:flex;align-items:center;justify-content:space-between;background:#1e3a8a;border-radius:8px 8px 0 0;padding:8px 12px;}
-.diagram-head .dtitle{font-size:12px;font-weight:700;color:#fff;}
+.diagram-head .dtitle{font-size:16px;font-weight:700;color:#fff;}
 .diagram-vals{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#eff6ff;border-left:1px solid #bfdbfe;border-right:1px solid #bfdbfe;}
-.dval{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
+.dval{font-size:14px;font-weight:700;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
 .dval.g{background:#d1fae5;color:#059669;}
 .diagram-img{width:100%;display:block;border-radius:0 0 8px 8px;border:1px solid #bfdbfe;border-top:none;}
-.diagram-noimg{text-align:center;color:var(--text3);font-size:12px;padding:16px;background:#f9fafb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;}
-.btn-close-diag{background:none;border:1px solid rgba(255,255,255,.4);color:rgba(255,255,255,.9);border-radius:4px;font-size:11px;padding:2px 8px;cursor:pointer;}
+.diagram-noimg{text-align:center;color:var(--text3);font-size:16px;padding:16px;background:#f9fafb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;}
+.btn-close-diag{background:none;border:1px solid rgba(255,255,255,.4);color:rgba(255,255,255,.9);border-radius:4px;font-size:14px;padding:2px 8px;cursor:pointer;}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -183,15 +183,17 @@ main{padding:10px 14px 90px;}
   <span class="logo">📷</span>
   <h1>写真撮影チェックリスト</h1>
   <span class="sub" id="hdDate"></span>
-  <span id="adminBadge" style="display:none;font-size:10px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;margin-left:4px;"></span>
-  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;margin-left:4px;" title="既存データをFirebaseへ移行">📤 移行</button>
-  <button id="adminBtn" onclick="openFbModal()" title="管理者ログイン" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;margin-left:4px;">🔑</button>
+  <span id="adminBadge" style="display:none;font-size:13px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;margin-left:4px;"></span>
+  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:4px 9px;font-size:14px;cursor:pointer;margin-left:4px;" title="既存データをFirebaseへ移行">📤 移行</button>
+  <button id="adminBtn" onclick="openFbModal()" title="管理者ログイン" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:17px;cursor:pointer;margin-left:4px;">🔑</button>
 </header>
 
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('check',this)">📋 チェック</button>
   <button class="tab-btn" onclick="switchTab('history',this)">🕐 履歴</button>
   <button class="tab-btn" onclick="switchTab('items',this)">📷 品目一覧</button>
+  <a class="tab-btn" href="manage.html" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">📊 集計アプリ <span style="font-size:13px;opacity:0.7;">↗</span></a>
+  <a class="tab-btn" id="viewerLink" href="viewer.html" target="_blank" onclick="updateViewerLink(this)" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">📐 図面 <span style="font-size:13px;opacity:0.7;">↗</span></a>
 </div>
 
 <!-- ===== チェックタブ ===== -->
@@ -214,8 +216,8 @@ main{padding:10px 14px 90px;}
 <div class="tab-pane" id="pane-history">
   <main>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div style="font-size:12px;color:var(--text2)" id="histCount"></div>
-      <button onclick="clearAllHistory()" style="background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.18);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">全削除</button>
+      <div style="font-size:16px;color:var(--text2)" id="histCount"></div>
+      <button onclick="clearAllHistory()" style="background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.18);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer">全削除</button>
     </div>
     <div id="histList"></div>
   </main>
@@ -225,18 +227,18 @@ main{padding:10px 14px 90px;}
 <div class="tab-pane" id="pane-items">
   <!-- 舗装構成図リンク -->
   <div style="background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;">
-    <div style="font-size:11px;font-weight:700;color:#7030a0;margin-bottom:7px;">📐 舗装構成図（タップで開く）</div>
+    <div style="font-size:14px;font-weight:700;color:#7030a0;margin-bottom:7px;">📐 舗装構成図（タップで開く）</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <a href="https://drive.google.com/open?id=1d0N6CU-Jov_WlElIWEapGAY6VR_HmWd9&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道40型</a>
-      <a href="https://drive.google.com/open?id=1qOSMojamnjnqQQ6YDh7e5qfd00vVy8Mc&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道85型</a>
-      <a href="https://drive.google.com/open?id=15nf3hdotTrR-OI0BiVzwrj_mHHm6ehJz&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道30型</a>
-      <a href="https://drive.google.com/open?id=12sqhYI0YSwsLli1GMY1GQ4dlHbIbNl0S&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道20型</a>
-      <a href="https://drive.google.com/open?id=1AgGzVxC9xlPtntrwnhLdJDsU89WvYy5q&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道14型</a>
+      <a href="https://drive.google.com/open?id=1d0N6CU-Jov_WlElIWEapGAY6VR_HmWd9&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道40型</a>
+      <a href="https://drive.google.com/open?id=1qOSMojamnjnqQQ6YDh7e5qfd00vVy8Mc&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;">📐 車道85型</a>
+      <a href="https://drive.google.com/open?id=15nf3hdotTrR-OI0BiVzwrj_mHHm6ehJz&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道30型</a>
+      <a href="https://drive.google.com/open?id=12sqhYI0YSwsLli1GMY1GQ4dlHbIbNl0S&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道20型</a>
+      <a href="https://drive.google.com/open?id=1AgGzVxC9xlPtntrwnhLdJDsU89WvYy5q&usp=drive_fs" target="_blank" style="padding:5px 10px;background:#ede7f6;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;">📐 歩道14型</a>
     </div>
   </div>
   <!-- 型フィルター -->
   <div style="background:#fff;border-bottom:1px solid var(--border);padding:8px 14px;">
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;">🔎 型で絞り込み</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:6px;">🔎 型で絞り込み</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;">
       <button class="il-btn active" id="il-btn-all"  onclick="ilFilter('all')">すべて</button>
       <button class="il-btn" id="il-btn-40" onclick="ilFilter('車道乗入れ40型')">🚗 車道40型</button>
@@ -433,6 +435,11 @@ function openFbModal() {
 }
 function closeFbModal() {
   var m = document.getElementById('fbModal'); if(m) m.style.display = 'none';
+}
+function updateViewerLink(a) {
+  var site = _sites.find(function(s){ return s.id === _siteId; });
+  var name = site ? (site.name || site.siteName || _siteId) : _siteId;
+  if (name) a.href = 'viewer.html?site=' + encodeURIComponent(name);
 }
 function updateAdminBadge() {
   var b=document.getElementById('adminBadge'), btn=document.getElementById('adminBtn');
@@ -2407,8 +2414,8 @@ function renderMain(){
       '<input class="hata-input" type="number" id="hataInput" placeholder="例:35" inputmode="numeric" oninput="onHataInput()">' +
       '<button class="btn-sm btn-load" onclick="loadHata()">読込</button>' +
       '<div class="hata-info" id="hataInfo"></div>' +
-      '<button class="btn-sm" id="debugBtn" style="display:none;background:#555;font-size:11px;margin-top:4px" onclick="debugHataEntry()">🔍 DEBUG</button>' +
-      '<div id="debugOut" style="font-size:11px;color:#0f0;background:#111;padding:6px;border-radius:4px;word-break:break-all;white-space:pre-wrap;display:none;margin-top:4px"></div>' +
+      '<button class="btn-sm" id="debugBtn" style="display:none;background:#555;font-size:14px;margin-top:4px" onclick="debugHataEntry()">🔍 DEBUG</button>' +
+      '<div id="debugOut" style="font-size:14px;color:#0f0;background:#111;padding:6px;border-radius:4px;word-break:break-all;white-space:pre-wrap;display:none;margin-top:4px"></div>' +
     '</div>' +
     // 図面展開エリア（旗揚げエリア直下）
     '<div class="hata-diagram" id="hataDiagram">' +
@@ -2443,14 +2450,14 @@ function renderMain(){
       var _rbDetailId = 'ckRbDetail_'+((_presetType&&_presetType.key)||_typeKey||'x');
       // 詳細パネル用チップ生成（仮復旧／現況・本復旧 共通フォーマット・orderのbuildRoadbedChipsに準拠）
       var _ckRbAsChip = function(name, tmm){
-        return '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#1e40af;margin-bottom:3px;">'+name+'</div><div style="font-weight:700;font-size:12px;color:#2563eb;font-family:monospace;">t = '+tmm+'mm</div></div>';
+        return '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#1e40af;margin-bottom:3px;">'+name+'</div><div style="font-weight:700;font-size:16px;color:#2563eb;font-family:monospace;">t = '+tmm+'mm</div></div>';
       };
       var _ckRbRmcChip = function(label, val, tone){
         var bg = (tone==='hon') ? '#ede9fe' : '#d1fae5';
         var bd = (tone==='hon') ? '#ddd6fe' : '#a7f3d0';
         var lc = (tone==='hon') ? '#5b21b6' : '#065f46';
         var vc = (tone==='hon') ? '#7c3aed' : '#059669';
-        return '<div style="background:'+bg+';border:1px solid '+bd+';border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:'+lc+';margin-bottom:3px;">'+label+'</div><div style="font-weight:700;font-size:12px;color:'+vc+';font-family:monospace;">'+val+'</div></div>';
+        return '<div style="background:'+bg+';border:1px solid '+bd+';border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:'+lc+';margin-bottom:3px;">'+label+'</div><div style="font-weight:700;font-size:16px;color:'+vc+';font-family:monospace;">'+val+'</div></div>';
       };
       // 🔧 仮復旧（路盤先行）側チップ：AS層 → 上層路盤工RM → 下層路盤工RC
       var _kariChips = [];
@@ -2466,9 +2473,9 @@ function renderMain(){
       if(_frsHon.length > 0){
         _frsHon.forEach(function(r){
           if(r.type==='concrete'||r.type==='コンクリート'){
-            _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">'+(r.name||'コンクリート')+'</div><div style="font-weight:700;font-size:12px;color:#f97316;font-family:monospace;">'+r.t+'mm</div></div>');
+            _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">'+(r.name||'コンクリート')+'</div><div style="font-weight:700;font-size:16px;color:#f97316;font-family:monospace;">'+r.t+'mm</div></div>');
           } else if(r.type==='cn_rc'){
-            _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+(r.subcat||'RC-40')+'（別途発注）</div><div style="font-weight:700;font-size:12px;color:#fb923c;font-family:monospace;">'+r.t+'mm</div></div>');
+            _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+(r.subcat||'RC-40')+'（別途発注）</div><div style="font-weight:700;font-size:16px;color:#fb923c;font-family:monospace;">'+r.t+'mm</div></div>');
           } else if(r.type==='upper_rb'){
             _honChips.push(_ckRbRmcChip('上層路盤工 '+(r.subcat||'RM-40'), ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
           } else if(r.type==='lower_rb'){
@@ -2477,11 +2484,11 @@ function renderMain(){
         });
         // cn_rc型行が無くてもgenkyoCnRCがある場合（旧ロジック計算値）はフォールバック
         var _frsHonHasCnRc = _frsHon.some(function(r){ return r.type==='cn_rc'; });
-        if(!_frsHonHasCnRc && (rb.genkyoCnRC||0)>0){ var _cnRcSubFB=rb.genkyoCnRCSubcat||'RM-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSubFB+'（別途発注）</div><div style="font-weight:700;font-size:12px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
+        if(!_frsHonHasCnRc && (rb.genkyoCnRC||0)>0){ var _cnRcSubFB=rb.genkyoCnRCSubcat||'RM-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSubFB+'（別途発注）</div><div style="font-weight:700;font-size:16px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
       } else {
         _honAsArr.forEach(function(a){ _honChips.push(_ckRbAsChip(a.name, a.t)); });
-        if((rb.genkyoCnH||0)>0) _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">コンクリート層</div><div style="font-weight:700;font-size:12px;color:#f97316;font-family:monospace;">'+Math.round(rb.genkyoCnH*1000)+'mm</div></div>');
-        if((rb.genkyoCnRC||0)>0){ var _cnRcSub=rb.genkyoCnRCSubcat||'RC-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:10px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSub+'（別途発注）</div><div style="font-weight:700;font-size:12px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
+        if((rb.genkyoCnH||0)>0) _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">コンクリート層</div><div style="font-weight:700;font-size:16px;color:#f97316;font-family:monospace;">'+Math.round(rb.genkyoCnH*1000)+'mm</div></div>');
+        if((rb.genkyoCnRC||0)>0){ var _cnRcSub=rb.genkyoCnRCSubcat||'RC-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSub+'（別途発注）</div><div style="font-weight:700;font-size:16px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
         if((rb.genkyoRM||0)>0) _honChips.push(_ckRbRmcChip('上層路盤工 RM-'+rb.rmSize, ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
         if((rb.genkyoRC||0)>0) _honChips.push(_ckRbRmcChip('下層路盤工 RC-'+rb.rcSize, ckLayerAdditionStr(rb._honRC_layers, rb.genkyoRC*1000), 'hon'));
       }
@@ -2512,24 +2519,24 @@ function renderMain(){
         return parts.join(' ／ ');
       };
       var _honTotalMm = Math.round(((rb.genkyoTotalH||0)||((rb.genkyoAsH||0)+(rb.genkyoRM||0)+(rb.genkyoRC||0)+(rb.genkyoCnRC||0)+(rb.genkyoCnH||0)))*1000)||Math.round(rb.totalH*1000);
-      var _kariWarnBadge = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '';
-      var _honWarnBadge  = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:rgba(239,68,68,0.2);color:#b91c1c;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 仮復旧路盤は異なる</span>' : '';
+      var _kariWarnBadge = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '';
+      var _honWarnBadge  = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:rgba(239,68,68,0.2);color:#b91c1c;font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 仮復旧路盤は異なる</span>' : '';
       html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin:10px 0;">'
-        +'<div style="font-size:12px;color:#0369a1;line-height:1.7;">📐 <strong>仮復旧・路盤先行 構成（固定値） H='+Math.round(rb.totalH*1000)+'mm</strong>： '+_noticeParts.join(' ／ ')+_kariWarnBadge
+        +'<div style="font-size:16px;color:#0369a1;line-height:1.7;">📐 <strong>仮復旧・路盤先行 構成（固定値） H='+Math.round(rb.totalH*1000)+'mm</strong>： '+_noticeParts.join(' ／ ')+_kariWarnBadge
         +'</div>'
         +(_rbDiffers
-          ? '<div style="font-size:12px;color:#7c3aed;line-height:1.7;margin-top:4px;">🏗 <strong>現況・本復旧 H='+_honTotalMm+'mm</strong>： '+_buildHonNotice(rb)+_honWarnBadge+'</div>'
+          ? '<div style="font-size:16px;color:#7c3aed;line-height:1.7;margin-top:4px;">🏗 <strong>現況・本復旧 H='+_honTotalMm+'mm</strong>： '+_buildHonNotice(rb)+_honWarnBadge+'</div>'
           : '')
         +'</div>'
-        +'<button id="'+_rbDetailId+'-btn" type="button" onclick="toggleCkRoadbedDetail(\''+_rbDetailId+'\')" style="margin-top:6px;font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:5px;padding:3px 10px;cursor:pointer;">詳細を見る ▼</button>'
+        +'<button id="'+_rbDetailId+'-btn" type="button" onclick="toggleCkRoadbedDetail(\''+_rbDetailId+'\')" style="margin-top:6px;font-size:13px;font-weight:700;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:5px;padding:3px 10px;cursor:pointer;">詳細を見る ▼</button>'
         +'<div id="'+_rbDetailId+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #bae6fd;">'
           +((_rbDiffers && _honChips.length)
             ? ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-                +'<div><div style="font-size:9px;font-weight:700;color:#ea580c;letter-spacing:1px;margin-bottom:5px;">🔧 仮復旧（路盤先行）</div><div style="display:flex;flex-direction:column;gap:5px;">'+_kariChips.join('')+'</div></div>'
-                +'<div><div style="font-size:9px;font-weight:700;color:#7c3aed;letter-spacing:1px;margin-bottom:5px;">🏗 現況・本復旧</div><div style="display:flex;flex-direction:column;gap:5px;">'+_honChips.join('')+'</div></div>'
+                +'<div><div style="font-size:12px;font-weight:700;color:#ea580c;letter-spacing:1px;margin-bottom:5px;">🔧 仮復旧（路盤先行）</div><div style="display:flex;flex-direction:column;gap:5px;">'+_kariChips.join('')+'</div></div>'
+                +'<div><div style="font-size:12px;font-weight:700;color:#7c3aed;letter-spacing:1px;margin-bottom:5px;">🏗 現況・本復旧</div><div style="display:flex;flex-direction:column;gap:5px;">'+_honChips.join('')+'</div></div>'
               +'</div>')
             : ('<div style="display:flex;flex-wrap:wrap;gap:6px;">'+_kariChips.join('')+'</div>'))
-          +'<div style="font-size:10px;color:#0369a1;margin-top:6px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
+          +'<div style="font-size:13px;color:#0369a1;margin-top:6px;">合計H = '+Math.round(rb.totalH*1000)+'mm　※転圧ポイントはこの構成から自動計算</div>'
         +'</div>'
         +'</div>';
     }
@@ -2542,11 +2549,11 @@ function renderMain(){
   '</div>';
 
   if(!_typeKey){
-    html += '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px;">型を選択するとチェックリストが表示されます</div>';
+    html += '<div style="text-align:center;color:var(--text3);padding:20px;font-size:17px;">型を選択するとチェックリストが表示されます</div>';
   } else {
     var _effSections = getEffectiveSections(ck, _typeKey);
     if(_effSections.length===0){
-      html += '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px;">チェックリスト未設定です</div>';
+      html += '<div style="text-align:center;color:var(--text3);padding:20px;font-size:17px;">チェックリスト未設定です</div>';
     } else {
       _effSections.forEach(function(sec, si){
         html += renderSection(sec, si);
@@ -2752,7 +2759,7 @@ function calcDPH(pipe){
 
   var expr = p1 + (b1 ? '＋管台' + b1 : '') + (p2 ? '＋' + p2 : '') + ' ＝ ' + total + 'mm ＝ ' + totalM + 'm';
   if(resEl) resEl.innerHTML = '管下H：' + expr +
-    ' <button onclick="applyDPH(' + pipe + ',' + totalM + ')" style="margin-left:8px;padding:2px 10px;font-size:11px;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700;">①管下Hにセット</button>';
+    ' <button onclick="applyDPH(' + pipe + ',' + totalM + ')" style="margin-left:8px;padding:2px 10px;font-size:14px;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700;">①管下Hにセット</button>';
 }
 
 function applyDPH(pipe, val){
@@ -2883,7 +2890,7 @@ function makePipeSelect(idx) {
   var customVal = _pipeCustomNames[idx] || '';
   var isOther = cur === 'その他';
   var s = '<select onchange="setPipeType('+idx+',this.value)"'
-    + ' style="width:100%;padding:4px 4px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text1);height:34px;box-sizing:border-box;">';
+    + ' style="width:100%;padding:4px 4px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;background:var(--surface);color:var(--text1);height:34px;box-sizing:border-box;">';
   s += '<option value=""'+(cur===''?' selected':'')+'>（管種なし）</option>';
   PIPE_OPTIONS.forEach(function(o){
     s += '<option value="'+o+'"'+(cur===o?' selected':'')+'>'+o+'</option>';
@@ -2893,7 +2900,7 @@ function makePipeSelect(idx) {
   s += '<div id="pipeCustomWrap'+idx+'" style="display:'+(isOther?'':'none')+';margin-top:3px;">'
     +  '<input type="text" id="pipeCustom'+idx+'" placeholder="管種名を入力" value="'+customVal.replace(/"/g,'&quot;')+'"'
     +  ' oninput="setPipeCustomName('+idx+',this.value)"'
-    +  ' style="width:100%;box-sizing:border-box;padding:4px 6px;border:1.5px solid #fbbf24;border-radius:5px;font-size:11px;background:#fffbeb;">'
+    +  ' style="width:100%;box-sizing:border-box;padding:4px 6px;border:1.5px solid #fbbf24;border-radius:5px;font-size:14px;background:#fffbeb;">'
     +  '</div>';
   return s;
 }
@@ -2910,43 +2917,43 @@ function makePipeRow(idx, isHL) {
   var cols    = idx===0 ? '80px 1fr 1fr' : '80px 1fr 1fr 28px';
   var row = '<div style="display:grid;grid-template-columns:'+cols+';gap:5px;align-items:end;margin-bottom:5px;">';
   row += '<div style="display:flex;flex-direction:column;gap:2px;">'
-    +    '<label style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">管種</label>'
+    +    '<label style="font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;">管種</label>'
     +    makePipeSelect(idx)
     +  '</div>';
   row += '<div style="display:flex;flex-direction:column;gap:2px;">'
-    +    '<label id="lblDP'+(idx+1)+'" style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">'+(isGrad?'①':'')+''+lbl+' DP (m)</label>'
+    +    '<label id="lblDP'+(idx+1)+'" style="font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;">'+(isGrad?'①':'')+''+lbl+' DP (m)</label>'
     +    '<input'+hl+' type="number" id="'+dp_id+'" step="0.01" placeholder="1.60" oninput="recalcGL()"'
     +    ' style="width:100%;box-sizing:border-box;">'
     +  '</div>';
   row += '<div style="display:flex;flex-direction:column;gap:2px;">'
-    +    '<label id="lblDPH'+(idx+1)+'" style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;">'+(isGrad?'①':'')+''+lbl+' 管下H (m)</label>'
+    +    '<label id="lblDPH'+(idx+1)+'" style="font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;">'+(isGrad?'①':'')+''+lbl+' 管下H (m)</label>'
     +    '<input'+hl+' type="number" id="'+dph_id+'" step="0.001" placeholder="0.285" oninput="recalcGL()"'
     +    ' style="width:100%;box-sizing:border-box;">'
     +  '</div>';
   if(idx > 0){
     row += '<div style="display:flex;align-items:flex-end;padding-bottom:1px;">'
       +  '<button onclick="removePipeRow()" title="削除"'
-      +  ' style="width:28px;height:34px;padding:0;font-size:14px;background:transparent;border:1px solid #e2e8f0;border-radius:5px;cursor:pointer;color:var(--text3);line-height:1;">✕</button>'
+      +  ' style="width:28px;height:34px;padding:0;font-size:18px;background:transparent;border:1px solid #e2e8f0;border-radius:5px;cursor:pointer;color:var(--text3);line-height:1;">✕</button>'
       +  '</div>';
   }
   row += '</div>';
   // ── 勾配チェックボックス + ②端フィールド ──
-  row += '<label style="display:flex;align-items:center;gap:5px;margin-bottom:3px;cursor:pointer;font-size:11px;color:var(--text2);padding:2px;">'
+  row += '<label style="display:flex;align-items:center;gap:5px;margin-bottom:3px;cursor:pointer;font-size:14px;color:var(--text2);padding:2px;">'
     +   '<input type="checkbox" id="chkGrad'+idx+'" onchange="toggleGradient('+idx+',this.checked)"'+(isGrad?' checked':'')+' style="width:13px;height:13px;accent-color:#0ea5e9;">'
     +   '<span style="color:#0369a1;font-weight:600;">勾配あり（②端を追加）</span>'
     + '</label>';
   row += '<div id="slopeFields'+idx+'" style="display:'+(isGrad?'':'none')+';background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:7px 8px;margin-bottom:5px;">';
-  row += '<div style="font-size:10px;color:#0369a1;margin-bottom:5px;font-weight:600;">②端（勾配浅側）の数値を入力してください</div>';
+  row += '<div style="font-size:13px;color:#0369a1;margin-bottom:5px;font-weight:600;">②端（勾配浅側）の数値を入力してください</div>';
   row += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">';
   row += '<div style="display:flex;flex-direction:column;gap:2px;">'
-    +    '<label style="font-size:9px;color:#0369a1;font-weight:600;white-space:nowrap;">②端 DP (m)</label>'
+    +    '<label style="font-size:12px;color:#0369a1;font-weight:600;white-space:nowrap;">②端 DP (m)</label>'
     +    '<input type="number" id="'+dps_id+'" step="0.01" placeholder="1.10" oninput="recalcGL()"'
-    +    ' style="width:100%;box-sizing:border-box;background:#fff;color:var(--text1);border:1.5px solid #bae6fd;border-radius:6px;padding:8px 9px;font-size:14px;-webkit-appearance:none;">'
+    +    ' style="width:100%;box-sizing:border-box;background:#fff;color:var(--text1);border:1.5px solid #bae6fd;border-radius:6px;padding:8px 9px;font-size:18px;-webkit-appearance:none;">'
     +  '</div>';
   row += '<div style="display:flex;flex-direction:column;gap:2px;">'
-    +    '<label style="font-size:9px;color:#0369a1;font-weight:600;white-space:nowrap;">②端 管下H (m)</label>'
+    +    '<label style="font-size:12px;color:#0369a1;font-weight:600;white-space:nowrap;">②端 管下H (m)</label>'
     +    '<input type="number" id="'+dphs_id+'" step="0.001" placeholder="0.285" oninput="recalcGL()"'
-    +    ' style="width:100%;box-sizing:border-box;background:#fff;color:var(--text1);border:1.5px solid #bae6fd;border-radius:6px;padding:8px 9px;font-size:14px;-webkit-appearance:none;">'
+    +    ' style="width:100%;box-sizing:border-box;background:#fff;color:var(--text1);border:1.5px solid #bae6fd;border-radius:6px;padding:8px 9px;font-size:18px;-webkit-appearance:none;">'
     +  '</div>';
   row += '</div></div>';
   return row;
@@ -2986,9 +2993,9 @@ function renderGLPanel() {
     + '<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">'
     +   'GL 計算'
     +   '<span style="display:flex;gap:6px;align-items:center;">'
-    +     '<button id="saveDpBtn" onclick="saveDpDphToMaster()" style="display:none;font-size:11px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>'
-    +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
-    +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:10px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
+    +     '<button id="saveDpBtn" onclick="saveDpDphToMaster()" style="display:none;font-size:14px;padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="DP・管下HをFirestoreのマスタに保存">💾 DPを保存</button>'
+    +     '<button id="addPipeBtn" onclick="addPipeRow()" style="display:'+addVis+';font-size:14px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;">＋ 管種追加</button>'
+    +     (_isAdmin ? '<button onclick="savePipeSettingsToFb()" style="font-size:13px;padding:3px 8px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;" title="管理者：この管種設定をFirestoreに登録し全端末に反映">📡 登録</button>' : '')
     +   '</span>'
     + '</div>'
     + makePipeRow(0, true)
@@ -2997,35 +3004,35 @@ function renderGLPanel() {
     + '<div id="pipe3Wrap" style="display:'+p3disp+';">' + makePipeRow(2, false) + '</div>'
     + '<div id="pipe4Wrap" style="display:'+p4disp+';">' + makePipeRow(3, false) + '</div>'
     // ── ダミー管チェック ──
-    + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:11px;color:var(--text2);">'
+    + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
     +   '<input type="checkbox" id="chkDummyGlobal" onchange="toggleDummy(this.checked)"'+(_showDummy?' checked':'')+' style="width:14px;height:14px;accent-color:#f59e0b;">'
     +   '<span>ダミー管の撮影項目を表示する</span>'
     + '</label>'
     // ── 管下H計算補助 ──
     + '<details id="dphCalcWrap" style="margin-top:8px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">'
-    +   '<summary style="background:#f8fafc;padding:7px 12px;font-size:11px;font-weight:700;color:#475569;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">'
+    +   '<summary style="background:#f8fafc;padding:7px 12px;font-size:14px;font-weight:700;color:#475569;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">'
     +     '📐 管下H 計算補助（管径・管台から自動計算）'
     +   '</summary>'
     +   '<div style="padding:10px 12px;background:#fff;">'
-    +     '<div style="font-size:10px;color:#64748b;margin-bottom:8px;">管下H = 管径1 ＋ 管台 ＋ 管径2（2条の場合）<br>例：130φ＋管台25＋130φ ＝ 285mm</div>'
-    +     '<div id="dphHdr1" style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl1+'</div>'
+    +     '<div style="font-size:13px;color:#64748b;margin-bottom:8px;">管下H = 管径1 ＋ 管台 ＋ 管径2（2条の場合）<br>例：130φ＋管台25＋130φ ＝ 285mm</div>'
+    +     '<div id="dphHdr1" style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl1+'</div>'
     +     '<div class="field-row c3" style="margin-bottom:6px;">'
-    +       '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe1" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
-    +       '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase1" step="1" placeholder="例:25" oninput="calcDPH(1)"></div>'
-    +       '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe2" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管径1 (mm)</label><input type="number" id="dphPipe1" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管台 (mm)</label><input type="number" id="dphBase1" step="1" placeholder="例:25" oninput="calcDPH(1)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:12px;">2条の場合</span></label><input type="number" id="dphPipe2" step="1" placeholder="例:130" oninput="calcDPH(1)"></div>'
     +     '</div>'
-    +     '<div id="dphResult1" style="font-size:11px;color:#0369a1;font-weight:700;margin-bottom:10px;min-height:16px;"></div>'
+    +     '<div id="dphResult1" style="font-size:14px;color:#0369a1;font-weight:700;margin-bottom:10px;min-height:16px;"></div>'
     +     '<div style="border-top:1px solid #f1f5f9;margin:8px 0 10px;"></div>'
-    +     '<div id="dphHdr2" style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl2+'（異なる場合のみ）</div>'
+    +     '<div id="dphHdr2" style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px;">'+lbl2+'（異なる場合のみ）</div>'
     +     '<div class="field-row c3" style="margin-bottom:6px;">'
-    +       '<div class="field"><label style="font-size:10px;">管径1 (mm)</label><input type="number" id="dphPipe3" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
-    +       '<div class="field"><label style="font-size:10px;">管台 (mm)</label><input type="number" id="dphBase2" step="1" placeholder="例:25" oninput="calcDPH(2)"></div>'
-    +       '<div class="field"><label style="font-size:10px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:9px;">2条の場合</span></label><input type="number" id="dphPipe4" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管径1 (mm)</label><input type="number" id="dphPipe3" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管台 (mm)</label><input type="number" id="dphBase2" step="1" placeholder="例:25" oninput="calcDPH(2)"></div>'
+    +       '<div class="field"><label style="font-size:13px;">管径2 (mm)<br><span style="color:#94a3b8;font-size:12px;">2条の場合</span></label><input type="number" id="dphPipe4" step="1" placeholder="例:130" oninput="calcDPH(2)"></div>'
     +     '</div>'
-    +     '<div id="dphResult2" style="font-size:11px;color:#0369a1;font-weight:700;min-height:16px;"></div>'
+    +     '<div id="dphResult2" style="font-size:14px;color:#0369a1;font-weight:700;min-height:16px;"></div>'
     +   '</div>'
     + '</details>'
-    + '<div id="glResult" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;line-height:1.8;"></div>'
+    + '<div id="glResult" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:16px;line-height:1.8;"></div>'
     + '<div class="field-row c2" style="margin-top:8px">'
     +   '<div class="field"><label>BH バケット径 (m)</label><input type="number" id="inBH" step="0.01" placeholder="0.50" value="0.50" oninput="recalcGL()"></div>'
     +   '<div class="field"><label>追加深さ (m)</label><input type="number" id="inExtra" step="0.01" placeholder="0.00" oninput="recalcGL()"></div>'
@@ -3661,7 +3668,7 @@ function showDiagram(e, hasImg){
     var dp2 = e.dp2||e.dp_end||'';
     if(dp2) v += '<span class="dval">② DP '+dp2+'m</span>';
     if(e.pipetype) v += '<span class="dval">'+e.pipetype+'</span>';
-    if(e.note) v += '<span style="font-size:10px;color:#555;padding:3px 4px">'+e.note+'</span>';
+    if(e.note) v += '<span style="font-size:13px;color:#555;padding:3px 4px">'+e.note+'</span>';
     vals.innerHTML = v;
   }
   // 画像
@@ -3897,7 +3904,7 @@ function ilRender(){
   IL_ITEMS.forEach(function(d){
     if(d.phase){
       var ph = document.createElement('div');
-      ph.style.cssText = 'padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:12px;font-weight:700;';
+      ph.style.cssText = 'padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:16px;font-weight:700;';
       ph.style.background = d.color; ph.style.color = d.fontColor;
       ph.textContent = d.phase;
       c.appendChild(ph);
@@ -3911,27 +3918,27 @@ function ilRender(){
       var short = t.replace('車道乗入れ','車道').replace('歩道乗入れ','歩道');
       var bg = t.indexOf('車道')>=0 ? '#dbeafe' : '#dcfce7';
       var co = t.indexOf('車道')>=0 ? '#1d4ed8' : '#166534';
-      return '<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:'+bg+';color:'+co+';margin:1px 2px;">'+short+'</span>';
+      return '<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:13px;font-weight:700;background:'+bg+';color:'+co+';margin:1px 2px;">'+short+'</span>';
     }).join('');
 
     var noteHtml = d.note
-      ? '<div style="font-size:11px;color:#555;margin-top:5px;padding:5px 8px;background:#f9f8f5;border-radius:6px;border-left:2px solid #d0cfc8;line-height:1.6;white-space:pre-wrap;">'+d.note+'</div>'
+      ? '<div style="font-size:14px;color:#555;margin-top:5px;padding:5px 8px;background:#f9f8f5;border-radius:6px;border-left:2px solid #d0cfc8;line-height:1.6;white-space:pre-wrap;">'+d.note+'</div>'
       : '';
     var unitHtml = d.unit
-      ? '<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;margin-left:5px;white-space:pre-wrap;">'+d.unit+'</span>'
+      ? '<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:14px;font-weight:700;background:#dbeafe;color:#1d4ed8;margin-left:5px;white-space:pre-wrap;">'+d.unit+'</span>'
       : '';
     var linkHtml = d.url
-      ? '<a href="'+d.url+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 10px;border:1px solid #7030a0;border-radius:7px;font-size:11px;font-weight:700;color:#7030a0;text-decoration:none;background:#ede7f6;flex-shrink:0;white-space:nowrap;">📷 見本</a>'
+      ? '<a href="'+d.url+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 10px;border:1px solid #7030a0;border-radius:7px;font-size:14px;font-weight:700;color:#7030a0;text-decoration:none;background:#ede7f6;flex-shrink:0;white-space:nowrap;">📷 見本</a>'
       : '';
 
     var el = document.createElement('div');
     el.style.cssText = 'background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:7px;box-shadow:0 1px 2px rgba(0,0,0,.04);';
     el.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:8px;">'
-      +'<span style="font-size:16px;font-weight:900;color:#94a3b8;min-width:26px;line-height:1.4;">'+no+'</span>'
+      +'<span style="font-size:21px;font-weight:900;color:#94a3b8;min-width:26px;line-height:1.4;">'+no+'</span>'
       +'<div style="flex:1;min-width:0;">'
       +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'
-      +'<span style="font-size:13px;font-weight:700;color:var(--text1);">'+d.name+'</span>'
+      +'<span style="font-size:17px;font-weight:700;color:var(--text1);">'+d.name+'</span>'
       +unitHtml
       +'</div>'
       +'<div style="margin-top:4px;">'+badgesHtml+'</div>'
@@ -3942,27 +3949,22 @@ function ilRender(){
     c.appendChild(el);
   });
   if(no===0){
-    c.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px;">該当する品目がありません</div>';
+    c.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:17px;">該当する品目がありません</div>';
   }
 }
 </script>
 <!-- 管理者ログインモーダル -->
 <div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
-    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#1a1a1a;">🔑 管理者ログイン</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:16px;color:#1a1a1a;">🔑 管理者ログイン</div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">メールアドレス</label>
-      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;" placeholder="管理者メールアドレス">
+      <label style="font-size:14px;color:#666;display:block;margin-bottom:4px;">メールアドレス</label>
+      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;" placeholder="管理者メールアドレス">
     </div>
     <div style="margin-bottom:18px;">
-      <label style="font-size:11px;color:#666;display:block;margin-bottom:4px;">パスワード</label>
-      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:13px;box-sizing:border-box;" placeholder="パスワード">
+      <label style="font-size:14px;color:#666;display:block;margin-bottom:4px;">パスワード</label>
+      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;" placeholder="パスワード">
     </div>
     <div style="display:flex;gap:8px;">
-      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ログイン</button>
-      <button onclick="closeFbModal()" style="padding:11px 16px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;cursor:pointer;">×</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;">ログイン</button>
+      <button on

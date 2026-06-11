@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>集計ダッシュボード</title>
+<style>
+:root{
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#f0efe9;--card:#ffffff;
+  --border:#d0cfc8;--border2:#e0dfd8;
+  --text:#1a1a1a;--text2:#555;--text3:#888;
+  --accent:#1d4ed8;--accent-dim:#dbeafe;--accent-dim2:#bfdbfe;
+  --green:#059669;--green-dim:#d1fae5;
+  --red:#dc2626;--red-dim:#fee2e2;
+  --yellow:#b45309;--yellow-dim:#fef3c7;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:17px;min-height:100vh;}
+header{display:flex;align-items:center;gap:10px;padding:0 14px;height:60px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;position:sticky;top:0;z-index:100;}
+header .logo{font-size:22px;}
+header h1{font-size:17px;font-weight:700;color:#fff;letter-spacing:.04em;flex:1;}
+header p{font-size:13px;color:rgba(255,255,255,.7);}
+.hd-col{display:flex;flex-direction:column;flex:1;}
+#adminBadge{display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.2);border-radius:4px;color:#fff;white-space:nowrap;}
+.hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:5px 12px;font-size:16px;cursor:pointer;}
+.hd-btn:hover{background:rgba(255,255,255,.25);}
+
+.tab-nav{display:flex;overflow-x:auto;scrollbar-width:none;background:#fff;border-bottom:2px solid var(--border);}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-btn{white-space:nowrap;padding:13px 16px;font-size:15px;border:none;background:none;color:var(--text3);cursor:pointer;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-weight:700;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-btn:hover{color:var(--text2);}
+
+.tab-pane{display:none;padding:12px 14px;}
+.tab-pane.active{display:block;}
+
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:flex-end;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.filter-group{display:flex;flex-direction:column;gap:3px;}
+.filter-group label{font-size:14px;color:var(--text2);font-weight:600;}
+.filter-group select,.filter-group input{background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:15px;}
+.filter-group select:focus,.filter-group input:focus{outline:none;border-color:var(--accent);}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:15px;cursor:pointer;font-weight:700;}
+.btn-primary{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;box-shadow:0 2px 4px rgba(29,78,216,.25);}
+.btn-ghost{background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);}
+.btn-ghost:hover{background:var(--border2);}
+
+.summary-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.summary-card h3{font-size:14px;color:var(--text3);margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.kpi-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:90px;flex:1;}
+.kpi-val{font-size:26px;font-weight:700;color:var(--accent);}
+.kpi-lbl{font-size:14px;color:var(--text3);margin-top:2px;}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+table{width:100%;border-collapse:collapse;font-size:15px;background:#fff;}
+th{background:#f8f9fa;color:var(--text2);padding:9px 12px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;font-weight:700;font-size:14px;}
+td{padding:9px 12px;border-bottom:1px solid var(--border2);vertical-align:middle;color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f9f8f4;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+.badge-site{display:inline-block;padding:3px 8px;border-radius:4px;background:var(--accent-dim);color:var(--accent);font-size:13px;font-weight:700;}
+.badge-ok{background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.badge-warn{background:var(--yellow-dim);color:var(--yellow);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.badge-ng{background:var(--red-dim);color:var(--red);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.progress-bar{background:#e5e7eb;border-radius:10px;height:8px;overflow:hidden;min-width:70px;}
+.progress-fill{height:100%;border-radius:10px;transition:width .3s;}
+.empty{text-align:center;color:var(--text3);padding:40px;font-size:17px;}
+.loading{text-align:center;color:var(--text3);padding:40px;font-size:17px;}
+.spinner{display:inline-block;width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cross-table th:first-child{min-width:130px;}
+.cross-table td,.cross-table th{min-width:80px;}
+.cross-table .total-col{font-weight:700;background:var(--accent-dim)!important;color:var(--accent)!important;}
+.cross-table .total-row td{font-weight:700;background:var(--accent-dim);}
+
+/* モーダル */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;width:340px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:16px;color:var(--text);}
+.modal-box input{width:100%;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:11px;font-size:16px;margin-bottom:10px;}
+.modal-box input:focus{outline:none;border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:10px;color:var(--text2);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📊</div>
+  <div class="hd-col">
+    <h1>集計ダッシュボード</h1>
+    <p>発注 &amp; チェックリスト管理</p>
+  </div>
+  <span id="adminBadge"></span>
+  <button class="hd-btn" onclick="onAuthBtnClick()" id="adminBtn" title="管理者ログイン">🔑</button>
+</header>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('summary',this)">📈 発注サマリー</button>
+  <button class="tab-btn" onclick="switchTab('orders',this)">📋 発注明細</button>
+  <button class="tab-btn" onclick="switchTab('checks',this)">✅ チェック状況</button>
+</div>
+
+<!-- ===== 発注サマリー ===== -->
+<div class="tab-pane active" id="pane-summary">
+  <div class="kpi-row" id="kpiRow">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+  <div class="summary-card">
+    <h3>現場×月 発注数量クロス集計</h3>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>集計項目</label>
+        <select id="sumMetric" onchange="renderCrossTable()">
+          <option value="asTon密粒">AS 密粒 (t)</option>
+          <option value="asTon粗粒">AS 粗粒 (t)</option>
+          <option value="rmOrd">RM 路盤材 (m³)</option>
+          <option value="rcOrd">RC 再生砕石 (m³)</option>
+          <option value="rcRmSum">RC+RM 合計 (m³)</option>
+          <option value="isoilOrd">改良土 (m³)</option>
+          <option value="sandOrd">砂 (m³)</option>
+          <option value="sandSoilSum">砂+改良土 合計 (m³)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>年</label>
+        <select id="sumYear" onchange="renderCrossTable()"></select>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="crossTableWrap">
+      <div class="loading"><span class="spinner"></span>読み込み中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 発注明細 ===== -->
+<div class="tab-pane" id="pane-orders">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>現場</label>
+      <select id="fltOrderSite" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>型</label>
+      <select id="fltOrderType" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>担当者</label>
+      <select id="fltOrderAuthor" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>開始日</label>
+      <input type="date" id="fltOrderFrom" onchange="renderOrderTable()">
+    </div>
+    <div class="filter-group">
+      <label>終了日</label>
+      <input type="date" id="fltOrderTo" onchange="renderOrderTable()">
+    </div>
+    <div class="filter-group" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn btn-ghost" onclick="exportOrderCSV()">📤 CSV出力</button>
+    </div>
+  </div>
+  <div class="tbl-wrap" id="orderTableWrap">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+</div>
+
+<!-- ===== チェック状況 ===== -->
+<div class="tab-pane" id="pane-checks">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>現場</label>
+      <select id="fltCheckSite" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>型</label>
+      <select id="fltCheckType" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>記録者</label>
+      <select id="fltCheckRecorder" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>開始日</label>
+      <input type="date" id="fltCheckFrom" onchange="renderCheckTable()">
+    </div>
+    <div class="filter-group">
+      <label>終了日</label>
+      <input type="date" id="fltCheckTo" onchange="renderCheckTable()">
+    </div>
+    <div class="filter-group" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn btn-ghost" onclick="exportCheckCSV()">📤 CSV出力</button>
+    </div>
+  </div>
+  <div class="tbl-wrap" id="checkTableWrap">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+</div>
+
+<!-- 管理者ログインモーダル -->
+<div class="modal-overlay" id="fbModal">
+  <div class="modal-box">
+    <h3>🔑 管理者ログイン</h3>
+    <input id="fbEmail" type="email" autocomplete="email" placeholder="メールアドレス">
+    <input id="fbPass" type="password" autocomplete="current-password" placeholder="パスワード">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeFbModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="doFbLogin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+// ===== Firebase 初期化 =====
+var _fb = firebase.initializeApp({
+  apiKey: "AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain: "alrit-kandenkou.firebaseapp.com",
+  projectId: "alrit-kandenkou",
+  storageBucket: "alrit-kandenkou.firebasestorage.app",
+  messagingSenderId: "640432772833",
+  appId: "1:640432772833:web:ab2aff11980621322809a0"
+});
+var _fbDb = firebase.firestore();
+var _fbAuth = firebase.auth();
+var _isAdmin = false;
+
+// ===== データキャッシュ =====
+var _orderRecords = null;  // 全発注レコード
+var _checkRecords = null;  // 全チェックリストレコード
+
+// ===== Auth =====
+_fbAuth.onAuthStateChanged(function(user) {
+  _isAdmin = !!user;
+  var badge = document.getElementById('adminBadge');
+  var btn = document.getElementById('adminBtn');
+  if (_isAdmin) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '👑管理者';
+    btn.textContent = '🔓';
+    btn.title = 'ログアウト';
+  } else {
+    badge.style.display = 'none';
+    btn.textContent = '🔑';
+    btn.title = '管理者ログイン';
+  }
+});
+
+function onAuthBtnClick() {
+  if (_isAdmin) {
+    if (confirm('管理者ログアウトしますか？')) _fbAuth.signOut();
+  } else {
+    document.getElementById('fbModal').classList.add('open');
+    setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
+  }
+}
+function closeFbModal() { document.getElementById('fbModal').classList.remove('open'); }
+function doFbLogin() {
+  var e = document.getElementById('fbEmail').value;
+  var p = document.getElementById('fbPass').value;
+  _fbAuth.signInWithEmailAndPassword(e, p)
+    .then(function(){ closeFbModal(); })
+    .catch(function(err){ alert('ログイン失敗: ' + err.message); });
+}
+document.getElementById('fbPass').addEventListener('keydown', function(ev){
+  if(ev.key==='Enter') doFbLogin();
+});
+
+// ===== タブ切替 =====
+var _activeTab = 'summary';
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('pane-' + name).classList.add('active');
+  _activeTab = name;
+  if (name === 'summary' && _orderRecords !== null) renderSummaryTab();
+  if (name === 'orders' && _orderRecords !== null) renderOrderTable();
+  if (name === 'checks' && _checkRecords !== null) renderCheckTable();
+}
+
+// ===== データ読み込み =====
+function loadAll() {
+  loadOrders();
+  loadChecks();
+}
+
+function loadOrders() {
+  _fbDb.collection('order_records').get().then(function(snap) {
+    _orderRecords = [];
+    snap.forEach(function(doc) { _orderRecords.push(doc.data()); });
+    _orderRecords.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    populateOrderFilters();
+    renderSummaryTab();
+    if (_activeTab === 'orders') renderOrderTable();
+  }).catch(function(e) {
+    document.getElementById('kpiRow').innerHTML = '<div class="empty">⚠️ 発注データ取得失敗: ' + e.message + '</div>';
+    document.getElementById('crossTableWrap').innerHTML = '';
+    document.getElementById('orderTableWrap').innerHTML = '';
+  });
+}
+
+function loadChecks() {
+  _fbDb.collection('cl_records').get().then(function(snap) {
+    _checkRecords = [];
+    snap.forEach(function(doc) { _checkRecords.push(doc.data()); });
+    _checkRecords.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    populateCheckFilters();
+    if (_activeTab === 'checks') renderCheckTable();
+    else renderCheckTable(); // バックグラウンドで描画
+  }).catch(function(e) {
+    document.getElementById('checkTableWrap').innerHTML = '<div class="empty">⚠️ チェックデータ取得失敗: ' + e.message + '</div>';
+  });
+}
+
+// ===== フィルター選択肢の構築 =====
+function unique(arr) {
+  return arr.filter(function(v,i,a){ return v && a.indexOf(v) === i; }).sort();
+}
+function buildSelect(id, vals) {
+  var sel = document.getElementById(id);
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">すべて</option>';
+  vals.forEach(function(v){ sel.innerHTML += '<option value="'+esc(v)+'">'+esc(v)+'</option>'; });
+  if (cur) sel.value = cur;
+}
+function populateOrderFilters() {
+  buildSelect('fltOrderSite', unique(_orderRecords.map(function(r){ return r.site||''; })));
+  buildSelect('fltOrderType', unique(_orderRecords.map(function(r){ return r.typeLabel||r.typeKey||''; })));
+  buildSelect('fltOrderAuthor', unique(_orderRecords.map(function(r){ return r.author||''; })));
+  // 年セレクト
+  var years = unique(_orderRecords.map(function(r){ return (r.date||'').slice(0,4); })).reverse();
+  var sy = document.getElementById('sumYear');
+  var cy = sy.value;
+  sy.innerHTML = '<option value="">全年</option>';
+  years.forEach(function(y){ sy.innerHTML += '<option value="'+y+'">'+y+'年</option>'; });
+  if (!cy && years.length) sy.value = years[0];
+}
+function populateCheckFilters() {
+  buildSelect('fltCheckSite', unique(_checkRecords.map(function(r){ return r.siteName||''; })));
+  buildSelect('fltCheckType', unique(_checkRecords.map(function(r){ return r.typeName||r.typeKey||''; })));
+  buildSelect('fltCheckRecorder', unique(_checkRecords.map(function(r){ return r.recorder||''; })));
+}
+
+// ===== エスケープ =====
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n, d){ return (n||0).toFixed(d===undefined?2:d); }
+
+// ===== 発注サマリータブ =====
+function renderSummaryTab() {
+  if (!_orderRecords) return;
+  var total = _orderRecords.length;
+  var sites = unique(_orderRecords.map(function(r){ return r.site||'(未記入)'; })).length;
+  var authors = unique(_orderRecords.map(function(r){ return r.author||''; })).filter(Boolean).length;
+  var totalRM = _orderRecords.reduce(function(s,r){ return s + (r.rmOrd||0); }, 0);
+  var totalAS = _orderRecords.reduce(function(s,r){ return s + (r.asTon密粒||0) + (r.asTon粗粒||0); }, 0);
+  document.getElementById('kpiRow').innerHTML =
+    kpi(total + ' 件', '総発注記録') +
+    kpi(sites + ' 現場', '現場数') +
+    kpi(authors + ' 名', '担当者数') +
+    kpi(fmt(totalAS) + ' t', 'AS合計') +
+    kpi(fmt(totalRM) + ' m³', 'RM合計');
+  renderCrossTable();
+}
+function kpi(v, l){ return '<div class="kpi"><div class="kpi-val">'+esc(v)+'</div><div class="kpi-lbl">'+esc(l)+'</div></div>'; }
+
+function renderCrossTable() {
+  if (!_orderRecords) return;
+  var wrap = document.getElementById('crossTableWrap');
+  var metric = document.getElementById('sumMetric').value;
+  var year = document.getElementById('sumYear').value;
+
+  var recs = year ? _orderRecords.filter(function(r){ return (r.date||'').slice(0,4) === year; }) : _orderRecords;
+
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }
+
+  // 現場リスト・月リスト
+  var siteList = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
+  var monthSet = {};
+  recs.forEach(function(r){
+    var m = (r.date||'').slice(0,7);
+    if (m) monthSet[m] = true;
+  });
+  var monthList = Object.keys(monthSet).sort().reverse();
+
+  // クロス集計
+  var data = {}; // data[month][site] = value
+  recs.forEach(function(r){
+    var m = (r.date||'').slice(0,7); if(!m) return;
+    var s = r.site||'(未記入)';
+    if (!data[m]) data[m] = {};
+    data[m][s] = (data[m][s]||0) + (r[metric]||0);
+  });
+
+  var html = '<table class="cross-table"><thead><tr><th>年月</th>';
+  siteList.forEach(function(s){ html += '<th>'+esc(s)+'</th>'; });
+  html += '<th class="total-col">合計</th></tr></thead><tbody>';
+
+  // 合計行の計算
+  var colTotals = {};
+  var grandTotal = 0;
+
+  monthList.forEach(function(m){
+    html += '<tr><td>'+esc(m)+'</td>';
+    var rowTotal = 0;
+    siteList.forEach(function(s){
+      var v = (data[m] && data[m][s]) || 0;
+      rowTotal += v;
+      colTotals[s] = (colTotals[s]||0) + v;
+      html += '<td class="num">' + (v > 0 ? fmt(v) : '<span style="color:var(--text3)">—</span>') + '</td>';
+    });
+    grandTotal += rowTotal;
+    html += '<td class="num total-col">' + fmt(rowTotal) + '</td></tr>';
+  });
+
+  // 合計行
+  html += '<tr class="total-row"><td>合　計</td>';
+  siteList.forEach(function(s){ html += '<td class="num">' + fmt(colTotals[s]||0) + '</td>'; });
+  html += '<td class="num total-col">' + fmt(grandTotal) + '</td></tr>';
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ===== 発注明細テーブル =====
+function getFilteredOrders() {
+  if (!_orderRecords) return [];
+  var site = document.getElementById('fltOrderSite').value;
+  var type = document.getElementById('fltOrderType').value;
+  var author = document.getElementById('fltOrderAuthor').value;
+  var from = document.getElementById('fltOrderFrom').value;
+  var to = document.getElementById('fltOrderTo').value;
+  return _orderRecords.filter(function(r){
+    if (site && (r.site||'') !== site) return false;
+    if (type && (r.typeLabel||r.typeKey||'') !== type) return false;
+    if (author && (r.author||'') !== author) return false;
+    if (from && (r.date||'') < from) return false;
+    if (to && (r.date||'') > to) return false;
+    return true;
+  });
+}
+
+function renderOrderTable() {
+  var wrap = document.getElementById('orderTableWrap');
+  if (!_orderRecords) { wrap.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中…</div>'; return; }
+  var recs = getFilteredOrders();
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
+
+  var html = '<table><thead><tr>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th><th>モード</th>'
+    + '<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
+    + '<th class="num">RM(m³)</th><th class="num">RC(m³)</th><th class="num">RC+RM(m³)</th>'
+    + '<th class="num">改良土(m³)</th><th class="num">砂(m³)</th><th class="num">砂+改良(m³)</th>'
+    + '</tr></thead><tbody>';
+
+  recs.forEach(function(r){
+    var modeLabel = r.calcMode === 'hon' ? '<span style="color:var(--green);font-size:14px;">本復旧</span>'
+                 : r.calcMode === 'kari' ? '<span style="color:var(--yellow);font-size:14px;">仮復旧</span>'
+                 : '<span style="color:var(--text3);font-size:14px;">'+(r.calcMode||'')+'</span>';
+    html += '<tr>'
+      + '<td>' + esc(r.date||'') + '</td>'
+      + '<td><span class="badge-site">' + esc(r.site||'—') + '</span></td>'
+      + '<td>' + esc(r.typeLabel||r.typeKey||'') + '</td>'
+      + '<td>' + esc(r.hata||'') + '</td>'
+      + '<td>' + esc(r.author||'') + '</td>'
+      + '<td>' + modeLabel + '</td>'
+      + '<td class="num">' + fmt(r.asTon密粒) + '</td>'
+      + '<td class="num">' + fmt(r.asTon粗粒) + '</td>'
+      + '<td class="num">' + fmt(r.rmOrd) + '</td>'
+      + '<td class="num">' + fmt(r.rcOrd) + '</td>'
+      + '<td class="num">' + fmt(r.rcRmSum) + '</td>'
+      + '<td class="num">' + fmt(r.isoilOrd) + '</td>'
+      + '<td class="num">' + fmt(r.sandOrd) + '</td>'
+      + '<td class="num">' + fmt(r.sandSoilSum) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="padding:8px 0;color:var(--text3);font-size:14px;">' + recs.length + ' 件表示</div>';
+  wrap.innerHTML = html;
+}
+
+function exportOrderCSV() {
+  var recs = getFilteredOrders();
+  if (!recs.length) { alert('データがありません'); return; }
+  var header = ['日付','現場','型','旗揚げ','担当','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)'];
+  var rows = recs.map(function(r){
+    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,r.calcMode,
+      r.asTon密粒,r.asTon粗粒,r.rmOrd,r.rcOrd,r.rcRmSum,r.isoilOrd,r.sandOrd,r.sandSoilSum
+    ].map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
+  });
+  downloadCSV('order_records.csv', [header].concat(rows));
+}
+
+// ===== チェック状況テーブル =====
+function getFilteredChecks() {
+  if (!_checkRecords) return [];
+  var site = document.getElementById('fltCheckSite').value;
+  var type = document.getElementById('fltCheckType').value;
+  var rec = document.getElementById('fltCheckRecorder').value;
+  var from = document.getElementById('fltCheckFrom').value;
+  var to = document.getElementById('fltCheckTo').value;
+  return _checkRecords.filter(function(r){
+    if (site && (r.siteName||'') !== site) return false;
+    if (type && (r.typeName||r.typeKey||'') !== type) return false;
+    if (rec && (r.recorder||'') !== rec) return false;
+    if (from && (r.date||'') < from) return false;
+    if (to && (r.date||'') > to) return false;
+    return true;
+  });
+}
+
+function renderCheckTable() {
+  var wrap = document.getElementById('checkTableWrap');
+  if (!_checkRecords) { wrap.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中…</div>'; return; }
+  var recs = getFilteredChecks();
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
+
+  var html = '<table><thead><tr>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>記録者</th><th>管理番号</th>'
+    + '<th>完了率</th><th class="num">完了</th><th class="num">合計</th>'
+    + '</tr></thead><tbody>';
+
+  recs.forEach(function(r){
+    var done = r.done||0, total = r.total||0;
+    var pct = total > 0 ? Math.round(done/total*100) : 0;
+    var badgeCls = pct === 100 ? 'badge-ok' : pct >= 80 ? 'badge-warn' : 'badge-ng';
+    html += '<tr>'
+      + '<td>' + esc(r.date||'') + '</td>'
+      + '<td><span class="badge-site">' + esc(r.siteName||'—') + '</span></td>'
+      + '<td>' + esc(r.typeName||r.typeKey||'') + '</td>'
+      + '<td>' + esc(r.hata||'') + '</td>'
+      + '<td>' + esc(r.recorder||'') + '</td>'
+      + '<td>' + esc(r.mgmt||'') + '</td>'
+      + '<td style="min-width:120px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;">'
+        + '<div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:'+pct+'%;background:'+(pct===100?'var(--green)':pct>=80?'var(--yellow)':'var(--red)')+'"></div></div>'
+        + '<span class="'+badgeCls+'" style="font-size:14px;padding:2px 5px;border-radius:4px;white-space:nowrap;">'+pct+'%</span>'
+        + '</div>'
+      + '</td>'
+      + '<td class="num">' + done + '</td>'
+      + '<td class="num">' + total + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="padding:8px 0;color:var(--text3);font-size:14px;">' + recs.length + ' 件表示</div>';
+  wrap.innerHTML = html;
+}
+
+function exportCheckCSV() {
+  var recs = getFilteredChecks();
+  if (!recs.length) { alert('データがありません'); return; }
+  var header = ['日付','現場','型','旗揚げ','記録者','管理番号','完了数','合計数','完了率(%)'];
+  var rows = recs.map(function(r){
+    var done=r.done||0, total=r.total||0;
+    var pct = total>0 ? Math.round(done/total*100) : 0;
+    return [r.date,r.siteName,r.typeName||r.typeKey,r.hata,r.recorder,r.mgmt,done,total,pct]
+      .map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
+  });
+  downloadCSV('check_records.csv', [header].concat(rows));
+}
+
+// ===== CSV出力ユーティリティ =====
+function downloadCSV(filename, rows) {
+  var bom = '﻿';
+  var csv = bom + rows.map(function(r){ return r.join(','); }).join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+// ===== 起動: Auth確定後にデータ読み込み =====
+var _loaded = false;
+_fbAuth.onAuthStateChanged(function() {
+  if (!_loaded) {
+    _loaded = true;
+    loadAll();
+  }
+});
+</script>
+</body>
+</html>
