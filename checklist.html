@@ -120,6 +120,7 @@ main{padding:10px 14px 90px;}
 .seg-btn:last-child{border-right:none;}
 .seg-btn.active.kari{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;}
 .seg-btn.active.hon{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;}
+.seg-btn.active.both{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;}
 
 /* 本復旧セクションヘッダー */
 .section-header.hon-hdr{background:linear-gradient(135deg,#6d28d9,#7c3aed);}
@@ -397,6 +398,38 @@ function fbSyncHataMasterForSite(siteId, callback) {
     })
     .catch(function(e) {
       console.warn('[FB] fbSyncHataMasterForSite err:', e);
+      if(callback) callback();
+    });
+}
+
+// 現場別 roadbed_masters を Firestore から取得して localStorage に反映
+// 現場別ドキュメント(roadbed_masters_${siteId}) → モノリシック(roadbed_masters) の順で試みる
+function fbSyncRoadbedMasterForSite(siteId, callback) {
+  if (!_fbDb || !siteId) { if(callback) callback(); return; }
+  var docKey = 'roadbed_masters_' + siteId;
+  _fbDb.collection('masters').doc(docKey).get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data && doc.data().data.length > 0) {
+        localStorage.setItem(docKey, JSON.stringify(doc.data().data));
+        console.log('[FB] roadbed masters loaded for site', siteId, doc.data().data.length, 'entries');
+        if(callback) callback();
+        return;
+      }
+      // フォールバック: モノリシック形式
+      return _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(function(doc2) {
+          if (doc2.exists && doc2.data().data && doc2.data().data[siteId]) {
+            var arr = doc2.data().data[siteId];
+            if (Array.isArray(arr) && arr.length > 0) {
+              localStorage.setItem(docKey, JSON.stringify(arr));
+              console.log('[FB] roadbed masters loaded (mono) for site', siteId, arr.length, 'entries');
+            }
+          }
+          if(callback) callback();
+        });
+    })
+    .catch(function(e) {
+      console.warn('[FB] fbSyncRoadbedMasterForSite err:', e);
       if(callback) callback();
     });
 }
@@ -1837,9 +1870,12 @@ function buildChecklistFromPreset(presetType){
     sec.items.forEach(function(item){
       var n = item.n || '';
 
-      // 舗装厚確認
+      // 舗装厚確認: glType='paveThick' に変更し、仮/本/両方モードで動的表示
       if(n.indexOf('舗装厚確認') >= 0){
-        item.dim = 't＝'+asTotal.toFixed(3)+'m';
+        item.glType = 'paveThick';
+        item._paveKariH = asTotal;
+        item._paveHonH  = (presetType.genkyoAsH && presetType.genkyoAsH > 0) ? presetType.genkyoAsH : asTotal;
+        item.dim = ''; // 動的表示のため静的dimは空
       }
 
       // 路盤構成変更点
@@ -2111,7 +2147,8 @@ function resolveBaseKey(typeKey){
 
 var _siteId = '';
 var _typeKey = '';
-var _kojiKbn = 'kari'; // 'kari' | 'hon'        // TYPE_CHECKLISTSキー（'85'|'40'|'30'|'20'|'14'）
+var _kojiKbn = 'kari';     // 'kari' | 'hon'
+var _kussuri_kbn = 'kari'; // 'kari' | 'hon' | 'both'  掘削路盤確認モード
 var _presetTypeKey = '';  // プリセット型の元キー（type_XXXXX等）
 var _sites = [];
 var _checks = {};   // {itemKey: bool}
@@ -2171,6 +2208,31 @@ function loadSites(){
 }
 
 
+// 掘削路盤確認モード切替
+function _updatePaveThickWrap(wrap){
+  var kariH = parseFloat(wrap.getAttribute('data-kari')) || 0;
+  var honH  = parseFloat(wrap.getAttribute('data-hon'))  || 0;
+  if(_kussuri_kbn === 'both'){
+    var t1 = subChkSpan('pave_kari', '<span class="tag tag-blue">t＝'+kariH.toFixed(3)+'m（仮復旧）</span>');
+    var t2 = subChkSpan('pave_hon',  '<span class="tag" style="background:#ede9fe;border:1.5px solid #8b5cf6;color:#5b21b6;border-radius:4px;font-size:14px;padding:2px 7px;font-weight:700;">t＝'+honH.toFixed(3)+'m（本復旧）</span>');
+    wrap.innerHTML = t1 + ' ' + t2;
+  } else {
+    var h = (_kussuri_kbn === 'hon') ? honH : kariH;
+    wrap.innerHTML = '<div class="cdim">t＝'+h.toFixed(3)+'m</div>';
+  }
+}
+function setKussKbn(v){
+  _kussuri_kbn = v;
+  ['kari','hon','both'].forEach(function(k){
+    var b = document.getElementById('btnKuss'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(b) b.className = 'seg-btn' + (v===k ? ' active '+k : '');
+  });
+  document.querySelectorAll('.pave-thick-wrap').forEach(function(wrap){
+    _updatePaveThickWrap(wrap);
+  });
+  saveState();
+}
+
 function setKojiKbn(kbn){
   _kojiKbn = kbn;
   var btnKari = document.getElementById('btnKari');
@@ -2199,20 +2261,24 @@ function onSiteChange(silent){
   if(_siteId){
     localStorage.setItem('cl_last_site', _siteId);
   }
-  // 現場別の旗揚げマスタを Firestore から確実にロード（遅延取得）
-  fbSyncHataMasterForSite(_siteId, function() {
+  // 旗揚げマスタ・路盤マスタを Firestore から並列ロードしてから UI を更新
+  var _syncDone = 0;
+  function _onBothSynced() {
+    _syncDone++;
+    if(_syncDone < 2) return; // 両方完了待ち
     buildTypeSelect(_siteId);
     if(!silent){ _checks={}; _naItems={}; _subChecks={}; }
     restoreState();
     renderMain();
-    // renderMain後にDOMが生成されてから勾配②端DP値を復元
     if(_pendingSlope){
       var _ps = _pendingSlope; _pendingSlope = null;
       var _applied = false;
       Object.keys(_ps).forEach(function(id){ if(_ps[id]){ sv(id, _ps[id]); _applied=true; } });
       if(_applied) recalcGL();
     }
-  });
+  }
+  fbSyncHataMasterForSite(_siteId, _onBothSynced);
+  fbSyncRoadbedMasterForSite(_siteId, _onBothSynced);
 }
 
 function buildTypeSelect(siteId){
@@ -2337,7 +2403,7 @@ function saveState(){
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
-    hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn
+    hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn,kussKbn:_kussuri_kbn
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
 }
@@ -2368,7 +2434,8 @@ function restoreState(){
     _hataEntry = null;
     closeDiagram();
     _checks = d.checks||{}; _naItems = d.na||{}; _subChecks = d.subChecks||{};
-    if(d.kojiKbn) _kojiKbn = d.kojiKbn;
+    if(d.kojiKbn)  _kojiKbn     = d.kojiKbn;
+    if(d.kussKbn)  _kussuri_kbn = d.kussKbn;
   }catch(e){}
 }
 function $v(id){ var el=document.getElementById(id); return el?el.value:''; }
@@ -2402,6 +2469,16 @@ function renderMain(){
         '<div class="seg-wrap">' +
           '<button class="seg-btn' + (_kojiKbn==='kari'?' active kari':'') + '" id="btnKari" onclick="setKojiKbn(\'kari\')">仮復旧</button>' +
           '<button class="seg-btn' + (_kojiKbn==='hon'?' active hon':'') + '" id="btnHon" onclick="setKojiKbn(\'hon\')">本復旧</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="field-row" style="margin-top:4px">' +
+      '<div class="field">' +
+        '<label style="font-size:13px;color:var(--text2);">掘削路盤確認</label>' +
+        '<div class="seg-wrap">' +
+          '<button class="seg-btn' + (_kussuri_kbn==='kari'?' active kari':'') + '" id="btnKussKari" onclick="setKussKbn(\'kari\')" style="font-size:14px;">仮復旧路盤</button>' +
+          '<button class="seg-btn' + (_kussuri_kbn==='hon'?' active hon':'') + '" id="btnKussHon" onclick="setKussKbn(\'hon\')" style="font-size:14px;">本復旧路盤</button>' +
+          '<button class="seg-btn' + (_kussuri_kbn==='both'?' active both':'') + '" id="btnKussBoth" onclick="setKussKbn(\'both\')" style="font-size:14px;">両方</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -2513,6 +2590,11 @@ function renderMain(){
         } else {
           if((rb.genkyoCnH||0)>0) parts.push('<span style="color:#f97316;font-weight:700;">コンクリート '+Math.round(rb.genkyoCnH*1000)+'mm</span>');
           if((rb.genkyoCnRC||0)>0) parts.push('<span style="color:#fb923c;font-weight:700;">CN間路盤材 '+(rb.genkyoCnRCSubcat||'RC-40')+' '+Math.round(rb.genkyoCnRC*1000)+'mm（別途発注）</span>');
+          // AS層：honAsLayersがあれば展開、なければgenkyoAsHから単層フォールバック
+          if((rb.genkyoAsH||0)>0){
+            var _bhnAsArr = (rb.honAsLayers&&rb.honAsLayers.length) ? rb.honAsLayers : [{name:'AS混合物', t:Math.round(rb.genkyoAsH*1000)}];
+            _bhnAsArr.forEach(function(a){ parts.push('<span style="color:#7c3aed;font-weight:700;">'+a.name+' '+a.t+'mm</span>'); });
+          }
           if((rb.genkyoRM||0)>0) parts.push('<span style="color:#0284c7;font-weight:700;">RM-'+(rb.rmSize||40)+' '+Math.round(rb.genkyoRM*1000)+'mm</span>');
           if((rb.genkyoRC||0)>0) parts.push('<span style="color:#059669;font-weight:700;">RC-'+(rb.rcSize||40)+' '+Math.round(rb.genkyoRC*1000)+'mm</span>');
         }
@@ -2628,9 +2710,11 @@ function renderSection(sec, si, isHon){
       tags = '<div class="tags mid-list-wrap"><span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span></div>';
     } else if(gt === 'roadbedChg'){
       tags = '<div class="tags"><span class="tag tag-yellow tag-roadbedchg">' + (item.dim||'GL-??') + '</span></div>';
+    } else if(gt === 'paveThick'){
+      tags = '<div class="tags"><div class="pave-thick-wrap" data-kari="'+(item._paveKariH||0).toFixed(3)+'" data-hon="'+(item._paveHonH||0).toFixed(3)+'"></div></div>';
     } else {
       if(item.gl===1) tags += '<span class="gl1-dp-wrap"><span class="tag tag-blue">'+glTagStr(1)+'</span></span>';
-      if(item.gl===2) tags += '<span class="tag tag-green">'+glTagStr(2)+'</span>';
+      if(item.gl===2) tags += '<span class="gl2-dp-wrap"><span class="tag tag-green">'+glTagStr(2)+'</span></span>';
       if(item.gl==='mid') tags += '<span class="tag tag-yellow">BH掘削 GL-'+fmtBH()+'m</span>';
       if(tags) tags = '<div class="tags">'+tags+'</div>';
     }
@@ -3357,8 +3441,27 @@ function recalcGL(){
         + '</span>';
     }
   });
+  // 土被り確認 pipe1（電力管）— 勾配ありなら DP①②を両方表示
+  document.querySelectorAll('.gl2-dp-wrap').forEach(function(wrap){
+    if(_pipeGradient[1] && dp2s > 0 && dp2 > 0){
+      var bn2=getPipeBaseName(1);
+      var t1='<span class="tag tag-green">DP①'+bn2+' DP='+dp2.toFixed(3)+'m</span>';
+      var t2='<span class="tag tag-green">DP②'+bn2+' DP='+dp2s.toFixed(3)+'m</span>';
+      wrap.innerHTML = subChkSpan('soil_p1_e1', t1) + ' ' + subChkSpan('soil_p1_e2', t2);
+    } else {
+      wrap.innerHTML = '<span class="tag tag-green">'
+        + (dp2 > 0 ? _lbl2 + ' DP=' + dp2.toFixed(3) + 'm' : _lbl2 + ' DP入力後に計算')
+        + '</span>';
+    }
+  });
+  // gl2-dp-wrap 以外の tag-green（水締め等の内部タグ更新は addMizuTag が担当するため不要だが念のため残す）
   document.querySelectorAll('.tag-green').forEach(function(el){
+    if(el.closest('.gl2-dp-wrap')) return; // gl2-dp-wrap ハンドラで処理済み
     el.textContent = dp2 > 0 ? _lbl2 + ' DP=' + dp2.toFixed(3) + 'm' : _lbl2 + ' DP入力後に計算';
+  });
+  // 舗装厚確認 - 掘削路盤確認モードに応じて動的表示
+  document.querySelectorAll('.pave-thick-wrap').forEach(function(wrap){
+    _updatePaveThickWrap(wrap);
   });
   document.querySelectorAll('.tag-yellow').forEach(function(el){
     el.textContent = 'BH掘削 GL-' + fmtBH() + 'm';
@@ -3610,10 +3713,21 @@ function loadHata(){
   // 勾配②端DP値: 新フォーマット(dp1s/dph1s) → roadbed.html形式(rangeFrom/dph1)
   var _dp1s  = entry.dp1s  != null ? entry.dp1s  : (entry.rangeFrom != null ? entry.rangeFrom : null);
   var _dph1s = entry.dph1s != null ? entry.dph1s : (entry.dph1     != null ? entry.dph1     : null);
-  if(_pipeGradient[0] && _dp1s  != null) sv('inDP1s',  _dp1s);
-  if(_pipeGradient[0] && _dph1s != null) sv('inDPH1s', _dph1s);
-  if(_pipeGradient[1] && entry.dp2s  != null) sv('inDP2s',  entry.dp2s);
-  if(_pipeGradient[1] && entry.dph2s != null) sv('inDPH2s', entry.dph2s);
+  // 旗揚げマスタに勾配②端データがあればチェックなしでも自動でON
+  if(_dp1s != null && !_pipeGradient[0]) {
+    toggleGradient(0, true);
+    var _gcb0 = document.getElementById('chkGrad0');
+    if(_gcb0) _gcb0.checked = true;
+  }
+  if(_dp1s  != null) sv('inDP1s',  _dp1s);
+  if(_dph1s != null) sv('inDPH1s', _dph1s);
+  if(entry.dp2s != null && !_pipeGradient[1]) {
+    toggleGradient(1, true);
+    var _gcb1 = document.getElementById('chkGrad1');
+    if(_gcb1) _gcb1.checked = true;
+  }
+  if(entry.dp2s  != null) sv('inDP2s',  entry.dp2s);
+  if(entry.dph2s != null) sv('inDPH2s', entry.dph2s);
   var info = entry.name?entry.name+'　':'';
   info += '①DP:'+(_dp!=null?_dp+'m':'未登録')+' 管下H:'+(_dph!=null?_dph+'m':'未登録');
   if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
@@ -3702,7 +3816,13 @@ function closeDiagram(){
 // =====================================================
 function saveRecord(){
   var date = $v('inDate');
-  if(!date){ alert('作業日を入力してください'); return; }
+  if(!date){ alert('⚠ 作業日を入力してください'); return; }
+  var recorder = ($v('inRecorder')||'').trim();
+  if(!recorder){ alert('⚠ 記録者（氏名）を入力してください'); return; }
+  var _doneCount = Object.keys(_checks).filter(function(k){ return _checks[k]; }).length;
+  if(_doneCount === 0){
+    if(!confirm('チェック済み項目が0件です。このまま保存しますか？')){ return; }
+  }
   var ck = TYPE_CHECKLISTS[_typeKey];
   var total=0, done=0;
   if(ck){
