@@ -2266,6 +2266,8 @@ function onSiteChange(silent){
   function _onBothSynced() {
     _syncDone++;
     if(_syncDone < 2) return; // 両方完了待ち
+    // 現場切替後に road_presets の honFreeRows 欠落を再補完（110型など対応）
+    try { _ckEnrichPresetsFromMasters(); } catch(e) {}
     buildTypeSelect(_siteId);
     if(!silent){ _checks={}; _naItems={}; _subChecks={}; }
     restoreState();
