@@ -2750,6 +2750,7 @@ function renderSection(sec, si, isHon){
         (item.dim && gt!=='roadbedChg' ? '<div class="cdim">'+item.dim+'</div>':'') +
         tags +
         noteHtml +
+        (_comboPair ? '<div class="combo-mid-note"></div>' : '') +
       '</div>' +
       (item.na?'<button class="btn-na" onclick="toggleNA(event,'+si+','+ii+')">'+(isNA?'対象に戻す':'対象外')+'</button>':'') +
     '</div>';
@@ -3512,7 +3513,7 @@ function recalcGL(){
     var headed = /^【埋設シート】/.test(base) ? base : '【埋設シート】' + base;
     var html = esc(headed);
     if(embSameAsF40){
-      html += '<br><br>※埋設シート敷設（' + fmtGL(f40) + '）と中間転圧（路盤構成変更）が同じGL値。下の「中間転圧」と合わせて同じタイミングで2種類撮影すること。';
+      html += '<br>※埋設シート敷設（' + fmtGL(f40) + '）と中間転圧（路盤構成変更）が同じGL値。下の「中間転圧」と合わせて同じタイミングで2種類撮影すること。';
     }
     el.innerHTML = html;
   });
@@ -3561,14 +3562,16 @@ function recalcGL(){
         html += subChkSpan(key, rowLbl);
       });
       html += '</div>';
-      var midNote = wrap.getAttribute('data-mid-note');
-      if(midNote){
-        html += '<div class="cnote combo-extra-note">【中間転圧】'+midNote+'</div>';
-      }
     } else {
       html = '<span class="tag tag-yellow">DP入力後に順序を計算</span>';
     }
     wrap.innerHTML = html;
+    // 【中間転圧】注釈は note-sheet の下のプレースホルダーへ移動
+    var midNote = wrap.getAttribute('data-mid-note');
+    if(midNote){
+      var midNotePh = wrap.closest('.check-label') && wrap.closest('.check-label').querySelector('.combo-mid-note');
+      if(midNotePh) midNotePh.innerHTML = '<div class="cnote combo-extra-note">【中間転圧】'+midNote+'</div>';
+    }
   });
 
   updatePipeItems();
