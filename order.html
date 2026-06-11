@@ -3002,8 +3002,9 @@ function saveRecord(typeKey) {
   const hata   = document.getElementById(`${typeKey}-hata`)?.value;
   const author = document.getElementById(`${typeKey}-author`)?.value || '';
   const site   = document.getElementById(`${typeKey}-site`)?.value || '';
-  if (!date) { alert('作業日付を入力してください'); return; }
-  if (!hata) { alert('旗揚げ番号を入力してください'); return; }
+  if (!date) { alert('⚠ 作業日付を入力してください'); return; }
+  if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
+  if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
 
   const t = TYPES[typeKey];
   const s = sumResults(getResults(typeKey).filter(Boolean));
@@ -5486,11 +5487,35 @@ function _deriveLayersArr(rbLayers, filterFn, layersStr, heightM, alwaysInclude)
 }
 
 function _rbMasterToTypeObj(m) {
+  // AS層の surface/base/other 判別リスト（roadbed.html AS_OPTIONS と合わせる）
+  var _asSurfaceNames = ['再生密粒度AS混合物','密粒度AS混合物','密粒度改質AS混合物','密粒改良1','表層ポーラスAS混合物（透水性）','開粒度AS混合物'];
+  var _asBaseNames    = ['再生粗粒度AS混合物','粗粒度AS混合物','粗粒度改質AS混合物（改質Ⅱ型）'];
+  var _asOtherNames   = ['瀝青安定処理'];
+  function _resolveAsRole(a, idx) {
+    if (a.role) return a.role;
+    var name = a.name || a.preset || '';
+    if (_asSurfaceNames.indexOf(name) >= 0) return 'surface';
+    if (_asBaseNames.indexOf(name) >= 0)    return 'base';
+    if (_asOtherNames.indexOf(name) >= 0)   return 'other';
+    return idx === 0 ? 'surface' : 'base';  // 位置フォールバック
+  }
   var sumAS = function(layers, roles) {
     if (!Array.isArray(layers)) return 0;
-    return layers.filter(function(a){ return roles.indexOf(a.role||'surface') >= 0; })
+    return layers.filter(function(a, idx){ return roles.indexOf(_resolveAsRole(a, idx)) >= 0; })
                  .reduce(function(s,a){ return s+(a.t||0); }, 0);
   };
+  // kariAsLayers → asLayers (role/preset/custom/t 形式) — chip ラベル表示用
+  var _kariAsArr = m.kariAsLayers || [];
+  var _allKnownAs = _asSurfaceNames.concat(_asBaseNames).concat(_asOtherNames);
+  var _asLayers = _kariAsArr.length > 0
+    ? _kariAsArr.map(function(a, idx) {
+        var role   = _resolveAsRole(a, idx);
+        var name   = a.name || a.preset || '';
+        var preset = _allKnownAs.indexOf(name) >= 0 ? name : '';
+        var custom = preset ? '' : name;
+        return { role: role, preset: preset, custom: custom, t: a.t || 0 };
+      })
+    : undefined;
   return {
     key:        'type_import_' + m.key,
     label:      m.label || m.key,
@@ -5501,7 +5526,11 @@ function _rbMasterToTypeObj(m) {
     rcSize:     m.kariRcSize || 40,
     asT密粒:    sumAS(m.kariAsLayers, ['surface']),
     asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
-    totalH:     m.kariTotalH || 0,
+    asLayers:   _asLayers,
+    totalH:         m.kariTotalH || 0,
+    // roadbed.html は hasImprovedSoil を保存しないため、
+    // 明示値があればそれを使い、なければ kariTotalH >= 0.4 で車道判定（85型・40型相当）
+    hasImprovedSoil: m.hasImprovedSoil != null ? !!m.hasImprovedSoil : ((m.kariTotalH || 0) >= 0.4),
     kariRmH:    m.kariRmH  || 0,
     kariRcH:    m.kariRcH  || 0,
     kariTotalH: m.kariTotalH || 0,
@@ -5688,7 +5717,10 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
     const btn = document.createElement('button');
     btn.className   = 'type-subbtn' + (idx === 0 ? ' active' : '');
     btn.dataset.typetab = tabId;
-    btn.textContent = typeConf.label;
+    // 現場名がラベル先頭に含まれる場合は省略して短く表示
+    btn.textContent = (siteName && typeConf.label.startsWith(siteName))
+      ? (typeConf.label.slice(siteName.length).replace(/^[\s　・_\-]+/,'') || typeConf.label)
+      : typeConf.label;
     btn.style.cssText = `
       padding:6px 12px;font-size:14px;font-weight:700;
       border:none;border-radius:7px;cursor:pointer;
@@ -5780,7 +5812,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     <div class="card-title">基本情報</div>
     <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:16px;color:var(--accent);">
       🏗 <strong id="${tid}-sitename-display">${siteName}</strong>
-      <span style="color:var(--text3);margin-left:8px;">型: ${t.label}</span>
+      <span style="color:var(--text3);margin-left:8px;">型: ${t.label.startsWith(siteName) ? t.label.slice(siteName.length).replace(/^[\s　・_\-]+/,'') || t.label : t.label}</span>
     </div>
     <div class="input-grid">
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="${tid}-date" class="highlight" style="width:100%"></div>
@@ -6512,8 +6544,9 @@ function saveDynRecord(tid, typeKey) {
   const hata   = document.getElementById(`${tid}-hata`)?.value;
   const author = document.getElementById(`${tid}-author`)?.value || '';
   const siteName = site?.name || '';
-  if (!date) { alert('作業日付を入力してください'); return; }
-  if (!hata) { alert('旗揚げ番号を入力してください'); return; }
+  if (!date) { alert('⚠ 作業日付を入力してください'); return; }
+  if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
+  if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
 
   const t = TYPES[tid];
   const _t = TYPES[tid];
