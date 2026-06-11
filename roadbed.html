@@ -953,7 +953,11 @@ function saveConfig(){
 
   const configs=getLocalRb(_selectedSiteId);
   const idx=configs.findIndex(r=>r.key===entry.key);
-  if(idx>=0) configs[idx]=entry; else configs.push(entry);
+  // editKey未指定でも同名ラベルが存在する場合は上書き（重複防止）
+  const labelIdx=idx<0?configs.findIndex(r=>r.label===label):-1;
+  if(idx>=0){ configs[idx]=entry; }
+  else if(labelIdx>=0){ entry.key=configs[labelIdx].key; configs[labelIdx]=entry; }
+  else{ configs.push(entry); }
   saveRbForSite(_selectedSiteId,configs);
   renderConfigList(configs);
   clearForm();
