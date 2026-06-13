@@ -1161,8 +1161,35 @@ function _ckRbMasterToTypeObj(m){
     color:      m.color || '#7c3aed',
     rmH:        m.kariRmH  || 0,
     rcH:        m.kariRcH  || 0,
-    rmSize:     m.kariRmSize || 40,
-    rcSize:     m.kariRcSize || 40,
+    rmSize: (function(){
+      var row=(m.kariRbLayers||[]).find(function(r){return _ckIsRmCat(r.subcat||'')||_ckIsRmCat(r.type||'');});
+      if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      return m.kariRmSize||40;
+    })(),
+    rcSize: (function(){
+      var row=(m.kariRbLayers||[]).find(function(r){return _ckIsRcCat(r.subcat||'')||_ckIsRcCat(r.type||'');});
+      if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      return m.kariRcSize||40;
+    })(),
+    // 本復旧・現況表示用RM/RCサイズ（honRbLayers subcat から優先導出）
+    honRmSize: (function(){
+      if(m.honFreeMode){
+        var row=(m.honFreeRows||[]).find(function(r){return r.type==='upper_rb'&&r.subcat;});
+        if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      }
+      var row=(m.honRbLayers||[]).find(function(r){return _ckIsRmCat(r.subcat||'')||_ckIsRmCat(r.type||'');});
+      if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      return m.honRmSize||m.kariRmSize||40;
+    })(),
+    honRcSize: (function(){
+      if(m.honFreeMode){
+        var row=(m.honFreeRows||[]).find(function(r){return r.type==='lower_rb'&&r.subcat;});
+        if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      }
+      var row=(m.honRbLayers||[]).find(function(r){return _ckIsRcCat(r.subcat||'')||_ckIsRcCat(r.type||'');});
+      if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
+      return m.honRcSize||m.kariRcSize||40;
+    })(),
     asT密粒:    sumAS(m.kariAsLayers, ['surface']),
     asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
     totalH:     m.kariTotalH || 0,
@@ -1181,6 +1208,25 @@ function _ckRbMasterToTypeObj(m){
     genkyoCnRCSubcat: genkyoCnRCSubcat,
     genkyoTotalH: honFreeMode ? (m.honTotalH||0) : 0,
     honFreeRows: honFreeRows,
+    // 現況・本復旧 フリー層（既設路盤など RM/RC 以外の路盤工層行）
+    // ・通常モード: honRbLayers から cat='free' / subcat='subfree' の行を抽出
+    // ・フリーモード: honFreeRows から type='other' の行を抽出
+    genkyoFreeRows: (function(){
+      if(honFreeMode){
+        return honFreeRows.filter(function(r){ return r.type==='other' && ((r.t||0)>0||r.name); });
+      }
+      return (m.honRbLayers||[]).filter(function(r){
+        return (r.cat==='free'||r.subcat==='subfree') && ((r.t||0)>0||r.name);
+      }).map(function(r){ return {name:r.name||'', t:r.t||0}; });
+    })(),
+    genkyoFreeH: (function(){
+      if(honFreeMode){
+        return honFreeRows.filter(function(r){ return r.type==='other'; })
+          .reduce(function(s,r){ return s+(r.t||0); },0)/1000;
+      }
+      return (m.honRbLayers||[]).filter(function(r){ return r.cat==='free'||r.subcat==='subfree'; })
+        .reduce(function(s,r){ return s+(r.t||0); },0)/1000;
+    })(),
     kariRM_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRmCat, m.kariRmLayers, m.kariRmH, false),
     kariRC_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRcCat, m.kariRcLayers, m.kariRcH, true),
     honRM_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRmCat, m.honRmLayers,  m.honRmH,  false),
@@ -1240,8 +1286,8 @@ function _ckApplyLiveRbOverride(presetType, siteId, typeKey, presetTypeKey){
     var merged = {};
     for(var k in presetType){ merged[k] = presetType[k]; }
     var overrideKeys = [
-      'key','label','rmH','rcH','rmSize','rcSize','asT密粒','asT粗粒','totalH','asLayers',
-      'honAsLayers','genkyoAsH','genkyoRM','genkyoRC','genkyoCnH','genkyoCnRC','genkyoCnRCSubcat','honFreeRows','genkyoTotalH',
+      'key','label','rmH','rcH','rmSize','rcSize','honRmSize','honRcSize','asT密粒','asT粗粒','totalH','asLayers',
+      'honAsLayers','genkyoAsH','genkyoRM','genkyoRC','genkyoCnH','genkyoCnRC','genkyoCnRCSubcat','honFreeRows','genkyoTotalH','genkyoFreeRows','genkyoFreeH',
       'kariRM_layers','kariRC_layers','honRM_layers','honRC_layers',
       'kariRmLayers','kariRcLayers','honRmLayers','honRcLayers',
     ];
@@ -1617,6 +1663,8 @@ function buildChecklistFromPreset(presetType){
   var roadbedInfo = {
     asLayers: asLayers, hasTack: hasTack, hasPrime: hasPrime,
     rmH: rmH, rmSize: rmS, rcH: rcH, rcSize: rcS,
+    honRmSize: presetType.honRmSize||presetType.rmSize||rmS,
+    honRcSize: presetType.honRcSize||presetType.rcSize||rcS,
     rmLabel: rmBadgeLabel, rcLabel: rcBadgeLabel,
     totalH: totalH,
     hasImprovedSoil: presetType.hasImprovedSoil||false,
@@ -1635,6 +1683,8 @@ function buildChecklistFromPreset(presetType){
     genkyoCnRC: presetType.genkyoCnRC||0,
     genkyoCnRCSubcat: presetType.genkyoCnRCSubcat||'RC-40',
     honFreeRows: presetType.honFreeRows||[],
+    genkyoFreeRows: presetType.genkyoFreeRows||[],
+    genkyoFreeH: presetType.genkyoFreeH||0,
     _honRM_layers: presetType.honRM_layers||[],
     _honRC_layers: presetType.honRC_layers||[],
   };
@@ -1806,12 +1856,122 @@ function buildChecklistFromPreset(presetType){
   });
   // コンクリート・CN間打設写真項目（honFreeRows がある場合のみ）
   _honExtraItems.forEach(function(item){ _honRbItems.push(item); });
+  // 通常モード: genkyoFreeRows（既設路盤・鉄板など RM/RC 以外のフリー層）の写真項目を生成
+  // 挿入順: 施工順序（下層から上層）= genkyoFreeRows を reverse して処理
+  if (_frsHon2.length === 0) { // フリーモードでない場合のみ
+    var _gfRows = (presetType.genkyoFreeRows || []).filter(function(r){ return (r.t||0) > 0; });
+    if (_gfRows.length > 0) {
+      var _gfRowsRev = _gfRows.slice().reverse(); // 下層から施工順
+      var _genkyoTotalH = presetType.genkyoTotalH ||
+        parseFloat(((presetType.genkyoAsH||0) + genRcH + genRmH + (presetType.genkyoFreeH||0)).toFixed(4));
+      var _gfCumul = 0;
+      _gfRowsRev.forEach(function(r){
+        var _t = (r.t || 0) / 1000;
+        var _layerTopGLm = parseFloat((_genkyoTotalH - _gfCumul - _t).toFixed(4));
+        _gfCumul = parseFloat((_gfCumul + _t).toFixed(4));
+        var nm = r.name || 'フリー層';
+        var _isTeppan = (nm.indexOf('鉄板') >= 0);
+        var _actionWord = _isTeppan ? '敷設' : '転圧';
+        var _noteStr = _isTeppan
+          ? '鉄板を規定位置に敷設している状況を撮影。設置位置・寸法を黒板に記載して撮影すること。'
+          : (nm + 'を敷き均しランマーで転圧している状況を撮影。転圧後にスケールで厚さを確認して撮影。');
+        if (_isTeppan) {
+          // 鉄板: @200mm分割不要（物理的な板なので1項目のみ）
+          var _dimStr = (_layerTopGLm <= 0.001)
+            ? ('t＝' + (r.t||0) + 'mm')
+            : ('GL-' + _layerTopGLm.toFixed(3) + 'm（t=' + (r.t||0) + 'mm）');
+          _honRbItems.push({ n: '本復旧　' + nm + _actionWord, dim: _dimStr, note: _noteStr, _isGfLayer: true });
+        } else {
+          // 転圧層: ルール②＠200mm分割（compactLayers を使用）
+          // 例: 既設路盤300mm → ceil(300/200)=2分割 → 2アイテム生成
+          compactLayers(_layerTopGLm, _t, nm + _actionWord).forEach(function(cl){
+            _honRbItems.push({
+              n: cl.n.replace(/^仮復旧\s*/, '本復旧　'),
+              dim: cl.dim,
+              note: _noteStr,
+              _isGfLayer: true
+            });
+          });
+        }
+      });
+    }
+  }
   _dynHonItems.splice.apply(_dynHonItems, [_insIdx, 0].concat(_honRbItems));
   var _dynHonBurialSection = {
     phase: _honStaticSec.phase,
     _isHonBurial: true,
     items: _dynHonItems
   };
+  // ── _dynHonBurialSection に 本復旧AS特殊層（瀝青安定処理等）転圧項目を挿入 ──
+  // ※ kariAsLayers（仮復旧） ≠ honAsLayers（本復旧）なので本復旧専用で処理
+  //    仮復旧なし現場（kariAsLayers空）でも honAsLayers から正しく生成できる
+  (function(){
+    var _honAsRaw = presetType.honAsLayers || [];
+    var _honNormalAs = []; // 通常AS（表層・基層）: GL計算用
+    var _honSpecialAs = []; // 特殊AS（瀝青安定処理等）: 挿入対象
+    _honAsRaw.forEach(function(a){
+      var t = a.t || 0;
+      if(t <= 0) return;
+      var nm = a.name || a.preset || a.custom || '';
+      if(!nm) return;
+      var role = a.role || '';
+      // コート類はスキップ
+      if(role==='tack' || role==='prime') return;
+      if(nm.indexOf('タック')>=0 || nm.indexOf('PK-4')>=0 || nm.indexOf('プライム')>=0 || nm.indexOf('PK-3')>=0) return;
+      var isSpec = (
+        role==='stabilize' || role==='existing' || role==='special' ||
+        nm.indexOf('瀝青')>=0 || nm.indexOf('安定処理')>=0 ||
+        nm.indexOf('既設')>=0 || nm.indexOf('改良')>=0 ||
+        nm.indexOf('コンクリート')>=0 || nm.indexOf('調整')>=0
+      );
+      if(isSpec) _honSpecialAs.push({ name:nm, t: t/1000 });
+      else       _honNormalAs.push({ name:nm, t: t/1000 });
+    });
+    if(_honSpecialAs.length === 0) return;
+
+    var _sHon2 = _dynHonBurialSection.items;
+    if(_sHon2.some(function(x){ return x._isSpecial; })) return; // 二重挿入防止
+
+    // プライムコートの位置を探す（genkyoFreeRows挿入後のインデックス）
+    var _sPIdx = -1;
+    for(var _si = 0; _si < _sHon2.length; _si++){
+      if(_sHon2[_si].n && _sHon2[_si].n.indexOf('プライムコート') >= 0){ _sPIdx = _si; break; }
+    }
+    if(_sPIdx < 0) return;
+
+    // 本復旧側通常AS合計厚 = 特殊AS層の上端GL（地表面からの深さ）
+    var _honNormalTotal = _honNormalAs.reduce(function(s,a){ return s + (a.t||0); }, 0);
+    // 通常AS層（基層・表層）がある ＝ 瀝青安定処理の上にAS層が存在 → タックコートが必要
+    // honAsLayers内のタックコートエントリ有無に依存せず、AS構成から判断する
+
+    var _spGL = _honNormalTotal;
+    var _spItems = [];
+    _honSpecialAs.forEach(function(sp){
+      var _spTopGL = parseFloat(_spGL.toFixed(4));
+      var _spName = normalizeMaterialName(sp.name) + '転圧';
+      compactLayers(_spTopGL, sp.t, _spName).forEach(function(l){
+        _spItems.push({
+          n: l.n.replace('仮復旧　', '本復旧　'),
+          dim: l.dim,
+          note: 'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。',
+          _isSpecial: true
+        });
+      });
+      // 特殊AS層（瀝青安定処理等）の後に タックコート を挿入（基層AS接着のため）
+      // 通常AS層（基層・表層）が存在する場合は必ずタックコートが必要
+      if(_honNormalAs.length > 0){
+        _spItems.push({
+          n: '本復旧　タックコート散布',
+          note: '特殊AS層（瀝青安定処理等）の上面にPK-4乳剤を散布。散布直後の状態で全景を撮影する。',
+          _isSpecial: true
+        });
+      }
+      _spGL = parseFloat((_spGL + sp.t).toFixed(4));
+    });
+    if(_spItems.length > 0){
+      _sHon2.splice.apply(_sHon2, [_sPIdx + 1, 0].concat(_spItems));
+    }
+  })();
 
   // extraMaterials転圧ポイント（コンクリート層・調整層など）
   // totalHからAS・RM・RCを引いた残りがextra層の合計
@@ -2568,8 +2728,15 @@ function renderMain(){
         _honAsArr.forEach(function(a){ _honChips.push(_ckRbAsChip(a.name, a.t)); });
         if((rb.genkyoCnH||0)>0) _honChips.push('<div style="background:#fff7ed;border:1px solid #f97316;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">コンクリート層</div><div style="font-weight:700;font-size:16px;color:#f97316;font-family:monospace;">'+Math.round(rb.genkyoCnH*1000)+'mm</div></div>');
         if((rb.genkyoCnRC||0)>0){ var _cnRcSub=rb.genkyoCnRCSubcat||'RC-40'; _honChips.push('<div style="background:#fff7ed;border:1px solid #fb923c;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#c2410c;margin-bottom:3px;">CN間路盤材 '+_cnRcSub+'（別途発注）</div><div style="font-weight:700;font-size:16px;color:#fb923c;font-family:monospace;">'+Math.round(rb.genkyoCnRC*1000)+'mm</div></div>'); }
-        if((rb.genkyoRM||0)>0) _honChips.push(_ckRbRmcChip('上層路盤工 RM-'+rb.rmSize, ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
-        if((rb.genkyoRC||0)>0) _honChips.push(_ckRbRmcChip('下層路盤工 RC-'+rb.rcSize, ckLayerAdditionStr(rb._honRC_layers, rb.genkyoRC*1000), 'hon'));
+        if((rb.genkyoRM||0)>0) _honChips.push(_ckRbRmcChip('上層路盤工 RM-'+(rb.honRmSize||rb.rmSize), ckLayerAdditionStr(rb._honRM_layers, rb.genkyoRM*1000), 'hon'));
+        if((rb.genkyoRC||0)>0) _honChips.push(_ckRbRmcChip('下層路盤工 RC-'+(rb.honRcSize||rb.rcSize), ckLayerAdditionStr(rb._honRC_layers, rb.genkyoRC*1000), 'hon'));
+        // フリー層（既設路盤など）
+        (rb.genkyoFreeRows||[]).forEach(function(r){
+          if((r.t||0)>0){
+            var nm=r.name||'フリー層';
+            _honChips.push('<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:7px;padding:8px 12px;"><div style="font-size:13px;color:#92400e;margin-bottom:3px;">'+nm+'</div><div style="font-weight:700;font-size:16px;color:#d97706;font-family:monospace;">t = '+r.t+'mm</div></div>');
+          }
+        });
       }
       // 現況・本復旧 notice用 層展開ヘルパー
       var _buildHonNotice = function(rb){
@@ -2597,12 +2764,16 @@ function renderMain(){
             var _bhnAsArr = (rb.honAsLayers&&rb.honAsLayers.length) ? rb.honAsLayers : [{name:'AS混合物', t:Math.round(rb.genkyoAsH*1000)}];
             _bhnAsArr.forEach(function(a){ parts.push('<span style="color:#7c3aed;font-weight:700;">'+a.name+' '+a.t+'mm</span>'); });
           }
-          if((rb.genkyoRM||0)>0) parts.push('<span style="color:#0284c7;font-weight:700;">RM-'+(rb.rmSize||40)+' '+Math.round(rb.genkyoRM*1000)+'mm</span>');
-          if((rb.genkyoRC||0)>0) parts.push('<span style="color:#059669;font-weight:700;">RC-'+(rb.rcSize||40)+' '+Math.round(rb.genkyoRC*1000)+'mm</span>');
+          if((rb.genkyoRM||0)>0) parts.push('<span style="color:#0284c7;font-weight:700;">RM-'+(rb.honRmSize||rb.rmSize||40)+' '+Math.round(rb.genkyoRM*1000)+'mm</span>');
+          if((rb.genkyoRC||0)>0) parts.push('<span style="color:#059669;font-weight:700;">RC-'+(rb.honRcSize||rb.rcSize||40)+' '+Math.round(rb.genkyoRC*1000)+'mm</span>');
+          // フリー層（既設路盤など RM/RC 以外の路盤工層）
+          (rb.genkyoFreeRows||[]).forEach(function(r){
+            if((r.t||0)>0) parts.push('<span style="color:#d97706;font-weight:700;">'+(r.name||'フリー層')+' '+r.t+'mm</span>');
+          });
         }
         return parts.join(' ／ ');
       };
-      var _honTotalMm = Math.round(((rb.genkyoTotalH||0)||((rb.genkyoAsH||0)+(rb.genkyoRM||0)+(rb.genkyoRC||0)+(rb.genkyoCnRC||0)+(rb.genkyoCnH||0)))*1000)||Math.round(rb.totalH*1000);
+      var _honTotalMm = Math.round(((rb.genkyoTotalH||0)||((rb.genkyoAsH||0)+(rb.genkyoRM||0)+(rb.genkyoRC||0)+(rb.genkyoCnRC||0)+(rb.genkyoCnH||0)+(rb.genkyoFreeH||0)))*1000)||Math.round(rb.totalH*1000);
       var _kariWarnBadge = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:#fee2e2;color:#dc2626;font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 現況路盤は異なる</span>' : '';
       var _honWarnBadge  = _rbDiffers ? ' <span style="display:inline-block;margin-left:6px;background:rgba(239,68,68,0.2);color:#b91c1c;font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;">⚠️ 仮復旧路盤は異なる</span>' : '';
       html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin:10px 0;">'
@@ -3261,50 +3432,88 @@ function recalcGL(){
       },0);
       var _tot = _asT + _rcH + _rmH + _spT;
       if(_tot > 0) f40 = -_tot;
+      // 仮復旧なし（kariTotalH=0 かつ _tot=0）の場合は現況・本復旧の路盤合計をフォールバック
+      // ※ AS層のみ（路盤工なし）は路盤変更点を算出しない（RM/RC/フリー層=0 ならスキップ）
+      if(_tot <= 0) {
+        var _honRM    = _presetType.genkyoRM    || 0;
+        var _honRC    = _presetType.genkyoRC    || 0;
+        var _honFreeH = _presetType.genkyoFreeH || 0;
+        // RM/RC またはフリー層（既設路盤など）がある場合のみ路盤変更点を算出
+        if((_honRM + _honRC + _honFreeH) > 0) {
+          var _honAsH = _presetType.genkyoAsH || 0;
+          var _genTotal = _presetType.genkyoTotalH || parseFloat((_honRM + _honRC + _honAsH + _honFreeH).toFixed(4));
+          if(_genTotal > 0) f40 = -_genTotal;
+        }
+      }
     }
   }
 
   // ① 通信管（水締め・埋設シート計算はDP値=土被りGL基準）
   var f23 = dp1 > 0 ? parseFloat((-dp1).toFixed(4)) : '';
   var f28 = f23 !== '' ? parseFloat((f23 + 0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合（鉄板など）は路盤構成下端に合わせる
+  if(f28 !== '' && f40 !== '' && f28 > f40) f28 = f40;
   var raw30 = f23 !== '' ? parseFloat((f23 + emb).toFixed(4)) : '';
   var f30 = raw30 !== '' ? (raw30 > f40 ? f40 : raw30) : '';
+  // 安全キャップ: 埋設シートは水締め（管天端+100mm）より深くなれない
+  if(f30 !== '' && f28 !== '' && f30 < f28) f30 = f28;
 
   // ② 電力管
   var g25 = dp2 > 0 ? parseFloat((-dp2).toFixed(4)) : '';
   var g28 = g25 !== '' ? parseFloat((g25 + 0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(g28 !== '' && f40 !== '' && g28 > f40) g28 = f40;
   var rawG30 = g25 !== '' ? parseFloat((g25 + emb).toFixed(4)) : '';
   var g30 = rawG30 !== '' ? (rawG30 > f40 ? f40 : rawG30) : '';
+  if(g30 !== '' && g28 !== '' && g30 < g28) g30 = g28;
 
   // ① 通信管・勾配②端（浅側）GL計算
   var f23s = (dp1s > 0) ? parseFloat((-dp1s).toFixed(4)) : '';
   var f28s = f23s !== '' ? parseFloat((f23s + 0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(f28s !== '' && f40 !== '' && f28s > f40) f28s = f40;
   var raw30s = f23s !== '' ? parseFloat((f23s + emb).toFixed(4)) : '';
   var f30s = raw30s !== '' ? (raw30s > f40 ? f40 : raw30s) : '';
+  if(f30s !== '' && f28s !== '' && f30s < f28s) f30s = f28s;
   // ② 電力管・勾配②端（浅側）GL計算
   var g25s = (dp2s > 0) ? parseFloat((-dp2s).toFixed(4)) : '';
   var g28s = g25s !== '' ? parseFloat((g25s + 0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(g28s !== '' && f40 !== '' && g28s > f40) g28s = f40;
   var rawG30s = g25s !== '' ? parseFloat((g25s + emb).toFixed(4)) : '';
   var g30s = rawG30s !== '' ? (rawG30s > f40 ? f40 : rawG30s) : '';
+  if(g30s !== '' && g28s !== '' && g30s < g28s) g30s = g28s;
 
   // ── pipe3 GL ──
   var h23  = dp3  > 0 ? parseFloat((-dp3 ).toFixed(4)) : '';
   var h28  = h23  !== '' ? parseFloat((h23 +0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(h28 !== '' && f40 !== '' && h28 > f40) h28 = f40;
   var rawH30 = h23!==''  ? parseFloat((h23 +emb).toFixed(4)) : '';
   var h30  = rawH30!=='' ? (rawH30>f40?f40:rawH30) : '';
+  if(h30!==''&&h28!==''&&h30<h28) h30=h28;
   var h23s = dp3s > 0 ? parseFloat((-dp3s).toFixed(4)) : '';
   var h28s = h23s !== '' ? parseFloat((h23s+0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(h28s !== '' && f40 !== '' && h28s > f40) h28s = f40;
   var rawH30s=h23s!==''  ? parseFloat((h23s+emb).toFixed(4)) : '';
   var h30s = rawH30s!==''? (rawH30s>f40?f40:rawH30s) : '';
+  if(h30s!==''&&h28s!==''&&h30s<h28s) h30s=h28s;
   // ── pipe4 GL ──
   var i23  = dp4  > 0 ? parseFloat((-dp4 ).toFixed(4)) : '';
   var i28  = i23  !== '' ? parseFloat((i23 +0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(i28 !== '' && f40 !== '' && i28 > f40) i28 = f40;
   var rawI30 = i23!==''  ? parseFloat((i23 +emb).toFixed(4)) : '';
   var i30  = rawI30!=='' ? (rawI30>f40?f40:rawI30) : '';
+  if(i30!==''&&i28!==''&&i30<i28) i30=i28;
   var i23s = dp4s > 0 ? parseFloat((-dp4s).toFixed(4)) : '';
   var i28s = i23s !== '' ? parseFloat((i23s+0.1).toFixed(4)) : '';
+  // ルール①: 水締めGLが路盤構成内に入る場合は路盤構成下端に合わせる
+  if(i28s !== '' && f40 !== '' && i28s > f40) i28s = f40;
   var rawI30s=i23s!==''  ? parseFloat((i23s+emb).toFixed(4)) : '';
   var i30s = rawI30s!==''? (rawI30s>f40?f40:rawI30s) : '';
+  if(i30s!==''&&i28s!==''&&i30s<i28s) i30s=i28s;
 
   // ── 中間転圧リスト（勾配時：②深側@200 → ①浅側の路盤変更点を追加）──
   function buildMidGrad(dpShallow, dpDeep, f28Sh, f28De, f30Sh){
