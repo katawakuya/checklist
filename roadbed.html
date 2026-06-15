@@ -414,6 +414,7 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
           </div>
         </div>
 
+        <input type="hidden" id="h-editKey">
         <button class="btn-save" onclick="saveHata()">💾 旗揚げマスタを登録</button>
         <button class="btn-cancel" id="btnCancelHata" onclick="clearHataForm()">キャンセル</button>
       </div>
@@ -1591,9 +1592,16 @@ function getLocalSites(){return JSON.parse(localStorage.getItem('site_master')||
 
 function fbSaveAllHata(id,list){
   if(!_fbDb||!_isAdmin)return;
-  // undefined を除去
+  // undefined を除去して safeList を生成
   var safeList;
   try{safeList=JSON.parse(JSON.stringify(list));}catch(e){safeList=list;}
+  // Firestoreドキュメント上限(1MB)対策:
+  // 圧縮済み画像(~20KB/枚)は保存する。合計が800KBを超える場合は画像を除外してwarning。
+  var totalBytes=JSON.stringify(safeList).length;
+  if(totalBytes>800*1024){
+    console.warn('[FB hata] 合計サイズ'+Math.round(totalBytes/1024)+'KB > 800KB → img を除外してFirestore保存');
+    safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;return s;});
+  }
   // 現場別ドキュメントに保存（checklist.html の fbSyncHataMasterForSite が読む形式）
   try{
     _fbDb.collection('masters').doc('hata_master_'+id).set({data:safeList,updatedAt:new Date().toISOString()})
@@ -1607,11 +1615,60 @@ function fbSaveAllHata(id,list){
 
 function loadHataFromFb(id){
   if(!_fbDb){renderHataList(getLocalHata(id));return;}
-  _fbDb.collection('masters').doc('hata_master').get()
+  // 現場別ドキュメント（checklist.html / order.html が書く形式）を優先して読み込む
+  // → hata_master_<id> が存在すればそちらを使い、なければ旧モノリシック hata_master を参照
+  _fbDb.collection('masters').doc('hata_master_'+id).get()
     .then(doc=>{
-      if(doc.exists&&doc.data().data){const all=doc.data().data;if(all[id])saveLocalHata(id,all[id]);}
-      renderHataList(getLocalHata(id));
-    }).catch(()=>renderHataList(getLocalHata(id)));
+      if(doc.exists&&doc.data().data){
+        // per-site ドキュメントが存在する場合はローカルへマージ（キーで重複排除、新しい方を優先）
+        var fbList=doc.data().data||[];
+        var localList=getLocalHata(id);
+        var merged={};
+        localList.forEach(function(r){var k=r.key||String(r.num||r.hata||'');if(k)merged[k]=r;});
+        fbList.forEach(function(r){
+          var k=r.key||String(r.num||r.hata||'');
+          if(!k)return;
+          var loc=merged[k];
+          // dp/kanH/dph が新しい方（Firestoreにあればそちら優先、ただしnullで上書きはしない）
+          if(loc){
+            if(r.dp!=null)       loc.dp=r.dp;
+            if(r.kanH!=null)     loc.kanH=r.kanH;
+            if(r.dph!=null)      loc.dph=r.dph;
+            if(r.rangeFrom!=null)loc.rangeFrom=r.rangeFrom;
+            if(r.rangeTo!=null)  loc.rangeTo=r.rangeTo;
+            if(r.dph1!=null)     loc.dph1=r.dph1;
+            if(r.dph2!=null)     loc.dph2=r.dph2;
+            if(r.name)           loc.name=r.name;
+            if(r.note)           loc.note=r.note;
+            if(r.kanType)        loc.kanType=r.kanType;
+            // img はFirestoreに保存されないため、ローカルの値を優先して保持
+            // Firestoreに img がある（旧データ）場合のみローカルに取り込む
+            if(!loc.img&&!loc.imgData&&(r.img||r.imgData)){
+              if(r.img)     loc.img=r.img;
+              if(r.imgData) loc.imgData=r.imgData;
+            }
+          } else {
+            merged[k]=r;
+          }
+        });
+        saveLocalHata(id,Object.values(merged));
+        renderHataList(getLocalHata(id));
+      } else {
+        // per-site ドキュメントがない場合はモノリシック形式にフォールバック
+        _fbDb.collection('masters').doc('hata_master').get()
+          .then(function(doc2){
+            if(doc2.exists&&doc2.data().data){var all=doc2.data().data;if(all[id])saveLocalHata(id,all[id]);}
+            renderHataList(getLocalHata(id));
+          }).catch(function(){renderHataList(getLocalHata(id));});
+      }
+    }).catch(function(){
+      // per-site 取得失敗 → モノリシックフォールバック
+      _fbDb.collection('masters').doc('hata_master').get()
+        .then(function(doc2){
+          if(doc2.exists&&doc2.data().data){var all=doc2.data().data;if(all[id])saveLocalHata(id,all[id]);}
+          renderHataList(getLocalHata(id));
+        }).catch(function(){renderHataList(getLocalHata(id));});
+    });
 }
 
 function loadHataForSite(id){
@@ -1620,15 +1677,31 @@ function loadHataForSite(id){
   updateExistingHataSel();
 }
 
-function handleHataImgSelect(input){
-  const file=input.files[0];if(!file)return;
-  const fr=new FileReader();
-  fr.onload=e=>{
-    document.getElementById('h-previewImg').src=e.target.result;
-    document.getElementById('h-imgName').textContent=file.name;
+// 旗揚げ画像を幅500px・JPEG60%に圧縮してプレビューにセット
+// → 1枚あたり15〜25KB程度になりFirestore(1MBドキュメント上限)に安全に保存できる
+function _compressAndSetHataImg(dataUrl, fileName){
+  var img=new Image();
+  img.onload=function(){
+    var MAX=500;
+    var w=img.width, h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    var cv=document.createElement('canvas');
+    cv.width=w;cv.height=h;
+    var ctx=cv.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    var compressed=cv.toDataURL('image/jpeg',0.60);
+    var kb=Math.round(compressed.length*0.75/1024);
+    document.getElementById('h-previewImg').src=compressed;
+    document.getElementById('h-imgName').textContent=(fileName||'画像')+'（圧縮後 '+kb+'KB）';
     document.getElementById('h-imgPreview').style.display='';
     document.getElementById('h-imgLabel').style.display='none';
   };
+  img.src=dataUrl;
+}
+function handleHataImgSelect(input){
+  const file=input.files[0];if(!file)return;
+  const fr=new FileReader();
+  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name);
   fr.readAsDataURL(file);
 }
 
@@ -1650,7 +1723,7 @@ function clearHataImg(){
 function saveHata(){
   if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
   if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
-  const num=document.getElementById('h-num').value.trim();
+  const num=document.getElementById('h-hata').value.trim();
   if(!num){showToast('⚠️ 旗揚げ番号を入力してください');return;}
   const gN=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
   const dp=gN('h-dp')||0;
@@ -1664,13 +1737,14 @@ function saveHata(){
   const rec={
     key:editKey||('h_'+Date.now()),
     num,
+    name:document.getElementById('h-name')?.value?.trim()||'',
     dp,
     kanH,                              // normalizeHataEntry maps kanH → dph
     rangeFrom:dp1!=null?dp1:null,      // normalizeHataEntry maps rangeFrom → dp_start
     rangeTo:dp2!=null?dp2:null,        // normalizeHataEntry maps rangeTo  → dp_end
     dph1:dph1!=null?dph1:null,
     dph2:dph2!=null?dph2:null,
-    kanType:document.getElementById('h-kanType').value,
+    kanType:document.getElementById('h-pipetype').value,
     note:document.getElementById('h-note').value,
     img:imgSrc&&imgSrc!==location.href?imgSrc:'',
   };
@@ -1687,8 +1761,8 @@ function saveHata(){
 }
 
 function clearHataForm(){
-  ['h-num','h-dp','h-dph','h-dp1','h-dp2','h-dph1','h-dph2','h-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const kt=document.getElementById('h-kanType');if(kt)kt.value='VP';
+  ['h-hata','h-name','h-dp','h-dph','h-dp1','h-dp2','h-dph1','h-dph2','h-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const kt=document.getElementById('h-pipetype');if(kt)kt.value='';
   document.getElementById('h-editKey').value='';
   clearHataImg();
   const sel=document.getElementById('existingHataSel');if(sel)sel.value='';
@@ -1698,16 +1772,18 @@ function clearHataForm(){
 function loadExistingHata(key){
   if(!key||!_selectedSiteId)return;
   const list=getLocalHata(_selectedSiteId);
-  const r=list.find(x=>x.key===key);
+  // key フィールドで検索、なければ num または hata フィールドで照合（order.html 由来エントリ対応）
+  const r=list.find(x=>x.key===key)||list.find(x=>String(x.num||x.hata||'')===String(key));
   if(!r)return;
-  document.getElementById('h-num').value=r.num||'';
-  document.getElementById('h-dp').value=r.dp||'';
-  const _dphEl=document.getElementById('h-dph');if(_dphEl)_dphEl.value=r.kanH||r.dph||'';
-  const _dp1El=document.getElementById('h-dp1');if(_dp1El)_dp1El.value=r.rangeFrom!=null?r.rangeFrom:'';
-  const _dp2El=document.getElementById('h-dp2');if(_dp2El)_dp2El.value=r.rangeTo!=null?r.rangeTo:'';
+  document.getElementById('h-hata').value=r.num||r.hata||'';
+  const _nameEl=document.getElementById('h-name');if(_nameEl)_nameEl.value=r.name||'';
+  document.getElementById('h-dp').value=r.dp!=null?r.dp:'';
+  const _dphEl=document.getElementById('h-dph');if(_dphEl)_dphEl.value=r.kanH!=null?r.kanH:(r.dph!=null?r.dph:'');
+  const _dp1El=document.getElementById('h-dp1');if(_dp1El)_dp1El.value=r.rangeFrom!=null?r.rangeFrom:(r.dp_start!=null?r.dp_start:'');
+  const _dp2El=document.getElementById('h-dp2');if(_dp2El)_dp2El.value=r.rangeTo!=null?r.rangeTo:(r.dp_end!=null?r.dp_end:'');
   const _dph1El=document.getElementById('h-dph1');if(_dph1El)_dph1El.value=r.dph1!=null?r.dph1:'';
   const _dph2El=document.getElementById('h-dph2');if(_dph2El)_dph2El.value=r.dph2!=null?r.dph2:'';
-  const kt=document.getElementById('h-kanType');if(kt)kt.value=r.kanType||'VP';
+  const kt=document.getElementById('h-pipetype');if(kt)kt.value=r.kanType||r.pipetype||'';
   document.getElementById('h-note').value=r.note||'';
   document.getElementById('h-editKey').value=r.key;
   if(r.img){

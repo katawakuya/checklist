@@ -3599,7 +3599,7 @@ function recalcGL(){
     var result = [];
     if(entries.length === 0){
       activePipes.forEach(function(p){
-        var note = (embSameAsF40||(p.dpSv>0&&_pipeGradient[p.pi])) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
+        var note = sheetValueMatch(f40) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
         result.push({piIdx:p.pi, v:f40, cls:p.cls, lbl:getPipeLbl(p.pi)+' '+fmtGL(f40), note:note});
       });
       return result;
@@ -3611,7 +3611,7 @@ function recalcGL(){
       var lbl, note = '';
       if(grad && isShallowF40){
         lbl = glGradLbl(p.pi, 1, e.v);
-        note = '（路盤変更点・埋設シートと同GL）';
+        note = sheetValueMatch(e.v) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
       } else if(grad && p.f28sv!==''){
         var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), f40);
         var inDeepList = deepListRef.some(function(dv){ return Math.abs(dv-e.v)<0.005; });
@@ -3915,18 +3915,20 @@ function loadHata(){
   _hataEntry = entry;
   var _dbBtn=document.getElementById('debugBtn'); if(_dbBtn)_dbBtn.style.display='';
   var _dpBtn=document.getElementById('saveDpBtn'); if(_dpBtn)_dpBtn.style.display=(_isAdmin?'':'none');
-  // dp/dph: 新フォーマット(dp/dph) → roadbed.html形式(kanH) → 旧フォーマット(dp1) → null
-  var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1 != null ? entry.dp1 : null);
-  var _dph = entry.dph != null ? entry.dph : (entry.kanH != null ? entry.kanH : null);
+  // ① 主管（深側）DP/管下H: 新フォーマット(dp/dph) → roadbed.html形式(kanH) → rangeFrom(深側始点) → 旧形式(dp1)
+  var _dp  = entry.dp  != null ? entry.dp  : (entry.dp1 != null ? entry.dp1 : (entry.rangeFrom != null ? entry.rangeFrom : null));
+  var _dph = entry.dph != null ? entry.dph : (entry.kanH != null ? entry.kanH : (entry.dph1 != null ? entry.dph1 : null));
   sv('inDP1', _dp); sv('inDPH', _dph);
-  // dp2/dph2: 新フォーマット → roadbed.html形式(rangeTo) → 旧形式(dp_end)
-  var dp2val  = entry.dp2  || entry.rangeTo  || entry.dp_end  || '';
-  var dph2val = entry.dph2 || entry.dph_end || '';
+  // ② 2本目管のDP/管下H: entry.dp2 のみ有効
+  // ※ rangeTo / dp_end は「勾配②端（浅側）DP」= 1本目管のもう一方の端であり2本目管ではない → 除外
+  var dp2val  = entry.dp2 || '';
+  var dph2val = entry.dp2 ? (entry.dph2 || '') : '';
   if(dp2val)  sv('inDP2', dp2val);
   if(dph2val) sv('inDPH2', dph2val);
-  // 勾配②端DP値: 新フォーマット(dp1s/dph1s) → roadbed.html形式(rangeFrom/dph1)
-  var _dp1s  = entry.dp1s  != null ? entry.dp1s  : (entry.rangeFrom != null ? entry.rangeFrom : null);
-  var _dph1s = entry.dph1s != null ? entry.dph1s : (entry.dph1     != null ? entry.dph1     : null);
+  // 勾配②端（浅側）DP/管下H: 新フォーマット(dp1s/dph1s) → roadbed.html形式(rangeTo/dph2) → 旧形式(dp_end)
+  // ※ rangeFrom は深側DPのため使用不可（上の inDP1 側で使用）
+  var _dp1s  = entry.dp1s  != null ? entry.dp1s  : (entry.rangeTo  != null ? entry.rangeTo  : (entry.dp_end  != null ? entry.dp_end  : null));
+  var _dph1s = entry.dph1s != null ? entry.dph1s : (entry.dph2     != null ? entry.dph2     : null);
   // 旗揚げマスタに勾配②端データがあればチェックなしでも自動でON
   if(_dp1s != null && !_pipeGradient[0]) {
     toggleGradient(0, true);
