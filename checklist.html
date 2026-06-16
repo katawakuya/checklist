@@ -157,7 +157,8 @@ main{padding:10px 14px 90px;}
 /* 図面インライン展開 */
 .hata-diagram{display:none;margin-top:-4px;margin-bottom:10px;width:100%;border-radius:0 0 8px 8px;overflow:hidden;}
 .hata-diagram.show{display:block;}
-.diagram-head{display:flex;align-items:center;justify-content:space-between;background:#1e3a8a;border-radius:8px 8px 0 0;padding:8px 12px;}
+.diagram-head{display:flex;align-items:center;gap:8px;justify-content:space-between;background:#1e3a8a;border-radius:8px 8px 0 0;padding:8px 12px;}
+#ckDiagZoomCtrl button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;}
 .diagram-head .dtitle{font-size:16px;font-weight:700;color:#fff;}
 .diagram-vals{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#eff6ff;border-left:1px solid #bfdbfe;border-right:1px solid #bfdbfe;}
 .dval{font-size:14px;font-weight:700;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
@@ -1846,18 +1847,8 @@ function buildChecklistFromPreset(presetType){
   }
   if (_insIdx < 0) _insIdx = _dynHonItems.length;
   var _honRbItems = [];
-  honRcLayers.forEach(function(l){
-    _honRbItems.push({n:l.n, dim:l.dim,
-      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
-  });
-  honRmLayers.forEach(function(l){
-    _honRbItems.push({n:l.n, dim:l.dim,
-      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
-  });
-  // コンクリート・CN間打設写真項目（honFreeRows がある場合のみ）
-  _honExtraItems.forEach(function(item){ _honRbItems.push(item); });
-  // 通常モード: genkyoFreeRows（既設路盤・鉄板など RM/RC 以外のフリー層）の写真項目を生成
-  // 挿入順: 施工順序（下層から上層）= genkyoFreeRows を reverse して処理
+  // ① genkyoFreeRows（鉄板・既設路盤等）= 路盤の最下層 → 施工順で最初に施工するため先頭に追加
+  // 施工順序: 鉄板敷設 → RC-40下層路盤 → RM-40上層路盤 （下から上へ）
   if (_frsHon2.length === 0) { // フリーモードでない場合のみ
     var _gfRows = (presetType.genkyoFreeRows || []).filter(function(r){ return (r.t||0) > 0; });
     if (_gfRows.length > 0) {
@@ -1882,8 +1873,6 @@ function buildChecklistFromPreset(presetType){
             : ('GL-' + _layerTopGLm.toFixed(3) + 'm（t=' + (r.t||0) + 'mm）');
           _honRbItems.push({ n: '本復旧　' + nm + _actionWord, dim: _dimStr, note: _noteStr, _isGfLayer: true });
         } else {
-          // 転圧層: ルール②＠200mm分割（compactLayers を使用）
-          // 例: 既設路盤300mm → ceil(300/200)=2分割 → 2アイテム生成
           compactLayers(_layerTopGLm, _t, nm + _actionWord).forEach(function(cl){
             _honRbItems.push({
               n: cl.n.replace(/^仮復旧\s*/, '本復旧　'),
@@ -1896,6 +1885,18 @@ function buildChecklistFromPreset(presetType){
       });
     }
   }
+  // ② RC-40 下層路盤転圧
+  honRcLayers.forEach(function(l){
+    _honRbItems.push({n:l.n, dim:l.dim,
+      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
+  });
+  // ③ RM-40 上層路盤転圧
+  honRmLayers.forEach(function(l){
+    _honRbItems.push({n:l.n, dim:l.dim,
+      note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。'});
+  });
+  // ④ コンクリート・CN間打設写真項目（honFreeRows がある場合のみ）
+  _honExtraItems.forEach(function(item){ _honRbItems.push(item); });
   _dynHonItems.splice.apply(_dynHonItems, [_insIdx, 0].concat(_honRbItems));
   var _dynHonBurialSection = {
     phase: _honStaticSec.phase,
@@ -2545,8 +2546,15 @@ function onTypeChange(silent){
   _typeKey = parts[0];                          // TYPE_CHECKLISTSキー（85/40等）
   _presetTypeKey = parts.length>=3 ? parts[1] : parts[0]; // プリセット元キー
   if(_siteId) localStorage.setItem('cl_last_type_'+_siteId, val);
+  // 型変更時に旗揚げ番号を維持するため、変更前の値を退避
+  var _savedHataVal = !silent ? ($v('hataInput') || '').trim() : '';
   if(!silent){ _checks={}; _naItems={}; _subChecks={}; restoreState(); }
   renderMain();
+  // 型変更時: 旗揚げ番号を復元してloadHataで再検索
+  if(!silent && _savedHataVal){
+    var _hataElRestore = document.getElementById('hataInput');
+    if(_hataElRestore){ _hataElRestore.value = _savedHataVal; loadHata(); }
+  }
   // pendingSlope が onTypeChange 経路でセットされた場合も適用
   if(_pendingSlope){
     var _ps2 = _pendingSlope; _pendingSlope = null;
@@ -2559,6 +2567,12 @@ function onTypeChange(silent){
 // =====================================================
 
 function storeKey(){ return 'cl_state_'+(_siteId||'x')+'_'+(_presetTypeKey||_typeKey||'x'); }
+// 記録者名をこのデバイス専用キーで記憶（現場・型に関係なく共通）
+function _saveRecorderName(name){
+  var n = (name||'').trim();
+  if(n) localStorage.setItem('checklist_recorder', n);
+}
+
 function saveState(){
   if(!_siteId||!_typeKey) return;
   var data = {
@@ -2613,6 +2627,18 @@ function renderMain(){
   var _dynChecklist = _presetType ? buildChecklistFromPreset(_presetType) : null;
   var ck = _dynChecklist ? _dynChecklist : TYPE_CHECKLISTS[_typeKey];
 
+  // 仮復旧路盤が未登録（totalH=0）かつ本復旧路盤がある場合は自動で本復旧タブを選択
+  // ただしユーザーが明示的に仮復旧を選んでいた場合（前回保存）はそちらを尊重しない
+  // → 保存時に kojiKbn が 'kari' のまま残るケースは「本復旧のみ」構成と見なして自動切替
+  if (_presetType && _kojiKbn === 'kari') {
+    var _kariTotal = (_presetType.totalH || 0);
+    var _honHasData = (_presetType.genkyoRC||0) > 0 || (_presetType.genkyoRM||0) > 0
+                   || (_presetType.genkyoAsH||0) > 0 || (_presetType.genkyoTotalH||0) > 0;
+    if (_kariTotal === 0 && _honHasData) {
+      _kojiKbn = 'hon';
+    }
+  }
+
   var html = '<main>';
 
   // 基本情報パネル（最上部）
@@ -2623,7 +2649,7 @@ function renderMain(){
       '<div class="field"><label>管理番号</label><input type="text" id="inMgmtNo" placeholder="例: K-12" onchange="saveState()"></div>' +
     '</div>' +
     '<div class="field-row c2">' +
-      '<div class="field"><label>記録者</label><input type="text" id="inRecorder" placeholder="氏名" onchange="saveState()"></div>' +
+      '<div class="field"><label>記録者</label><input type="text" id="inRecorder" placeholder="氏名" onchange="saveState();_saveRecorderName(this.value)"></div>' +
     '</div>' +
     '<div class="field-row" style="margin-top:4px">' +
       '<div class="field">' +
@@ -2660,10 +2686,16 @@ function renderMain(){
     '<div class="hata-diagram" id="hataDiagram">' +
       '<div class="diagram-head">' +
         '<span class="dtitle" id="diagTitle">📐 図面</span>' +
+        '<div id="ckDiagZoomCtrl" style="display:none;align-items:center;gap:5px;">' +
+          '<button onclick="_ckDiagZoom(-0.25)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.2;">－</button>' +
+          '<span id="ckDiagZoomLv" style="font-size:13px;color:var(--text2);min-width:38px;text-align:center;">100%</span>' +
+          '<button onclick="_ckDiagZoom(+0.25)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.2;">＋</button>' +
+          '<button onclick="_ckDiagZoomReset()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer;font-size:12px;">Reset</button>' +
+        '</div>' +
         '<button class="btn-close-diag" onclick="closeDiagram()">✕ 閉じる</button>' +
       '</div>' +
       '<div class="diagram-vals" id="diagVals"></div>' +
-      '<div id="diagImgWrap"></div>' +
+      '<div id="diagImgWrap" style="overflow:auto;"></div>' +
     '</div>';
 
   if(ck){
@@ -2819,13 +2851,38 @@ function renderMain(){
   html += '</main>';
   document.getElementById('checkMain').innerHTML = html;
 
-  // 日付デフォルト
-  var dateEl = document.getElementById('inDate');
-  if(dateEl) dateEl.value = new Date().toISOString().slice(0,10);
-
   // 状態復元（ここでloadHata→imgBtn操作が走る）
   _hataEntry = null; // 一旦クリアしてloadHataで再セット
   restoreState();
+
+  // 日付は常に今日に設定（restoreState で古い日付が入る場合があるため後から上書き）
+  var dateEl = document.getElementById('inDate');
+  var _today = new Date().toISOString().slice(0,10);
+  if(dateEl) dateEl.value = _today;
+
+  // ── 記録者デバイス記憶 ──────────────────────────────────
+  var _recEl = document.getElementById('inRecorder');
+  var _savedRec = localStorage.getItem('checklist_recorder') || '';
+  if(_recEl) {
+    var _stateRec = (_recEl.value || '').trim();
+    if(!_stateRec && _savedRec) {
+      // 状態に名前がなければデバイス記憶から補完
+      _recEl.value = _savedRec;
+    } else if(_stateRec && _savedRec && _stateRec !== _savedRec) {
+      // 状態の名前とデバイス記憶が異なる場合に確認アラート
+      var _useDevice = confirm(
+        '⚠ 記録者の確認\n\n' +
+        'このデバイスの登録者: 【' + _savedRec + '】\n' +
+        '前回のセッションの記録者: 【' + _stateRec + '】\n\n' +
+        '「OK」→ デバイス登録者（' + _savedRec + '）を使用\n' +
+        '「キャンセル」→ 前回の記録者（' + _stateRec + '）を維持'
+      );
+      if(_useDevice) _recEl.value = _savedRec;
+    } else if(!_stateRec && !_savedRec) {
+      // どちらもなければ空のまま（入力を促す）
+    }
+  }
+  // ──────────────────────────────────────────────────────
   // Firestore管種設定（管理者登録済みの場合はそちらを優先）
   // localStorage個人設定よりFirestore共通設定を優先して上書き
   loadPipeSettingsFromFb();
@@ -3910,7 +3967,8 @@ function loadHata(){
   try{ var _gr=localStorage.getItem('hata_master'); if(_gr){var _gp=JSON.parse(_gr);if(Array.isArray(_gp))_allHataEntries=_allHataEntries.concat(_gp);} }catch(e){}
   var infoEl = document.getElementById('hataInfo');
   if(!_allHataEntries.length){ if(infoEl) infoEl.innerHTML='<span style="color:var(--yellow)">⚠ 旗揚げマスタ未登録（発注アプリで登録してください）</span>'; return; }
-  var entry = _allHataEntries.find(function(e){ return String(e.hata)===String(num); });
+  // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
+  var entry = _allHataEntries.find(function(e){ return String(e.hata||e.num||'')===String(num); });
   if(!entry){ if(infoEl) infoEl.innerHTML='<span style="color:var(--text3)">No.'+num+' は未登録</span>'; return; }
   _hataEntry = entry;
   var _dbBtn=document.getElementById('debugBtn'); if(_dbBtn)_dbBtn.style.display='';
@@ -3949,11 +4007,14 @@ function loadHata(){
   if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
   if(_dp1s != null) info += '　勾配②端DP:'+_dp1s+'m';
   if(infoEl) infoEl.innerHTML='<span style="color:#78350f">'+info+'</span>';
-  // 図面ボタン: imgData が実際に画像データかチェック
-  var hasImg = entry.imgData && (
-    entry.imgData.startsWith('data:image') ||
-    entry.imgData.startsWith('data:application/pdf')
-  );
+  // 図面: imgData(order.html形式) または img(roadbed.html形式) を統合してチェック
+  var _rawImg = entry.imgData || entry.img || '';
+  var hasImg = !!(_rawImg && (
+    _rawImg.startsWith('data:image') ||
+    _rawImg.startsWith('data:application/pdf')
+  ));
+  // img フィールドを imgData に正規化（表示を統一するため）
+  if (!entry.imgData && entry.img) entry.imgData = entry.img;
   if (hasImg) {
     showDiagram(entry, true);
     recalcGL();
@@ -3969,7 +4030,7 @@ function loadHata(){
           var mkLocal = _siteId ? 'hata_master_' + _siteId : 'hata_master';
           try {
             var localArr = JSON.parse(localStorage.getItem(mkLocal)||'[]');
-            var idx = localArr.findIndex(function(r){ return String(r.hata)===String(num); });
+            var idx = localArr.findIndex(function(r){ return String(r.hata||r.num||'')===String(num); });
             if (idx >= 0) { localArr[idx].imgData = entry.imgData; localStorage.setItem(mkLocal, JSON.stringify(localArr)); }
           } catch(e) {}
           showDiagram(entry, true);
@@ -3986,13 +4047,38 @@ function loadHata(){
   }
 }
 
+// ===== checklist 図面ズーム =====
+var _ckDiagZoomLv = 1.0;
+var _ckDiagBaseW = 0;
+function _ckDiagZoom(delta){
+  _ckDiagZoomLv = Math.max(0.25, Math.min(4.0, parseFloat((_ckDiagZoomLv+delta).toFixed(2))));
+  var img = document.querySelector('#diagImgWrap img');
+  if(!img) return;
+  if(!_ckDiagBaseW) _ckDiagBaseW = img.naturalWidth||img.offsetWidth||600;
+  img.style.width = Math.round(_ckDiagBaseW*_ckDiagZoomLv)+'px';
+  img.style.maxWidth = 'none';
+  var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent=Math.round(_ckDiagZoomLv*100)+'%';
+}
+function _ckDiagZoomReset(){
+  _ckDiagZoomLv=1.0; _ckDiagBaseW=0;
+  var img=document.querySelector('#diagImgWrap img');
+  if(img){img.style.width='100%';img.style.maxWidth='';}
+  var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent='100%';
+}
+// ================================
+
 function showDiagram(e, hasImg){
   var diag = document.getElementById('hataDiagram');
   if(!diag) return;
-  if(!hasImg){ diag.className='hata-diagram'; return; }
-  // タイトル
+  var zCtrl = document.getElementById('ckDiagZoomCtrl');
+  if(!hasImg){
+    diag.className='hata-diagram';
+    if(zCtrl) zCtrl.style.display='none';
+    return;
+  }
+  // タイトル（hata||num 両対応）
   var title = document.getElementById('diagTitle');
-  if(title) title.textContent = '📐 旗揚げ No.'+(e.hata||'')+(e.name?'  '+e.name:'');
+  if(title) title.textContent = '📐 旗揚げ No.'+(e.hata||e.num||'')+(e.name?'  '+e.name:'');
   // 数値タグ
   var vals = document.getElementById('diagVals');
   if(vals){
@@ -4004,15 +4090,24 @@ function showDiagram(e, hasImg){
     if(e.note) v += '<span style="font-size:13px;color:#555;padding:3px 4px">'+e.note+'</span>';
     vals.innerHTML = v;
   }
-  // 画像
+  // 画像（imgData=order.html形式 / img=roadbed.html形式 両対応）
+  var imgSrc = e.imgData || e.img || '';
   var wrap = document.getElementById('diagImgWrap');
+  _ckDiagZoomLv=1.0; _ckDiagBaseW=0;
   if(wrap){
-    if(e.imgData && e.imgData.startsWith('data:image'))
-      wrap.innerHTML = '<img class="diagram-img" src="'+e.imgData+'" alt="図面">';
-    else if(e.imgData && e.imgData.startsWith('data:application/pdf'))
+    if(imgSrc && imgSrc.startsWith('data:image')){
+      wrap.innerHTML = '<img class="diagram-img" id="ckDiagImg" src="'+imgSrc+'" alt="図面" style="width:100%;">';
+      var _imgEl = wrap.querySelector('img');
+      if(_imgEl) _imgEl.onload=function(){_ckDiagBaseW=_imgEl.naturalWidth||_imgEl.offsetWidth||600;};
+      if(zCtrl){ zCtrl.style.display='flex'; }
+      var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent='100%';
+    } else if(imgSrc && imgSrc.startsWith('data:application/pdf')){
       wrap.innerHTML = '<div class="diagram-noimg">📄 PDF図面が登録されています</div>';
-    else
+      if(zCtrl) zCtrl.style.display='none';
+    } else {
       wrap.innerHTML = '<div class="diagram-noimg">画像なし</div>';
+      if(zCtrl) zCtrl.style.display='none';
+    }
   }
   diag.className = 'hata-diagram show';
   // 旗揚げエリアの下角を四角に
@@ -4035,6 +4130,8 @@ function saveRecord(){
   if(!date){ alert('⚠ 作業日を入力してください'); return; }
   var recorder = ($v('inRecorder')||'').trim();
   if(!recorder){ alert('⚠ 記録者（氏名）を入力してください'); return; }
+  // 記録者名をデバイスに保存（次回起動時に自動入力）
+  _saveRecorderName(recorder);
   var _doneCount = Object.keys(_checks).filter(function(k){ return _checks[k]; }).length;
   if(_doneCount === 0){
     if(!confirm('チェック済み項目が0件です。このまま保存しますか？')){ return; }

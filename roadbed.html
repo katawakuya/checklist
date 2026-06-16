@@ -32,6 +32,10 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
 .page-nav{display:flex;align-items:center;gap:6px;margin-left:auto;}
 .page-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:17px;}
 .page-nav span{font-size:16px;color:var(--text2);white-space:nowrap;}
+.zoom-ctrl{display:none;align-items:center;gap:4px;margin-left:auto;}
+.zoom-ctrl button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:18px;line-height:1;font-weight:700;}
+.zoom-ctrl button:active{background:var(--border);}
+.zoom-level{font-size:15px;color:var(--text2);min-width:44px;text-align:center;font-variant-numeric:tabular-nums;}
 .viewer-area{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;background:#111;padding:8px;}
 .viewer-area canvas,.viewer-area img{max-width:100%;height:auto;display:block;box-shadow:0 2px 12px rgba(0,0,0,.5);}
 .viewer-area iframe{width:100%;height:100%;border:none;background:#fff;}
@@ -128,6 +132,12 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFile(this.files[0])">
       <button class="btn-file" onclick="document.getElementById('fileInput').click()">📁 ファイルを開く</button>
       <button class="btn-file-clear" id="btnClearViewer" onclick="clearViewer()" style="display:none">✕</button>
+      <div class="zoom-ctrl" id="zoomCtrl">
+        <button onclick="viewerZoom(-0.25)" title="縮小">－</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button onclick="viewerZoom(+0.25)" title="拡大">＋</button>
+        <button onclick="viewerZoomReset()" title="リセット" style="font-size:14px;padding:4px 8px;">Reset</button>
+      </div>
       <div class="page-nav" id="pageNav" style="display:none">
         <button onclick="changePage(-1)">◀</button>
         <span id="pageInfo">1 / 1</span>
@@ -1486,6 +1496,7 @@ function viewDwg(key){
 async function _showDwgInViewer(d){
   document.getElementById('viewerTitle').textContent=d.name;
   document.getElementById('btnClearViewer').style.display='';
+  _zoomCtrlShow(true);viewerZoomReset();
   _pdfDoc=null;
   if(d.fileData){
     const isPdf=(d.fileType&&d.fileType.indexOf('pdf')>=0)||d.name.toLowerCase().endsWith('.pdf');
@@ -1521,6 +1532,7 @@ async function handleFile(file){
   _pdfDoc=null;
   document.getElementById('viewerTitle').textContent=file.name;
   document.getElementById('btnClearViewer').style.display='';
+  _zoomCtrlShow(true);viewerZoomReset();
   if(file.name.split('.').pop().toLowerCase()==='pdf') await loadPdf(file);
   else loadImage(file);
 }
@@ -1561,10 +1573,18 @@ async function renderPdfPage(p){
   const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
   await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
   const va=document.getElementById('viewerArea');va.innerHTML='';va.appendChild(c);
+  _viewerBaseW=c.width;
+  if(_viewerZoom!==1.0)_applyViewerZoom();
 }
 function loadImage(file){
   const fr=new FileReader();
-  fr.onload=e=>{document.getElementById('viewerArea').innerHTML='<img src="'+e.target.result+'" alt="図面">';document.getElementById('pageNav').style.display='none';};
+  fr.onload=e=>{
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+e.target.result+'" alt="図面" style="max-width:100%;height:auto;">';
+    document.getElementById('pageNav').style.display='none';
+    var imgEl=va.querySelector('img');
+    if(imgEl){imgEl.onload=function(){_viewerBaseW=imgEl.naturalWidth||imgEl.offsetWidth||800;};}
+  };
   fr.readAsDataURL(file);
 }
 function changePage(d){
@@ -1573,13 +1593,149 @@ function changePage(d){
   document.getElementById('pageInfo').textContent=_pdfPage+' / '+_pdfTotal;
   renderPdfPage(_pdfPage);
 }
+// ======== ビューア ズーム ========
+var _viewerZoom=1.0;
+var _viewerBaseW=0;
+function viewerZoom(delta){
+  _viewerZoom=Math.max(0.25,Math.min(4.0,parseFloat((_viewerZoom+delta).toFixed(2))));
+  _applyViewerZoom();
+}
+function viewerZoomReset(){
+  _viewerZoom=1.0;_viewerBaseW=0;
+  var el=document.querySelector('#viewerArea > img, #viewerArea > canvas');
+  if(el){el.style.width='';el.style.maxWidth='100%';el.style.height='auto';}
+  var va=document.getElementById('viewerArea');if(va)va.style.justifyContent='center';
+  var zl=document.getElementById('zoomLevel');if(zl)zl.textContent='100%';
+}
+function _applyViewerZoom(){
+  var el=document.querySelector('#viewerArea > img, #viewerArea > canvas');
+  if(!el)return;
+  if(!_viewerBaseW)_viewerBaseW=el.naturalWidth||el.offsetWidth||800;
+  el.style.width=Math.round(_viewerBaseW*_viewerZoom)+'px';
+  el.style.maxWidth='none';
+  el.style.height='auto';
+  var va=document.getElementById('viewerArea');
+  if(va)va.style.justifyContent=_viewerZoom>1?'flex-start':'center';
+  var zl=document.getElementById('zoomLevel');
+  if(zl)zl.textContent=Math.round(_viewerZoom*100)+'%';
+}
+function _zoomCtrlShow(v){
+  var zc=document.getElementById('zoomCtrl');
+  if(zc)zc.style.display=v?'flex':'none';
+}
+// ホイールズーム（Ctrl+scroll）
+document.addEventListener('DOMContentLoaded',function(){
+  var va=document.getElementById('viewerArea');
+  if(va)va.addEventListener('wheel',function(e){
+    if(e.ctrlKey||e.metaKey){e.preventDefault();viewerZoom(e.deltaY<0?0.1:-0.1);}
+  },{passive:false});
+});
+// ======== /ビューア ズーム ========
+
 function clearViewer(){
   document.getElementById('viewerArea').innerHTML='<div class="viewer-empty">📄 右パネルの図面リストから選択するか<br>ローカルのPDF・画像を開いてください</div>';
   document.getElementById('viewerTitle').textContent='図面ビューア';
   document.getElementById('pageNav').style.display='none';
   document.getElementById('btnClearViewer').style.display='none';
+  _zoomCtrlShow(false);viewerZoomReset();
   _pdfDoc=null;
   document.getElementById('fileInput').value='';
+}
+
+// ======================================
+// ビューア 絞り込みフィルター
+// ======================================
+function _hataKey(r){return r.key||String(r.num||r.hata||'');}
+function setFilterStatus(text){var el=document.getElementById('filterStatus');if(el)el.textContent=text;}
+
+function refreshViewerFilter(){
+  // 検索バーの表示制御
+  var bar=document.getElementById('viewerSearchBar');
+  if(bar) bar.classList.toggle('hidden',!_selectedSiteId);
+  // 型（路盤構成）セレクト
+  var rbSel=document.getElementById('filterRbSel');
+  if(rbSel){
+    rbSel.innerHTML='<option value="">― 型を選択 ―</option>';
+    if(_selectedSiteId){
+      getLocalRb(_selectedSiteId).forEach(function(r){
+        var o=document.createElement('option');
+        o.value=r.key||r.label||'';
+        o.textContent=r.label||r.key||'?';
+        rbSel.appendChild(o);
+      });
+    }
+    rbSel.value='';
+  }
+  // 旗揚げ番号セレクト
+  var hSel=document.getElementById('filterHataSel');
+  if(hSel){
+    hSel.innerHTML='<option value="">― 旗揚げ番号 ―</option>';
+    hSel.disabled=true;
+    if(_selectedSiteId){
+      getLocalHata(_selectedSiteId).forEach(function(r){
+        var o=document.createElement('option');
+        o.value=_hataKey(r);
+        o.textContent='No.'+(r.num||r.hata||'?')+(r.name?' '+r.name:'');
+        hSel.appendChild(o);
+      });
+      if(hSel.options.length>1)hSel.disabled=false;
+    }
+    hSel.value='';
+  }
+  setFilterStatus('');
+}
+
+function onFilterRbChange(rbKey){
+  // 旗揚げセレクトをリセット
+  var hSel=document.getElementById('filterHataSel');
+  if(hSel){hSel.value='';hSel.disabled=!rbKey;}
+  if(!rbKey){setFilterStatus('');return;}
+  var dwgList=getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey;});
+  if(dwgList.length>0){
+    _viewDwgEntry(dwgList[0]);
+    setFilterStatus('📋 図面 '+dwgList.length+'件');
+  } else {
+    setFilterStatus('図面未登録');
+  }
+}
+
+function onFilterHataChange(hataKey){
+  if(!hataKey){
+    var rbKey=document.getElementById('filterRbSel').value;
+    if(rbKey) onFilterRbChange(rbKey); else setFilterStatus('');
+    return;
+  }
+  var r=getLocalHata(_selectedSiteId).find(function(x){return _hataKey(x)===hataKey;});
+  if(!r){setFilterStatus('⚠️ 見つかりません');return;}
+  var imgSrc=r.img||r.imgData||'';
+  if(imgSrc){
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
+    document.getElementById('btnClearViewer').style.display='';
+    document.getElementById('pageNav').style.display='none';
+    _zoomCtrlShow(true);viewerZoomReset();
+    _pdfDoc=null;
+    var imgEl=va.querySelector('img');
+    if(imgEl)imgEl.onload=function(){_viewerBaseW=imgEl.naturalWidth||imgEl.offsetWidth||800;};
+    var dpStr=r.dp?'DP:'+r.dp+'m　':'';
+    var khStr=(r.kanH!=null&&r.kanH!=='')?'管下H:'+(r.kanH||r.dph||'')+'m':'';
+    setFilterStatus('📷 '+dpStr+khStr);
+  } else {
+    var rbKey2=document.getElementById('filterRbSel').value;
+    var dwgList2=rbKey2?getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey2;}):[];
+    if(dwgList2.length>0){
+      _viewDwgEntry(dwgList2[0]);
+      setFilterStatus('📋 図面（旗揚げ画像なし）');
+    } else {
+      setFilterStatus('⚠️ 画像・図面なし');
+    }
+  }
+}
+
+function _viewDwgEntry(d){
+  if(!d)return;
+  _showDwgInViewer(d);
 }
 
 // ======================================
@@ -2115,6 +2271,7 @@ function onFilterHataChange(hataKey){
     document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
     document.getElementById('btnClearViewer').style.display='';
     document.getElementById('pageNav').style.display='none';
+    _zoomCtrlShow(true);viewerZoomReset();
     _pdfDoc=null;
     var dpStr=r.dp?'DP:'+r.dp+'m　':'';
     var khStr=(r.kanH!=null&&r.kanH!=='')?'管下H:'+(r.kanH||r.dph||'')+'m':'';

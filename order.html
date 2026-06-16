@@ -1451,7 +1451,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
       <!-- 左：図面画像 -->
       <div style="flex:1;overflow:auto;padding:16px;background:var(--surface2);
-        border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+        border-right:1px solid var(--border);display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;">
+        <!-- ズームコントロール -->
+        <div id="diag-zoom-ctrl" style="display:none;align-items:center;gap:6px;align-self:flex-start;flex-shrink:0;">
+          <button onclick="_diagZoom(-0.25)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:18px;font-weight:700;line-height:1;">－</button>
+          <span id="diag-zoom-level" style="font-size:14px;color:var(--text2);min-width:42px;text-align:center;">100%</span>
+          <button onclick="_diagZoom(+0.25)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:18px;font-weight:700;line-height:1;">＋</button>
+          <button onclick="_diagZoomReset()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;">Reset</button>
+        </div>
         <div id="diag-imgWrap" style="display:none;width:100%;">
           <img id="diag-img" style="width:100%;height:auto;border-radius:8px;
             border:1px solid var(--border);display:block;">
@@ -1856,7 +1863,9 @@ function fbSyncHataMasters(callback) {
           if (arr.length > 0) {
             var localArr = [];
             try { localArr = JSON.parse(localStorage.getItem('hata_master_' + s.id)||'[]'); } catch(e) {}
-            if (arr.length >= localArr.length) {
+            // Firestore が多い場合に加え、件数が同じでも常にマージして最新を取得
+            // ただし Firestore 側が明らかに少ない（local>Firestore+2件以上）場合はスキップ
+            if (arr.length >= localArr.length - 2) {
               arr = _mergeImgDataFromLocal(arr, localArr);
               localStorage.setItem('hata_master_' + s.id, JSON.stringify(arr));
             }
@@ -1870,9 +1879,17 @@ function fbSyncHataMasters(callback) {
 // hasImg:true エントリの imgData を既存ローカルキャッシュから復元するヘルパー
 function _mergeImgDataFromLocal(newArr, localArr) {
   return newArr.map(function(e) {
-    if (e.hasImg && !e.imgData) {
-      var loc = localArr.find(function(r){ return String(r.hata)===String(e.hata); });
-      if (loc && loc.imgData) { e = Object.assign({}, e, { imgData: loc.imgData }); }
+    // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
+    var eKey = String(e.hata||e.num||'');
+    // hasImg フラグがある、または imgData/img が未設定の場合にローカルから補完
+    if ((e.hasImg && !e.imgData) || (!e.imgData && !e.img)) {
+      var loc = localArr.find(function(r){ return String(r.hata||r.num||'')===eKey; });
+      if (loc) {
+        var patch = {};
+        if (loc.imgData) patch.imgData = loc.imgData;
+        else if (loc.img) patch.imgData = loc.img; // roadbed.html の img フィールドを imgData に統合
+        if (Object.keys(patch).length) e = Object.assign({}, e, patch);
+      }
     }
     return e;
   });
@@ -7233,8 +7250,32 @@ function importMasterJSON(e) {
 let _currentDiagHata = null;
 let _currentApplyTarget = null; // { typeKey, patternId }
 
+// ===== ダイアログ内ズーム =====
+var _diagZoomLevel = 1.0;
+var _diagBaseW = 0;
+function _diagZoom(delta) {
+  _diagZoomLevel = Math.max(0.25, Math.min(4.0, parseFloat((_diagZoomLevel + delta).toFixed(2))));
+  _diagApplyZoom();
+}
+function _diagZoomReset() {
+  _diagZoomLevel = 1.0; _diagBaseW = 0;
+  var img = document.getElementById('diag-img');
+  if (img) { img.style.width = '100%'; img.style.maxWidth = ''; }
+  var lbl = document.getElementById('diag-zoom-level'); if (lbl) lbl.textContent = '100%';
+}
+function _diagApplyZoom() {
+  var img = document.getElementById('diag-img'); if (!img) return;
+  if (!_diagBaseW) _diagBaseW = img.naturalWidth || img.offsetWidth || 600;
+  img.style.width = Math.round(_diagBaseW * _diagZoomLevel) + 'px';
+  img.style.maxWidth = 'none';
+  var lbl = document.getElementById('diag-zoom-level');
+  if (lbl) lbl.textContent = Math.round(_diagZoomLevel * 100) + '%';
+}
+// ===========================
+
 function showDiagram(hata) {
-  const entry = getMaster().find(r => String(r.hata) === String(hata));
+  // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
+  const entry = getMaster().find(r => String(r.hata||r.num||'') === String(hata));
   _currentDiagHata = hata;
 
   // タイトル
@@ -7258,16 +7299,25 @@ function showDiagram(hata) {
   }
   document.getElementById('diag-values').innerHTML = valHTML;
 
-  // 画像
+  // 画像（imgData = order.html形式、img = roadbed.html形式、両対応）
   const imgWrap = document.getElementById('diag-imgWrap');
   const noImg   = document.getElementById('diag-noimg');
-  if (entry?.imgData) {
-    document.getElementById('diag-img').src = entry.imgData;
+  const diagZoomCtrl = document.getElementById('diag-zoom-ctrl');
+  const imgSrc  = entry?.imgData || entry?.img || '';
+  _diagZoomLevel = 1.0; _diagBaseW = 0;
+  if (imgSrc) {
+    const imgEl = document.getElementById('diag-img');
+    imgEl.style.width = '100%'; imgEl.style.maxWidth = '';
+    imgEl.src = imgSrc;
+    imgEl.onload = function(){ _diagBaseW = imgEl.naturalWidth || imgEl.offsetWidth || 600; };
     imgWrap.style.display = 'block';
     noImg.style.display = 'none';
+    if (diagZoomCtrl) { diagZoomCtrl.style.display = 'flex'; }
+    const lbl = document.getElementById('diag-zoom-level'); if (lbl) lbl.textContent = '100%';
   } else {
     imgWrap.style.display = 'none';
     noImg.style.display = 'block';
+    if (diagZoomCtrl) diagZoomCtrl.style.display = 'none';
   }
 
   // 現在アクティブなタブの型を初期選択として設定
