@@ -1652,23 +1652,32 @@ function autoRegisterDefaultRoadbeds() {
   ];
   _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc) {
     var rawExisting = (doc.exists && doc.data().data) ? doc.data().data : [];
-    var existing = Array.isArray(rawExisting) ? rawExisting : [];
+    // ── per-site フォーマット（object）の場合は Firestore を絶対に上書きしない ──
+    // Array.isArray でない = 新フォーマット（siteId→配列 の辞書）
+    // そのまま上書きすると現場別データが全滅するため、localStorage のみ更新して終了
+    if (!Array.isArray(rawExisting)) {
+      var _globalMasters = [];
+      try { _globalMasters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]'); } catch(e) {}
+      var _localChanged = false;
+      defaults.forEach(function(entry) {
+        if (!_globalMasters.find(function(r){ return r.key === entry.key; })) {
+          _globalMasters.push(entry); _localChanged = true;
+        }
+      });
+      if (_localChanged) localStorage.setItem('roadbed_masters', JSON.stringify(_globalMasters));
+      try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+      console.log('[autoReg] per-site format detected — Firestore not touched, localStorage updated');
+      return;
+    }
+    // ── 旧フォーマット（フラット配列）の場合のみ Firestore に書き戻す ──
+    var existing = rawExisting; // Array.isArray confirmed
     var changed = false;
     defaults.forEach(function(entry) {
       var idx = existing.findIndex(function(r){ return r.key === entry.key; });
       if (idx < 0) {
         existing.push(entry); changed = true;
-      } else {
-        // kariRmLayers/kariRcLayers/kariRmH が変わっていたら上書き
-        var old = existing[idx];
-        if (old.kariRmLayers !== entry.kariRmLayers ||
-            old.kariRcLayers !== entry.kariRcLayers ||
-            old.kariRmH     !== entry.kariRmH ||
-            old.kariRcH     !== entry.kariRcH) {
-          existing[idx] = Object.assign({}, old, entry);
-          changed = true;
-        }
       }
+      // 既存エントリは上書きしない（ユーザーがroadbed.htmlで設定したデータを保護）
     });
     // 常に localStorage を最新にしてラベルを再描画
     localStorage.setItem('roadbed_masters', JSON.stringify(existing));
@@ -1878,7 +1887,8 @@ function fbSyncHataMasters(callback) {
 
 // hasImg:true エントリの imgData を既存ローカルキャッシュから復元するヘルパー
 function _mergeImgDataFromLocal(newArr, localArr) {
-  return newArr.map(function(e) {
+  // まず Firestore 側エントリをローカルで補完
+  var merged = newArr.map(function(e) {
     // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
     var eKey = String(e.hata||e.num||'');
     // hasImg フラグがある、または imgData/img が未設定の場合にローカルから補完
@@ -1893,6 +1903,14 @@ function _mergeImgDataFromLocal(newArr, localArr) {
     }
     return e;
   });
+  // ローカルにあるが Firestore に存在しないエントリも保持（roadbed.html の num 形式エントリ等）
+  var newKeys = {};
+  newArr.forEach(function(e){ var k=String(e.hata||e.num||''); if(k) newKeys[k]=true; });
+  localArr.forEach(function(r){
+    var rKey = String(r.hata||r.num||'');
+    if (rKey && !newKeys[rKey]) merged.push(r);
+  });
+  return merged;
 }
 
 function fbSaveMaster(key, data) {
@@ -1912,14 +1930,19 @@ function fbSaveMaster(key, data) {
 // hata配列の imgData を本体から分離して保存（Firestore 1MB制限対策）
 function _fbSaveHataArr(docKey, arr) {
   if (!_fbDb || !_isAdmin) return;
-  // imgData を別ドキュメントに抜き出し、本体には hasImg フラグのみ残す
+  // imgData / img を別ドキュメントに抜き出し、本体には hasImg フラグのみ残す
+  // roadbed.html は num フィールドを使用するため hata||num で両対応
   var stripped = arr.map(function(e) {
-    if (e.imgData) {
-      var imgDocKey = docKey + '_img_' + String(e.hata);
-      _fbDb.collection('masters').doc(imgDocKey).set({ imgData: e.imgData, updatedAt: new Date().toISOString() })
-        .catch(function(err){ console.warn('[FB] imgData save err', imgDocKey, err); });
+    var imgData = e.imgData || e.img || '';
+    if (imgData) {
+      var hataOrNum = String(e.hata||e.num||'');
+      if (hataOrNum) {
+        var imgDocKey = docKey + '_img_' + hataOrNum;
+        _fbDb.collection('masters').doc(imgDocKey).set({ imgData: imgData, updatedAt: new Date().toISOString() })
+          .catch(function(err){ console.warn('[FB] imgData save err', imgDocKey, err); });
+      }
       var c = Object.assign({}, e);
-      delete c.imgData;
+      delete c.imgData; delete c.img;
       c.hasImg = true;
       return c;
     }
@@ -2575,11 +2598,26 @@ function _resolveLayersStr(t, field) {
   } catch(e) { console.warn('[RB] _resolveLayersStr error:', e); }
   return v; // 空文字列 / undefined → 標準ラベル
 }
-// 型オブジェクトから kariRmSize を動的解決（_resolveLayersStr と同様の height-match）
+// kariRbLayers / honRbLayers の subcat（'RM-30','RM-40' 等）から size を抽出するヘルパー
+function _sizeFromRbLayers(layers, isRm) {
+  if (!Array.isArray(layers)) return null;
+  var r = layers.find(function(r) {
+    var sc = String(r.subcat || r.cat || '');
+    return isRm ? sc.startsWith('RM-') : sc.startsWith('RC-');
+  });
+  if (r) { var sz = parseInt(String(r.subcat || r.cat || '').replace(/\D/g, '')); if (sz > 0) return sz; }
+  return null;
+}
+// 型オブジェクトから kariRmSize を動的解決（kariRbLayers.subcat を最優先）
 function _resolveRmSize(t) {
   if (!t) return 40;
+  // ① kariRbLayers の subcat から直接取得。空の場合は honRbLayers からフォールバック
+  //    （kari側未設定・hon側のみ登録マスタ でも honRbLayers のサイズを参照できるよう）
+  var _fromLayers = _sizeFromRbLayers(t.kariRbLayers, true)
+                 || _sizeFromRbLayers(t.honRbLayers,  true);
+  if (_fromLayers != null) return _fromLayers;
   var rmKey = (t.key || '').replace(/^type_import_/, '');
-  // key が空でも必ず高さマッチングを実行
+  // ② key または height-match でマスタを検索
   try {
     var _allMasters = getRoadbedMasters();
     var rm = rmKey ? _allMasters.find(function(r){ return r.key === rmKey; }) : null;
@@ -2604,8 +2642,12 @@ function _resolveRmSize(t) {
 }
 function _resolveRcSize(t) {
   if (!t) return 40;
+  // ① kariRbLayers の subcat から直接取得。空の場合は honRbLayers からフォールバック
+  var _fromLayers = _sizeFromRbLayers(t.kariRbLayers, false)
+                 || _sizeFromRbLayers(t.honRbLayers,  false);
+  if (_fromLayers != null) return _fromLayers;
   var rmKey = (t.key || '').replace(/^type_import_/, '');
-  // key が空でも必ず高さマッチングを実行
+  // ② key または height-match でマスタを検索
   try {
     var _allMasters = getRoadbedMasters();
     var rm = rmKey ? _allMasters.find(function(r){ return r.key === rmKey; }) : null;
@@ -2632,12 +2674,17 @@ function _resolveRcSize(t) {
 function getModeRmLabel(t, typeKey, rmSize) {
   const mode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[typeKey]) || 'kari';
   const layersStr = _resolveLayersStr(t, mode === 'hon' ? 'honRmLayers' : 'kariRmLayers');
-  return getRmLabel(rmSize != null ? rmSize : _resolveRmSize(t), layersStr);
+  // honモードは honRbLayers から size を取得、kariモードは kariRbLayers（_resolveRmSize が参照）
+  const _sz = rmSize != null ? rmSize
+    : (mode === 'hon' ? (_sizeFromRbLayers(t.honRbLayers, true) || _resolveRmSize(t)) : _resolveRmSize(t));
+  return getRmLabel(_sz, layersStr);
 }
 function getModeRcLabel(t, typeKey, rcSize) {
   const mode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[typeKey]) || 'kari';
   const layersStr = _resolveLayersStr(t, mode === 'hon' ? 'honRcLayers' : 'kariRcLayers');
-  return getRcLabel(rcSize != null ? rcSize : _resolveRcSize(t), layersStr);
+  const _sz = rcSize != null ? rcSize
+    : (mode === 'hon' ? (_sizeFromRbLayers(t.honRbLayers, false) || _resolveRcSize(t)) : _resolveRcSize(t));
+  return getRcLabel(_sz, layersStr);
 }
 // ────────────────────────────────────────────────────────────────────
 
@@ -2716,8 +2763,24 @@ function renderChips(containerId, result, typeKey) {
     }
   }
   if (showRM)   html += chip(getModeRmLabel(t, typeKey, rmS), fmt(result.rmOrd), 'm³');
-  html += chip(getModeRcLabel(t, typeKey, rcS), fmt(result.rcOrd), 'm³');
-  if (showRM)   html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
+  // honモード && honFreeRbRows（通常モードの既設路盤・鉄板等）がある場合はRC-40の代わりに表示
+  const _honFrbChip = _isHonMode
+    ? (((t.honFreeRbRows||[]).length > 0)
+        ? t.honFreeRbRows
+        : ((t.honFreeRows||[]).length === 0
+            ? (t.honRbLayers||[]).filter(r => r.cat==='free' || r.subcat==='subfree')
+            : [])
+      ).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板')
+    : [];
+  if (_honFrbChip.length > 0 && (result._W||0) > 0 && (result._L||0) > 0) {
+    const _chipWL = (result._W) * (result._L);
+    _honFrbChip.forEach(r => {
+      html += chip(r.name||'路盤材', fmt((r.t/1000) * _chipWL * WASTE_RB_BULK), 'm³');
+    });
+  } else {
+    html += chip(getModeRcLabel(t, typeKey, rcS), fmt(result.rcOrd), 'm³');
+  }
+  if (showRM && _honFrbChip.length === 0) html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
   if (_isHonFreeChip) html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:var(--orange);padding:4px 2px 2px;margin-top:2px;">再生砂・改良土</div>';
   if (t.hasImprovedSoil) html += chip('改良土', fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
@@ -2846,7 +2909,10 @@ function renderTotal(typeKey) {
   const honAsWaste  = honAsH * honTotalWL * AS_DENSITY * WASTE_AS_BULK;
   const honRcWaste  = t.genkyoRC * honTotalWL * WASTE_RB_BULK;
   const honRmWaste  = t.genkyoRM * honTotalWL * WASTE_RB_BULK;
-  const honRcRmWaste = honRcWaste + honRmWaste;
+  // honFreeRbRows（既設路盤等、鉄板除く）の廃材計算
+  const _honFrbWasteRows = (t.honFreeRbRows||[]).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板');
+  const honFrbWaste = _honFrbWasteRows.reduce((s,r) => s + (r.t/1000) * honTotalWL * WASTE_RB_BULK, 0);
+  const honRcRmWaste = honRcWaste + honRmWaste + honFrbWaste;
 
   const el = document.getElementById(`${typeKey}-total`);
   if (!el) return;
@@ -2931,8 +2997,11 @@ function renderTotal(typeKey) {
       // ── 現況廃材100%：現況廃材のみ表示 ──
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
       html += add(honAsLabel, honAsWaste, 't', false);
-      if (t.genkyoRM > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
-      else                 html += add('廃路盤材 合計',     honRcWaste,    'm³', true);
+      _honFrbWasteRows.forEach(r => {
+        html += add((r.name||'路盤材')+'廃材（'+r.t+'mm）', (r.t/1000)*honTotalWL*WASTE_RB_BULK, 'm³', false);
+      });
+      if (t.genkyoRM > 0 || honFrbWaste > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
+      else                                    html += add('廃路盤材 合計',           honRcWaste,   'm³', true);
 
     } else if (mixed) {
       // ── 混在：仮復旧廃材 ＋ 現況廃材 ＋ 合計 ──
@@ -2943,25 +3012,37 @@ function renderTotal(typeKey) {
 
       html += sep(`🗑️ 路盤廃材（現況・本復旧）　現況廃材（${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡）`, 'rgba(124,58,237,0.75)');
       html += add(honAsLabel, honAsWaste, 't', false);
-      if (t.genkyoRM > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
-      else                 html += add('廃路盤材 合計',     honRcWaste,   'm³', true);
+      _honFrbWasteRows.forEach(r => {
+        html += add((r.name||'路盤材')+'廃材（'+r.t+'mm）', (r.t/1000)*honTotalWL*WASTE_RB_BULK, 'm³', false);
+      });
+      if (t.genkyoRM > 0 || honFrbWaste > 0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', true);
+      else                                    html += add('廃路盤材 合計',           honRcWaste,   'm³', true);
 
       // 合計（仮復旧廃材＋現況廃材）
-      const totalAsWaste  = kariAsWaste  + honAsWaste;
-      const totalRcWaste  = kariRcWaste  + honRcWaste;
-      const totalRmWaste  = kariRmWaste  + honRmWaste;
-      const totalRcRmWaste = totalRcWaste + totalRmWaste;
+      const totalAsWaste   = kariAsWaste + honAsWaste;
+      const totalRcWaste   = kariRcWaste + honRcWaste;
+      const totalRmWaste   = kariRmWaste + honRmWaste;
+      const totalRcRmWaste = totalRcWaste + totalRmWaste + honFrbWaste;
       html += sep(`📊 仮復旧・現況路盤廃材 合計　（${fmt(kariHaibanWL)}㎡＋${fmt(genWL)}㎡＝${fmt(honTotalWL)}㎡）`, 'rgba(79,142,247,0.7)');
       html += add(`廃材AS 合計`, totalAsWaste, 't', true);
-      if (t.genkyoRM > 0 || t.rmH > 0) html += add('廃路盤材（RC＋RM）合計', totalRcRmWaste, 'm³', true);
-      else                               html += add('廃路盤材 合計',     totalRcWaste,   'm³', true);
+      if (t.genkyoRM > 0 || t.rmH > 0 || honFrbWaste > 0) html += add('廃路盤材（RC＋RM）合計', totalRcRmWaste, 'm³', true);
+      else                                                   html += add('廃路盤材 合計',          totalRcWaste,   'm³', true);
 
     } else {
-      // ── 仮復旧のみ ──
+      // ── 仮復旧のみ（またはhonFreeRbRows廃材あり） ──
       html += sep(`🗑️ 路盤廃材（仮復旧・路盤先行）　仮復旧路盤廃材（${fmt(totalKariW)}×${fmt(totalKariL)}=${fmt(totalWL)}㎡）`, 'rgba(234,88,12,0.75)');
       html += add(`廃材AS（${_asActiveStr} 合計${Math.round(kariAsH*1000)}mm）`, kariAsWaste, 't', false);
       if (t.rmH > 0) html += add('廃路盤材（RC＋RM）合計', kariRcRmWaste, 'm³', true);
       else           html += add('廃路盤材 合計',      kariRcWaste,   'm³', true);
+      // 本復旧モードで既設路盤等がある場合は現況廃材セクションを追加
+      if (honFrbWaste > 0) {
+        html += sep(`🗑️ 路盤廃材（現況・本復旧）　${fmt(honTotalWL)}㎡`, 'rgba(124,58,237,0.75)');
+        html += add(honAsLabel, honAsWaste, 't', false);
+        _honFrbWasteRows.forEach(r => {
+          html += add((r.name||'路盤材')+'廃材（'+r.t+'mm）', (r.t/1000)*honTotalWL*WASTE_RB_BULK, 'm³', false);
+        });
+        html += add('廃路盤材 合計', honFrbWaste, 'm³', true);
+      }
     }
   }
 
@@ -3022,6 +3103,7 @@ function saveRecord(typeKey) {
   if (!date) { alert('⚠ 作業日付を入力してください'); return; }
   if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
   if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
+  _saveOrderRecorder(author);
 
   const t = TYPES[typeKey];
   const s = sumResults(getResults(typeKey).filter(Boolean));
@@ -3700,6 +3782,16 @@ function initRoadbedForm() {
 
 // 型サブタブ切り替え
 function activateTypeTab(typeTabId) {
+  // 切替前に現在アクティブなパネルの旗揚げ番号を退避
+  var _savedHataForTab = '';
+  const _activeBtnOld = document.querySelector('#type-subnav .type-subbtn.active');
+  if (_activeBtnOld) {
+    const _oldPanel = document.getElementById('typepanel-' + _activeBtnOld.dataset.typetab);
+    if (_oldPanel) {
+      const _oldHataEl = _oldPanel.querySelector('input[id$="-hata"]');
+      if (_oldHataEl) _savedHataForTab = _oldHataEl.value.trim();
+    }
+  }
   // サブタブボタン
   document.querySelectorAll('#type-subnav .type-subbtn').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`#type-subnav .type-subbtn[data-typetab="${typeTabId}"]`);
@@ -3708,6 +3800,14 @@ function activateTypeTab(typeTabId) {
   document.querySelectorAll('#dynamic-calc-tabs .type-panel').forEach(p => p.style.display = 'none');
   const panel = document.getElementById(`typepanel-${typeTabId}`);
   if (panel) panel.style.display = '';
+  // 旗揚げ番号を新パネルに引き継ぐ（新パネルが空の場合のみ）
+  if (_savedHataForTab && panel) {
+    const _newHataEl = panel.querySelector('input[id$="-hata"]');
+    if (_newHataEl && !_newHataEl.value.trim()) {
+      _newHataEl.value = _savedHataForTab;
+      _newHataEl.dispatchEvent(new Event('input', {bubbles: true}));
+    }
+  }
 }
 
 // =====================================================================
@@ -4138,7 +4238,11 @@ function importFromRoadbedMasters(silent) {
       genkyoRM: r.honRmH || 0, genkyoRC: r.honRcH || 0,
       honFreeMode: r.honFreeMode || false,
       honFreeRows: r.honFreeMode ? (r.honFreeRows||[]) : [],
-      genkyoTotalH: r.honFreeMode ? (r.honTotalH||0) : 0,
+      genkyoTotalH: r.honTotalH || 0,
+      honFreeRbRows: (function(){
+        if (r.honFreeMode) return [];
+        return (r.honRbLayers||[]).filter(function(x){ return x.cat==='free' || x.subcat==='subfree'; });
+      })(),
       genkyoCnH: (function(){
         if (!r.honFreeMode || !Array.isArray(r.honFreeRows)) return 0;
         return r.honFreeRows.filter(function(x){ return x.type==='concrete'||x.type==='コンクリート'; }).reduce(function(s,x){ return s+(x.t||0); }, 0) / 1000;
@@ -4942,7 +5046,11 @@ function buildRoadbedInlineChips(t, mode) {
     const honCnRcMm = Math.round((t.genkyoCnRC||0)*1000);
     if (honCnRcMm>0) rows.push({label:'CN間路盤 '+(t.genkyoCnRCSubcat||'RC-40'), val:honCnRcMm+'mm ★別途発注', color:'#fb923c'});
     const honCnHMm = Math.round((t.genkyoCnH||0)*1000);
-    // genkyoTotalH があればそれを優先（honFreeMode時は各層合計をFirestoreから取得）
+    // 通常モードのフリー路盤層（既設路盤・鉄板等）
+    (t.honFreeRbRows||[]).filter(r=>(r.t||0)>0).forEach(r=>{
+      rows.push({label:r.name||'路盤材', val:r.t+'mm', color:'var(--green)'});
+    });
+    // genkyoTotalH があればそれを優先
     const honTotal = Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000) || (honAs+Math.round((t.genkyoRM||0)*1000)+honRc+honCnRcMm+honCnHMm);
     rows.push({label:'合計H', val:honTotal+'mm', color:'#a78bfa', bold:true});
   }
@@ -5004,6 +5112,10 @@ function buildRoadbedChips(t, mode) {
       if (honCnRcH > 0) chips.push({ label:'CN間路盤材 '+(t.genkyoCnRCSubcat||'RC-40')+'（別途発注）', val:honCnRcH+'mm', color:'rgba(251,146,60,0.08)', border:'rgba(251,146,60,0.5)', textColor:'#fb923c' });
       const honCnMm = Math.round((t.genkyoCnH||0)*1000);
       if (honCnMm > 0) chips.push({ label:'コンクリート', val:'t='+honCnMm+'mm', color:'rgba(249,115,22,0.08)', border:'rgba(249,115,22,0.4)', textColor:'#f97316' });
+      // 通常モードのフリー路盤層（既設路盤・鉄板等）
+      (t.honFreeRbRows||[]).filter(function(r){ return (r.t||0)>0; }).forEach(function(r){
+        chips.push({ label:r.name||'路盤材', val:'t='+r.t+'mm', color:'rgba(34,197,94,0.08)', border:'rgba(34,197,94,0.3)', textColor:'var(--green)' });
+      });
     }
     const honTotal = Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000);
     chips.push({ label:'路盤合計H（現況）', val: honTotal+'mm', color:'rgba(124,58,237,0.08)', border:'rgba(124,58,237,0.4)', textColor:'#a78bfa' });
@@ -5424,14 +5536,28 @@ function updateRbLabels(tid, typeConf) {
     Object.keys(_tov).forEach(function(k){ if (_tov[k]) t[k] = _tov[k]; });
   }
   // デバッグ（常に出力）
-  console.log('[RbLabel] tid='+tid+' key='+(t.key||'(none)')+' _bk='+_bk+' kariRmLayers='+t.kariRmLayers+' rmH='+t.rmH+' totalH='+t.totalH);
-  const rmS = _resolveRmSize(t);
-  const rcS = _resolveRcSize(t);
-  const _kariRmMm = Math.round((t.rmH||0)*1000);
-  const _kariRcMm = Math.round((t.rcH||0)*1000);
+  var _krbLen  = Array.isArray(t.kariRbLayers) ? t.kariRbLayers.length : 'none';
+  var _hrbLen  = Array.isArray(t.honRbLayers)  ? t.honRbLayers.length  : 'none';
+  var _krbSub  = Array.isArray(t.kariRbLayers) ? t.kariRbLayers.map(function(r){return (r.cat||'?')+':'+(r.subcat||'');}).join(',') : '-';
+  var _hrbSub  = Array.isArray(t.honRbLayers)  ? t.honRbLayers.map(function(r){return (r.cat||'?')+':'+(r.subcat||'');}).join(',') : '-';
+  console.log('[RbLabel] tid='+tid+' kariRb['+_krbLen+']='+_krbSub+' honRb['+_hrbLen+']='+_hrbSub+' rmH='+t.rmH+' rmSize='+t.rmSize);
+  // モードに応じて RM/RC サイズを解決（hon モード時は honRbLayers を優先参照）
+  const _labelMode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[tid]) || 'kari';
+  const rmS = _labelMode === 'hon'
+    ? (_sizeFromRbLayers(t.honRbLayers, true)  || _resolveRmSize(t))
+    : _resolveRmSize(t);
+  const rcS = _labelMode === 'hon'
+    ? (_sizeFromRbLayers(t.honRbLayers, false) || _resolveRcSize(t))
+    : _resolveRcSize(t);
+  const _rmLayersField = _labelMode === 'hon' ? 'honRmLayers' : 'kariRmLayers';
+  const _rcLayersField = _labelMode === 'hon' ? 'honRcLayers' : 'kariRcLayers';
+  // kari バックアップから仮復旧用高さを取得（hon モード切替後も正しい値を参照）
+  const _bkForNotice = t._kariBackup || {};
+  const _kariRmMm = Math.round(((_bkForNotice.rmH != null ? _bkForNotice.rmH : t.rmH)||0)*1000);
+  const _kariRcMm = Math.round(((_bkForNotice.rcH != null ? _bkForNotice.rcH : t.rcH)||0)*1000);
   const _rbDiff = _kariRmMm !== Math.round((t.genkyoRM||0)*1000) || _kariRcMm !== Math.round((t.genkyoRC||0)*1000);
-  const _rmLabel = getRmLabel(rmS, _resolveLayersStr(t, 'kariRmLayers'));
-  const _rcLabel = getRcLabel(rcS, _resolveLayersStr(t, 'kariRcLayers'));
+  const _rmLabel = getRmLabel(rmS, _resolveLayersStr(t, _rmLayersField));
+  const _rcLabel = getRcLabel(rcS, _resolveLayersStr(t, _rcLayersField));
   const totalH = Math.round((t.totalH||0)*1000);
   const _noticeTitle = _rbDiff ? '仮復旧・路盤先行 構成（固定値）' : '路盤構成';
   const _asLayers = (t.asLayers && Array.isArray(t.asLayers) && t.asLayers.some(a=>!a.memo&&(a.t||0)>0))
@@ -5508,6 +5634,21 @@ function _rbMasterToTypeObj(m) {
   var _asSurfaceNames = ['再生密粒度AS混合物','密粒度AS混合物','密粒度改質AS混合物','密粒改良1','表層ポーラスAS混合物（透水性）','開粒度AS混合物'];
   var _asBaseNames    = ['再生粗粒度AS混合物','粗粒度AS混合物','粗粒度改質AS混合物（改質Ⅱ型）'];
   var _asOtherNames   = ['瀝青安定処理'];
+  var _allKnownAs     = _asSurfaceNames.concat(_asBaseNames).concat(_asOtherNames);
+  // フリーモード行が「路盤」かどうか（upper_rb/lower_rb/路盤 型）
+  function _isFreeRbRow(r) {
+    var tp = r.type || 'surface';
+    return tp === 'upper_rb' || tp === 'lower_rb' || tp === '路盤';
+  }
+  // フリーモード行が「AS層」かどうか（路盤・コンクリート以外で既知AS名 or 表層/基層型）
+  function _isFreeAsRow(r) {
+    var tp = r.type || 'surface';
+    if (_isFreeRbRow(r) || tp === 'concrete' || tp === 'コンクリート' || tp === 'cn_rc' || tp === 'blank') return false;
+    if (tp === 'surface' || tp === 'base' || tp === 'AS') return true;
+    // type='other': 既知AS名のみ算入（鉄板などは除外）
+    var nm = r.preset || r.name || '';
+    return _allKnownAs.indexOf(nm) >= 0;
+  }
   function _resolveAsRole(a, idx) {
     if (a.role) return a.role;
     var name = a.name || a.preset || '';
@@ -5516,14 +5657,56 @@ function _rbMasterToTypeObj(m) {
     if (_asOtherNames.indexOf(name) >= 0)   return 'other';
     return idx === 0 ? 'surface' : 'base';  // 位置フォールバック
   }
+  function _resolveFreeAsRole(r) {
+    var tp = r.type || 'surface';
+    if (tp === 'surface' || tp === 'AS') return 'surface';
+    if (tp === 'base') return 'base';
+    // type='other': 名前で判定
+    var nm = r.preset || r.name || '';
+    if (_asSurfaceNames.indexOf(nm) >= 0) return 'surface';
+    if (_asBaseNames.indexOf(nm) >= 0)    return 'base';
+    return 'other';
+  }
   var sumAS = function(layers, roles) {
     if (!Array.isArray(layers)) return 0;
     return layers.filter(function(a, idx){ return roles.indexOf(_resolveAsRole(a, idx)) >= 0; })
                  .reduce(function(s,a){ return s+(a.t||0); }, 0);
   };
+  // kariFreeRows の有無を先に確認
+  var _kariFreeRowsArr = Array.isArray(m.kariFreeRows) ? m.kariFreeRows : [];
+  var _honFreeRowsArr  = Array.isArray(m.honFreeRows)  ? m.honFreeRows  : [];
+  // フリーモード判定: 明示フラグ OR (kariFreeRows にデータがあって kariAsLayers が空)
+  // → Fix1 で kariAsLayers が上書きされた場合も kariFreeRows が残っていれば正しく動作する
+  var _kariAsBase = Array.isArray(m.kariAsLayers) ? m.kariAsLayers : [];
+  var _effectivelyFreeMode = !!m.kariFreeMode || (_kariFreeRowsArr.length > 0 && _kariAsBase.length === 0);
+  // ── honFreeRows フォールバック ──────────────────────────────────────────────
+  // roadbed.html で kari 側フリーモードを未設定のまま hon 側だけ設定した場合の救済
+  // 条件: kari フリーモードなし AND kariFreeRows/kariAsLayers ともに空 AND kariTotalH=0
+  //       AND hon フリーモードにデータがある
+  var _useHonForKari = (!_effectivelyFreeMode
+    && _kariFreeRowsArr.length === 0
+    && _kariAsBase.length === 0
+    && (m.kariTotalH || 0) === 0
+    && m.honFreeMode
+    && _honFreeRowsArr.length > 0);
+  if (_useHonForKari) {
+    _kariFreeRowsArr    = _honFreeRowsArr;
+    _effectivelyFreeMode = true;
+  }
+
+  // フリーモード時は kariFreeRows を正源として kariAsArr を構築
+  // （kariFreeMode=true でも kariAsLayers に旧ハードコード値が残っている場合は kariFreeRows を優先）
+  var _kariAsArr;
+  if (_effectivelyFreeMode && _kariFreeRowsArr.length > 0) {
+    var _freeAsRows = _kariFreeRowsArr.filter(_isFreeAsRow);
+    _kariAsArr = _freeAsRows.map(function(r) {
+      return { name: r.preset || r.name || '', t: r.t || 0 };
+    });
+  } else {
+    _kariAsArr = _kariAsBase;
+  }
+
   // kariAsLayers → asLayers (role/preset/custom/t 形式) — chip ラベル表示用
-  var _kariAsArr = m.kariAsLayers || [];
-  var _allKnownAs = _asSurfaceNames.concat(_asBaseNames).concat(_asOtherNames);
   var _asLayers = _kariAsArr.length > 0
     ? _kariAsArr.map(function(a, idx) {
         var role   = _resolveAsRole(a, idx);
@@ -5533,39 +5716,61 @@ function _rbMasterToTypeObj(m) {
         return { role: role, preset: preset, custom: custom, t: a.t || 0 };
       })
     : undefined;
+  // フリーモード路盤 upper_rb 合計H (m)
+  var _freeRbRmH = (_effectivelyFreeMode && _kariFreeRowsArr.length > 0)
+    ? _kariFreeRowsArr.filter(function(r){ return (r.type||'') === 'upper_rb'; })
+                      .reduce(function(s,r){ return s + (r.t||0); }, 0) / 1000
+    : 0;
+  // 仮復旧 路盤H: kariRmH が 0 でも フリーモードなら upper_rb 行から算出
+  var _kariRmH = (m.kariRmH || 0) > 0 ? m.kariRmH : _freeRbRmH;
+  // kariTotalH: 0 の場合はフリーモード行の合計から算出
+  var _kariTotalHFromFree = (_effectivelyFreeMode && _kariFreeRowsArr.length > 0)
+    ? _kariFreeRowsArr.reduce(function(s,r){ return s + (r.t||0); }, 0) / 1000
+    : 0;
+  var _kariTotalH = (m.kariTotalH || 0) || _kariTotalHFromFree;
+  console.log('[rbMaster] key='+m.key+' kariFreeMode='+m.kariFreeMode+' _effectivelyFreeMode='+_effectivelyFreeMode
+    +' kariFreeRows.len='+_kariFreeRowsArr.length+' _kariAsArr.len='+_kariAsArr.length
+    +' _kariRmH='+_kariRmH+' _kariTotalH='+_kariTotalH);
   return {
     key:        'type_import_' + m.key,
     label:      m.label || m.key,
     color:      m.color || '#7c3aed',
-    rmH:        m.kariRmH  || 0,
+    rmH:        _kariRmH,
     rcH:        m.kariRcH  || 0,
-    rmSize:     m.kariRmSize || 40,
-    rcSize:     m.kariRcSize || 40,
-    asT密粒:    sumAS(m.kariAsLayers, ['surface']),
-    asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
+    rmSize:     (function(){ var sz=_sizeFromRbLayers(m.kariRbLayers, true); return sz||m.kariRmSize||40; })(),
+    rcSize:     (function(){ var sz=_sizeFromRbLayers(m.kariRbLayers, false); return sz||m.kariRcSize||40; })(),
+    asT密粒:    sumAS(_kariAsArr, ['surface']),
+    asT粗粒:    sumAS(_kariAsArr, ['base','other']),
     asLayers:   _asLayers,
-    totalH:         m.kariTotalH || 0,
+    totalH:         _kariTotalH,
     // roadbed.html は hasImprovedSoil を保存しないため、
     // 明示値があればそれを使い、なければ kariTotalH >= 0.4 で車道判定（85型・40型相当）
-    hasImprovedSoil: m.hasImprovedSoil != null ? !!m.hasImprovedSoil : ((m.kariTotalH || 0) >= 0.4),
-    kariRmH:    m.kariRmH  || 0,
+    hasImprovedSoil: m.hasImprovedSoil != null ? !!m.hasImprovedSoil : (_kariTotalH >= 0.4),
+    kariRmH:    _kariRmH,
     kariRcH:    m.kariRcH  || 0,
-    kariTotalH: m.kariTotalH || 0,
+    kariTotalH: _kariTotalH,
     honRmH:     m.honRmH   || 0,
     honRcH:     m.honRcH   || 0,
     honTotalH:  m.honTotalH || 0,
-    kariAsLayers:  m.kariAsLayers  || [],
+    kariAsLayers:  _kariAsArr.length > 0 ? _kariAsArr : (m.kariAsLayers || []),
     honAsLayers:   m.honAsLayers   || [],
     kariRbLayers:  m.kariRbLayers  || [],
     honRbLayers:   m.honRbLayers   || [],
     // 層内訳（配列形式）— buildLayerStr/buildLayerCompactStr が参照する実体。
     // m.kariRbLayers 等の構造化データがあればそれを優先し、なければ文字列表記
     // （kariRmLayers: '150×3層' 等）を解析、それも無理なら単層として補完する。
-    kariRM_layers: _deriveLayersArr(m.kariRbLayers, function(c){ return String(c||'').startsWith('RM') || c==='rm' || c==='rmfree'; }, m.kariRmLayers, m.kariRmH, false),
+    kariRM_layers: _deriveLayersArr(m.kariRbLayers, function(c){ return String(c||'').startsWith('RM') || c==='rm' || c==='rmfree'; }, m.kariRmLayers, _kariRmH, false),
     kariRC_layers: _deriveLayersArr(m.kariRbLayers, function(c){ return String(c||'').startsWith('RC') || c==='rc' || c==='rcfree'; }, m.kariRcLayers, m.kariRcH, true),
     honRM_layers:  _deriveLayersArr(m.honRbLayers,  function(c){ return String(c||'').startsWith('RM') || c==='rm' || c==='rmfree'; }, m.honRmLayers,  m.honRmH,  false),
     honRC_layers:  _deriveLayersArr(m.honRbLayers,  function(c){ return String(c||'').startsWith('RC') || c==='rc' || c==='rcfree'; }, m.honRcLayers,  m.honRcH,  true),
-    kariRmLayers:  m.kariRmLayers  || '',
+    kariRmLayers:  m.kariRmLayers || (function(){
+      // フリーモードで kariRmLayers が空の場合、upper_rb 行の名前からラベル生成
+      if (!m.kariRmLayers && m.kariFreeMode && _kariFreeRowsArr.length > 0) {
+        var rbRows = _kariFreeRowsArr.filter(function(r){ return (r.type||'') === 'upper_rb'; });
+        if (rbRows.length > 0) return rbRows.map(function(r){ return (r.name||'既設路盤')+' t='+(r.t||0)+'mm'; }).join('、');
+      }
+      return '';
+    })(),
     kariRcLayers:  m.kariRcLayers  || '',
     honRmLayers:   m.honRmLayers   || '',
     honRcLayers:   m.honRcLayers   || '',
@@ -5590,7 +5795,9 @@ function _rbMasterToTypeObj(m) {
           return false;
         }).reduce(function(s,r){return s+(r.t||0);},0)/1000;
       }
-      return m.honRmH || 0;
+      if ((m.honRmH || 0) > 0) return m.honRmH;
+      // フリーモード仮復旧路盤を現況路盤として利用（honRmH未設定時のフォールバック）
+      return _kariRmH;
     })(),
     genkyoRC: (function(){
       if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
@@ -5611,9 +5818,17 @@ function _rbMasterToTypeObj(m) {
       }
       return 0;
     })(),
-    // hon路盤合計H: フリーモードは m.honTotalH を正とする
-    genkyoTotalH: m.honFreeMode ? (m.honTotalH||0) : 0,
+    // hon路盤合計H: フリーモード・通常モード両方で m.honTotalH を正とする
+    genkyoTotalH: m.honTotalH || 0,
     honFreeRows: m.honFreeMode ? (m.honFreeRows||[]) : [],
+    // 通常モードの hon 側フリー路盤層（cat='free' or subcat='subfree'）
+    // 既設路盤・鉄板など RM/RC に分類されない路盤層の表示用
+    honFreeRbRows: (function(){
+      if (m.honFreeMode) return [];
+      return (m.honRbLayers||[]).filter(function(r){
+        return r.cat==='free' || r.subcat==='subfree';
+      });
+    })(),
     // コンクリート間のRC行（廃材計算用）
     // cn_rc 型を明示指定した行を優先。なければ旧ロジック（コンクリート間に挟まれたlower_rb行）で検出
     genkyoCnRC: (function(){
@@ -5779,6 +5994,25 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       setTodayDate(`${tabId}-date`);
       const siteNameEl = document.getElementById(`${tabId}-sitename-display`);
       if (siteNameEl) siteNameEl.textContent = siteName;
+      // 記録者名を復元 + blur 時に保存
+      _restoreOrderRecorder(`${tabId}-author`);
+      var _authorEl = document.getElementById(`${tabId}-author`);
+      if (_authorEl) _authorEl.addEventListener('blur', function(){ _saveOrderRecorder(this.value); });
+      // 前回のモード（仮/本）を localStorage から復元
+      // ① 前回 localStorage に保存されたモードを優先
+      // ② なければ履歴 calcMode が全て 'hon' の場合に本復旧へ自動切替（新規レコード対応）
+      try {
+        var _savedModes = JSON.parse(localStorage.getItem('order_dyn_modes') || '{}');
+        if (_savedModes[tabId] === 'hon') {
+          switchDynMode(tabId, 'hon');
+        } else if (!_savedModes[tabId]) {
+          // lastMode 未保存の場合: 履歴に calcMode:'hon' のみ存在するなら自動切替
+          var _typeHist = getHistory().filter(function(r){ return r.typeKey === tabId && r.calcMode; });
+          if (_typeHist.length > 0 && _typeHist.every(function(r){ return r.calcMode === 'hon'; })) {
+            switchDynMode(tabId, 'hon');
+          }
+        }
+      } catch(e) {}
     }, 0);
   });
 }
@@ -5908,6 +6142,13 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
           if((t.genkyoRC||0)>0) pts.push('RC:'+Math.round((t.genkyoRC||0)*1000)+'mm');
           if((t.genkyoCnRC||0)>0) pts.push('<span style=\'color:#fb923c;\'>CN間路盤:'+Math.round((t.genkyoCnRC||0)*1000)+'mm</span>');
           if((t.genkyoCnH||0)>0) pts.push('CN:'+Math.round((t.genkyoCnH||0)*1000)+'mm');
+          // 通常モードのフリー路盤層（既設路盤・鉄板等）: honFreeRbRows または honRbLayers.cat=free から
+          var _frb = ((t.honFreeRbRows||[]).length>0)
+            ? t.honFreeRbRows
+            : (t.honRbLayers||[]).filter(function(r){return r.cat==='free'||r.subcat==='subfree';});
+          _frb.filter(function(r){return (r.t||0)>0;}).forEach(function(r){
+            pts.push((r.name||'路盤材')+':'+r.t+'mm');
+          });
           return pts.join(' ／ ');
         })()}
           <span style="color:#a78bfa;font-weight:700;">＝${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000)}mm</span>
@@ -6104,6 +6345,13 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
           if ((t.genkyoRC||0)>0) _fb += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 RC-'+rcS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
           if ((t.genkyoCnH||0)>0) _fb += '<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">コンクリート層</div><div style="color:#f97316;font-weight:700;">t = '+Math.round((t.genkyoCnH||0)*1000)+'mm</div></div>';
           if ((t.genkyoCnRC||0)>0) _fb += '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.5);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">CN間路盤材 '+(t.genkyoCnRCSubcat||'RC-40')+'</div><div style="color:#fb923c;font-weight:700;">'+Math.round((t.genkyoCnRC||0)*1000)+'mm</div><div style="color:var(--text3);font-size:13px;margin-top:3px;">★ 別途発注</div></div>';
+          // 通常モードのフリー路盤層（既設路盤・鉄板等）: honFreeRbRows または honRbLayers.cat=free から
+          var _frbArr = ((t.honFreeRbRows||[]).length>0)
+            ? t.honFreeRbRows
+            : (t.honRbLayers||[]).filter(function(r){return r.cat==='free'||r.subcat==='subfree';});
+          _frbArr.filter(function(r){ return (r.t||0)>0; }).forEach(function(r){
+            _fb += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">'+(r.name||'路盤材')+'</div><div style="color:var(--green);font-weight:700;">t = '+r.t+'mm</div></div>';
+          });
           return _fb;
         })()}
         <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
@@ -6131,6 +6379,19 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   <div class="card">
     <div class="card-title">🧾 発注量合計（${t.label}）</div>
     <div class="summary-grid" id="${tid}-total"></div>
+    <!-- 🔩 鉄板枚数計算 -->
+    <div style="margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:8px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+      <span style="color:var(--green);font-size:14px;font-weight:700;">🔩 鉄板枚数</span>
+      <label style="color:var(--text3);font-size:14px;">1枚 L（m）</label>
+      <input type="number" step="0.5" id="${tid}-teppanL" placeholder="6" style="width:68px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;" oninput="renderDynTotal('${tid}',TYPES['${tid}'])">
+      <span style="color:var(--text3);font-size:14px;">掘削L</span>
+      <span id="${tid}-teppan-totalL" style="font-family:var(--mono);font-size:17px;color:var(--text);font-weight:700;">—</span>
+      <span style="color:var(--text3);font-size:14px;">m ÷</span>
+      <span id="${tid}-teppan-divL" style="font-family:var(--mono);font-size:17px;color:var(--text);">—</span>
+      <span style="color:var(--text3);font-size:14px;">m ＝</span>
+      <span id="${tid}-teppan-count" style="font-family:var(--mono);font-size:22px;color:var(--green);font-weight:700;">—</span>
+      <span style="color:var(--text3);font-size:14px;">枚</span>
+    </div>
     <div class="actions" style="margin-top:16px;">
       <button class="btn btn-primary" onclick="saveDynRecord('${tid}','${t.key}')">📥 発注量を記録</button>
       <button class="btn btn-danger" onclick="resetDynForm('${tid}')">🔄 入力リセット</button>
@@ -6182,11 +6443,37 @@ function bindDynamicCalc(tid, typeConf) {
   update();
 }
 
+// honAsLayers の layers を role ベースで合計するヘルパー（name / preset 両対応）
+// switchDynMode で kariAsLayers が空の旧データでも本復旧量を正しく算出するために使用
+function _sumHonAsRole(layers, roles) {
+  if (!Array.isArray(layers) || layers.length === 0) return 0;
+  var _surf  = ['再生密粒度AS混合物','密粒度AS混合物','密粒度改質AS混合物','密粒改良1','表層ポーラスAS混合物（透水性）','開粒度AS混合物'];
+  var _base  = ['再生粗粒度AS混合物','粗粒度AS混合物','粗粒度改質AS混合物（改質Ⅱ型）'];
+  var _other = ['瀝青安定処理'];
+  return layers.filter(function(a, idx) {
+    var r = a.role;
+    if (!r) {
+      var nm = a.name || a.preset || '';
+      if (_surf.indexOf(nm)  >= 0) r = 'surface';
+      else if (_base.indexOf(nm)  >= 0) r = 'base';
+      else if (_other.indexOf(nm) >= 0) r = 'other';
+      else r = idx === 0 ? 'surface' : 'base';
+    }
+    return roles.indexOf(r) >= 0;
+  }).reduce(function(s, a) { return s + (a.t || 0); }, 0);
+}
+
 // =====================================================================
 // 仮復旧 / 本復旧 発注量計算モード切替
 // =====================================================================
 function switchDynMode(tid, mode) {
   _dynCalcModes[tid] = mode;
+  // 最後に選択したモードをデバイスに記憶（次回起動時に自動復元）
+  try {
+    var _dm = JSON.parse(localStorage.getItem('order_dyn_modes') || '{}');
+    _dm[tid] = mode;
+    localStorage.setItem('order_dyn_modes', JSON.stringify(_dm));
+  } catch(e) {}
   const t = TYPES[tid];
   if (!t) return;
 
@@ -6200,10 +6487,16 @@ function switchDynMode(tid, mode) {
       };
     }
     // honFreeMode: genkyoAsH がすでに honFreeRows の surface+base 合計 → それを使う
+    // 通常モード: honAsLayers があればそこから role ベースで直接計算
+    //   （kariAsLayers が旧データで空でも honAsLayers は存在する場合に対応）
+    const _hasHonAs = Array.isArray(t.honAsLayers) && t.honAsLayers.length > 0;
     const honSurfaceT = t.honFreeMode
-      ? Math.round((t.genkyoAsH || 0) * 1000)  // honFreeRows から算出済みのAS合計(0なら0)
-      : t.asT密粒;                               // 通常モード: kari surface を踏襲
-    const honBaseT = t.honFreeMode ? 0 : Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT);
+      ? Math.round((t.genkyoAsH || 0) * 1000)
+      : (_hasHonAs ? _sumHonAsRole(t.honAsLayers, ['surface']) : t.asT密粒);
+    const honBaseT = t.honFreeMode ? 0
+      : (_hasHonAs
+          ? _sumHonAsRole(t.honAsLayers, ['base', 'other'])
+          : Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT));
     const honTotalH = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0) + (t.genkyoCnRC || 0) + (t.genkyoCnH || 0);
     t.asT密粒 = honSurfaceT;
     t.asT粗粒 = honBaseT;
@@ -6247,8 +6540,20 @@ function switchDynMode(tid, mode) {
   const noticeEl = document.getElementById(tid + '-notice');
   if (noticeEl) {
     const eff = TYPES[tid];
-    const rmS = eff.rmSize || 40, rcS = eff.rcSize || 40;
-    const effTH = Math.round((eff.totalH || 0) * 1000);
+    // honRbLayers / kariRbLayers の subcat からモードに応じてサイズを解決（eff.rmSize固定値に依存しない）
+    const rmS = mode === 'hon'
+      ? (_sizeFromRbLayers(eff.honRbLayers, true)  || _resolveRmSize(eff))
+      : _resolveRmSize(eff);
+    const rcS = mode === 'hon'
+      ? (_sizeFromRbLayers(eff.honRbLayers, false) || _resolveRcSize(eff))
+      : _resolveRcSize(eff);
+    // honモード時はgenkyoTotalH（既設路盤・鉄板等を含む全高）を優先使用
+    const effTH = mode === 'hon'
+      ? (Math.round((eff.genkyoTotalH || eff.totalH || 0) * 1000)
+         || Math.round(((eff.genkyoAsH||0)+(eff.genkyoRM||0)+(eff.genkyoRC||0)
+            +(eff.genkyoCnRC||0)+(eff.genkyoCnH||0))*1000)
+         + (eff.honFreeRbRows||[]).reduce((s,r)=>s+(r.t||0),0))
+      : Math.round((eff.totalH || 0) * 1000);
     const effAS = (eff.asT密粒 || 0) + (eff.asT粗粒 || 0);
     const effRM = Math.round((eff.rmH || 0) * 1000);
     const effRC = Math.round((eff.rcH || 0) * 1000);
@@ -6258,6 +6563,9 @@ function switchDynMode(tid, mode) {
       const _effCnRcMm = Math.round((t.genkyoCnRC||0)*1000);
       const _effCnRcSubcat = t.genkyoCnRCSubcat||'RC-40';
       const _frs = (t.honFreeRows||[]).filter(r=>(r.t||0)>0);
+      // 通常モードのフリー路盤層（既設路盤・鉄板等）をバナーに追加
+      const _honFrbNotice = (eff.honFreeRbRows||[]).filter(r=>(r.t||0)>0)
+        .map(r=>'<span style="color:#c4b5fd;">'+(r.name||'路盤材')+' '+r.t+'mm</span>');
       const _honNoticeParts = _frs.length ? _frs.map(r=>{
         if(r.type==='concrete'||r.type==='コンクリート') return '<span style="color:#f97316;font-weight:700;">'+(r.name||'コンクリート')+' '+r.t+'mm</span>';
         if(r.type==='cn_rc') return '<span style="color:#fb923c;font-weight:700;">CN間路盤材 '+(r.subcat||'RC-40')+' '+r.t+'mm（別途発注）</span>';
@@ -6269,6 +6577,7 @@ function switchDynMode(tid, mode) {
         ...(effRM>0?['<span style="color:#7dd3fc;">'+_rmLbl+' '+effRM+'mm</span>']:[]),
         ...(effRC>0?['<span style="color:#86efac;">'+_rcLbl+' '+effRC+'mm</span>']:[]),
         ...(_effCnRcMm>0?['<span style="color:#fb923c;">CN間路盤 '+_effCnRcSubcat+' '+_effCnRcMm+'mm（別途発注）</span>']:[]),
+        ..._honFrbNotice,
       ];
       noticeEl.innerHTML = '📐 <strong>現況・本復旧 路盤構成 H=' + effTH + 'mm</strong>：'
         + _honNoticeParts.join(' ／ ')
@@ -6379,12 +6688,27 @@ function renderDynTotal(tid, typeConf) {
   const kariRcRmWaste = kariRcWaste + kariRmWaste;
   const kariCnWasteVol = _kariCnH * kariHaibanWL;           // m³ 仮復旧コンクリート廃材
   const kariCnWasteT   = kariCnWasteVol * CONCRETE_DENSITY;  // t
-  const honCnWasteVol  = _honCnH * genWL;                   // m³ 現況コンクリート廃材（honFreeRowsから）
+  // honFreeRbRows（既設路盤等、鉄板除く）廃材量
+  const _honFrbWasteRows = (typeConf.honFreeRbRows||[]).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板');
+  const _dynModeNow   = _dynCalcModes[tid] || 'kari';
+  // 現況廃材面積の自動決定：
+  //   genWL入力あり → そのまま genWL を使用（従来通り）
+  //   genWL未入力 かつ 本復旧モード かつ kari/hon路盤構成に差異がある → kariHaibanWL を自動使用
+  //   差異なし（kari==hon）の場合は kariHaibanWL を使わない（二重計上防止）
+  const _honRcDiff    = Math.abs((_kariT.genkyoRC||0) - (_kariT.rcH||0)) > 0.001;
+  const _honRmDiff    = Math.abs((_kariT.genkyoRM||0) - (_kariT.rmH||0)) > 0.001;
+  const _honWasteArea = genWL > 0
+    ? genWL
+    : (_dynModeNow === 'hon' && kariHaibanWL > 0
+        && (_honRcDiff || _honRmDiff || _honFrbWasteRows.length > 0)
+      ? kariHaibanWL : 0);
+  const honFrbWaste   = _honFrbWasteRows.reduce((s, r) => s + (r.t/1000) * _honWasteArea * WASTE_RB_BULK, 0);
+  const honCnWasteVol  = _honCnH * _honWasteArea;           // m³ 現況コンクリート廃材
   const honCnWasteT    = honCnWasteVol * CONCRETE_DENSITY;   // t
-  const honAsWaste   = _kariT.genkyoAsH * genWL * AS_DENSITY * WASTE_AS_BULK;
-  const honRcWaste   = _kariT.genkyoRC * genWL * WASTE_RB_BULK;
-  const honRmWaste   = _kariT.genkyoRM * genWL * WASTE_RB_BULK;
-  const honRcRmWaste = honRcWaste + honRmWaste;
+  const honAsWaste   = (_kariT.genkyoAsH||0) * _honWasteArea * AS_DENSITY * WASTE_AS_BULK;
+  const honRcWaste   = (_kariT.genkyoRC||0) * _honWasteArea * WASTE_RB_BULK;
+  const honRmWaste   = (_kariT.genkyoRM||0) * _honWasteArea * WASTE_RB_BULK;
+  const honRcRmWaste = honRcWaste + honRmWaste + honFrbWaste;
 
   const el = document.getElementById(`${tid}-total`);
   if (!el) return;
@@ -6469,8 +6793,26 @@ function renderDynTotal(tid, typeConf) {
   }
   // RM/RC（コンクリート・CN間の後）
   if (_effRmH > 0) html += add(`${getModeRmLabel(_effT2, tid, _effRmS)}合計`, s.rmOrd, 'm³', 'var(--green)');
-  html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
-  if (_effRmH > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
+  // honモード && honFreeRbRows（または honRbLayers.cat=free フォールバック）がある場合は既設路盤等を表示（RC-40の代わり）
+  const _effHonFrb = (_dynMode === 'hon')
+    ? (
+        ((_effT2.honFreeRbRows||[]).length > 0)
+          ? (_effT2.honFreeRbRows)
+          : ((_effT2.honFreeRows||[]).length === 0  // フリーモードデータなし → honRbLayersから算出
+              ? (_effT2.honRbLayers||[]).filter(r => r.cat==='free' || r.subcat==='subfree')
+              : [])
+      )
+    : [];
+  const _honFrbDisp = _effHonFrb.filter(r => (r.t||0)>0 && (r.name||'')!=='鉄板');
+  if (_honFrbDisp.length > 0) {
+    _honFrbDisp.forEach(r => {
+      const _rbVol = (r.t/1000) * totalWL * WASTE_RB_BULK;
+      html += add(r.name||'路盤材', _rbVol, 'm³', 'var(--green)');
+    });
+  } else {
+    html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
+  }
+  if (_effRmH > 0 && _honFrbDisp.length === 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
   if (_effT2.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
   html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
   html += add('改良土+再生砂', s.sandSoilSum, 'm³', 'var(--orange)');
@@ -6489,29 +6831,37 @@ function renderDynTotal(tid, typeConf) {
         html += add('コンクリート廃材 重量', kariCnWasteT, 't', '#c4b5fd');
       }
     }
-    if (genWL > 0.0001) {
-      html += sep(`🗑️ 路盤廃材（現況・本復旧）　${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡`, 'rgba(124,58,237,0.75)');
+    // 現況廃材: genWL>0（ユーザー入力）または _honWasteArea>0（kariRb なし hon モード）
+    if (_honWasteArea > 0.0001 && (honAsWaste + honRcRmWaste) > 0.00001) {
+      const _honWlLabel = genWL > 0.0001
+        ? `${fmt(totalGenW)}×${fmt(totalGenL)}=${fmt(genWL)}㎡`
+        : `${fmt(_honWasteArea)}㎡`;
+      html += sep(`🗑️ 路盤廃材（現況・本復旧）　${_honWlLabel}`, 'rgba(124,58,237,0.75)');
       if ((_kariT.genkyoAsH||0)>0) html += add(`廃材AS（現況 ${Math.round((_kariT.genkyoAsH||0)*1000)}mm）`, honAsWaste, 't', 'rgba(249,115,22,0.85)');
       const _honCnRcH  = (_kariT.genkyoCnRC||0);  // コンクリート間のRC
-      const _honCnRcWaste = _honCnRcH * genWL * WASTE_RB_BULK;
+      const _honCnRcWaste = _honCnRcH * _honWasteArea * WASTE_RB_BULK;
       // コンクリート廃材を先頭に表示（路盤構成順に合わせる）
       if (_honCnH > 0) {
         html += add(`コンクリート廃材（現況 ${Math.round(_honCnH*1000)}mm）`, honCnWasteVol, 'm³', '#a78bfa');
         html += add('コンクリート廃材 重量', honCnWasteT, 't', '#c4b5fd');
       }
+      // honFreeRbRows（既設路盤等）廃材を個別表示
+      _honFrbWasteRows.forEach(r => {
+        html += add((r.name||'路盤材')+'廃材（'+r.t+'mm）', (r.t/1000)*_honWasteArea*WASTE_RB_BULK, 'm³', 'var(--green)');
+      });
       if ((_kariT.genkyoCnH||0)>0 && (_kariT.genkyoRC||0)>0) {
         // コンクリートとRC両方ある場合: CN間路盤材廃材 → 廃路盤材合計
         if (_honCnRcH > 0) { const _cnRcSubcat=(_kariT.genkyoCnRCSubcat||'RC-40'); const _cnRcLabel=_cnRcSubcat==='フリー'?'路盤材':_cnRcSubcat; html += add(`コンクリート間 ${_cnRcLabel}廃材（${Math.round(_honCnRcH*1000)}mm）`, _honCnRcWaste, 'm³', '#fb923c'); }
-        if ((_kariT.genkyoRM||0)>0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
+        if ((_kariT.genkyoRM||0)>0 || honFrbWaste>0) html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
         else if ((_kariT.genkyoRC||0)>0) html += add('廃路盤材 合計', honRcWaste, 'm³', 'var(--green)');
-      } else if ((_kariT.genkyoRM||0)>0) {
+      } else if ((_kariT.genkyoRM||0)>0 || honFrbWaste>0) {
         html += add('廃路盤材（RC＋RM）合計', honRcRmWaste, 'm³', 'var(--green)');
       } else if ((_kariT.genkyoRC||0)>0) {
         html += add('廃路盤材 合計', honRcWaste, 'm³', 'var(--green)');
       }
     }
     // ── 路盤廃材合計（仮復旧＋現況 両方ある場合） ──
-    if (kariHaibanWL > 0.0001 && genWL > 0.0001) {
+    if (kariHaibanWL > 0.0001 && _honWasteArea > 0.0001 && kariHaibanWL !== _honWasteArea) {
       html += sep('📊 路盤廃材　合計（仮復旧＋現況）', 'rgba(71,85,105,0.85)');
       // 表示順: AS → コンクリート廃材 → CN間路盤材 → 廃路盤材（RC+RM）
       const _totAsW = kariAsWaste + honAsWaste;
@@ -6521,7 +6871,7 @@ function renderDynTotal(tid, typeConf) {
       if (_totCnVol > 0) html += add('コンクリート廃材 合計', _totCnVol, 'm³', '#a78bfa');
       if (_totCnT   > 0) html += add('コンクリート廃材 重量 合計', _totCnT, 't', '#c4b5fd');
       const _totCnRcH = (_kariT.genkyoCnRC||0);
-      const _totCnRcW = _totCnRcH * genWL * WASTE_RB_BULK;
+      const _totCnRcW = _totCnRcH * _honWasteArea * WASTE_RB_BULK;
       if (_totCnRcH > 0) {
         const _tSub = (_kariT.genkyoCnRCSubcat||'RC-40'); const _tLbl = _tSub==='フリー'?'路盤材':_tSub;
         html += add(`コンクリート間 ${_tLbl}廃材 合計`, _totCnRcW, 'm³', '#fb923c');
@@ -6550,6 +6900,17 @@ function renderDynTotal(tid, typeConf) {
   }
 
   el.innerHTML = html;
+
+  // ── 🔩 鉄板枚数計算（summary-gridの外・永続inputを参照） ──
+  const _totalL = results.filter(Boolean).reduce((acc, r) => acc + (r._L||0), 0);
+  const _teppanL = parseFloat(document.getElementById(`${tid}-teppanL`)?.value) || 0;
+  const _teppanCount = (_teppanL > 0 && _totalL > 0) ? Math.ceil(_totalL / _teppanL) : null;
+  const _tpTotalLEl = document.getElementById(`${tid}-teppan-totalL`);
+  const _tpDivLEl   = document.getElementById(`${tid}-teppan-divL`);
+  const _tpCountEl  = document.getElementById(`${tid}-teppan-count`);
+  if (_tpTotalLEl) _tpTotalLEl.textContent = _totalL > 0 ? _totalL.toFixed(1) + 'm' : '—';
+  if (_tpDivLEl)   _tpDivLEl.textContent   = _teppanL > 0 ? _teppanL.toFixed(1) : '—';
+  if (_tpCountEl)  _tpCountEl.textContent  = _teppanCount != null ? _teppanCount + '枚' : '—';
 }
 
 // =====================================================================
@@ -6564,6 +6925,7 @@ function saveDynRecord(tid, typeKey) {
   if (!date) { alert('⚠ 作業日付を入力してください'); return; }
   if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
   if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
+  _saveOrderRecorder(author);
 
   const t = TYPES[tid];
   const _t = TYPES[tid];
@@ -6580,6 +6942,7 @@ function saveDynRecord(tid, typeKey) {
     id: Date.now(),
     date, hata, author, site: siteName, typeKey: tid,
     typeLabel: t.label,
+    calcMode: _dynCalcModes[tid] || 'kari',
     asTon密粒:   +s.asTon密粒.toFixed(6),
     asTon粗粒:   +s.asTon粗粒.toFixed(6),
     rmOrd:      +s.rmOrd.toFixed(6),
@@ -7433,7 +7796,29 @@ function _closeDiagram() {
   document.body.style.overflow = '';
 }
 // × ボタン用
-document.addEventListener('DOMContentLoaded', () => {});
+// =====================================================================
+// 記録者名 デバイス記憶
+// =====================================================================
+function _saveOrderRecorder(name) {
+  var n = (name || '').trim();
+  if (n) localStorage.setItem('order_recorder', n);
+}
+function _restoreOrderRecorder(inputId) {
+  var saved = localStorage.getItem('order_recorder') || '';
+  if (!saved) return;
+  var el = document.getElementById(inputId);
+  if (el && !el.value.trim()) el.value = saved;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 静的タブ（85/40/30/20/14型）の記録者欄に保存済み名前を復元
+  ['85','40','30','20','14'].forEach(t => _restoreOrderRecorder(t + '-author'));
+  // 静的タブの author 欄 blur 時にも保存（保存ボタンを押さなくても記憶）
+  ['85','40','30','20','14'].forEach(t => {
+    var el = document.getElementById(t + '-author');
+    if (el) el.addEventListener('blur', function(){ _saveOrderRecorder(this.value); });
+  });
+});
 
 function applyMasterValues(typeKey, patternId) {
   const entry = getMaster().find(r => String(r.hata) === String(_currentDiagHata));
@@ -7481,8 +7866,8 @@ function viewDiagramFromTab(typeKey) {
   const hata = document.getElementById(`${typeKey}-hata`)?.value?.trim();
   if (!hata) { alert('旗揚げ番号を入力してください'); return; }
   const siteArr = getMasterForCalcTab(typeKey);
-  const entry = siteArr.find(r => String(r.hata) === String(hata))
-             || getMaster('').find(r => String(r.hata) === String(hata))
+  const entry = siteArr.find(r => String(r.hata||r.num||'') === String(hata))
+             || getMaster('').find(r => String(r.hata||r.num||'') === String(hata))
              || null;
   const excelEntry = getExcelDiagram(hata);
   if (!entry && !excelEntry) { alert(`旗揚げ番号 №${hata} はマスタに登録されていません`); return; }
@@ -7532,8 +7917,8 @@ function getMasterForCalcTab(typeKey) {
     timer = setTimeout(() => {
       const excelEntry = getExcelDiagram(val);
       const siteArr = getMasterForCalcTab(typeKey);
-      const manualEntry = siteArr.find(r => String(r.hata) === String(val))
-                       || getMaster('').find(r => String(r.hata) === String(val));
+      const manualEntry = siteArr.find(r => String(r.hata||r.num||'') === String(val))
+                       || getMaster('').find(r => String(r.hata||r.num||'') === String(val));
       if (excelEntry || manualEntry) showDiagram(val, typeKey);
     }, 500);
   });
@@ -7546,18 +7931,27 @@ function showDiagram(hata, typeKey) {
     document.querySelector('.tab-btn.active')?.dataset?.tab?.replace('calc','')) ?
     document.querySelector('.tab-btn.active').dataset.tab.replace('calc','') : '');
   const siteArr = tKey ? getMasterForCalcTab(tKey) : getMaster(_currentMasterSiteId);
-  const manual = siteArr.find(r => String(r.hata) === String(hata))
-              || getMaster(_currentMasterSiteId).find(r => String(r.hata) === String(hata))
-              || getMaster(document.getElementById('global-site-sel')?.value||'').find(r => String(r.hata) === String(hata))
-              || getMaster('').find(r => String(r.hata) === String(hata));
+  // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
+  const _hataMatch = r => String(r.hata||r.num||'') === String(hata);
+  const _hataMatchImg = r => _hataMatch(r) && (r.imgData || r.img); // 画像付きエントリ優先
+  // DP情報はfindで先頭エントリを使用、画像は画像持ちエントリを別途検索
+  const _allSrc = [
+    ...siteArr,
+    ...getMaster(_currentMasterSiteId),
+    ...getMaster(document.getElementById('global-site-sel')?.value||''),
+    ...getMaster('')
+  ];
+  const manual = _allSrc.find(_hataMatch);
+  const imgManual = _allSrc.find(_hataMatchImg); // 画像持ちエントリ（DP情報と別の場合あり）
   const excel  = getExcelDiagram(hata);
   _currentDiagHata = hata;
 
   // ヘッダー
   document.getElementById('diag-title').textContent =
     `旗揚げ番号 №${hata}${manual?.name ? ' — ' + manual.name : ''}`;
+  // manual が見つかれば登録済み（noteがなくても「未登録」にしない）
   document.getElementById('diag-sub').textContent =
-    manual?.note || (excel ? 'Excelから自動抽出' : '未登録');
+    manual?.note || (excel ? 'Excelから自動抽出' : (manual ? '' : '未登録'));
 
   // 値の優先順位: 手動マスタ > Excelデータ
   const dp   = manual?.dp   ?? excel?.dp   ?? null;
@@ -7577,15 +7971,50 @@ function showDiagram(hata, typeKey) {
   setF('diag-in-dph2', dph2);
   setF('diag-in-note', note);
 
-  // 画像
-  const imgSrc = manual?.imgData || (excel?.img ? `data:image/webp;base64,${excel.img}` : null);
+  // 画像（roadbed.html は img フィールド、order.html は imgData フィールドのため両対応）
+  // 画像持ちエントリ(imgManual)を優先し、なければ通常エントリのimgData/imgを使用
+  const imgSrc = imgManual?.imgData || imgManual?.img || manual?.imgData || manual?.img || (excel?.img ? `data:image/webp;base64,${excel.img}` : null);
   const imgWrap = document.getElementById('diag-imgWrap');
   const noImg   = document.getElementById('diag-noimg');
+  const diagZoomCtrl2 = document.getElementById('diag-zoom-ctrl');
+  _diagZoomLevel = 1.0; _diagBaseW = 0;
   if (imgSrc) {
-    document.getElementById('diag-img').src = imgSrc;
-    imgWrap.style.display = 'flex'; noImg.style.display = 'none';
+    const imgEl2 = document.getElementById('diag-img');
+    imgEl2.style.width = '100%'; imgEl2.style.maxWidth = '';
+    imgEl2.src = imgSrc;
+    imgEl2.onload = function(){ _diagBaseW = imgEl2.naturalWidth || imgEl2.offsetWidth || 600; };
+    imgWrap.style.display = 'block'; noImg.style.display = 'none';
+    if (diagZoomCtrl2) { diagZoomCtrl2.style.display = 'flex'; }
+    const lbl2 = document.getElementById('diag-zoom-level'); if (lbl2) lbl2.textContent = '100%';
   } else {
     imgWrap.style.display = 'none'; noImg.style.display = 'block';
+    if (diagZoomCtrl2) diagZoomCtrl2.style.display = 'none';
+    // ローカルに画像がない場合、Firestore の _img_ サブドキュメントから取得を試みる
+    // （checklist.html と同じ機構 — hasImg フラグがある、または全検索で見つからない場合）
+    if (_fbDb && (manual?.hasImg || (manual && !imgSrc))) {
+      const _imgSiteId = document.getElementById('global-site-sel')?.value || _currentMasterSiteId || '';
+      const _imgDocKey = (_imgSiteId ? 'hata_master_' + _imgSiteId : 'hata_master_global') + '_img_' + String(hata);
+      _fbDb.collection('masters').doc(_imgDocKey).get()
+        .then(function(imgDoc) {
+          if (imgDoc.exists && imgDoc.data().imgData) {
+            const _imgSrc2 = imgDoc.data().imgData;
+            const _imgEl3 = document.getElementById('diag-img');
+            if (_imgEl3) {
+              _imgEl3.style.width = '100%'; _imgEl3.style.maxWidth = '';
+              _imgEl3.src = _imgSrc2;
+              _imgEl3.onload = function(){ _diagBaseW = _imgEl3.naturalWidth || _imgEl3.offsetWidth || 600; };
+            }
+            const _iw = document.getElementById('diag-imgWrap');
+            const _ni = document.getElementById('diag-noimg');
+            if (_iw) _iw.style.display = 'block';
+            if (_ni) _ni.style.display = 'none';
+            const _zc = document.getElementById('diag-zoom-ctrl');
+            if (_zc) _zc.style.display = 'flex';
+            const _lb = document.getElementById('diag-zoom-level');
+            if (_lb) _lb.textContent = '100%';
+          }
+        }).catch(function(){});
+    }
   }
 
   // 型ボタン初期化：現在アクティブな型サブタブから取得

@@ -158,7 +158,10 @@ main{padding:10px 14px 90px;}
 .hata-diagram{display:none;margin-top:-4px;margin-bottom:10px;width:100%;border-radius:0 0 8px 8px;overflow:hidden;}
 .hata-diagram.show{display:block;}
 .diagram-head{display:flex;align-items:center;gap:8px;justify-content:space-between;background:#1e3a8a;border-radius:8px 8px 0 0;padding:8px 12px;}
-#ckDiagZoomCtrl button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;}
+#ckDiagZoomCtrl{align-items:center;gap:6px;}
+#ckDiagZoomCtrl button{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.65);color:#fff;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:17px;font-weight:700;line-height:1.2;}
+#ckDiagZoomCtrl button:active{background:rgba(255,255,255,.35);}
+#ckDiagZoomCtrl .ck-zoom-lv{font-size:14px;color:#fff;min-width:42px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
 .diagram-head .dtitle{font-size:16px;font-weight:700;color:#fff;}
 .diagram-vals{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#eff6ff;border-left:1px solid #bfdbfe;border-right:1px solid #bfdbfe;}
 .dval{font-size:14px;font-weight:700;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1d4ed8;}
@@ -1156,11 +1159,44 @@ function _ckRbMasterToTypeObj(m){
       })()
     : 'RC-40';
 
+  // ── 仮復旧フリーモード & honFreeRows フォールバック ──
+  var _ckKariFreeRows = Array.isArray(m.kariFreeRows) ? m.kariFreeRows : [];
+  var _ckKariAsBase   = Array.isArray(m.kariAsLayers) ? m.kariAsLayers : [];
+  var _ckEffFreeModeKari = !!m.kariFreeMode || (_ckKariFreeRows.length > 0 && _ckKariAsBase.length === 0);
+  var _ckUseHonForKari = (!_ckEffFreeModeKari
+    && _ckKariFreeRows.length === 0
+    && _ckKariAsBase.length === 0
+    && (m.kariTotalH || 0) === 0
+    && m.honFreeMode
+    && honFreeRows.length > 0);
+  if (_ckUseHonForKari) {
+    _ckKariFreeRows = honFreeRows;
+    _ckEffFreeModeKari = true;
+  }
+  var _ckKariAsArr;
+  if (_ckEffFreeModeKari && _ckKariFreeRows.length > 0) {
+    _ckKariAsArr = _ckKariFreeRows
+      .filter(function(r){ var t=r.type||''; return t==='surface'||t==='base'||t==='other'; })
+      .map(function(r){ return { role: r.type||'surface', name: r.preset||r.name||'', t: r.t||0 }; });
+  } else {
+    _ckKariAsArr = _ckKariAsBase;
+  }
+  var _ckKariRmH = (m.kariRmH || 0);
+  if (_ckEffFreeModeKari && _ckKariRmH === 0 && _ckKariFreeRows.length > 0) {
+    _ckKariRmH = _ckKariFreeRows
+      .filter(function(r){ return (r.type||'') === 'upper_rb'; })
+      .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+  }
+  var _ckKariTotalH = (m.kariTotalH || 0);
+  if (_ckEffFreeModeKari && _ckKariTotalH === 0 && _ckKariFreeRows.length > 0) {
+    _ckKariTotalH = _ckKariFreeRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+  }
+
   return {
     key:        'type_import_' + m.key,
     label:      m.label || m.key,
     color:      m.color || '#7c3aed',
-    rmH:        m.kariRmH  || 0,
+    rmH:        _ckKariRmH,
     rcH:        m.kariRcH  || 0,
     rmSize: (function(){
       var row=(m.kariRbLayers||[]).find(function(r){return _ckIsRmCat(r.subcat||'')||_ckIsRmCat(r.type||'');});
@@ -1191,11 +1227,11 @@ function _ckRbMasterToTypeObj(m){
       if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
       return m.honRcSize||m.kariRcSize||40;
     })(),
-    asT密粒:    sumAS(m.kariAsLayers, ['surface']),
-    asT粗粒:    sumAS(m.kariAsLayers, ['base','other']),
-    totalH:     m.kariTotalH || 0,
-    asLayers: (m.kariAsLayers||[]).map(function(a, idx){
-      return { role: idx===0?'surface':'base', preset:'', custom: a.name||'', t: a.t||0 };
+    asT密粒:    sumAS(_ckKariAsArr, ['surface']),
+    asT粗粒:    sumAS(_ckKariAsArr, ['base','other']),
+    totalH:     _ckKariTotalH,
+    asLayers: _ckKariAsArr.map(function(a, idx){
+      return { role: a.role||(idx===0?'surface':'base'), preset:'', custom: a.name||'', t: a.t||0 };
     }),
     honAsLayers: m.honAsLayers || [],
     hasImprovedSoil: false,
@@ -2686,11 +2722,11 @@ function renderMain(){
     '<div class="hata-diagram" id="hataDiagram">' +
       '<div class="diagram-head">' +
         '<span class="dtitle" id="diagTitle">📐 図面</span>' +
-        '<div id="ckDiagZoomCtrl" style="display:none;align-items:center;gap:5px;">' +
-          '<button onclick="_ckDiagZoom(-0.25)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.2;">－</button>' +
-          '<span id="ckDiagZoomLv" style="font-size:13px;color:var(--text2);min-width:38px;text-align:center;">100%</span>' +
-          '<button onclick="_ckDiagZoom(+0.25)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.2;">＋</button>' +
-          '<button onclick="_ckDiagZoomReset()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer;font-size:12px;">Reset</button>' +
+        '<div id="ckDiagZoomCtrl" style="display:none;">' +
+          '<button onclick="_ckDiagZoom(-0.25)" title="縮小">－</button>' +
+          '<span id="ckDiagZoomLv" class="ck-zoom-lv">100%</span>' +
+          '<button onclick="_ckDiagZoom(+0.25)" title="拡大">＋</button>' +
+          '<button onclick="_ckDiagZoomReset()" style="font-size:13px;padding:3px 8px;">Reset</button>' +
         '</div>' +
         '<button class="btn-close-diag" onclick="closeDiagram()">✕ 閉じる</button>' +
       '</div>' +
