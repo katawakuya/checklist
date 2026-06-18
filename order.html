@@ -3920,19 +3920,22 @@ function updateCutoffDisplay(typeKey) {
     const cutoff = (dp - 0.1).toFixed(3);
     const t = TYPES[typeKey];
 
+    // checklist同様: kari totalH と genkyoTotalH の大きい方を路盤上限に使用
+    const _stRbCapH = t ? Math.max(t.totalH || 0, t.genkyoTotalH || 0) : 0;
     if (zoneUnknown) {
       // 不明: 車道(0.3)と歩道(0.2)の両値を併記
       const raw03 = dp - 0.3;
       const raw02 = dp - 0.2;
-      const val03 = t ? Math.max(raw03, t.totalH).toFixed(3) : raw03.toFixed(3);
-      const val02 = t ? Math.max(raw02, t.totalH).toFixed(3) : raw02.toFixed(3);
+      const val03 = _stRbCapH > 0 ? Math.max(raw03, _stRbCapH).toFixed(3) : raw03.toFixed(3);
+      const val02 = _stRbCapH > 0 ? Math.max(raw02, _stRbCapH).toFixed(3) : raw02.toFixed(3);
       if (cutoffEl && showImproved) cutoffEl.textContent    = `GL − ${cutoff} m（改良土↑ / 再生砂↓）`;
       if (pipesheetEl)              pipesheetEl.textContent = `GL − ${val03} m (車道) / ${val02} m (歩道)`;
     } else {
       const rawPipe = dp - coeff;
-      const pipesheet = t ? Math.max(rawPipe, t.totalH).toFixed(3) : rawPipe.toFixed(3);
+      const pipesheet = _stRbCapH > 0 ? Math.max(rawPipe, _stRbCapH).toFixed(3) : rawPipe.toFixed(3);
+      const _stInRb   = _stRbCapH > 0 && rawPipe < _stRbCapH - 0.001;
       if (cutoffEl && showImproved) cutoffEl.textContent    = `GL − ${cutoff} m（改良土↑ / 再生砂↓）`;
-      if (pipesheetEl)              pipesheetEl.textContent = `GL − ${pipesheet} m`;
+      if (pipesheetEl)              pipesheetEl.textContent = `GL − ${pipesheet} m${_stInRb ? `（路盤内→${(_stRbCapH*1000).toFixed(0)}mm最下端）` : ''}`;
     }
   } else {
     if (cutoffEl && showImproved) cutoffEl.textContent    = 'GL − ― m';
@@ -6326,8 +6329,10 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         })() : ''}
         ${(function(){
           var _frs = (t.honFreeRows||[]).filter(function(r){return (r.t||0)>0;});
+          var _out = '';
           if (_frs.length > 0) {
-            return _frs.map(function(r){
+            // honFreeMode型: concrete/cn_rc/upper_rb/lower_rb のみ表示（surface/base/other AS層はgenkyoAsHセクションで表示済み）
+            _out += _frs.map(function(r){
               if (r.type==='concrete'||r.type==='コンクリート')
                 return '<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">'+(r.name||'コンクリート')+'</div><div style="color:#f97316;font-weight:700;">t = '+r.t+'mm</div></div>';
               if (r.type==='cn_rc')
@@ -6338,25 +6343,26 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
                 return '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 '+(r.subcat||'RC-40')+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
               return '';
             }).filter(Boolean).join('');
+          } else {
+            // フォールバック（honFreeRows なし）
+            if ((t.genkyoRM||0)>0) _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">上層路盤 RM-'+rmS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRM_layers,t.genkyoRM)+'</div></div>';
+            if ((t.genkyoRC||0)>0) _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 RC-'+rcS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
+            if ((t.genkyoCnH||0)>0) _out += '<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">コンクリート層</div><div style="color:#f97316;font-weight:700;">t = '+Math.round((t.genkyoCnH||0)*1000)+'mm</div></div>';
+            if ((t.genkyoCnRC||0)>0) _out += '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.5);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">CN間路盤材 '+(t.genkyoCnRCSubcat||'RC-40')+'</div><div style="color:#fb923c;font-weight:700;">'+Math.round((t.genkyoCnRC||0)*1000)+'mm</div><div style="color:var(--text3);font-size:13px;margin-top:3px;">★ 別途発注</div></div>';
           }
-          // フォールバック（honFreeRows なし）
-          var _fb = '';
-          if ((t.genkyoRM||0)>0) _fb += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">上層路盤 RM-'+rmS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRM_layers,t.genkyoRM)+'</div></div>';
-          if ((t.genkyoRC||0)>0) _fb += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 RC-'+rcS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
-          if ((t.genkyoCnH||0)>0) _fb += '<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">コンクリート層</div><div style="color:#f97316;font-weight:700;">t = '+Math.round((t.genkyoCnH||0)*1000)+'mm</div></div>';
-          if ((t.genkyoCnRC||0)>0) _fb += '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.5);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">CN間路盤材 '+(t.genkyoCnRCSubcat||'RC-40')+'</div><div style="color:#fb923c;font-weight:700;">'+Math.round((t.genkyoCnRC||0)*1000)+'mm</div><div style="color:var(--text3);font-size:13px;margin-top:3px;">★ 別途発注</div></div>';
-          // 通常モードのフリー路盤層（既設路盤・鉄板等）: honFreeRbRows または honRbLayers.cat=free から
+          // 常に追加: honFreeRbRows（既設路盤・鉄板等 cat=free層）
+          // honFreeMode型（NO5+2.50等）でも通常型でも同様に表示する
           var _frbArr = ((t.honFreeRbRows||[]).length>0)
             ? t.honFreeRbRows
             : (t.honRbLayers||[]).filter(function(r){return r.cat==='free'||r.subcat==='subfree';});
           _frbArr.filter(function(r){ return (r.t||0)>0; }).forEach(function(r){
-            _fb += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">'+(r.name||'路盤材')+'</div><div style="color:var(--green);font-weight:700;">t = '+r.t+'mm</div></div>';
+            _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">'+(r.name||'路盤材')+'</div><div style="color:var(--green);font-weight:700;">t = '+r.t+'mm</div></div>';
           });
-          return _fb;
+          return _out;
         })()}
         <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
           <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">路盤合計H（現況）</div>
-          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000)}mm</div>
+          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)+((t.honFreeRbRows||[]).reduce(function(s,r){return s+(r.t||0)/1000;},0))))*1000)}mm</div>
         </div>
       </div>
     </div>` : ''}
@@ -6369,7 +6375,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       </div>` : ''}
       <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
         <div style="font-size:13px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:6px;">📋 配管シート</div>
-        <div style="font-size:14px;color:var(--text3);margin-bottom:4px;">GL−（= ${pipeCoeff} + DP）</div>
+        <div id="${t.key}-dyn-pipesheet-formula" style="font-size:14px;color:var(--text3);margin-bottom:4px;">GL−（= ${pipeCoeff} + DP）</div>
         <div id="${t.key}-dyn-pipesheet" style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);">GL − ― m</div>
       </div>
     </div>
@@ -6633,7 +6639,21 @@ function updateDynCutoff(tid, typeConf) {
     if (cutoffEl) cutoffEl.textContent = `GL − ${(dp - 0.1).toFixed(3)} m（改良土↑ / 再生砂↓）`;
     if (pipesheetEl) {
       const rawPipe = dp - pipeCoeff;
-      const pipesheet = Math.max(rawPipe, typeConf.totalH).toFixed(3);
+      // checklist同様のルール: 配管シートが路盤構成内に入る場合は路盤最下端まで深くする
+      // 路盤合計深さ: kari totalH と genkyoTotalH（FreeRbRows含む）の大きい方を使用
+      const _genkyoTH = typeConf.genkyoTotalH
+        || ((typeConf.genkyoAsH||0) + (typeConf.genkyoRM||0) + (typeConf.genkyoRC||0)
+            + (typeConf.honFreeRbRows||[]).reduce((s,r) => s + (r.t||0)/1000, 0));
+      const _rbCapH   = Math.max(typeConf.totalH || 0, _genkyoTH);
+      const pipesheet = Math.max(rawPipe, _rbCapH).toFixed(3);
+      const _inRb     = rawPipe < _rbCapH - 0.001;
+      // 路盤内に入る場合は式ラベルも更新
+      const formulaEl = document.getElementById(`${typeConf.key}-dyn-pipesheet-formula`);
+      if (formulaEl) {
+        formulaEl.textContent = _inRb
+          ? `GL−（= ${pipeCoeff} + DP → 路盤内のため ${(_rbCapH*1000).toFixed(0)}mm最下端）`
+          : `GL−（= ${pipeCoeff} + DP）`;
+      }
       pipesheetEl.textContent = `GL − ${pipesheet} m`;
     }
   } else {
