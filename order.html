@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
+<style>html{overscroll-behavior-y:none;}</style>
 <meta name="theme-color" content="#0f1117">
 <title>現場資材発注計算書 v4.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,6 +43,7 @@
     min-height: 100vh;
     font-size:18px;
     line-height: 1.6;
+    overscroll-behavior-y: none; /* iOS プルダウンリフレッシュ防止 */
   }
 
   /* HEADER */
@@ -7871,6 +7873,39 @@ function _restoreOrderRecorder(inputId) {
   var el = document.getElementById(inputId);
   if (el && !el.value.trim()) el.value = saved;
 }
+
+// =====================================================================
+// iPadプルダウンリフレッシュ防止 + 誤リロード警告
+// =====================================================================
+(function() {
+  // ① iOS 15以下向け: 最上部でのスワイプダウンをキャンセル
+  var _lastTouchY = 0;
+  document.addEventListener('touchstart', function(e) {
+    _lastTouchY = e.touches[0] ? e.touches[0].clientY : 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    var touchY = e.touches[0] ? e.touches[0].clientY : 0;
+    var scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
+    // スクロール最上部かつ下方向スワイプ → プルリフレッシュをキャンセル
+    if (scrollTop <= 0 && touchY > _lastTouchY) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // ② beforeunload: 入力欄に何か入力されていたら確認ダイアログ
+  window.addEventListener('beforeunload', function(e) {
+    var inputs = document.querySelectorAll('input[type="number"], input[type="text"], textarea');
+    var hasData = false;
+    for (var i = 0; i < inputs.length; i++) {
+      if (inputs[i].value && inputs[i].value.trim() !== '') { hasData = true; break; }
+    }
+    if (hasData) {
+      e.preventDefault();
+      e.returnValue = '入力中のデータがあります。ページを離れると消えます。';
+      return e.returnValue;
+    }
+  });
+})();
 
 document.addEventListener('DOMContentLoaded', () => {
   // 静的タブ（85/40/30/20/14型）の記録者欄に保存済み名前を復元
