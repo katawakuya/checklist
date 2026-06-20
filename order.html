@@ -2293,12 +2293,15 @@ function getNum(id) { return parseFloat(document.getElementById(id)?.value) || 0
 
 // 改良土・再生砂の分割ヘルパー
 // 条件: 床付け（DP + DPH）> totalH のとき発生
-//   再生砂H = DPH + 0.1m            （固定）
-//   改良土H = 床付け - totalH - DPH - 0.1  = max(0, 床付け - totalH - (DPH+0.1))
+//   再生砂H = DPH + 0.1m            （固定: 管下＋管上100mm）
+//   改良土H = 床付け - totalH - (DPH+0.1)  = max(0, excess - excessSandH)
 //   ※ 床付け <= totalH のときは両方ゼロ
+// _dynUseIsoil[typeKey]=true のとき hasImprovedSoil を上書きで有効化（環状2号ルール等）
+const _dynUseIsoil = {};
 function splitExcess(dp, dph, typeKey) {
   const t = TYPES[typeKey];
-  if (!t || !t.hasImprovedSoil) return { excessSandH: 0, soilH: 0 };
+  const useIsoil = (t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey];
+  if (!t || !useIsoil) return { excessSandH: 0, soilH: 0 };
   const floor  = dp + dph;
   const excess = Math.max(0, floor - t.totalH);
   if (excess <= 0) return { excessSandH: 0, soilH: 0 };
@@ -2333,7 +2336,8 @@ function calcNormal(prefix, typeKey) {
 
   const pipeVol   = getPipeVolume(`${prefix}-pipes`);
   const hasExcess = excessSandH > 0;
-  const sandH     = hasExcess ? excessSandH : Math.max(0, DP - t.totalH);  // honFreeMode対応: totalHは全層込み
+  const _floor    = DP + DPH;  // 床付け深さ
+  const sandH     = hasExcess ? excessSandH : Math.max(0, _floor - t.totalH);  // 床付け基準（路盤変更点より下～床付け）
   const sandOrd   = (sandH * W * L - pipeVol) * r.bulkRatioSand;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
@@ -2419,7 +2423,7 @@ function calcGradient(prefix, typeKey) {
 
   const pipeVol    = getPipeVolume(`${prefix}-pipes`);
   const gHasExcess = gExSandH > 0;
-  const gSandH     = gHasExcess ? gExSandH : Math.max(0, avgDP - t.totalH);  // honFreeMode対応
+  const gSandH     = gHasExcess ? gExSandH : Math.max(0, (avgDP + avgDPH) - t.totalH);  // 床付け基準
   const sandOrd    = (gSandH * W * L - pipeVol) * r.bulkRatioSand;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
@@ -6016,6 +6020,15 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
           }
         }
       } catch(e) {}
+      // 改良土ルールトグル復元
+      try {
+        var _savedIsoil = JSON.parse(localStorage.getItem('order_dyn_isoil') || '{}');
+        if (_savedIsoil[tabId]) {
+          _dynUseIsoil[tabId] = true;
+          var _el = document.getElementById(tabId + '-isoil-toggle');
+          if (_el) _el.checked = true;
+        }
+      } catch(e) {}
     }, 0);
   });
 }
@@ -6101,6 +6114,19 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     border-radius:7px;padding:6px 12px;margin-bottom:10px;
   ">🔧 仮復旧モード：仮復旧路盤構成で発注量を計算します</div>
   ` : ''}
+
+  <!-- 改良土ルールトグル（管上100mm以上を改良土とするオプション） -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 12px;
+    background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25);border-radius:7px;">
+    <input type="checkbox" id="${tid}-isoil-toggle"
+      ${t.hasImprovedSoil ? 'checked disabled title="このタイプは常時有効"' : ''}
+      onchange="toggleDynIsoil('${tid}',this.checked,TYPES['${tid}'])"
+      style="width:16px;height:16px;cursor:${t.hasImprovedSoil?'default':'pointer'};accent-color:#eab308;flex-shrink:0;">
+    <label for="${tid}-isoil-toggle" style="font-size:16px;font-weight:700;color:rgba(234,179,8,0.95);cursor:${t.hasImprovedSoil?'default':'pointer'};line-height:1.4;">
+      🔁 改良土ルール：管上100mm→路盤変更点＝改良土／それ以下＝再生砂
+      ${t.hasImprovedSoil ? '<span style="font-weight:400;color:var(--text3);font-size:14px;">（常時有効）</span>' : ''}
+    </label>
+  </div>
 
   <!-- 路盤クイック参照バナー（スクロール不要で確認できる固定バー） -->
   <div id="${tid}-roadbed-bar" style="
@@ -6470,6 +6496,20 @@ function _sumHonAsRole(layers, roles) {
 }
 
 // =====================================================================
+// 改良土ルールトグル（管上100mm以上を改良土として区別するオプション）
+// =====================================================================
+function toggleDynIsoil(tid, checked, typeConf) {
+  _dynUseIsoil[tid] = checked;
+  // localStorage に記憶
+  try {
+    const _im = JSON.parse(localStorage.getItem('order_dyn_isoil') || '{}');
+    _im[tid] = checked;
+    localStorage.setItem('order_dyn_isoil', JSON.stringify(_im));
+  } catch(e) {}
+  renderDynTotal(tid, typeConf || TYPES[tid]);
+}
+
+// =====================================================================
 // 仮復旧 / 本復旧 発注量計算モード切替
 // =====================================================================
 function switchDynMode(tid, mode) {
@@ -6503,7 +6543,9 @@ function switchDynMode(tid, mode) {
       : (_hasHonAs
           ? _sumHonAsRole(t.honAsLayers, ['base', 'other'])
           : Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT));
-    const honTotalH = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0) + (t.genkyoCnRC || 0) + (t.genkyoCnH || 0);
+    // honFreeRbRows（鉄板・既設路盤等）も totalH に含める
+    const _honFrbH  = (t.honFreeRbRows||[]).reduce((s,r)=>(r.t||0)>0?s+(r.t||0)/1000:s, 0);
+    const honTotalH = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0) + (t.genkyoCnRC || 0) + (t.genkyoCnH || 0) + _honFrbH;
     t.asT密粒 = honSurfaceT;
     t.asT粗粒 = honBaseT;
     t.rmH    = t.genkyoRM || 0;
