@@ -7875,80 +7875,67 @@ function _restoreOrderRecorder(inputId) {
 }
 
 // =====================================================================
-// iPadプルダウンリフレッシュ防止 + 名前未入力警告 + トップへ戻るボタン
+// 赤バナー警告（グローバル） + iPadプルダウンリフレッシュ防止 + トップへ戻るボタン
 // =====================================================================
-(function() {
-  // --- 警告バナー DOM ---
-  var _toast = null;
-  function _showToast(msg, authorEl) {
-    if (!_toast) {
-      _toast = document.createElement('div');
-      _toast.style.cssText = [
-        'position:fixed;top:0;left:0;right:0;z-index:99999;',
-        'background:#ef4444;color:#fff;font-size:18px;font-weight:700;',
-        'padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);',
-        'transform:translateY(-100%);transition:transform 0.25s;cursor:pointer;',
-        'display:flex;align-items:center;justify-content:center;gap:10px;'
-      ].join('');
-      document.body.appendChild(_toast);
-      _toast.addEventListener('click', function() {
-        _hideToast();
-        if (_toast._authorEl) {
-          _toast._authorEl.scrollIntoView({ behavior:'smooth', block:'center' });
-          setTimeout(function(){ if(_toast._authorEl) _toast._authorEl.focus(); }, 400);
-        }
-      });
-    }
-    _toast._authorEl = authorEl || null;
-    _toast.innerHTML = '⚠️ ' + msg + (authorEl ? ' <span style="text-decoration:underline;font-size:15px;">（ここをタップして移動）</span>' : '');
-    _toast.style.transform = 'translateY(0)';
-    clearTimeout(_toast._timer);
-    _toast._timer = setTimeout(_hideToast, 6000);
-  }
-  function _hideToast() {
-    if (_toast) _toast.style.transform = 'translateY(-100%)';
-  }
-  // グローバル公開（保存バリデーション等から呼び出すため）
-  window.showWarningBanner = function(msg, focusId) {
-    var el = focusId ? document.getElementById(focusId) : null;
-    _showToast(msg, el);
-    if (el) {
-      setTimeout(function() {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.focus();
-      }, 200);
-    }
-  };
 
-  // --- アクティブタブの作業記録者欄を取得 ---
-  function _getActiveAuthorEl() {
-    // メインタブ(計算シート)がアクティブか確認
-    var calcTab = document.getElementById('tab-calc');
-    if (!calcTab || !calcTab.classList.contains('active')) return null;
-    // 動的型パネル: display:none でない .type-panel を探す
-    var panels = calcTab.querySelectorAll('.type-panel');
-    for (var i = 0; i < panels.length; i++) {
-      if (panels[i].style.display !== 'none') {
-        var el = panels[i].querySelector('[id$="-author"]');
-        if (el) return el;
+// --- 警告バナー: グローバル関数として定義 ---
+var _warnToast = null;
+var _warnTimer = null;
+
+function _hideWarningBanner() {
+  if (_warnToast) _warnToast.style.transform = 'translateY(-100%)';
+}
+
+function showWarningBanner(msg, focusId) {
+  var el = focusId ? document.getElementById(focusId) : null;
+  if (!_warnToast) {
+    _warnToast = document.createElement('div');
+    _warnToast.style.cssText = [
+      'position:fixed;top:0;left:0;right:0;z-index:99999;',
+      'background:#ef4444;color:#fff;font-size:18px;font-weight:700;',
+      'padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);',
+      'transform:translateY(-100%);transition:transform 0.25s;cursor:pointer;',
+      'display:flex;align-items:center;justify-content:center;gap:10px;'
+    ].join('');
+    document.body.appendChild(_warnToast);
+    _warnToast.addEventListener('click', function() {
+      _hideWarningBanner();
+      if (_warnToast._targetEl) {
+        _warnToast._targetEl.scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(function(){ if(_warnToast._targetEl) _warnToast._targetEl.focus(); }, 350);
       }
-    }
-    // 静的タブ(85/40/30等): display:none でない .tab-content 内を探す
-    var staticContents = calcTab.querySelectorAll('.ptab-content, [id^="ptab-"]');
-    for (var j = 0; j < staticContents.length; j++) {
-      if (staticContents[j].style.display !== 'none' && !staticContents[j].closest('.type-panel')) {
-        var el2 = staticContents[j].querySelector('[id$="-author"]');
-        if (el2) return el2;
-      }
-    }
-    // 最終フォールバック: 画面内に見えている author フィールド
-    var all = calcTab.querySelectorAll('[id$="-author"]');
-    for (var k = 0; k < all.length; k++) {
-      var rect = all[k].getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) return all[k];
-    }
-    return null;
+    });
   }
+  _warnToast._targetEl = el || null;
+  _warnToast.innerHTML = '⚠️ ' + msg + (el ? '　<span style="text-decoration:underline;font-size:15px;">（ここをタップして移動）</span>' : '');
+  _warnToast.style.transform = 'translateY(0)';
+  clearTimeout(_warnTimer);
+  _warnTimer = setTimeout(_hideWarningBanner, 6000);
+}
+
+// --- アクティブタブの作業記録者欄を取得 ---
+function _getActiveAuthorEl() {
+  var calcTab = document.getElementById('tab-calc');
+  if (!calcTab || !calcTab.classList.contains('active')) return null;
+  // 動的型パネル: display:none でない .type-panel を探す
+  var panels = calcTab.querySelectorAll('.type-panel');
+  for (var i = 0; i < panels.length; i++) {
+    if (panels[i].style.display !== 'none') {
+      var el = panels[i].querySelector('[id$="-author"]');
+      if (el) return el;
+    }
+  }
+  // 最終フォールバック: 画面内に見えている author フィールド
+  var all = calcTab.querySelectorAll('[id$="-author"]');
+  for (var k = 0; k < all.length; k++) {
+    var rect = all[k].getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return all[k];
+  }
+  return null;
+}
+
+// --- iPadプルダウンリフレッシュ防止 ---
+(function() {
 
   // --- プルダウンリフレッシュ防止 ---
   var _startY = 0;
@@ -7968,9 +7955,9 @@ function _restoreOrderRecorder(inputId) {
         _warned = true;
         var authorEl = _getActiveAuthorEl();
         if (authorEl && !authorEl.value.trim()) {
-          _showToast('作業記録者（氏名）が未入力です', authorEl);
+          showWarningBanner('作業記録者（氏名）が未入力です', authorEl ? authorEl.id : null);
         } else {
-          _showToast('ページ最上部です（リロード防止中）', null);
+          showWarningBanner('ページ最上部です（リロード防止中）', null);
         }
       }
     }
