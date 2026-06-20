@@ -3106,9 +3106,9 @@ function saveRecord(typeKey) {
   const hata   = document.getElementById(`${typeKey}-hata`)?.value;
   const author = document.getElementById(`${typeKey}-author`)?.value || '';
   const site   = document.getElementById(`${typeKey}-site`)?.value || '';
-  if (!date) { alert('⚠ 作業日付を入力してください'); return; }
-  if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
-  if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
+  if (!date) { showWarningBanner('作業日付を入力してください', `${typeKey}-date`); return; }
+  if (!author.trim()) { showWarningBanner('作業記録者（氏名）を入力してください', `${typeKey}-author`); return; }
+  if (!hata) { showWarningBanner('旗揚げ番号を入力してください', `${typeKey}-hata`); return; }
   _saveOrderRecorder(author);
 
   const t = TYPES[typeKey];
@@ -6986,9 +6986,9 @@ function saveDynRecord(tid, typeKey) {
   const hata   = document.getElementById(`${tid}-hata`)?.value;
   const author = document.getElementById(`${tid}-author`)?.value || '';
   const siteName = site?.name || '';
-  if (!date) { alert('⚠ 作業日付を入力してください'); return; }
-  if (!author.trim()) { alert('⚠ 作業記録者（氏名）を入力してください'); return; }
-  if (!hata) { alert('⚠ 旗揚げ番号を入力してください'); return; }
+  if (!date) { showWarningBanner('作業日付を入力してください', `${tid}-date`); return; }
+  if (!author.trim()) { showWarningBanner('作業記録者（氏名）を入力してください', `${tid}-author`); return; }
+  if (!hata) { showWarningBanner('旗揚げ番号を入力してください', `${tid}-hata`); return; }
   _saveOrderRecorder(author);
 
   const t = TYPES[tid];
@@ -7903,11 +7903,22 @@ function _restoreOrderRecorder(inputId) {
     _toast.innerHTML = '⚠️ ' + msg + (authorEl ? ' <span style="text-decoration:underline;font-size:15px;">（ここをタップして移動）</span>' : '');
     _toast.style.transform = 'translateY(0)';
     clearTimeout(_toast._timer);
-    _toast._timer = setTimeout(_hideToast, 4000);
+    _toast._timer = setTimeout(_hideToast, 6000);
   }
   function _hideToast() {
     if (_toast) _toast.style.transform = 'translateY(-100%)';
   }
+  // グローバル公開（保存バリデーション等から呼び出すため）
+  window.showWarningBanner = function(msg, focusId) {
+    var el = focusId ? document.getElementById(focusId) : null;
+    _showToast(msg, el);
+    if (el) {
+      setTimeout(function() {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }, 200);
+    }
+  };
 
   // --- アクティブタブの作業記録者欄を取得 ---
   function _getActiveAuthorEl() {
