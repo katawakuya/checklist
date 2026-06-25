@@ -208,15 +208,14 @@ function updateAdminUI() {
     badge.style.background = _isAdmin ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.12)';
     btn.textContent = '🔓';
     btn.title = 'ログアウト';
-    // ログイン画面を非表示
+    // ログイン画面が出ていれば隠す
     var lp = document.getElementById('loginRequired');
     if (lp) lp.style.display = 'none';
   } else {
     badge.style.display = 'none';
     btn.textContent = '🔑';
-    btn.title = 'ログイン（ログイン後に閲覧可能）';
-    // ログイン必要画面を表示
-    showLoginRequired();
+    btn.title = 'ログイン';
+    // ※ ログイン画面はFirestoreエラー時のみ showLoginRequired() で表示
   }
 }
 
@@ -278,7 +277,12 @@ function loadSites() {
       }
       afterSitesLoaded();
     })
-    .catch(function() { afterSitesLoaded(); });
+    .catch(function(e) {
+      if (e && e.code === 'permission-denied') {
+        showLoginRequired(); return;  // 権限なし → ログイン画面
+      }
+      afterSitesLoaded();  // その他エラー → キャッシュで続行
+    });
 }
 
 function afterSitesLoaded() {
@@ -359,7 +363,10 @@ function loadDrawings() {
       renderCards();
     })
     .catch(function(e) {
-      // キャッシュがあればそれを使う
+      if (e && e.code === 'permission-denied') {
+        showLoginRequired(); return;  // 権限なし → ログイン画面
+      }
+      // その他エラー → キャッシュがあれば表示
       buildRbFilter();
       renderCards();
     });
@@ -494,22 +501,16 @@ function toDriveEmbedUrl(url) {
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ===== 起動 =====
-// ・未ログイン      → ログイン必要画面を表示
-// ・ログイン済み    → 閲覧可能（_isViewer=true）
-// ・管理者メール    → _isAdmin=true で書き込み機能も有効化（ADMIN_EMAILS に追加）
+// manage.html と同じ方式：認証状態に関わらずまずデータ取得を試みる
+// → Firestore で permission-denied が出た場合のみログイン画面を表示
+// （onAuthStateChanged が null で先発火する問題を回避）
 var _fbReady = false;
 _fbAuth.onAuthStateChanged(function(user) {
-  if (!user) {
-    _isViewer = false;
-    _isAdmin  = false;
-    updateAdminUI(); // showLoginRequired() を呼ぶ
-    return;
-  }
-  // ログイン済み → 閲覧権限あり
-  _isViewer = true;
-  // 管理者判定: ADMIN_EMAILSにあるか、またはリストが空なら全ログイン者を管理者扱い
-  _isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.indexOf(user.email || '') >= 0;
+  // 認証状態の更新（ログイン・ログアウトのたびに呼ばれる）
+  _isViewer = !!user;
+  _isAdmin  = !!user && (ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.indexOf(user.email || '') >= 0);
   updateAdminUI();
+  // 初回のみデータ取得開始
   if (!_fbReady) { _fbReady = true; loadSites(); }
 });
 
