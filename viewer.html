@@ -195,13 +195,12 @@ var _rbMasters = [];       // この現場の路盤マスタ（rbKey→名称変
 })();
 
 // ===== Auth =====
-_fbAuth.onAuthStateChanged(function(user) {
-  _isAdmin = !!user;
+function updateAdminUI() {
   var badge = document.getElementById('adminBadge');
   var btn = document.getElementById('adminBtn');
   if (_isAdmin) {
     badge.style.display = 'inline-block';
-    badge.textContent = '👑管理者';
+    badge.textContent = '👑 管理者';
     btn.textContent = '🔓';
     btn.title = 'ログアウト';
   } else {
@@ -209,11 +208,14 @@ _fbAuth.onAuthStateChanged(function(user) {
     btn.textContent = '🔑';
     btn.title = '管理者ログイン';
   }
-});
+}
 
 function onAuthBtnClick() {
   if (_isAdmin) {
-    if (confirm('管理者ログアウトしますか？')) _fbAuth.signOut();
+    if (confirm('管理者ログアウトしますか？\n（ログアウト後も閲覧のみ継続できます）')) {
+      _fbAuth.signOut();
+      // signOut → onAuthStateChanged(null) → 自動で匿名サインイン
+    }
   } else {
     document.getElementById('fbModal').classList.add('open');
     setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
@@ -462,8 +464,25 @@ function toDriveEmbedUrl(url) {
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ===== 起動 =====
+// ・未ログイン   → 匿名サインインで Firestore 読み取り許可（閲覧のみ）
+// ・管理者ログイン → _isAdmin=true で書き込み機能を有効化
 var _fbReady = false;
-_fbAuth.onAuthStateChanged(function() {
+_fbAuth.onAuthStateChanged(function(user) {
+  if (!user) {
+    // 未サインイン → 匿名サインイン（Firestoreルール対応）
+    _fbAuth.signInAnonymously().catch(function(e) {
+      console.warn('[viewer] anonymous sign-in failed:', e);
+      // 匿名サインイン失敗でも閲覧試みる（Firestoreルールが緩い場合）
+      _isAdmin = false;
+      updateAdminUI();
+      if (!_fbReady) { _fbReady = true; loadSites(); }
+    });
+    return; // 匿名サインイン成功後に onAuthStateChanged が再発火するまで待つ
+  }
+  // 匿名ユーザー = 一般閲覧者（閲覧のみ）
+  // 非匿名ユーザー = 管理者（メール/パスワード認証済み）
+  _isAdmin = !user.isAnonymous;
+  updateAdminUI();
   if (!_fbReady) { _fbReady = true; loadSites(); }
 });
 
