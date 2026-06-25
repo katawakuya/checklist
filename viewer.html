@@ -150,10 +150,10 @@ main{padding:12px 14px 80px;}
   </div>
 </div>
 
-<!-- 管理者ログインモーダル -->
+<!-- ログインモーダル -->
 <div class="modal-overlay" id="fbModal">
   <div class="modal-box">
-    <h3>🔑 管理者ログイン</h3>
+    <h3>🔑 ログイン</h3>
     <input id="fbEmail" type="email" autocomplete="email" placeholder="メールアドレス">
     <input id="fbPass" type="password" autocomplete="current-password" placeholder="パスワード">
     <div class="modal-actions">
@@ -178,7 +178,8 @@ var _fb = firebase.initializeApp({
 });
 var _fbDb = firebase.firestore();
 var _fbAuth = firebase.auth();
-var _isAdmin = false;
+var _isAdmin = false;   // 管理者（書き込み権限あり）
+var _isViewer = false;  // ログイン済み閲覧者（管理者含む）
 
 // ===== 状態 =====
 var _paramSiteName = '';   // URLパラメータの現場名
@@ -195,31 +196,60 @@ var _rbMasters = [];       // この現場の路盤マスタ（rbKey→名称変
 })();
 
 // ===== Auth =====
+// 管理者メールアドレスリスト（ここに追加すると管理者権限が付与される）
+var ADMIN_EMAILS = [];  // 例: ['admin@example.com']
+
 function updateAdminUI() {
   var badge = document.getElementById('adminBadge');
-  var btn = document.getElementById('adminBtn');
-  if (_isAdmin) {
+  var btn   = document.getElementById('adminBtn');
+  if (_isViewer) {
     badge.style.display = 'inline-block';
-    badge.textContent = '👑 管理者';
+    badge.textContent = _isAdmin ? '👑 管理者' : '👤 閲覧中';
+    badge.style.background = _isAdmin ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.12)';
     btn.textContent = '🔓';
     btn.title = 'ログアウト';
+    // ログイン画面を非表示
+    var lp = document.getElementById('loginRequired');
+    if (lp) lp.style.display = 'none';
   } else {
     badge.style.display = 'none';
     btn.textContent = '🔑';
-    btn.title = '管理者ログイン';
+    btn.title = 'ログイン（ログイン後に閲覧可能）';
+    // ログイン必要画面を表示
+    showLoginRequired();
   }
 }
 
 function onAuthBtnClick() {
-  if (_isAdmin) {
-    if (confirm('管理者ログアウトしますか？\n（ログアウト後も閲覧のみ継続できます）')) {
-      _fbAuth.signOut();
-      // signOut → onAuthStateChanged(null) → 自動で匿名サインイン
-    }
+  if (_isViewer) {
+    if (confirm('ログアウトしますか？')) _fbAuth.signOut();
   } else {
-    document.getElementById('fbModal').classList.add('open');
-    setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
+    openLoginModal();
   }
+}
+function openLoginModal() {
+  document.getElementById('fbModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
+}
+function showLoginRequired() {
+  var main = document.getElementById('mainArea');
+  // まだ loginRequired div がない場合のみ作成
+  if (!document.getElementById('loginRequired')) {
+    var div = document.createElement('div');
+    div.id = 'loginRequired';
+    div.style.cssText = 'text-align:center;padding:80px 20px;';
+    div.innerHTML =
+      '<div style="font-size:52px;margin-bottom:16px;">🔑</div>' +
+      '<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">ログインが必要です</div>' +
+      '<div style="font-size:14px;color:var(--text3);margin-bottom:24px;">図面を閲覧するにはログインしてください</div>' +
+      '<button onclick="openLoginModal()" style="background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer;">ログイン</button>';
+    main.innerHTML = '';
+    main.appendChild(div);
+  } else {
+    document.getElementById('loginRequired').style.display = '';
+  }
+  document.getElementById('loadingMsg') && (document.getElementById('loadingMsg').style.display = 'none');
+  document.getElementById('filterBar').style.display = 'none';
 }
 function closeFbModal() { document.getElementById('fbModal').classList.remove('open'); }
 function doFbLogin() {
@@ -464,24 +494,21 @@ function toDriveEmbedUrl(url) {
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ===== 起動 =====
-// ・未ログイン   → 匿名サインインで Firestore 読み取り許可（閲覧のみ）
-// ・管理者ログイン → _isAdmin=true で書き込み機能を有効化
+// ・未ログイン      → ログイン必要画面を表示
+// ・ログイン済み    → 閲覧可能（_isViewer=true）
+// ・管理者メール    → _isAdmin=true で書き込み機能も有効化（ADMIN_EMAILS に追加）
 var _fbReady = false;
 _fbAuth.onAuthStateChanged(function(user) {
   if (!user) {
-    // 未サインイン → 匿名サインイン（Firestoreルール対応）
-    _fbAuth.signInAnonymously().catch(function(e) {
-      console.warn('[viewer] anonymous sign-in failed:', e);
-      // 匿名サインイン失敗でも閲覧試みる（Firestoreルールが緩い場合）
-      _isAdmin = false;
-      updateAdminUI();
-      if (!_fbReady) { _fbReady = true; loadSites(); }
-    });
-    return; // 匿名サインイン成功後に onAuthStateChanged が再発火するまで待つ
+    _isViewer = false;
+    _isAdmin  = false;
+    updateAdminUI(); // showLoginRequired() を呼ぶ
+    return;
   }
-  // 匿名ユーザー = 一般閲覧者（閲覧のみ）
-  // 非匿名ユーザー = 管理者（メール/パスワード認証済み）
-  _isAdmin = !user.isAnonymous;
+  // ログイン済み → 閲覧権限あり
+  _isViewer = true;
+  // 管理者判定: ADMIN_EMAILSにあるか、またはリストが空なら全ログイン者を管理者扱い
+  _isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.indexOf(user.email || '') >= 0;
   updateAdminUI();
   if (!_fbReady) { _fbReady = true; loadSites(); }
 });
