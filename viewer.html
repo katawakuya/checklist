@@ -277,11 +277,9 @@ function loadSites() {
       }
       afterSitesLoaded();
     })
-    .catch(function(e) {
-      if (e && e.code === 'permission-denied') {
-        showLoginRequired(); return;  // 権限なし → ログイン画面
-      }
-      afterSitesLoaded();  // その他エラー → キャッシュで続行
+    .catch(function() {
+      // エラー（権限なし含む）→ キャッシュで続行
+      afterSitesLoaded();
     });
 }
 
@@ -362,11 +360,8 @@ function loadDrawings() {
       buildRbFilter();
       renderCards();
     })
-    .catch(function(e) {
-      if (e && e.code === 'permission-denied') {
-        showLoginRequired(); return;  // 権限なし → ログイン画面
-      }
-      // その他エラー → キャッシュがあれば表示
+    .catch(function() {
+      // エラー（権限なし含む）→ キャッシュがあれば表示
       buildRbFilter();
       renderCards();
     });
