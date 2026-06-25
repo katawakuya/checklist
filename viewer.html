@@ -472,24 +472,26 @@ function openViewer(idx) {
   if (zCtrl) zCtrl.style.display = 'none';
   if (zLbl)  zLbl.textContent = '100%';
 
+  // ズームボタンは常に表示
+  area.classList.add('zoomable');
+  if (zCtrl) zCtrl.style.display = 'flex';
+
   if (d.fileData) {
     if (d.fileType && d.fileType.startsWith('image/')) {
-      // 画像 → ズームボタン有効
-      area.classList.add('zoomable');
+      // 画像 → width ベースズーム
       area.innerHTML = '<img src="' + d.fileData + '" alt="' + esc(d.name) + '" style="max-width:100%;max-height:100%;object-fit:contain;" id="vwImg">';
       var img = area.querySelector('img');
       if (img) img.onload = function() { _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600; };
-      if (zCtrl) zCtrl.style.display = 'flex';
       extBtn.style.display = 'none';
     } else {
-      // PDF等 → embed（ズームはPDF内蔵）
-      area.innerHTML = '<embed src="' + d.fileData + '" type="' + (d.fileType || 'application/pdf') + '" style="width:100%;height:100%;">';
+      // PDF等 → embed（transform ズーム）
+      area.innerHTML = '<embed src="' + d.fileData + '" type="' + (d.fileType || 'application/pdf') + '" style="width:100%;height:100%;transform-origin:top left;" id="vwEmbed">';
       extBtn.style.display = 'none';
     }
   } else if (d.embedUrl || d.url) {
-    // Drive等iframe（ズームはDrive側に委ねる）
+    // Drive等iframe（transform ズーム）
     var embedUrl = d.embedUrl || toDriveEmbedUrl(d.url);
-    area.innerHTML = '<iframe src="' + esc(embedUrl) + '" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
+    area.innerHTML = '<iframe src="' + esc(embedUrl) + '" allowfullscreen style="width:100%;height:100%;border:none;transform-origin:top left;" id="vwIframe"></iframe>';
     extBtn.href = d.url || embedUrl;
     extBtn.style.display = '';
   } else {
@@ -518,21 +520,47 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeV
 // ===== ズーム =====
 var _vwZoomLv = 1.0;
 var _vwZoomBaseW = 0;
+
+function _applyVwZoom() {
+  var img    = document.getElementById('vwImg');
+  var iframe = document.getElementById('vwIframe');
+  var embed  = document.getElementById('vwEmbed');
+  var lv     = _vwZoomLv;
+
+  if (img) {
+    // 画像: width ベース
+    if (lv === 1.0) {
+      img.style.width = ''; img.style.maxWidth = '100%'; img.style.maxHeight = '100%';
+    } else {
+      if (!_vwZoomBaseW) _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600;
+      img.style.width = Math.round(_vwZoomBaseW * lv) + 'px';
+      img.style.maxWidth = 'none'; img.style.maxHeight = 'none';
+    }
+  } else if (iframe || embed) {
+    // iframe / embed: CSS transform scale（top-left 基点）
+    var el = iframe || embed;
+    if (lv === 1.0) {
+      el.style.transform = '';
+      el.style.width = '100%'; el.style.height = '100%';
+    } else {
+      el.style.transform = 'scale(' + lv + ')';
+      el.style.transformOrigin = 'top left';
+      // scale 後も元のエリアを埋めるよう逆数サイズに
+      el.style.width  = (100 / lv).toFixed(1) + '%';
+      el.style.height = (100 / lv).toFixed(1) + '%';
+    }
+  }
+}
+
 function _vwZoom(delta) {
   _vwZoomLv = Math.max(0.25, Math.min(4.0, parseFloat((_vwZoomLv + delta).toFixed(2))));
-  var img = document.getElementById('vwImg');
-  if (!img) return;
-  if (!_vwZoomBaseW) _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600;
-  img.style.width    = Math.round(_vwZoomBaseW * _vwZoomLv) + 'px';
-  img.style.maxWidth = 'none';
-  img.style.maxHeight = 'none';
+  _applyVwZoom();
   var lbl = document.getElementById('vwZoomLv');
   if (lbl) lbl.textContent = Math.round(_vwZoomLv * 100) + '%';
 }
 function _vwZoomReset() {
   _vwZoomLv = 1.0; _vwZoomBaseW = 0;
-  var img = document.getElementById('vwImg');
-  if (img) { img.style.width = ''; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; }
+  _applyVwZoom();
   var lbl = document.getElementById('vwZoomLv');
   if (lbl) lbl.textContent = '100%';
 }
