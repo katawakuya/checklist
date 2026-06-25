@@ -487,19 +487,21 @@ function openViewer(idx) {
       // PDF等 → embed（ラッパー方式ズーム）
       var _bwE = window.innerWidth, _bhE = Math.max(200, window.innerHeight - 120);
       _vwZoomBaseW = _bwE; _vwZoomBaseH = _bhE;
-      area.innerHTML = '<div id="vwWrap" style="width:' + _bwE + 'px;height:' + _bhE + 'px;position:relative;flex-shrink:0;">' +
+      area.innerHTML = '<div id="vwWrap" style="width:' + _bwE + 'px;height:' + _bhE + 'px;position:relative;flex-shrink:0;overflow:hidden;">' +
         '<embed id="vwEmbed" src="' + d.fileData + '" type="' + (d.fileType||'application/pdf') + '" ' +
-        'style="position:absolute;top:0;left:0;width:' + _bwE + 'px;height:' + _bhE + 'px;transform-origin:top left;"></embed></div>';
+        'style="position:absolute;top:0;left:0;width:' + _bwE + 'px;height:' + (_bhE + 100) + 'px;transform-origin:top left;"></embed></div>';
       extBtn.style.display = 'none';
     }
   } else if (d.embedUrl || d.url) {
     // Drive等iframe（ラッパー方式ズーム）
+    // iframe を +100px 縦に伸ばし、vwWrap が overflow:hidden でクリップ
+    // → Drive の「ページ目」バー（iframeの最下部に固定）が可視領域外に隠れる
     var embedUrl = d.embedUrl || toDriveEmbedUrl(d.url);
     var _bw = window.innerWidth, _bh = Math.max(200, window.innerHeight - 120);
     _vwZoomBaseW = _bw; _vwZoomBaseH = _bh;
-    area.innerHTML = '<div id="vwWrap" style="width:' + _bw + 'px;height:' + _bh + 'px;position:relative;flex-shrink:0;">' +
+    area.innerHTML = '<div id="vwWrap" style="width:' + _bw + 'px;height:' + _bh + 'px;position:relative;flex-shrink:0;overflow:hidden;">' +
       '<iframe id="vwIframe" src="' + esc(embedUrl) + '" allowfullscreen ' +
-      'style="position:absolute;top:0;left:0;width:' + _bw + 'px;height:' + _bh + 'px;border:none;transform-origin:top left;"></iframe></div>';
+      'style="position:absolute;top:0;left:0;width:' + _bw + 'px;height:' + (_bh + 100) + 'px;border:none;transform-origin:top left;"></iframe></div>';
     extBtn.href = d.url || embedUrl;
     extBtn.style.display = '';
   } else {
