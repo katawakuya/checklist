@@ -61,9 +61,16 @@ main{padding:12px 14px 80px;}
 .btn-close{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;font-size:13px;padding:5px 12px;cursor:pointer;}
 .btn-close:hover{background:rgba(255,255,255,.15);}
 .viewer-area{flex:1;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;}
+.viewer-area.zoomable{overflow:auto;align-items:flex-start;justify-content:flex-start;padding:12px;}
 .viewer-area iframe{width:100%;height:100%;border:none;}
 .viewer-area img{max-width:100%;max-height:100%;object-fit:contain;}
+.viewer-area.zoomable img{object-fit:unset;}
 .viewer-area embed{width:100%;height:100%;}
+/* ズームコントロール */
+#vwZoomCtrl{display:none;align-items:center;gap:6px;}
+#vwZoomCtrl button{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.65);color:#fff;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:17px;font-weight:700;line-height:1.2;}
+#vwZoomCtrl button:active{background:rgba(255,255,255,.35);}
+#vwZoomCtrl .vw-zoom-lv{font-size:14px;color:#fff;min-width:42px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
 .viewer-info{background:#111;padding:8px 14px;flex-shrink:0;display:flex;gap:16px;align-items:center;}
 .viewer-info .vi-memo{font-size:12px;color:#aaa;flex:1;}
 .btn-open-ext{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;font-size:12px;padding:5px 12px;cursor:pointer;white-space:nowrap;text-decoration:none;}
@@ -140,6 +147,12 @@ main{padding:12px 14px 80px;}
   <div class="viewer-header">
     <span class="viewer-type" id="vType"></span>
     <span class="viewer-title" id="vTitle"></span>
+    <div id="vwZoomCtrl">
+      <button onclick="_vwZoom(-0.25)" title="縮小">－</button>
+      <span class="vw-zoom-lv" id="vwZoomLv">100%</span>
+      <button onclick="_vwZoom(+0.25)" title="拡大">＋</button>
+      <button onclick="_vwZoomReset()" style="font-size:13px;padding:3px 8px;">Reset</button>
+    </div>
     <a class="btn-open-ext" id="vOpenExt" href="#" target="_blank" style="display:none;">↗ 外部で開く</a>
     <button class="btn-close" onclick="closeViewer()">✕ 閉じる</button>
   </div>
@@ -449,19 +462,32 @@ function openViewer(idx) {
 
   var area = document.getElementById('viewerArea');
   area.innerHTML = '';
+  area.classList.remove('zoomable');
 
-  var extBtn = document.getElementById('vOpenExt');
+  var extBtn  = document.getElementById('vOpenExt');
+  var zCtrl   = document.getElementById('vwZoomCtrl');
+  var zLbl    = document.getElementById('vwZoomLv');
+  _vwZoomLv   = 1.0;
+  _vwZoomBaseW = 0;
+  if (zCtrl) zCtrl.style.display = 'none';
+  if (zLbl)  zLbl.textContent = '100%';
 
   if (d.fileData) {
     if (d.fileType && d.fileType.startsWith('image/')) {
-      area.innerHTML = '<img src="' + d.fileData + '" alt="' + esc(d.name) + '" style="max-width:100%;max-height:100%;object-fit:contain;">';
+      // 画像 → ズームボタン有効
+      area.classList.add('zoomable');
+      area.innerHTML = '<img src="' + d.fileData + '" alt="' + esc(d.name) + '" style="max-width:100%;max-height:100%;object-fit:contain;" id="vwImg">';
+      var img = area.querySelector('img');
+      if (img) img.onload = function() { _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600; };
+      if (zCtrl) zCtrl.style.display = 'flex';
       extBtn.style.display = 'none';
     } else {
-      // PDF等 → embed
+      // PDF等 → embed（ズームはPDF内蔵）
       area.innerHTML = '<embed src="' + d.fileData + '" type="' + (d.fileType || 'application/pdf') + '" style="width:100%;height:100%;">';
       extBtn.style.display = 'none';
     }
   } else if (d.embedUrl || d.url) {
+    // Drive等iframe（ズームはDrive側に委ねる）
     var embedUrl = d.embedUrl || toDriveEmbedUrl(d.url);
     area.innerHTML = '<iframe src="' + esc(embedUrl) + '" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
     extBtn.href = d.url || embedUrl;
@@ -478,11 +504,38 @@ function openViewer(idx) {
 function closeViewer() {
   document.getElementById('viewerOverlay').classList.remove('open');
   document.getElementById('viewerArea').innerHTML = '';
+  document.getElementById('viewerArea').classList.remove('zoomable');
   document.body.style.overflow = '';
+  _vwZoomLv = 1.0;
+  _vwZoomBaseW = 0;
+  var zCtrl = document.getElementById('vwZoomCtrl');
+  if (zCtrl) zCtrl.style.display = 'none';
 }
 
 // Escキーで閉じる
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeViewer(); });
+
+// ===== ズーム =====
+var _vwZoomLv = 1.0;
+var _vwZoomBaseW = 0;
+function _vwZoom(delta) {
+  _vwZoomLv = Math.max(0.25, Math.min(4.0, parseFloat((_vwZoomLv + delta).toFixed(2))));
+  var img = document.getElementById('vwImg');
+  if (!img) return;
+  if (!_vwZoomBaseW) _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600;
+  img.style.width    = Math.round(_vwZoomBaseW * _vwZoomLv) + 'px';
+  img.style.maxWidth = 'none';
+  img.style.maxHeight = 'none';
+  var lbl = document.getElementById('vwZoomLv');
+  if (lbl) lbl.textContent = Math.round(_vwZoomLv * 100) + '%';
+}
+function _vwZoomReset() {
+  _vwZoomLv = 1.0; _vwZoomBaseW = 0;
+  var img = document.getElementById('vwImg');
+  if (img) { img.style.width = ''; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; }
+  var lbl = document.getElementById('vwZoomLv');
+  if (lbl) lbl.textContent = '100%';
+}
 
 // ===== ユーティリティ =====
 function toDriveEmbedUrl(url) {
