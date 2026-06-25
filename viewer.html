@@ -484,14 +484,22 @@ function openViewer(idx) {
       if (img) img.onload = function() { _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600; };
       extBtn.style.display = 'none';
     } else {
-      // PDF等 → embed（transform ズーム）
-      area.innerHTML = '<embed src="' + d.fileData + '" type="' + (d.fileType || 'application/pdf') + '" style="width:100%;height:100%;transform-origin:top left;" id="vwEmbed">';
+      // PDF等 → embed（ラッパー方式ズーム）
+      var _bwE = window.innerWidth, _bhE = Math.max(200, window.innerHeight - 120);
+      _vwZoomBaseW = _bwE; _vwZoomBaseH = _bhE;
+      area.innerHTML = '<div id="vwWrap" style="width:' + _bwE + 'px;height:' + _bhE + 'px;position:relative;flex-shrink:0;">' +
+        '<embed id="vwEmbed" src="' + d.fileData + '" type="' + (d.fileType||'application/pdf') + '" ' +
+        'style="position:absolute;top:0;left:0;width:' + _bwE + 'px;height:' + _bhE + 'px;transform-origin:top left;"></embed></div>';
       extBtn.style.display = 'none';
     }
   } else if (d.embedUrl || d.url) {
-    // Drive等iframe（transform ズーム）
+    // Drive等iframe（ラッパー方式ズーム）
     var embedUrl = d.embedUrl || toDriveEmbedUrl(d.url);
-    area.innerHTML = '<iframe src="' + esc(embedUrl) + '" allowfullscreen style="width:100%;height:100%;border:none;transform-origin:top left;" id="vwIframe"></iframe>';
+    var _bw = window.innerWidth, _bh = Math.max(200, window.innerHeight - 120);
+    _vwZoomBaseW = _bw; _vwZoomBaseH = _bh;
+    area.innerHTML = '<div id="vwWrap" style="width:' + _bw + 'px;height:' + _bh + 'px;position:relative;flex-shrink:0;">' +
+      '<iframe id="vwIframe" src="' + esc(embedUrl) + '" allowfullscreen ' +
+      'style="position:absolute;top:0;left:0;width:' + _bw + 'px;height:' + _bh + 'px;border:none;transform-origin:top left;"></iframe></div>';
     extBtn.href = d.url || embedUrl;
     extBtn.style.display = '';
   } else {
@@ -509,7 +517,7 @@ function closeViewer() {
   document.getElementById('viewerArea').classList.remove('zoomable');
   document.body.style.overflow = '';
   _vwZoomLv = 1.0;
-  _vwZoomBaseW = 0;
+  _vwZoomBaseW = 0; _vwZoomBaseH = 0;
   var zCtrl = document.getElementById('vwZoomCtrl');
   if (zCtrl) zCtrl.style.display = 'none';
 }
@@ -520,15 +528,17 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeV
 // ===== ズーム =====
 var _vwZoomLv = 1.0;
 var _vwZoomBaseW = 0;
+var _vwZoomBaseH = 0;
 
 function _applyVwZoom() {
   var img    = document.getElementById('vwImg');
   var iframe = document.getElementById('vwIframe');
   var embed  = document.getElementById('vwEmbed');
+  var wrap   = document.getElementById('vwWrap');
   var lv     = _vwZoomLv;
 
   if (img) {
-    // 画像: width ベース
+    // 画像: width ベース（スクロール可）
     if (lv === 1.0) {
       img.style.width = ''; img.style.maxWidth = '100%'; img.style.maxHeight = '100%';
     } else {
@@ -537,29 +547,26 @@ function _applyVwZoom() {
       img.style.maxWidth = 'none'; img.style.maxHeight = 'none';
     }
   } else if (iframe || embed) {
-    // iframe / embed: CSS transform scale（top-left 基点）
+    // iframe/embed: ラッパーを lv 倍に拡大してスクロール領域を確保
+    // iframe 自体は固定サイズのまま transform:scale でピクセル拡大
     var el = iframe || embed;
-    if (lv === 1.0) {
-      el.style.transform = '';
-      el.style.width = '100%'; el.style.height = '100%';
-    } else {
-      el.style.transform = 'scale(' + lv + ')';
-      el.style.transformOrigin = 'top left';
-      // scale 後も元のエリアを埋めるよう逆数サイズに
-      el.style.width  = (100 / lv).toFixed(1) + '%';
-      el.style.height = (100 / lv).toFixed(1) + '%';
+    el.style.transform = lv === 1.0 ? '' : 'scale(' + lv + ')';
+    el.style.transformOrigin = 'top left';
+    if (wrap && _vwZoomBaseW && _vwZoomBaseH) {
+      wrap.style.width  = Math.round(_vwZoomBaseW  * lv) + 'px';
+      wrap.style.height = Math.round(_vwZoomBaseH * lv) + 'px';
     }
   }
 }
 
 function _vwZoom(delta) {
-  _vwZoomLv = Math.max(0.25, Math.min(4.0, parseFloat((_vwZoomLv + delta).toFixed(2))));
+  _vwZoomLv = Math.max(0.25, Math.min(8.0, parseFloat((_vwZoomLv + delta).toFixed(2))));
   _applyVwZoom();
   var lbl = document.getElementById('vwZoomLv');
   if (lbl) lbl.textContent = Math.round(_vwZoomLv * 100) + '%';
 }
 function _vwZoomReset() {
-  _vwZoomLv = 1.0; _vwZoomBaseW = 0;
+  _vwZoomLv = 1.0; _vwZoomBaseW = 0; _vwZoomBaseH = 0;
   _applyVwZoom();
   var lbl = document.getElementById('vwZoomLv');
   if (lbl) lbl.textContent = '100%';
