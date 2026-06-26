@@ -110,6 +110,11 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
 .filter-sel:disabled{opacity:0.4;cursor:default;}
 .filter-status{font-size:14px;color:var(--text3);white-space:nowrap;margin-left:2px;}
 </style>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
 </head>
 <body>
 
@@ -120,6 +125,7 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
   </select>
   <span class="admin-badge" id="adminBadge">👑 管理者</span>
   <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:5px 10px;font-size:16px;cursor:pointer;" title="既存データをFirebaseへ移行">📤 移行</button>
+  <button id="btnCopySite" class="admin-only" onclick="openCopyModal()" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;border-radius:6px;padding:5px 10px;font-size:16px;cursor:pointer;" title="現場間コピー">📋 コピー</button>
   <button class="btn-admin" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
 </header>
 
@@ -165,6 +171,7 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
       <button id="modeTabRoadbed" class="active" onclick="switchMode('roadbed')">🏗️ 路盤構成</button>
       <button id="modeTabDrawing" onclick="switchMode('drawing')">📋 図面管理</button>
       <button id="modeTabHata" onclick="switchMode('hata')">🗂 旗揚げマスタ</button>
+      <button id="modeTabAudit" class="admin-only" onclick="switchMode('audit')" style="display:none;">🕑 変更履歴</button>
     </div>
 
     <!-- ── 路盤構成モード ── -->
@@ -448,6 +455,69 @@ header h1{font-size:21px;font-weight:700;white-space:nowrap;}
           </div>
         </div>
         <div id="hataList"><div class="empty-state">現場を選択してください</div></div>
+      </div>
+    </div>
+
+    <!-- ── 現場間コピーモーダル ── -->
+<div class="modal-overlay" id="copyModal" onclick="if(event.target===this)closeCopyModal()">
+  <div class="modal" style="max-width:420px;width:94%;padding:24px;">
+    <button class="btn-close" onclick="closeCopyModal()">✕</button>
+    <h3 style="font-size:16px;margin-bottom:16px;">📋 現場間コピー</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:12px;color:var(--text2);font-weight:700;">コピー元（現在の現場）</label>
+        <div id="copySrcLabel" style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:14px;margin-top:4px;color:var(--accent);font-weight:700;">—</div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);font-weight:700;">コピー先（現場を選択）</label>
+        <select id="copyDestSel" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:14px;margin-top:4px;">
+          <option value="">― コピー先を選択 ―</option>
+        </select>
+      </div>
+      <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:12px;">
+        <div style="font-size:12px;color:var(--text2);font-weight:700;margin-bottom:8px;">コピーする内容を選択</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:6px;">
+          <input type="checkbox" id="copyOptRb" checked style="width:16px;height:16px;">
+          🏗️ 路盤構成マスタ
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:6px;">
+          <input type="checkbox" id="copyOptHata" style="width:16px;height:16px;">
+          🗂 旗揚げマスタ
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+          <input type="checkbox" id="copyOptDwg" style="width:16px;height:16px;">
+          📋 図面リスト（URLのみ）
+        </label>
+      </div>
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px;font-size:13px;color:var(--text2);">
+        ⚠️ コピー先に既存データがある場合は <strong style="color:var(--yellow);">上書き</strong> されます
+      </div>
+      <button onclick="execCopySite()" style="background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.5);color:#a78bfa;border-radius:8px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">
+        📋 コピー実行
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 変更履歴モード（管理者のみ） ── -->
+    <div id="modeAudit" class="mode-panel hidden">
+      <div class="form-area" style="padding-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <h3 style="margin:0;font-size:15px;">🕑 変更履歴ログ</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <select id="auditSiteFilter" onchange="renderAuditLog()"
+              style="background:var(--bg3);border:1px solid var(--border);color:var(--text);
+                     border-radius:6px;padding:5px 8px;font-size:13px;">
+              <option value="">すべての現場</option>
+            </select>
+            <button onclick="loadAuditLog()"
+              style="background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);
+                     border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">🔄 更新</button>
+          </div>
+        </div>
+      </div>
+      <div class="list-area" id="auditLogList">
+        <div class="empty-state">読み込み中...</div>
       </div>
     </div>
 
@@ -748,7 +818,11 @@ function saveRbForSite(id,configs){
   // モノリシック形式にも保存（後方互換）
   _fbDb.collection('masters').doc('roadbed_masters').get()
     .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=safe;return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()});})
-    .then(()=>_markSynced())
+    .then(()=>{
+      _markSynced();
+      var count=Array.isArray(configs)?configs.length:Object.keys(configs).length;
+      _auditLog('roadbed_save','路盤構成 '+count+'件 保存 ['+id+']');
+    })
     .catch(e=>{console.warn('[FB]',e);_markLocalModified();});
 }
 
@@ -916,11 +990,14 @@ function switchMode(mode){
   document.getElementById('modeRoadbed').classList.toggle('hidden',mode!=='roadbed');
   document.getElementById('modeDrawing').classList.toggle('hidden',mode!=='drawing');
   document.getElementById('modeHata').classList.toggle('hidden',mode!=='hata');
+  document.getElementById('modeAudit').classList.toggle('hidden',mode!=='audit');
   document.getElementById('modeTabRoadbed').className=mode==='roadbed'?'active':'';
   document.getElementById('modeTabDrawing').className=mode==='drawing'?'active':'';
   document.getElementById('modeTabHata').className=mode==='hata'?'active':'';
+  document.getElementById('modeTabAudit').className=mode==='audit'?'active admin-only':'admin-only';
   if(mode==='drawing'&&_selectedSiteId) populateDwgRbSelect();
   if(mode==='hata'&&_selectedSiteId) loadHataForSite(_selectedSiteId);
+  if(mode==='audit') loadAuditLog();
 }
 
 // ======================================
@@ -1396,6 +1473,7 @@ function saveDwg(){
   renderDwgList(list);
   clearDwgForm();
   showToast('✅「'+name+'」を登録しました');
+  _auditLog('dwg_save','図面登録「'+name+'」['+_selectedSiteId+']');
 }
 
 function editDwg(key){
@@ -1918,6 +1996,8 @@ function saveHata(){
   updateExistingHataSel();
   clearHataForm();
   showToast('✅ 旗揚げマスタを保存しました');
+  var action=editKey?'旗揚げ編集':'旗揚げ新規';
+  _auditLog('hata_save',action+' No.'+rec.num+(rec.name?' 「'+rec.name+'」':'')+' ['+id+']');
 }
 
 function clearHataForm(){
@@ -2125,6 +2205,9 @@ function updateAdminUI(){
   document.getElementById('btnAdmin').className=_isAdmin?'btn-admin active':'btn-admin';
   // 断面図切り出しリンク：管理者のみ表示
   document.querySelectorAll('.pdf-crop-link').forEach(el=>el.style.display=_isAdmin?'':'none');
+  // 変更履歴タブ・コピーボタン：管理者のみ表示
+  document.getElementById('modeTabAudit').style.display=_isAdmin?'':'none';
+  document.getElementById('btnCopySite').style.display=_isAdmin?'':'none';
   if(_selectedSiteId){renderConfigList(getLocalRb(_selectedSiteId));renderDwgList(getLocalDwg(_selectedSiteId));}
   _updateSyncBadge();
 }
@@ -2316,6 +2399,209 @@ window.addEventListener('DOMContentLoaded',()=>{
   renderRbRows('kari');renderRbRows('hon');
   initFirebase();
 });
+
+// ======================================
+// 現場間コピー
+// ======================================
+function openCopyModal() {
+  if(!_selectedSiteId){showToast('⚠️ コピー元の現場を先に選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者権限が必要です');return;}
+
+  // ラベルを更新
+  var sites=JSON.parse(localStorage.getItem('site_master')||'[]');
+  var srcSite=sites.find(function(s){return (s.id||s.siteId||s.name)===_selectedSiteId;})||{};
+  document.getElementById('copySrcLabel').textContent=(srcSite.name||srcSite.siteName||_selectedSiteId);
+
+  // コピー先セレクタ（コピー元以外）
+  var sel=document.getElementById('copyDestSel');
+  sel.innerHTML='<option value="">― コピー先を選択 ―</option>';
+  sites.forEach(function(s){
+    var id=s.id||s.siteId||s.name;
+    if(id===_selectedSiteId) return; // 自分自身は除外
+    var o=document.createElement('option');
+    o.value=id; o.textContent=s.name||s.siteName||id;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('copyModal').classList.add('open');
+}
+
+function closeCopyModal(){
+  document.getElementById('copyModal').classList.remove('open');
+}
+
+function execCopySite(){
+  var destId=document.getElementById('copyDestSel').value;
+  if(!destId){showToast('⚠️ コピー先を選択してください');return;}
+  if(!_selectedSiteId){showToast('⚠️ コピー元の現場が不明です');return;}
+
+  var copyRb   = document.getElementById('copyOptRb').checked;
+  var copyHata = document.getElementById('copyOptHata').checked;
+  var copyDwg  = document.getElementById('copyOptDwg').checked;
+
+  if(!copyRb&&!copyHata&&!copyDwg){showToast('⚠️ コピーする内容を1つ以上選んでください');return;}
+
+  var srcId=_selectedSiteId;
+  var tasks=[];
+  var copied=[];
+
+  // 路盤構成
+  if(copyRb){
+    var rbData=getLocalRb(srcId);
+    if(rbData&&(Array.isArray(rbData)?rbData.length:Object.keys(rbData).length)>0){
+      tasks.push(new Promise(function(resolve){
+        saveRbForSite(destId,rbData);
+        copied.push('路盤構成');
+        resolve();
+      }));
+    }
+  }
+
+  // 旗揚げマスタ
+  if(copyHata){
+    var hataData=getLocalHata(srcId);
+    if(hataData&&hataData.length>0){
+      tasks.push(new Promise(function(resolve){
+        saveLocalHata(destId,hataData);
+        fbSaveAllHata(destId,hataData);
+        copied.push('旗揚げ('+hataData.length+'件)');
+        resolve();
+      }));
+    }
+  }
+
+  // 図面リスト
+  if(copyDwg){
+    var dwgData=getLocalDwg(srcId);
+    // ローカルファイルデータは除外してURLのみコピー
+    var dwgCopy=(dwgData||[]).map(function(d){
+      var c=Object.assign({},d);
+      delete c.fileData; // Base64除外
+      c.key='dwg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      return c;
+    });
+    if(dwgCopy.length>0){
+      tasks.push(new Promise(function(resolve){
+        saveDwgsForSite(destId,dwgCopy);
+        copied.push('図面('+dwgCopy.length+'件)');
+        resolve();
+      }));
+    }
+  }
+
+  Promise.all(tasks).then(function(){
+    var destSites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    var destSite=destSites.find(function(s){return (s.id||s.siteId||s.name)===destId;})||{};
+    var destName=destSite.name||destSite.siteName||destId;
+    if(copied.length>0){
+      showToast('✅ コピー完了: '+copied.join(' / ')+' → '+destName);
+      _auditLog('site_copy','['+srcId+'] → ['+destId+'] '+copied.join(','));
+    }else{
+      showToast('⚠️ コピーするデータがありませんでした');
+    }
+    closeCopyModal();
+  });
+}
+
+// ======================================
+// 変更履歴ログ (audit_log)
+// ======================================
+var _auditCache = [];
+
+/**
+ * Firestoreのaudit_logコレクションに1件記録する
+ * @param {string} action  - 'roadbed_save' | 'hata_save' | 'dwg_save' | 'site_add' など
+ * @param {string} detail  - 人間が読める変更内容の概要
+ */
+function _auditLog(action, detail) {
+  if (!_fbDb || !_currentUser) return;
+  var entry = {
+    ts:     new Date().toISOString(),
+    user:   _currentUser.email || '不明',
+    siteId: _selectedSiteId || '',
+    action: action,
+    detail: detail || ''
+  };
+  _fbDb.collection('audit_log').add(entry)
+    .catch(function(e){ console.warn('[audit]', e); });
+}
+
+/** audit_logをFirestoreから読み込んでキャッシュ */
+function loadAuditLog() {
+  var listEl = document.getElementById('auditLogList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state">読み込み中...</div>';
+  _fbDb.collection('audit_log')
+    .orderBy('ts', 'desc')
+    .limit(200)
+    .get()
+    .then(function(snap) {
+      _auditCache = [];
+      snap.forEach(function(d){ _auditCache.push(d.data()); });
+      var sites = Array.from(new Set(_auditCache.map(function(r){return r.siteId||'';})))
+                       .filter(Boolean).sort();
+      var sel = document.getElementById('auditSiteFilter');
+      if (sel) {
+        var prev = sel.value;
+        sel.innerHTML = '<option value="">すべての現場</option>';
+        sites.forEach(function(s){
+          var o=document.createElement('option');
+          o.value=s; o.textContent=s; sel.appendChild(o);
+        });
+        if (prev) sel.value = prev;
+      }
+      renderAuditLog();
+    })
+    .catch(function(e){
+      if (listEl) listEl.innerHTML = '<div class="empty-state">⚠️ 読み込みエラー: '+e.message+'</div>';
+    });
+}
+
+var ACTION_LABELS = {
+  roadbed_save: '🏗️ 路盤構成 保存',
+  roadbed_delete: '🗑️ 路盤構成 削除',
+  hata_save:    '🗂 旗揚げマスタ 保存',
+  hata_delete:  '🗑️ 旗揚げマスタ 削除',
+  dwg_save:     '📋 図面 登録',
+  dwg_delete:   '🗑️ 図面 削除',
+  site_add:     '📍 現場 追加',
+  site_copy:    '📋 現場間コピー',
+};
+
+function renderAuditLog() {
+  var listEl = document.getElementById('auditLogList');
+  if (!listEl) return;
+  var siteFilter = (document.getElementById('auditSiteFilter')||{}).value || '';
+  var rows = _auditCache.filter(function(r){
+    return !siteFilter || r.siteId === siteFilter;
+  });
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="empty-state">変更履歴がありません</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    + '<thead><tr style="border-bottom:1px solid var(--border);color:var(--text2);">'
+    + '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">日時</th>'
+    + '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">操作</th>'
+    + '<th style="text-align:left;padding:6px 8px;">現場</th>'
+    + '<th style="text-align:left;padding:6px 8px;">詳細</th>'
+    + '</tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var dt = r.ts ? r.ts.replace('T',' ').slice(0,16) : '—';
+    var label = ACTION_LABELS[r.action] || r.action;
+    var site = r.siteId || '—';
+    var det = (r.detail||'').replace(/</g,'&lt;');
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">'
+      + '<td style="padding:6px 8px;white-space:nowrap;color:var(--text2);">'+dt+'</td>'
+      + '<td style="padding:6px 8px;white-space:nowrap;">'+label+'</td>'
+      + '<td style="padding:6px 8px;color:var(--accent);">'+site+'</td>'
+      + '<td style="padding:6px 8px;color:var(--text2);">'+det+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
 
 // =====================================================================
 // 赤バナー警告 + iPadプルダウンリフレッシュ防止 + トップへ戻るボタン

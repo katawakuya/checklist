@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>QRコード生成 - 現場管理システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0f172a; --bg2:#1e293b; --bg3:#2d3f56;
+  --accent:#60a5fa; --accent-dim:rgba(96,165,250,0.15);
+  --green:#34d399; --yellow:#fbbf24;
+  --text:#e2e8f0; --text2:#94a3b8;
+  --border:rgba(255,255,255,0.09);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;
+  min-height:100vh;
+}
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,#1e3a8a,#1e293b);
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+}
+.header h1{font-size:17px;font-weight:800;}
+.header .sub{font-size:11px;color:var(--text2);}
+.btn-back{
+  background:var(--accent-dim);border:1px solid rgba(96,165,250,0.3);
+  color:var(--accent);border-radius:8px;padding:7px 14px;
+  font-size:13px;cursor:pointer;font-weight:700;text-decoration:none;
+}
+
+/* ── CONTROLS ── */
+.controls{
+  max-width:960px;margin:0 auto;padding:16px;
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;
+}
+.ctrl-group{display:flex;flex-direction:column;gap:5px;}
+.ctrl-group label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;}
+select,input{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;
+  outline:none;
+}
+select:focus,input:focus{border-color:var(--accent);}
+.btn{
+  padding:9px 16px;border-radius:8px;border:none;
+  font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-print{background:rgba(52,211,153,0.15);border:1px solid var(--green);color:var(--green);}
+.btn-print:hover{background:rgba(52,211,153,0.25);}
+
+/* ── APP SELECTOR ── */
+.app-selector{
+  max-width:960px;margin:0 auto;padding:0 16px 16px;
+  display:flex;flex-wrap:wrap;gap:8px;
+}
+.app-toggle{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);border-radius:8px;padding:6px 14px;
+  font-size:13px;cursor:pointer;user-select:none;
+  transition:all 0.15s;
+}
+.app-toggle.on{
+  background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:700;
+}
+
+/* ── QR GRID ── */
+.qr-section{max-width:960px;margin:0 auto;padding:0 16px 32px;}
+.qr-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:16px;
+}
+.qr-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  text-align:center;
+}
+.qr-card .site-name{
+  font-size:13px;font-weight:800;color:var(--accent);
+  word-break:break-all;
+}
+.qr-card .app-label{
+  font-size:11px;color:var(--text2);
+  background:var(--bg3);padding:2px 8px;border-radius:10px;
+}
+.qr-wrap{background:#fff;padding:8px;border-radius:8px;display:inline-block;}
+.qr-url{font-size:10px;color:var(--text2);word-break:break-all;max-width:180px;}
+
+/* ── LOGIN ── */
+#loginArea{
+  max-width:400px;margin:60px auto;padding:32px;text-align:center;
+  background:var(--bg2);border:1px solid var(--border);border-radius:18px;
+}
+#loginArea h2{font-size:18px;margin-bottom:12px;}
+.login-form{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+.btn-login-primary{
+  background:var(--accent);color:#fff;border:none;
+  border-radius:9px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;
+}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px;color:var(--text2);}
+
+/* ── PRINT ── */
+@media print{
+  body{background:#fff !important;color:#000 !important;}
+  .header,.controls,.app-selector,.no-print{display:none !important;}
+  .qr-card{
+    background:#fff !important;border:1px solid #ccc !important;color:#000 !important;
+    break-inside:avoid;
+  }
+  .site-name{color:#1e3a8a !important;}
+  .app-label{color:#666 !important;background:#f0f0f0 !important;}
+  .qr-url{color:#666 !important;}
+  .qr-section{padding:0;}
+  .qr-grid{grid-template-columns:repeat(3,1fr);}
+}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#1e293b;border:1px solid rgba(255,255,255,0.12);
+  color:#e2e8f0;padding:10px 22px;border-radius:22px;
+  font-size:14px;transition:transform 0.28s;pointer-events:none;z-index:999;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>📲 QRコード生成</h1>
+    <div class="sub">現場 × アプリのQRコードを一括作成</div>
+  </div>
+  <a href="index.html" class="btn-back no-print">← ホームへ</a>
+</div>
+
+<!-- LOGIN -->
+<div id="loginArea" style="display:none;">
+  <div style="font-size:40px;">🔐</div>
+  <h2>ログインしてください</h2>
+  <p style="color:var(--text2);font-size:13px;">Firebase から現場一覧を読み込むにはログインが必要です</p>
+  <div class="login-form">
+    <input type="email" id="loginEmail" placeholder="メールアドレス" value="sato.k.katawakuya@gmail.com">
+    <input type="password" id="loginPass" placeholder="パスワード">
+    <button class="btn-login-primary" onclick="doLogin()">ログイン</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="mainContent" style="display:none;">
+
+  <!-- コントロール -->
+  <div class="controls no-print">
+    <div class="ctrl-group">
+      <label>ベースURL</label>
+      <input type="url" id="baseUrl" value="" placeholder="https://xxx.github.io/checklist" style="min-width:280px;">
+    </div>
+    <div class="ctrl-group">
+      <label>現場絞り込み</label>
+      <select id="siteFilter" onchange="generate()">
+        <option value="">すべての現場</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="generate()">🔄 生成</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+  </div>
+
+  <!-- アプリ選択トグル -->
+  <div class="app-selector no-print" id="appSelector"></div>
+
+  <!-- QR グリッド -->
+  <div class="qr-section">
+    <div id="qrGrid" class="qr-grid"></div>
+    <div id="qrEmpty" class="empty" style="display:none;">
+      ベースURLを入力して「生成」ボタンを押してください
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── Firebase ──────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain:"alrit-kandenkou.firebaseapp.com",
+  projectId:"alrit-kandenkou",
+  storageBucket:"alrit-kandenkou.firebasestorage.app",
+  messagingSenderId:"640432772833",
+  appId:"1:640432772833:web:ab2aff11980621322809a0"
+});
+var _fbAuth=firebase.auth(), _fbDb=firebase.firestore();
+var _sites=[], _currentUser=null;
+
+// ── アプリ定義 ──────────────────────────────────────────
+var APPS=[
+  {key:'home',     name:'🏠 ホーム',    file:'index.html',    siteParam:false},
+  {key:'roadbed',  name:'📐 路盤マスタ', file:'roadbed.html',  siteParam:false},
+  {key:'order',    name:'🧮 発注計算',   file:'order.html',    siteParam:false},
+  {key:'checklist',name:'✅ チェックリスト',file:'checklist.html',siteParam:false},
+  {key:'viewer',   name:'📂 図面ビューア',file:'viewer.html',   siteParam:true},
+  {key:'manage',   name:'📊 集計',       file:'manage.html',   siteParam:false},
+];
+var _enabledApps=new Set(APPS.map(function(a){return a.key;}));
+
+// ── 認証監視 ───────────────────────────────────────────
+_fbAuth.onAuthStateChanged(function(user){
+  _currentUser=user;
+  if(user){
+    document.getElementById('loginArea').style.display='none';
+    document.getElementById('mainContent').style.display='';
+    buildAppSelector();
+    loadSites();
+    // ベースURL自動設定
+    if(!document.getElementById('baseUrl').value){
+      var guessedBase=location.protocol==='file:'
+        ? '' : location.origin+location.pathname.replace(/\/[^/]*$/, '');
+      document.getElementById('baseUrl').value=guessedBase;
+    }
+  }else{
+    document.getElementById('loginArea').style.display='';
+    document.getElementById('mainContent').style.display='none';
+  }
+});
+
+function doLogin(){
+  var e=document.getElementById('loginEmail').value.trim();
+  var p=document.getElementById('loginPass').value;
+  _fbAuth.signInWithEmailAndPassword(e,p).catch(function(err){showToast('❌ '+err.message);});
+}
+
+// ── 現場読み込み ───────────────────────────────────────
+function loadSites(){
+  var cached=localStorage.getItem('site_master');
+  if(cached){setSites(JSON.parse(cached));}
+
+  _fbDb.collection('masters').doc('site_master').get().then(function(doc){
+    if(doc.exists&&doc.data().data){
+      var s=doc.data().data;
+      localStorage.setItem('site_master',JSON.stringify(s));
+      setSites(s);
+    }
+  }).catch(function(){});
+}
+
+function setSites(list){
+  _sites=list||[];
+  var sel=document.getElementById('siteFilter');
+  sel.innerHTML='<option value="">すべての現場</option>';
+  _sites.forEach(function(s){
+    var id=s.id||s.siteId||s.name;
+    var name=s.name||s.siteName||id;
+    var o=document.createElement('option');
+    o.value=id; o.textContent=name; sel.appendChild(o);
+  });
+  generate();
+}
+
+// ── アプリ選択トグル ───────────────────────────────────
+function buildAppSelector(){
+  var div=document.getElementById('appSelector');
+  div.innerHTML='<span style="font-size:11px;color:var(--text2);line-height:2.4;white-space:nowrap;">表示するアプリ: </span>';
+  APPS.forEach(function(app){
+    var btn=document.createElement('button');
+    btn.className='app-toggle on';
+    btn.textContent=app.name;
+    btn.dataset.key=app.key;
+    btn.onclick=function(){
+      if(_enabledApps.has(app.key)){
+        _enabledApps.delete(app.key);
+        btn.classList.remove('on');
+      }else{
+        _enabledApps.add(app.key);
+        btn.classList.add('on');
+      }
+      generate();
+    };
+    div.appendChild(btn);
+  });
+}
+
+// ── QR 生成 ────────────────────────────────────────────
+function generate(){
+  var base=(document.getElementById('baseUrl').value||'').replace(/\/$/,'');
+  var siteFilter=document.getElementById('siteFilter').value;
+  var grid=document.getElementById('qrGrid');
+  var empty=document.getElementById('qrEmpty');
+  grid.innerHTML='';
+
+  // 対象現場
+  var sites=siteFilter
+    ? _sites.filter(function(s){ return (s.id||s.siteId||s.name)===siteFilter; })
+    : _sites;
+
+  // 有効なアプリ
+  var apps=APPS.filter(function(a){return _enabledApps.has(a.key);});
+
+  if(!base||(!sites.length&&apps.some(function(a){return a.siteParam;}))){
+    empty.style.display='';
+    grid.style.display='none';
+    return;
+  }
+
+  empty.style.display='none';
+  grid.style.display='';
+
+  // 現場なしのアプリ（siteParam:false）
+  var noSiteApps=apps.filter(function(a){return !a.siteParam;});
+  if(!siteFilter){
+    noSiteApps.forEach(function(app){
+      var url=base+'/'+app.file;
+      addQrCard(grid,'(全現場共通)',app.name,url);
+    });
+  }
+
+  // 現場 × アプリ
+  sites.forEach(function(s){
+    var siteId=s.id||s.siteId||s.name;
+    var siteName=s.name||s.siteName||siteId;
+    apps.forEach(function(app){
+      var url=base+'/'+app.file+(app.siteParam?'?site='+encodeURIComponent(siteId):'');
+      addQrCard(grid,siteName,app.name,url);
+    });
+  });
+
+  if(!grid.children.length){
+    empty.style.display='';
+    grid.style.display='none';
+  }
+}
+
+function addQrCard(container,siteName,appName,url){
+  var card=document.createElement('div');
+  card.className='qr-card';
+
+  var siteEl=document.createElement('div');
+  siteEl.className='site-name';
+  siteEl.textContent=siteName;
+
+  var appEl=document.createElement('div');
+  appEl.className='app-label';
+  appEl.textContent=appName;
+
+  var wrap=document.createElement('div');
+  wrap.className='qr-wrap';
+
+  var urlEl=document.createElement('div');
+  urlEl.className='qr-url';
+  urlEl.textContent=url;
+
+  card.appendChild(siteEl);
+  card.appendChild(appEl);
+  card.appendChild(wrap);
+  card.appendChild(urlEl);
+  container.appendChild(card);
+
+  // QR生成
+  try{
+    new QRCode(wrap,{
+      text:url,
+      width:160, height:160,
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(e){
+    wrap.textContent=url;
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(function(){t.classList.remove('show');},2500);
+}
+</script>
+</body>
+</html>

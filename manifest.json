@@ -1,0 +1,50 @@
+{
+  "name": "現場管理システム",
+  "short_name": "現場管理",
+  "description": "路盤・発注・チェックリスト・図面の一元管理",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1e3a8a",
+  "background_color": "#0f172a",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "発注計算",
+      "short_name": "発注",
+      "url": "./order.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "チェックリスト",
+      "short_name": "チェック",
+      "url": "./checklist.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "路盤マスタ",
+      "short_name": "路盤",
+      "url": "./roadbed.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
