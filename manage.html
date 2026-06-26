@@ -404,6 +404,7 @@ document.getElementById('fbPass').addEventListener('keydown', function(ev){
 // ===== ゲスト情報 =====
 var _guestCompany = localStorage.getItem('myCompany') || '';
 var _guestTeam    = localStorage.getItem('myTeam')    || '';
+var _guestName    = localStorage.getItem('myName')    || '';
 
 // ===== タブ切替 =====
 var _activeTab = 'summary';
@@ -535,7 +536,8 @@ function renderTeamTab() {
   var guestNameEl = document.getElementById('teamGuestName');
   if (!_isAdmin && guestKey) {
     banner.style.display = '';
-    guestNameEl.textContent = guestKey;
+    var guestDisplay = [_guestCompany, _guestName ? '【'+_guestName+'】' : '', _guestTeam].filter(Boolean).join(' / ');
+    guestNameEl.textContent = guestDisplay || guestKey;
   } else {
     banner.style.display = 'none';
   }
@@ -747,6 +749,25 @@ function renderCrossTable() {
 }
 
 // ===== 発注明細テーブル =====
+// ===== ゲスト閲覧権限チェック =====
+// 会社名一致(必須) AND (氏名一致 OR 班名一致) → 閲覧可
+function guestCanSee(r) {
+  if (_isAdmin) return true;
+  var rCompany = r.company || '';
+  var rAuthor  = r.author  || r.recorder || '';
+  var rTeam    = r.team    || '';
+  // 会社名が設定されていて一致しない → 見れない
+  if (_guestCompany && rCompany !== _guestCompany) return false;
+  // 氏名・班名いずれも未設定 → 会社名だけで閲覧可（または全未設定なら全件非表示）
+  if (!_guestName && !_guestTeam) {
+    return !!_guestCompany; // 会社名だけ設定されていれば同社全件OK
+  }
+  // 氏名一致 OR 班名一致
+  var nameMatch = _guestName && rAuthor === _guestName;
+  var teamMatch = _guestTeam && rTeam   === _guestTeam;
+  return nameMatch || teamMatch;
+}
+
 function getFilteredOrders() {
   if (!_orderRecords) return [];
   var site = document.getElementById('fltOrderSite').value;
@@ -755,6 +776,7 @@ function getFilteredOrders() {
   var from = document.getElementById('fltOrderFrom').value;
   var to = document.getElementById('fltOrderTo').value;
   return _orderRecords.filter(function(r){
+    if (!guestCanSee(r)) return false;
     if (site && (r.site||'') !== site) return false;
     if (type && (r.typeLabel||r.typeKey||'') !== type) return false;
     if (author && (r.author||'') !== author) return false;
@@ -808,9 +830,10 @@ function renderOrderTable() {
 function exportOrderCSV() {
   var recs = getFilteredOrders();
   if (!recs.length) { alert('データがありません'); return; }
-  var header = ['日付','現場','型','旗揚げ','担当','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)'];
+  var header = ['日付','現場','型','旗揚げ','担当','会社・班','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)'];
   var rows = recs.map(function(r){
-    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,r.calcMode,
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,r.calcMode,
       r.asTon密粒,r.asTon粗粒,r.rmOrd,r.rcOrd,r.rcRmSum,r.isoilOrd,r.sandOrd,r.sandSoilSum
     ].map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
   });
@@ -826,6 +849,7 @@ function getFilteredChecks() {
   var from = document.getElementById('fltCheckFrom').value;
   var to = document.getElementById('fltCheckTo').value;
   return _checkRecords.filter(function(r){
+    if (!guestCanSee(r)) return false;
     if (site && (r.siteName||'') !== site) return false;
     if (type && (r.typeName||r.typeKey||'') !== type) return false;
     if (rec && (r.recorder||'') !== rec) return false;
@@ -877,11 +901,12 @@ function renderCheckTable() {
 function exportCheckCSV() {
   var recs = getFilteredChecks();
   if (!recs.length) { alert('データがありません'); return; }
-  var header = ['日付','現場','型','旗揚げ','記録者','管理番号','完了数','合計数','完了率(%)'];
+  var header = ['日付','現場','型','旗揚げ','記録者','会社・班','管理番号','完了数','合計数','完了率(%)'];
   var rows = recs.map(function(r){
     var done=r.done||0, total=r.total||0;
     var pct = total>0 ? Math.round(done/total*100) : 0;
-    return [r.date,r.siteName,r.typeName||r.typeKey,r.hata,r.recorder,r.mgmt,done,total,pct]
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.siteName,r.typeName||r.typeKey,r.hata,r.recorder,team,r.mgmt,done,total,pct]
       .map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
   });
   downloadCSV('check_records.csv', [header].concat(rows));
@@ -900,20 +925,23 @@ function downloadCSV(filename, rows) {
 
 // ===== 月次レポート =====
 function initReport() {
-  // 月セレクタの初期値を今月に設定
   var sel = document.getElementById('reportMonth');
   if (!sel.value) {
     var d = new Date();
     sel.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
   }
-  // 現場セレクタ更新
+  var siteSel = document.getElementById('reportSite');
+  var prev = siteSel ? siteSel.value : '';
   var sites = unique((_orderRecords||[]).map(function(r){return r.site||'';}).concat(
                      (_checkRecords||[]).map(function(r){return r.siteName||'';})))
               .filter(Boolean).sort();
-  sites.forEach(function(s){
-    var o=document.createElement('option'); o.value=s; o.textContent=s; siteSel.appendChild(o);
-  });
-  if (prev) siteSel.value = prev;
+  if (siteSel) {
+    siteSel.innerHTML = '<option value="">すべて</option>';
+    sites.forEach(function(s){
+      var o=document.createElement('option'); o.value=s; o.textContent=s; siteSel.appendChild(o);
+    });
+    if (prev) siteSel.value = prev;
+  }
   buildReport();
 }
 
@@ -922,24 +950,21 @@ function buildReport() {
   var site = document.getElementById('reportSite').value;
   var body = document.getElementById('reportBody');
   if (!ym) { body.innerHTML='<div class="empty">対象月を選択してください</div>'; return; }
-
   var ymLabel = ym.replace('-','年')+'月';
   var oRecs = (_orderRecords||[]).filter(function(r){
-    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site);
+    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site) && guestCanSee(r);
   });
   var cRecs = (_checkRecords||[]).filter(function(r){
-    return (r.date||'').startsWith(ym) && (!site||(r.siteName||'')===site);
+    return (r.date||'').startsWith(ym) && (!site||(r.siteName||'')===site) && guestCanSee(r);
   });
-
-  var totalAS  = oRecs.reduce(function(s,r){return s+(parseFloat(r.asTon密粒||0)+parseFloat(r.asTon粗粒||0));},0);
-  var totalRM  = oRecs.reduce(function(s,r){return s+parseFloat(r.rmOrd||0);},0);
-  var totalRC  = oRecs.reduce(function(s,r){return s+parseFloat(r.rcOrd||0);},0);
-  var oSites   = unique(oRecs.map(function(r){return r.site||'';})).filter(Boolean);
-  var clTotal  = cRecs.reduce(function(s,r){return s+(parseInt(r.checkCount||r.totalCount||0));},0);
-  var clDone   = cRecs.reduce(function(s,r){return s+(parseInt(r.doneCount||r.completeCount||0));},0);
-  var clPct    = clTotal>0 ? Math.round(clDone/clTotal*100) : 0;
-
-  var bySite = {};
+  var totalAS = oRecs.reduce(function(s,r){return s+(parseFloat(r.asTon密粒||0)+parseFloat(r.asTon粗粒||0));},0);
+  var totalRM = oRecs.reduce(function(s,r){return s+parseFloat(r.rmOrd||0);},0);
+  var totalRC = oRecs.reduce(function(s,r){return s+parseFloat(r.rcOrd||0);},0);
+  var oSites  = unique(oRecs.map(function(r){return r.site||'';})).filter(Boolean);
+  var clDone  = cRecs.reduce(function(s,r){return s+(parseInt(r.done||0));},0);
+  var clTotal = cRecs.reduce(function(s,r){return s+(parseInt(r.total||0));},0);
+  var clPct   = clTotal>0 ? Math.round(clDone/clTotal*100) : 0;
+  var bySite  = {};
   oRecs.forEach(function(r){
     var s=r.site||'(不明)';
     if(!bySite[s]) bySite[s]={site:s,count:0,as:0,rm:0,rc:0};
@@ -947,12 +972,9 @@ function buildReport() {
     bySite[s].rm+=parseFloat(r.rmOrd||0); bySite[s].rc+=parseFloat(r.rcOrd||0);
   });
   var siteRows=Object.values(bySite).sort(function(a,b){return b.as-a.as;});
-
   var titleEl=document.getElementById('reportPrintTitle');
   if(titleEl) titleEl.textContent = ymLabel+' 月次施工実績レポート'+(site?' ／ '+site:'');
-
-  var html='';
-  html+='<div class="report-kpi-grid">';
+  var html='<div class="report-kpi-grid">';
   html+=kpiCard(oRecs.length+' 件','発注記録数','var(--accent)');
   html+=kpiCard(oSites.length+' 現場','現場数','var(--accent)');
   html+=kpiCard(fmt(totalAS)+' t','AS合計','var(--green)');
@@ -961,7 +983,6 @@ function buildReport() {
   html+=kpiCard(cRecs.length+' 件','チェック記録','var(--text2)');
   html+=kpiCard(clPct+'%','チェック完了率',clPct>=80?'var(--green)':clPct>=50?'#f59e0b':'var(--red)');
   html+='</div>';
-
   if(siteRows.length){
     html+='<div class="report-section"><h3>📍 現場別発注集計</h3>';
     html+='<div class="tbl-wrap"><table><thead><tr><th>現場</th><th>件数</th>'
@@ -977,28 +998,6 @@ function buildReport() {
       +'<td class="num">'+fmt(totalRC)+'</td></tr>';
     html+='</tbody></table></div></div>';
   }
-
-  if(oRecs.length){
-    html+='<div class="report-section"><h3>📋 発注明細</h3>';
-    html+='<div class="tbl-wrap"><table><thead><tr>'
-      +'<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th>'
-      +'<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
-      +'<th class="num">RM(m³)</th><th class="num">RC(m³)</th>'
-      +'</tr></thead><tbody>';
-    oRecs.slice().sort(function(a,b){return (a.date||'')>(b.date||'')?1:-1;})
-      .forEach(function(r){
-        html+='<tr><td>'+esc(r.date||'')+'</td>'
-          +'<td><span class="badge-site">'+esc(r.site||'—')+'</span></td>'
-          +'<td>'+esc(r.typeLabel||r.typeKey||'')+'</td>'
-          +'<td>'+esc(r.hata||'')+'</td><td>'+esc(r.author||'')+'</td>'
-          +'<td class="num">'+fmt(r.asTon密粒||0)+'</td>'
-          +'<td class="num">'+fmt(r.asTon粗粒||0)+'</td>'
-          +'<td class="num">'+fmt(r.rmOrd||0)+'</td>'
-          +'<td class="num">'+fmt(r.rcOrd||0)+'</td></tr>';
-      });
-    html+='</tbody></table></div></div>';
-  }
-
   if(!oRecs.length && !cRecs.length) {
     html='<div class="empty">'+ymLabel+'のデータはありません</div>';
   }
@@ -1008,18 +1007,17 @@ function buildReport() {
 function kpiCard(val,lbl,color){
   return '<div class="report-kpi"><div class="val" style="color:'+color+'">'+val+'</div><div class="lbl">'+lbl+'</div></div>';
 }
-
 function printReport() { window.print(); }
-
 function exportReportCSV() {
   var ym = document.getElementById('reportMonth').value;
   var site = document.getElementById('reportSite').value;
   var oRecs = (_orderRecords||[]).filter(function(r){
-    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site);
+    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site) && guestCanSee(r);
   });
-  var header=['日付','現場','型','旗揚げ','担当','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','改良土(m³)','砂(m³)'];
+  var header=['日付','現場','型','旗揚げ','担当','会社・班','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','改良土(m³)','砂(m³)'];
   var rows=oRecs.map(function(r){
-    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,
       r.asTon密粒||0,r.asTon粗粒||0,r.rmOrd||0,r.rcOrd||0,r.isoilOrd||0,r.sandOrd||0]
       .map(function(v){var s=String(v||'');return s.includes(',')? '"'+s+'"':s;});
   });
@@ -1050,9 +1048,7 @@ function showWarningBanner(msg,focusId){
   clearTimeout(_warnTimer);
   _warnToast.style.transform='translateY(0)';
   _warnTimer=setTimeout(_hideWarningBanner,5000);
-  if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
 }
-
 (function(){
   document.addEventListener('touchmove',function(e){
     if(e.touches&&e.touches[0]&&e.touches[0].clientY>0&&document.documentElement.scrollTop===0)

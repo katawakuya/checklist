@@ -153,6 +153,8 @@ body{background:var(--bg);color:var(--text);
     <input id="tmCompany" type="text" placeholder="例: 関電工">
     <label>班名</label>
     <input id="tmTeam" type="text" placeholder="例: 第1班">
+    <label>氏名（担当者名）</label>
+    <input id="tmName" type="text" placeholder="例: 佐藤 嘉秀">
     <div class="tm-actions">
       <button class="btn-cancel" onclick="closeTeamModal()">後で設定</button>
       <button class="btn-save" onclick="saveTeamSettings()">&#x2705; 保存</button>
@@ -163,6 +165,7 @@ body{background:var(--bg);color:var(--text);
 <script>
 var _myCompany = localStorage.getItem('myCompany') || '';
 var _myTeam    = localStorage.getItem('myTeam')    || '';
+var _myName    = localStorage.getItem('myName')    || '';
 
 function _updateTeamBar() {
   var lbl = document.getElementById('teamLabel');
@@ -184,6 +187,7 @@ function _updateTeamBar() {
 function openTeamModal() {
   document.getElementById('tmCompany').value = _myCompany;
   document.getElementById('tmTeam').value    = _myTeam;
+  document.getElementById('tmName').value    = _myName;
   document.getElementById('teamModal').classList.add('open');
   setTimeout(function(){ document.getElementById('tmCompany').focus(); }, 100);
 }
@@ -193,8 +197,10 @@ function closeTeamModal() {
 function saveTeamSettings() {
   _myCompany = (document.getElementById('tmCompany').value || '').trim();
   _myTeam    = (document.getElementById('tmTeam').value    || '').trim();
+  _myName    = (document.getElementById('tmName').value    || '').trim();
   localStorage.setItem('myCompany', _myCompany);
   localStorage.setItem('myTeam',    _myTeam);
+  localStorage.setItem('myName',    _myName);
   _updateTeamBar();
   closeTeamModal();
 }
