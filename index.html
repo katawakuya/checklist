@@ -501,7 +501,7 @@ function openQrModal() {
       qrDiv.textContent = app.url;
     }
     var urlP = document.createElement('p');
-    urlP.style.cssText = 'font-size:10px;color:var(--text2);word-break:break-all;margin-top:4px;';
+        urlP.style.cssText = 'font-size:10px;color:var(--text2);word-break:break-all;margin-top:4px;';
     urlP.textContent = app.url;
     wrap.appendChild(urlP);
   });
@@ -528,7 +528,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
       console.log('[SW] Registered:', reg.scope);
-    }.catch(function(e){ console.warn('[SW] Register failed:', e); });
+    }).catch(function(e){ console.warn('[SW] Register failed:', e); });
   });
 }
 </script>
