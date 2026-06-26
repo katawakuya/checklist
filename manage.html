@@ -86,6 +86,22 @@ tr:hover td{background:#f9f8f4;}
 .report-month-sel label{font-size:13px;color:var(--text2);font-weight:600;}
 .report-month-sel input{background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:15px;}
 
+/* 班別集計グラフ */
+.chart-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.chart-wrap h3{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.bar-chart{display:flex;flex-direction:column;gap:10px;}
+.bar-row{display:flex;align-items:center;gap:8px;}
+.bar-label{font-size:14px;color:var(--text);min-width:100px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.bar-track{flex:1;background:#f1f5f9;border-radius:6px;height:20px;overflow:hidden;position:relative;}
+.bar-fill{height:100%;border-radius:6px;transition:width .4s ease;display:flex;align-items:center;padding-left:6px;}
+.bar-fill span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;}
+.bar-val{font-size:14px;color:var(--text2);min-width:60px;text-align:right;font-weight:600;}
+.team-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+.team-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+.team-kpi .val{font-size:22px;font-weight:800;color:var(--accent);}
+.team-kpi .lbl{font-size:12px;color:var(--text3);margin-top:3px;}
+.guest-filter-banner{background:var(--accent-dim);border:1.5px solid var(--accent-dim2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:14px;color:var(--accent);font-weight:700;}
+
 /* 印刷スタイル */
 @media print{
   header,.tab-nav,.filter-bar,.no-print,.modal-overlay{display:none!important;}
@@ -134,6 +150,7 @@ tr:hover td{background:#f9f8f4;}
   <button class="tab-btn active" onclick="switchTab('summary',this)">📈 発注サマリー</button>
   <button class="tab-btn" onclick="switchTab('orders',this)">📋 発注明細</button>
   <button class="tab-btn" onclick="switchTab('checks',this)">✅ チェック状況</button>
+  <button class="tab-btn no-print" onclick="switchTab('team',this)">🏢 班別集計</button>
   <button class="tab-btn no-print" onclick="switchTab('report',this)">📄 月次レポート</button>
 </div>
 
@@ -235,6 +252,49 @@ tr:hover td{background:#f9f8f4;}
   </div>
 </div>
 
+<!-- ===== 班別集計 ===== -->
+<div class="tab-pane" id="pane-team">
+  <div id="teamGuestBanner" class="guest-filter-banner" style="display:none;">
+    👷 ゲストモード: <span id="teamGuestName"></span> のデータを表示しています
+    &nbsp;—&nbsp; 管理者ログインで全班を確認できます
+  </div>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>集計項目（発注）</label>
+      <select id="teamMetric" onchange="renderTeamTab()">
+        <option value="asTon密粒">AS 密粒 (t)</option>
+        <option value="asTon粗粒">AS 粗粒 (t)</option>
+        <option value="rmOrd">RM 路盤材 (m³)</option>
+        <option value="rcOrd">RC 再生砕石 (m³)</option>
+        <option value="rcRmSum">RC+RM 合計 (m³)</option>
+        <option value="isoilOrd">改良土 (m³)</option>
+        <option value="sandOrd">砂 (m³)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>期間（年）</label>
+      <select id="teamYear" onchange="renderTeamTab()"></select>
+    </div>
+    <div class="filter-group">
+      <label>絞り込み（班）</label>
+      <select id="teamFilter" onchange="renderTeamTab()"><option value="">すべての班</option></select>
+    </div>
+  </div>
+  <div id="teamKpiRow" class="team-kpi-grid"></div>
+  <div class="chart-wrap">
+    <h3>📊 班別 発注量（棒グラフ）</h3>
+    <div class="bar-chart" id="teamBarChart"></div>
+  </div>
+  <div class="chart-wrap">
+    <h3>✅ 班別 チェックリスト 完了率</h3>
+    <div class="bar-chart" id="teamCheckChart"></div>
+  </div>
+  <div class="chart-wrap">
+    <h3>📋 班別 月次推移</h3>
+    <div class="tbl-wrap" id="teamMonthTable"></div>
+  </div>
+</div>
+
 <!-- ===== 月次レポート ===== -->
 <div class="tab-pane" id="pane-report">
   <div class="report-print-title" id="reportPrintTitle">月次施工実績レポート</div>
@@ -309,7 +369,16 @@ _fbAuth.onAuthStateChanged(function(user) {
     badge.style.display = 'none';
     btn.textContent = '🔑';
     btn.title = '管理者ログイン';
+    // ゲスト：班フィルターを自動適用
+    if (_guestCompany || _guestTeam) {
+      var guestKey = [_guestCompany,_guestTeam].filter(Boolean).join('/');
+      var tf = document.getElementById('teamFilter');
+      if (tf && guestKey) {
+        // 班フィルター選択肢構築後に設定（renderTeamTab内で処理）
+      }
+    }
   }
+  if (_activeTab === 'team') renderTeamTab();
 });
 
 function onAuthBtnClick() {
@@ -332,6 +401,10 @@ document.getElementById('fbPass').addEventListener('keydown', function(ev){
   if(ev.key==='Enter') doFbLogin();
 });
 
+// ===== ゲスト情報 =====
+var _guestCompany = localStorage.getItem('myCompany') || '';
+var _guestTeam    = localStorage.getItem('myTeam')    || '';
+
 // ===== タブ切替 =====
 var _activeTab = 'summary';
 function switchTab(name, btn) {
@@ -343,6 +416,7 @@ function switchTab(name, btn) {
   if (name === 'summary' && _orderRecords !== null) renderSummaryTab();
   if (name === 'orders' && _orderRecords !== null) renderOrderTable();
   if (name === 'checks' && _checkRecords !== null) renderCheckTable();
+  if (name === 'team') renderTeamTab();
   if (name === 'report') initReport();
 }
 
@@ -360,6 +434,8 @@ function loadOrders() {
     populateOrderFilters();
     renderSummaryTab();
     if (_activeTab === 'orders') renderOrderTable();
+    if (_activeTab === 'team') renderTeamTab();
+    populateTeamFilters();
   }).catch(function(e) {
     document.getElementById('kpiRow').innerHTML = '<div class="empty">⚠️ 発注データ取得失敗: ' + e.message + '</div>';
     document.getElementById('crossTableWrap').innerHTML = '';
@@ -375,6 +451,7 @@ function loadChecks() {
     populateCheckFilters();
     if (_activeTab === 'checks') renderCheckTable();
     else renderCheckTable(); // バックグラウンドで描画
+    if (_activeTab === 'team') renderTeamTab();
   }).catch(function(e) {
     document.getElementById('checkTableWrap').innerHTML = '<div class="empty">⚠️ チェックデータ取得失敗: ' + e.message + '</div>';
   });
@@ -407,6 +484,187 @@ function populateCheckFilters() {
   buildSelect('fltCheckSite', unique(_checkRecords.map(function(r){ return r.siteName||''; })));
   buildSelect('fltCheckType', unique(_checkRecords.map(function(r){ return r.typeName||r.typeKey||''; })));
   buildSelect('fltCheckRecorder', unique(_checkRecords.map(function(r){ return r.recorder||''; })));
+}
+
+// ===== 班フィルター構築 =====
+function populateTeamFilters() {
+  // 年セレクト
+  var years = unique((_orderRecords||[]).map(function(r){ return (r.date||'').slice(0,4); })).reverse();
+  var sy = document.getElementById('teamYear');
+  if (!sy) return;
+  var cy = sy.value;
+  sy.innerHTML = '<option value="">全年</option>';
+  years.forEach(function(y){ sy.innerHTML += '<option value="'+y+'">'+y+'年</option>'; });
+  if (!cy && years.length) sy.value = years[0];
+  // 班フィルター（非管理者はグレーアウト）
+  var allTeams = getTeamKeys(_orderRecords||[], _checkRecords||[]);
+  var tf = document.getElementById('teamFilter');
+  var ctv = tf.value;
+  tf.innerHTML = '<option value="">すべての班</option>';
+  allTeams.forEach(function(t){ tf.innerHTML += '<option value="'+esc(t)+'">'+esc(t)+'</option>'; });
+  if (ctv) tf.value = ctv;
+}
+
+function getTeamKey(r) {
+  var parts = [];
+  if (r.company) parts.push(r.company);
+  if (r.team)    parts.push(r.team);
+  return parts.length ? parts.join('/') : '(未設定)';
+}
+
+function getTeamKeys(orders, checks) {
+  var keys = {};
+  orders.forEach(function(r){ keys[getTeamKey(r)] = true; });
+  checks.forEach(function(r){ keys[getTeamKey(r)] = true; });
+  return Object.keys(keys).sort();
+}
+
+// ===== 班別集計タブ =====
+function renderTeamTab() {
+  if (!_orderRecords && !_checkRecords) return;
+  var metric  = document.getElementById('teamMetric')?.value || 'asTon密粒';
+  var year    = document.getElementById('teamYear')?.value   || '';
+  var tf      = document.getElementById('teamFilter')?.value || '';
+
+  // ゲストフィルター（非管理者は自班のみ）
+  var guestKey = (_guestCompany||_guestTeam)
+    ? [_guestCompany,_guestTeam].filter(Boolean).join('/')
+    : '';
+
+  var banner = document.getElementById('teamGuestBanner');
+  var guestNameEl = document.getElementById('teamGuestName');
+  if (!_isAdmin && guestKey) {
+    banner.style.display = '';
+    guestNameEl.textContent = guestKey;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  var oRecs = (_orderRecords||[]).filter(function(r){
+    if (year && (r.date||'').slice(0,4) !== year) return false;
+    if (!_isAdmin && guestKey) {
+      return getTeamKey(r) === guestKey;
+    }
+    if (tf) return getTeamKey(r) === tf;
+    return true;
+  });
+  var cRecs = (_checkRecords||[]).filter(function(r){
+    if (year && (r.date||'').slice(0,4) !== year) return false;
+    if (!_isAdmin && guestKey) {
+      return getTeamKey(r) === guestKey;
+    }
+    if (tf) return getTeamKey(r) === tf;
+    return true;
+  });
+
+  populateTeamFilters();
+  renderTeamKpi(oRecs, cRecs, metric);
+  renderTeamBarChart(oRecs, metric);
+  renderTeamCheckChart(cRecs);
+  renderTeamMonthTable(oRecs, metric);
+}
+
+function renderTeamKpi(oRecs, cRecs, metric) {
+  var teams = {};
+  oRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={orders:0,val:0,checks:0,done:0,total:0}; teams[k].orders++; teams[k].val+=(r[metric]||0); });
+  cRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={orders:0,val:0,checks:0,done:0,total:0}; teams[k].checks++; teams[k].done+=(r.done||0); teams[k].total+=(r.total||0); });
+  var teamList = Object.keys(teams);
+  var el = document.getElementById('teamKpiRow');
+  if (!teamList.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  el.innerHTML = teamList.map(function(k){
+    var t=teams[k];
+    var pct=t.total>0?Math.round(t.done/t.total*100):0;
+    return '<div class="team-kpi">'
+      +'<div class="val" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;">'+esc(k)+'</div>'
+      +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+      +'<div><div class="val">'+t.orders+'</div><div class="lbl">発注件数</div></div>'
+      +'<div><div class="val" style="color:var(--green);">'+fmt(t.val)+'</div><div class="lbl">'+getMetricUnit(metric)+'</div></div>'
+      +'<div><div class="val" style="color:'+(pct>=80?'var(--green)':pct>=50?'#f59e0b':'var(--red)')+'">'+pct+'%</div><div class="lbl">CL完了率</div></div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function getMetricUnit(m) {
+  var map = {'asTon密粒':'AS密粒(t)','asTon粗粒':'AS粗粒(t)','rmOrd':'RM(m³)','rcOrd':'RC(m³)','rcRmSum':'RC+RM(m³)','isoilOrd':'改良土(m³)','sandOrd':'砂(m³)'};
+  return map[m] || m;
+}
+
+function renderTeamBarChart(oRecs, metric) {
+  var el = document.getElementById('teamBarChart');
+  var teams = {};
+  oRecs.forEach(function(r){ var k=getTeamKey(r); teams[k]=(teams[k]||0)+(r[metric]||0); });
+  var sorted = Object.keys(teams).map(function(k){ return {k:k, v:teams[k]}; }).sort(function(a,b){ return b.v-a.v; });
+  if (!sorted.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  var maxV = sorted[0].v || 1;
+  var colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+  el.innerHTML = sorted.map(function(d,i){
+    var pct = (d.v/maxV*100).toFixed(1);
+    var color = colors[i % colors.length];
+    return '<div class="bar-row">'
+      +'<div class="bar-label" title="'+esc(d.k)+'">'+esc(d.k)+'</div>'
+      +'<div class="bar-track">'
+        +'<div class="bar-fill" style="width:'+pct+'%;background:'+color+';">'
+          +'<span>'+fmt(d.v)+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="bar-val">'+fmt(d.v)+' '+getMetricUnit(metric).split('(')[1]?.replace(')','')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderTeamCheckChart(cRecs) {
+  var el = document.getElementById('teamCheckChart');
+  var teams = {};
+  cRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={done:0,total:0,count:0}; teams[k].done+=(r.done||0); teams[k].total+=(r.total||0); teams[k].count++; });
+  var sorted = Object.keys(teams).map(function(k){ var t=teams[k]; var pct=t.total>0?Math.round(t.done/t.total*100):0; return {k:k,pct:pct,count:t.count}; }).sort(function(a,b){ return b.pct-a.pct; });
+  if (!sorted.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  el.innerHTML = sorted.map(function(d){
+    var color = d.pct>=80?'#10b981':d.pct>=50?'#f59e0b':'#ef4444';
+    return '<div class="bar-row">'
+      +'<div class="bar-label" title="'+esc(d.k)+'">'+esc(d.k)+'</div>'
+      +'<div class="bar-track">'
+        +'<div class="bar-fill" style="width:'+d.pct+'%;background:'+color+';">'
+          +'<span>'+d.pct+'%</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="bar-val" style="color:'+color+'">'+d.pct+'% ('+d.count+'件)</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderTeamMonthTable(oRecs, metric) {
+  var wrap = document.getElementById('teamMonthTable');
+  if (!oRecs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  var teams = unique(oRecs.map(function(r){ return getTeamKey(r); }));
+  var months = unique(oRecs.map(function(r){ return (r.date||'').slice(0,7); })).sort().reverse();
+  var data = {};
+  oRecs.forEach(function(r){
+    var m=(r.date||'').slice(0,7); var k=getTeamKey(r);
+    if(!m) return;
+    if(!data[m]) data[m]={};
+    data[m][k]=(data[m][k]||0)+(r[metric]||0);
+  });
+  var unit = getMetricUnit(metric);
+  var html = '<table><thead><tr><th>年月</th>';
+  teams.forEach(function(t){ html += '<th>'+esc(t)+'</th>'; });
+  html += '<th class="total-col" style="font-weight:700;background:var(--accent-dim);color:var(--accent);">合計</th></tr></thead><tbody>';
+  var colTotals={}, grand=0;
+  months.forEach(function(m){
+    html += '<tr><td>'+esc(m)+'</td>';
+    var rowT=0;
+    teams.forEach(function(t){
+      var v=(data[m]&&data[m][t])||0; rowT+=v; colTotals[t]=(colTotals[t]||0)+v;
+      html += '<td class="num">'+(v>0?fmt(v):'<span style="color:var(--text3)">—</span>')+'</td>';
+    });
+    grand+=rowT;
+    html += '<td class="num" style="font-weight:700;background:var(--accent-dim);color:var(--accent);">'+fmt(rowT)+'</td></tr>';
+  });
+  html += '<tr style="font-weight:800;background:var(--accent-dim);"><td>合計 ('+unit+')</td>';
+  teams.forEach(function(t){ html += '<td class="num">'+fmt(colTotals[t]||0)+'</td>'; });
+  html += '<td class="num" style="color:var(--accent);">'+fmt(grand)+'</td></tr>';
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 
 // ===== エスケープ =====
@@ -513,7 +771,7 @@ function renderOrderTable() {
   if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
 
   var html = '<table><thead><tr>'
-    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th><th>モード</th>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th><th>会社・班</th><th>モード</th>'
     + '<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
     + '<th class="num">RM(m³)</th><th class="num">RC(m³)</th><th class="num">RC+RM(m³)</th>'
     + '<th class="num">改良土(m³)</th><th class="num">砂(m³)</th><th class="num">砂+改良(m³)</th>'
@@ -523,12 +781,14 @@ function renderOrderTable() {
     var modeLabel = r.calcMode === 'hon' ? '<span style="color:var(--green);font-size:14px;">本復旧</span>'
                  : r.calcMode === 'kari' ? '<span style="color:var(--yellow);font-size:14px;">仮復旧</span>'
                  : '<span style="color:var(--text3);font-size:14px;">'+(r.calcMode||'')+'</span>';
+    var teamLabel = [r.company,r.team].filter(Boolean).join('/') || '—';
     html += '<tr>'
       + '<td>' + esc(r.date||'') + '</td>'
       + '<td><span class="badge-site">' + esc(r.site||'—') + '</span></td>'
       + '<td>' + esc(r.typeLabel||r.typeKey||'') + '</td>'
       + '<td>' + esc(r.hata||'') + '</td>'
       + '<td>' + esc(r.author||'') + '</td>'
+      + '<td style="font-size:13px;color:var(--text2);">' + esc(teamLabel) + '</td>'
       + '<td>' + modeLabel + '</td>'
       + '<td class="num">' + fmt(r.asTon密粒) + '</td>'
       + '<td class="num">' + fmt(r.asTon粗粒) + '</td>'
@@ -582,7 +842,7 @@ function renderCheckTable() {
   if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
 
   var html = '<table><thead><tr>'
-    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>記録者</th><th>管理番号</th>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>記録者</th><th>会社・班</th><th>管理番号</th>'
     + '<th>完了率</th><th class="num">完了</th><th class="num">合計</th>'
     + '</tr></thead><tbody>';
 
@@ -590,12 +850,14 @@ function renderCheckTable() {
     var done = r.done||0, total = r.total||0;
     var pct = total > 0 ? Math.round(done/total*100) : 0;
     var badgeCls = pct === 100 ? 'badge-ok' : pct >= 80 ? 'badge-warn' : 'badge-ng';
+    var teamLabel = [r.company,r.team].filter(Boolean).join('/') || '—';
     html += '<tr>'
       + '<td>' + esc(r.date||'') + '</td>'
       + '<td><span class="badge-site">' + esc(r.siteName||'—') + '</span></td>'
       + '<td>' + esc(r.typeName||r.typeKey||'') + '</td>'
       + '<td>' + esc(r.hata||'') + '</td>'
       + '<td>' + esc(r.recorder||'') + '</td>'
+      + '<td style="font-size:13px;color:var(--text2);">' + esc(teamLabel) + '</td>'
       + '<td>' + esc(r.mgmt||'') + '</td>'
       + '<td style="min-width:120px;">'
         + '<div style="display:flex;align-items:center;gap:6px;">'

@@ -202,6 +202,19 @@ main{padding:10px 14px 90px;}
   <a class="tab-btn" id="viewerLink" href="viewer.html" target="_blank" onclick="updateViewerLink(this)" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">📐 図面 <span style="font-size:13px;opacity:0.7;">↗</span></a>
 </div>
 
+<!-- ===== 会社・班設定バー ===== -->
+<div id="teamBar" style="
+  display:flex;align-items:center;gap:10px;padding:7px 16px;
+  background:linear-gradient(90deg,rgba(16,185,129,0.09),rgba(16,185,129,0.02));
+  border-bottom:1.5px solid rgba(16,185,129,0.25);font-size:15px;flex-wrap:wrap;
+  cursor:pointer;
+" onclick="openTeamModal()">
+  <span style="color:#059669;font-weight:700;white-space:nowrap;">👷 会社・班:</span>
+  <span id="teamBarLabel" style="color:#d97706;font-weight:600;flex:1;">未設定（タップして設定）</span>
+  <span style="background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.4);
+    color:#059669;border-radius:6px;padding:3px 12px;font-size:14px;font-weight:700;white-space:nowrap;">✎ 設定</span>
+</div>
+
 <!-- ===== チェックタブ ===== -->
 <div class="tab-pane active" id="pane-check">
   <div class="site-bar">
@@ -2604,6 +2617,50 @@ function onTypeChange(silent){
 // =====================================================
 
 function storeKey(){ return 'cl_state_'+(_siteId||'x')+'_'+(_presetTypeKey||_typeKey||'x'); }
+
+// =====================================================
+// 会社名・班名 設定（デバイス記憶）
+// =====================================================
+var _myCompany = localStorage.getItem('myCompany') || '';
+var _myTeam    = localStorage.getItem('myTeam')    || '';
+
+function _updateTeamBar() {
+  var lbl = document.getElementById('teamBarLabel');
+  if (!lbl) return;
+  if (_myCompany || _myTeam) {
+    var parts = [];
+    if (_myCompany) parts.push(_myCompany);
+    if (_myTeam)    parts.push(_myTeam);
+    lbl.textContent = parts.join(' ／ ');
+    lbl.style.color = '#1a1a1a';
+  } else {
+    lbl.textContent = '未設定（タップして設定）';
+    lbl.style.color = '#d97706';
+  }
+}
+function openTeamModal() {
+  document.getElementById('teamModalCompany').value = _myCompany;
+  document.getElementById('teamModalTeam').value    = _myTeam;
+  var m = document.getElementById('teamModal');
+  m.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('teamModalCompany').focus(); }, 100);
+}
+function closeTeamModal() {
+  document.getElementById('teamModal').style.display = 'none';
+}
+function saveTeamSettings() {
+  _myCompany = (document.getElementById('teamModalCompany').value || '').trim();
+  _myTeam    = (document.getElementById('teamModalTeam').value    || '').trim();
+  localStorage.setItem('myCompany', _myCompany);
+  localStorage.setItem('myTeam',    _myTeam);
+  _updateTeamBar();
+  closeTeamModal();
+}
+document.addEventListener('click', function(e) {
+  var tm = document.getElementById('teamModal');
+  if (tm && tm.style.display === 'flex' && e.target === tm) closeTeamModal();
+});
+
 // 記録者名をこのデバイス専用キーで記憶（現場・型に関係なく共通）
 function _saveRecorderName(name){
   var n = (name||'').trim();
@@ -4189,6 +4246,7 @@ function saveRecord(){
   _history.unshift({
     id:Date.now(), date:date, siteName:siteName, siteId:_siteId,
     typeName:typeName, typeKey:_typeKey,
+    company:_myCompany||'', team:_myTeam||'',
     mgmt:$v('inMgmtNo'), recorder:$v('inRecorder'), hata:$v('hataInput'),
     done:done, total:total,
     checks:JSON.parse(JSON.stringify(_checks)),
@@ -4460,6 +4518,10 @@ function showWarningBanner(msg, focusId) {
     }
   }, { passive: false });
   document.addEventListener('DOMContentLoaded', function() {
+    _updateTeamBar();
+    if (!_myCompany && !_myTeam) {
+      setTimeout(function(){ openTeamModal(); }, 800);
+    }
     var b = document.createElement('button');
     b.innerHTML = '▲'; b.title = 'ページ先頭へ';
     b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
@@ -4470,6 +4532,22 @@ function showWarningBanner(msg, focusId) {
 })();
 
 </script>
+<!-- 会社・班名設定モーダル -->
+<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:24px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px;color:#1a1a1a;">👷 会社名・班名の設定</div>
+    <div style="font-size:14px;color:#555;margin-bottom:18px;">保存した記録に自動でひも付けられます</div>
+    <label style="font-size:14px;color:#555;font-weight:700;display:block;margin-bottom:4px;">会社名</label>
+    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:14px;color:#555;font-weight:700;display:block;margin-bottom:4px;">班名</label>
+    <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:16px;margin-bottom:20px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#555;font-size:15px;cursor:pointer;">キャンセル</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 管理者ログインモーダル -->
 <div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">

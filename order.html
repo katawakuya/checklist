@@ -501,6 +501,19 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   </div>
 </nav>
 
+<!-- ===== 会社・班設定バー ===== -->
+<div id="teamBar" style="
+  display:flex;align-items:center;gap:10px;padding:7px 16px;
+  background:linear-gradient(90deg,rgba(16,185,129,0.09),rgba(16,185,129,0.02));
+  border-bottom:1.5px solid rgba(16,185,129,0.25);font-size:15px;flex-wrap:wrap;
+  cursor:pointer;
+" onclick="openTeamModal()">
+  <span style="color:#059669;font-weight:700;white-space:nowrap;">👷 会社・班:</span>
+  <span id="teamBarLabel" style="color:#d97706;font-weight:600;flex:1;">未設定（タップして設定）</span>
+  <span style="background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.4);
+    color:#059669;border-radius:6px;padding:3px 12px;font-size:14px;font-weight:700;white-space:nowrap;">✎ 設定</span>
+</div>
+
 <main>
 
 <!-- ========== 計算シートタブ ========== -->
@@ -3123,6 +3136,8 @@ function saveRecord(typeKey) {
   const record = {
     id: Date.now(),
     date, hata, author, site, typeKey,
+    company: _myCompany || '',
+    team: _myTeam || '',
     typeLabel: t.label,
     calcMode: _dynCalcModes[typeKey] || 'kari',
     asTon密粒:   +s.asTon密粒.toFixed(6),
@@ -3220,7 +3235,7 @@ function renderHistory() {
       <th class="num">RC+RM(m³)</th>
       <th class="num">改良土(m³)</th>
       <th class="num">再生砂(m³)</th><th class="num">土+砂(m³)</th>
-      <th>記録者</th><th></th>
+      <th>記録者</th><th>会社・班</th><th></th>
     </tr></thead><tbody>`;
 
   let prevMonth = '';
@@ -3228,7 +3243,7 @@ function renderHistory() {
     const month = r.date.substring(0, 7);
     if (month !== prevMonth) {
       prevMonth = month;
-      html += `<tr class="month-row"><td colspan="14">📅 ${month.replace('-','年')}月</td></tr>`;
+      html += `<tr class="month-row"><td colspan="15">📅 ${month.replace('-','年')}月</td></tr>`;
     }
     const t = TYPES[r.typeKey];
     html += `<tr>
@@ -3245,6 +3260,7 @@ function renderHistory() {
       <td class="num">${fmt(r.sandOrd)}</td>
       <td class="num">${fmt(r.sandSoilSum)}</td>
       <td>${r.author}</td>
+      <td style="font-size:14px;color:var(--text2);">${r.company||r.team ? [r.company,r.team].filter(Boolean).join('/') : '—'}</td>
       <td>${_isAdmin ? `<button class="del-btn" onclick="deleteRecord(${r.id})">✕</button>` : ''}</td>
     </tr>`;
   }
@@ -7011,6 +7027,8 @@ function saveDynRecord(tid, typeKey) {
   const record = {
     id: Date.now(),
     date, hata, author, site: siteName, typeKey: tid,
+    company: _myCompany || '',
+    team: _myTeam || '',
     typeLabel: t.label,
     calcMode: _dynCalcModes[tid] || 'kari',
     asTon密粒:   +s.asTon密粒.toFixed(6),
@@ -7867,6 +7885,53 @@ function _closeDiagram() {
 }
 // × ボタン用
 // =====================================================================
+// =====================================================================
+// 会社名・班名 設定（デバイス記憶）
+// =====================================================================
+var _myCompany = localStorage.getItem('myCompany') || '';
+var _myTeam    = localStorage.getItem('myTeam')    || '';
+
+function _updateTeamBar() {
+  var lbl = document.getElementById('teamBarLabel');
+  if (!lbl) return;
+  if (_myCompany || _myTeam) {
+    var parts = [];
+    if (_myCompany) parts.push(_myCompany);
+    if (_myTeam)    parts.push(_myTeam);
+    lbl.textContent = parts.join(' ／ ');
+    lbl.style.color = 'var(--text1)';
+  } else {
+    lbl.textContent = '未設定（タップして設定）';
+    lbl.style.color = '#d97706';
+  }
+}
+
+function openTeamModal() {
+  document.getElementById('teamModalCompany').value = _myCompany;
+  document.getElementById('teamModalTeam').value    = _myTeam;
+  var m = document.getElementById('teamModal');
+  m.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('teamModalCompany').focus(); }, 100);
+}
+
+function closeTeamModal() {
+  document.getElementById('teamModal').style.display = 'none';
+}
+
+function saveTeamSettings() {
+  _myCompany = (document.getElementById('teamModalCompany').value || '').trim();
+  _myTeam    = (document.getElementById('teamModalTeam').value    || '').trim();
+  localStorage.setItem('myCompany', _myCompany);
+  localStorage.setItem('myTeam',    _myTeam);
+  _updateTeamBar();
+  closeTeamModal();
+}
+
+document.addEventListener('click', function(e) {
+  var tm = document.getElementById('teamModal');
+  if (tm && tm.style.display === 'flex' && e.target === tm) closeTeamModal();
+});
+
 // 記録者名 デバイス記憶
 // =====================================================================
 function _saveOrderRecorder(name) {
@@ -8003,6 +8068,12 @@ document.addEventListener('DOMContentLoaded', () => {
     var el = document.getElementById(t + '-author');
     if (el) el.addEventListener('blur', function(){ _saveOrderRecorder(this.value); });
   });
+  // 会社・班バー初期表示
+  _updateTeamBar();
+  // 未設定の場合は初回のみ自動でモーダルを表示
+  if (!_myCompany && !_myTeam) {
+    setTimeout(function(){ openTeamModal(); }, 800);
+  }
 });
 
 function applyMasterValues(typeKey, patternId) {
@@ -8709,6 +8780,24 @@ document.addEventListener('click', function(e) {
 });
 
 </script>
+
+<!-- ================================================================
+     会社・班名設定モーダル
+     ================================================================ -->
+<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text1);">👷 会社名・班名の設定</div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:18px;">保存した記録に自動でひも付けられます</div>
+    <label style="font-size:14px;color:var(--text2);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
+    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:14px;color:var(--text2);font-weight:700;display:block;margin-bottom:4px;">班名</label>
+    <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:16px;margin-bottom:20px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid var(--border);background:transparent;color:var(--text2);font-size:15px;cursor:pointer;">キャンセル</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- ================================================================
      重複記録ダイアログ
