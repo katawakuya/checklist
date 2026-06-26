@@ -527,6 +527,49 @@ function closeViewer() {
 // Escキーで閉じる
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeViewer(); });
 
+
+// ===== ズーム制御 =====
+_vwZoomLv   = 1.0;
+_vwZoomBaseW = 0;
+var _vwZoomBaseH = 0;
+
+function _vwZoom(delta) {
+  _vwZoomLv = Math.max(0.25, Math.min(4.0, _vwZoomLv + delta));
+  _applyZoom();
+}
+function _vwZoomReset() {
+  _vwZoomLv = 1.0;
+  _applyZoom();
+}
+function _applyZoom() {
+  var lbl = document.getElementById('vwZoomLv');
+  if (lbl) lbl.textContent = Math.round(_vwZoomLv * 100) + '%';
+
+  // 画像ズーム
+  var img = document.getElementById('vwImg');
+  if (img && _vwZoomBaseW) {
+    img.style.width = (_vwZoomBaseW * _vwZoomLv) + 'px';
+    img.style.maxWidth = 'none';
+    return;
+  }
+  // PDF embed / iframe ズーム（vwWrapラッパー方式）
+  var wrap = document.getElementById('vwWrap');
+  if (wrap) {
+    var inner = wrap.querySelector('embed,iframe');
+    if (inner) {
+      inner.style.transform = 'scale(' + _vwZoomLv + ')';
+      inner.style.transformOrigin = 'top left';
+      // ラッパーのサイズをズーム後の実サイズに合わせて拡張
+      if (_vwZoomBaseW) {
+        wrap.style.width  = (_vwZoomBaseW * _vwZoomLv) + 'px';
+      }
+      if (_vwZoomBaseH) {
+        wrap.style.height = (_vwZoomBaseH * _vwZoomLv) + 'px';
+      }
+    }
+  }
+}
+
 // ===== ユーティリティ =====
 function toDriveEmbedUrl(url) {
   if (!url) return '';
