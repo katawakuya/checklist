@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>現場管理システム（ゲスト）</title>
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#2d3f56;
+  --accent:#60a5fa;--accent-dim:rgba(96,165,250,0.15);
+  --green:#34d399;--yellow:#fbbf24;--purple:#a78bfa;
+  --text:#e2e8f0;--text2:#94a3b8;
+  --border:rgba(255,255,255,0.09);--radius:13px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;
+  min-height:100vh;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1e3a8a 0%,#1e293b 100%);
+  padding:14px 16px 18px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;}
+.header-row{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto;}
+.app-title{display:flex;align-items:center;gap:10px;}
+.app-title .icon{font-size:26px;line-height:1;}
+.app-title h1{font-size:17px;font-weight:800;}
+.app-title .sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.btn-login{background:var(--accent);color:#fff;border:none;
+  border-radius:8px;padding:7px 16px;font-size:13px;
+  cursor:pointer;font-weight:700;text-decoration:none;white-space:nowrap;}
+
+/* MAIN */
+.main{max-width:760px;margin:0 auto;padding:16px;}
+
+/* GUEST NOTICE */
+.notice{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;
+  display:flex;align-items:flex-start;gap:10px;}
+.notice .icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+.notice p{font-size:13px;color:var(--text2);line-height:1.6;}
+.notice strong{color:var(--yellow);}
+
+/* SITE BAR */
+.sec-label{font-size:11px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;margin-top:18px;}
+.site-bar{background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 14px;
+  display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.site-bar label{font-size:13px;color:var(--text2);white-space:nowrap;}
+.site-bar select{flex:1;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:7px;padding:7px 10px;font-size:14px;outline:none;}
+
+/* APP GRID */
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(min-width:520px){.app-grid{grid-template-columns:repeat(3,1fr);}}
+.app-card{background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px 12px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  text-align:center;cursor:pointer;
+  transition:border-color 0.18s,background 0.18s;
+  text-decoration:none;position:relative;user-select:none;}
+.app-card:active{transform:scale(0.96);}
+.app-card .card-icon{font-size:32px;line-height:1;}
+.app-card .card-name{font-size:14px;font-weight:800;color:var(--text);}
+.app-card .card-desc{font-size:11px;color:var(--text2);line-height:1.4;}
+.card-green{border-color:rgba(52,211,153,0.2);}
+.card-green:hover{border-color:var(--green);background:rgba(52,211,153,0.07);}
+.card-yellow{border-color:rgba(251,191,36,0.2);}
+.card-yellow:hover{border-color:var(--yellow);background:rgba(251,191,36,0.07);}
+.card-purple{border-color:rgba(167,139,250,0.2);}
+.card-purple:hover{border-color:var(--purple);background:rgba(167,139,250,0.07);}
+
+/* LOGIN PROMPT */
+.login-prompt{margin-top:28px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;text-align:center;}
+.login-prompt p{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;}
+.btn-login-full{display:inline-block;background:var(--accent);color:#fff;
+  border:none;border-radius:9px;padding:12px 32px;
+  font-size:15px;font-weight:800;cursor:pointer;text-decoration:none;}
+
+.footer{text-align:center;padding:24px 16px 40px;color:var(--text2);font-size:12px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="app-title">
+      <div class="icon">🏗️</div>
+      <div>
+        <h1>現場管理システム</h1>
+        <div class="sub">アルリット関電工 — ゲストアクセス</div>
+      </div>
+    </div>
+    <a href="index.html" class="btn-login">🔑 ログイン</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="notice">
+    <div class="icon">⚠️</div>
+    <p><strong>ゲストモード</strong>：閲覧・入力はできますが、<strong>データの保存・履歴はログインが必要</strong>です。<br>
+    フル機能を使うには右上の「ログイン」から登録アカウントでサインインしてください。</p>
+  </div>
+
+  <div class="sec-label">📍 現場を選んでアプリを開く</div>
+  <div class="site-bar">
+    <label>現場</label>
+    <select id="siteSelect" onchange="saveSite()">
+      <option value="">— 現場を選択 —</option>
+    </select>
+  </div>
+
+  <div class="sec-label">🗂 利用できるアプリ</div>
+  <div class="app-grid">
+
+    <a class="app-card card-green" onclick="return goApp('order.html')">
+      <div class="card-icon">🧮</div>
+      <div class="card-name">発注計算</div>
+      <div class="card-desc">材料発注量の計算</div>
+    </a>
+
+    <a class="app-card card-yellow" onclick="return goApp('checklist.html')">
+      <div class="card-icon">✅</div>
+      <div class="card-name">チェックリスト</div>
+      <div class="card-desc">施工記録・写真添付</div>
+    </a>
+
+    <a class="app-card card-purple" onclick="return goApp('viewer.html')">
+      <div class="card-icon">📂</div>
+      <div class="card-name">図面ビューア</div>
+      <div class="card-desc">図面・写真の表示</div>
+    </a>
+
+  </div>
+
+  <div class="login-prompt">
+    <p>路盤マスタ・集計・変更履歴など<br>すべての機能を使うにはログインが必要です</p>
+    <a href="index.html" class="btn-login-full">🔑 ログインしてフル機能を使う</a>
+  </div>
+
+</div>
+
+<div class="footer">ゲストモード | アルリット関電工</div>
+
+<script>
+// 現場マスタをlocalStorageから読み込み（ログイン済みユーザーがキャッシュしたデータ）
+function loadSites() {
+  var cached = localStorage.getItem('site_master');
+  if (!cached) return;
+  try {
+    var sites = JSON.parse(cached);
+    var sel = document.getElementById('siteSelect');
+    var saved = localStorage.getItem('_launcher_site') || '';
+    sites.forEach(function(s) {
+      var id   = s.id || s.siteId || s.name;
+      var name = s.name || s.siteName || id;
+      var o = document.createElement('option');
+      o.value = id; o.textContent = name;
+      sel.appendChild(o);
+    });
+    if (saved) sel.value = saved;
+  } catch(e) {}
+}
+
+function saveSite() {
+  var v = document.getElementById('siteSelect').value;
+  if (v) localStorage.setItem('_launcher_site', v);
+}
+
+function goApp(page) {
+  var siteId = document.getElementById('siteSelect').value;
+  if (siteId) localStorage.setItem('_launcher_site', siteId);
+  window.location.href = page;
+  return false;
+}
+
+loadSites();
+</script>
+</body>
+</html>
