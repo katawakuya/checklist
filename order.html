@@ -50,32 +50,42 @@
   header {
     background: linear-gradient(135deg, #1a1d27 0%, #151829 100%);
     border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
+    padding: 8px 16px;
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     position: sticky;
     top: 0;
     z-index: 100;
-    height: 64px;
     box-sizing: border-box;
   }
-  header .logo {
-    width: 38px; height: 38px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size:23px; flex-shrink: 0;
+  header .hd-top {
+    display: flex; align-items: center; gap: 10px;
   }
-  header h1 { font-size:20px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
-  header p { font-size:14px; color: var(--text3); margin-top: 1px; }
+  header .hd-btns {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  header .logo {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size:20px; flex-shrink: 0;
+  }
+  header h1 { font-size:18px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  header p { font-size:12px; color: var(--text3); margin-top: 1px; }
   header .save-badge {
-    margin-left: auto;
-    font-size:14px; color: var(--green);
+    font-size:13px; color: var(--green);
     background: rgba(34,197,94,0.1);
     border: 1px solid rgba(34,197,94,0.3);
-    padding: 4px 10px; border-radius: 20px;
+    padding: 3px 9px; border-radius: 20px;
     display: none;
+  }
+  header .hd-btn {
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+    color:#e2e8f0;border-radius:6px;padding:4px 9px;font-size:13px;
+    cursor:pointer;text-decoration:none;white-space:nowrap;
   }
 
   /* TAB NAV */
@@ -86,7 +96,7 @@
     overflow-x: auto;
     scrollbar-width: none;
     position: sticky;
-    top: 64px;   /* header height */
+    top: 0;   /* header は auto height → sticky で自動スタック */
     z-index: 90;
   }
   .tab-nav::-webkit-scrollbar { display: none; }
@@ -478,16 +488,20 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 <body>
 
 <header>
-  <div class="logo">📋</div>
-  <div>
-    <h1>現場資材発注計算書</h1>
-    <p>マクロ不要・ブラウザ完結版</p>
+  <div class="hd-top">
+    <div class="logo">📋</div>
+    <div>
+      <h1>現場資材発注計算書</h1>
+      <p>マクロ不要・ブラウザ完結版</p>
+    </div>
   </div>
-  <div class="save-badge" id="saveBadge">💾 保存済み</div>
-  <span id="adminBadge" style="display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px;color:#e2e8f0;"></span>
-  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:4px 9px;font-size:14px;cursor:pointer;" title="既存データをFirebaseへ移行">📤 移行</button>
-  <a href="index.html" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#e2e8f0;border-radius:6px;padding:4px 10px;font-size:14px;cursor:pointer;text-decoration:none;" title="ホームへ戻る">🏠 ホーム</a>
-  <button id="adminBtn" onclick="openFbModal()" title="管理者ログイン" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#e2e8f0;border-radius:6px;padding:4px 10px;font-size:18px;cursor:pointer;">🔑</button>
+  <div class="hd-btns">
+    <span id="adminBadge" style="display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px;color:#e2e8f0;"></span>
+    <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
+    <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
+    <div class="save-badge" id="saveBadge">💾 保存済み</div>
+  </div>
 </header>
 
 <nav class="tab-nav" id="tabNav">
@@ -6030,18 +6044,11 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       var _authorEl = document.getElementById(`${tabId}-author`);
       if (_authorEl) _authorEl.addEventListener('blur', function(){ _saveOrderRecorder(this.value); });
       // 前回のモード（仮/本）を localStorage から復元
-      // ① 前回 localStorage に保存されたモードを優先
-      // ② なければ履歴 calcMode が全て 'hon' の場合に本復旧へ自動切替（新規レコード対応）
+      // 前回 localStorage に保存されたモードを優先。明示的に 'kari' 保存以外は本復旧をデフォルト
       try {
         var _savedModes = JSON.parse(localStorage.getItem('order_dyn_modes') || '{}');
-        if (_savedModes[tabId] === 'hon') {
+        if (_savedModes[tabId] !== 'kari') {
           switchDynMode(tabId, 'hon');
-        } else if (!_savedModes[tabId]) {
-          // lastMode 未保存の場合: 履歴に calcMode:'hon' のみ存在するなら自動切替
-          var _typeHist = getHistory().filter(function(r){ return r.typeKey === tabId && r.calcMode; });
-          if (_typeHist.length > 0 && _typeHist.every(function(r){ return r.calcMode === 'hon'; })) {
-            switchDynMode(tabId, 'hon');
-          }
         }
       } catch(e) {}
       // 改良土ルールトグル復元

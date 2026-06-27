@@ -20,11 +20,14 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text1);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:18px;min-height:100vh;overscroll-behavior-y:none;}
-header{position:sticky;top:0;z-index:100;height:var(--header-h);background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;display:flex;align-items:center;gap:10px;padding:0 14px;}
+header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 14px;box-sizing:border-box;}
 .logo{font-size:26px;}
-header h1{font-size:18px;font-weight:700;color:#fff;letter-spacing:.04em;}
-header .sub{font-size:14px;color:rgba(255,255,255,.7);margin-left:auto;}
-.tab-bar{position:sticky;top:var(--header-h);z-index:90;display:flex;background:#fff;border-bottom:2px solid var(--border);}
+header .hd-top{display:flex;align-items:center;gap:8px;}
+header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+header h1{font-size:17px;font-weight:700;color:#fff;letter-spacing:.04em;}
+header .hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+/* header .sub removed */
+.tab-bar{position:sticky;top:0;z-index:90;display:flex;background:#fff;border-bottom:2px solid var(--border);}
 .tab-btn{flex:1;padding:11px 4px;text-align:center;font-size:14px;color:var(--text3);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;transition:.15s;}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
 .tab-pane{display:none;} .tab-pane.active{display:block;}
@@ -185,13 +188,19 @@ main{padding:10px 14px 90px;}
 </head>
 <body>
 <header>
-  <span class="logo">📷</span>
-  <h1>写真撮影チェックリスト</h1>
-  <span class="sub" id="hdDate"></span>
-  <span id="adminBadge" style="display:none;font-size:13px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;margin-left:4px;"></span>
-  <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:6px;padding:4px 9px;font-size:14px;cursor:pointer;margin-left:4px;" title="既存データをFirebaseへ移行">📤 移行</button>
-  <a href="index.html" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;text-decoration:none;margin-left:4px;" title="ホームへ戻る">🏠 ホーム</a>
-  <button id="adminBtn" onclick="openFbModal()" title="管理者ログイン" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:17px;cursor:pointer;margin-left:4px;">🔑</button>
+  <div class="hd-top">
+    <span class="logo">📷</span>
+    <div>
+      <h1>写真撮影チェックリスト</h1>
+      <span style="font-size:12px;color:rgba(255,255,255,.7);" id="hdDate"></span>
+    </div>
+  </div>
+  <div class="hd-btns">
+    <span id="adminBadge" style="display:none;font-size:13px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;"></span>
+    <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
+    <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
+  </div>
 </header>
 
 <div class="tab-bar">
