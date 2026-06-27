@@ -4518,7 +4518,7 @@ function showWarningBanner(msg, focusId) {
     var st = document.documentElement.scrollTop || document.body.scrollTop || 0;
     if (st <= 0 && y > _sy + 8) {
       e.preventDefault();
-      _wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
+      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
     }
   }, { passive: false });
   document.addEventListener('DOMContentLoaded', function() {

@@ -7538,23 +7538,6 @@ function printMasterList() {
     </div></div>`);
   });
   w.document.write(`</div><script>window.onload=()=>window.print();<\/script>
-<!-- ===== 会社・班名 設定モーダル ===== -->
-<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
-    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
-    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
-    <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
-    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
-      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
-    </div>
-  </div>
-</div>
 </body></html>`);
   w.document.close();
 }
@@ -8749,4 +8732,91 @@ function exportCSVData(h, filename) {
       (t?.rmH||0) > 0 ? r.rmOrd : '',
       r.rcOrd,
       (t?.rmH||0) > 0 ? r.rcRmSum : r.rcOrd,
-      r.isoilOrd
+      r.isoilOrd,
+      r.isoilOrd || 0,
+      r.sandOrd,
+      r.sandSoilSum,
+      r.author
+     ]);
+  }
+  const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = filename;
+  a.click()
+}
+
+// =====================================================================
+// 重複記録ダイアログ
+// =====================================================================
+var _dupResolve = null;
+
+function _sortHistory(h) {
+  h.sort(function(a, b) {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return  1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  return h;
+}
+
+function showDupModal(oldRec, newRec, callback) {
+  _dupResolve = callback;
+  var fmt2 = function(r) {
+    return r.date + ' ／ 旗揚げ <strong>' + r.hata + '</strong>'
+      + (r.site   ? ' ／ ' + r.site   : '')
+      + (r.author ? ' ／ ' + r.author : '')
+      + ' ／ ' + (r.typeLabel || r.typeKey);
+  };
+  document.getElementById('dupModalMsg').innerHTML =
+    '<span style="color:var(--text3);font-size:14px;">既存</span><br>' + fmt2(oldRec) +
+    '<br><span style="color:var(--text3);font-size:14px;margin-top:6px;display:inline-block;">新規</span><br>' + fmt2(newRec);
+  var modal = document.getElementById('dupModal');
+  modal.style.display = 'flex';
+}
+
+function resolveDup(choice) {
+  document.getElementById('dupModal').style.display = 'none';
+  if (_dupResolve) { _dupResolve(choice); _dupResolve = null; }
+}
+
+document.addEventListener('click', function(e) {
+  var modal = document.getElementById('dupModal');
+  if (modal && modal.style.display === 'flex' && e.target === modal) resolveDup('cancel');
+});
+
+</script>
+
+<!-- ================================================================
+     重複記録ダイアログ
+     ================================================================ -->
+<div id="dupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px 22px;max-width:400px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+    <div style="font-weight:700;font-size:20px;margin-bottom:10px;color:var(--text1);">⚠️ 同じ記録が既にあります</div>
+    <div id="dupModalMsg" style="font-size:16px;color:var(--text2);margin-bottom:18px;line-height:1.75;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;"></div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button onclick="resolveDup('overwrite')" style="width:100%;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;border-radius:8px;padding:10px;font-size:18px;font-weight:700;cursor:pointer;">上書き保存する</button>
+      <button onclick="resolveDup('cancel')" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:var(--text2);border-radius:8px;padding:10px;font-size:18px;cursor:pointer;">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 会社・班名 設定モーダル ===== -->
+<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
+    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
+    <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
+    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
