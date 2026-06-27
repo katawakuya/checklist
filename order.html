@@ -498,6 +498,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   <div class="hd-btns">
     <span id="adminBadge" style="display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px;color:#e2e8f0;"></span>
     <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
+    <button id="guestSendBtn" onclick="guestSendToFirebase()" style="" class="hd-btn" title="発注記録をデータベースに送信">📤 記録を送信</button>
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
     <div class="save-badge" id="saveBadge">💾 保存済み</div>
@@ -1435,7 +1436,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div class="card">
       <div class="card-title">現場登録・管理</div>
       <p style="font-size:17px;color:var(--text2);margin-bottom:16px;">現場を登録すると各計算タブのドロップダウンから選択できます。現場ごとに旗揚げマスタが切り替わります。</p>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <div id="siteRegForm" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;display:none;">
         <div style="font-size:14px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px;">新規登録 / 編集</div>
         <div class="input-grid" style="margin-bottom:12px;">
           <div class="field" style="grid-column:1/-1"><label>現場名 ＊</label><input type="text" id="site-name" placeholder="例: ○○交差点 配管工事" class="highlight" style="width:100%"></div>
@@ -2015,6 +2016,54 @@ function fbSaveRecord(collectionName, record) {
 }
 
 
+// ─── ゲスト: 発注記録をFirestoreに送信 ──────────────────────────────────────
+function guestSendToFirebase() {
+  if (!_fbDb) { alert('Firebase未接続です。\nネットワーク接続を確認してください。'); return; }
+  var hist = getHistory();
+  if (hist.length === 0) { alert('送信する発注記録がありません。'); return; }
+  if (!confirm('このデバイスの発注記録 ' + hist.length + ' 件を\nデータベースに送信しますか？')) return;
+
+  function _doSend(uid) {
+    var sent = 0, failed = 0;
+    var promises = hist.map(function(record) {
+      var r = Object.assign({}, record, {
+        guestUid: uid || 'anonymous',
+        sentAt: new Date().toISOString()
+      });
+      if (!r.id) r.id = Date.now() + Math.floor(Math.random()*1000);
+      var docId = 'r_' + r.id;
+      return _fbDb.collection('order_records').doc(docId).set(r)
+        .then(function(){ sent++; })
+        .catch(function(e){ failed++; console.warn('[FB] guest send err', e); });
+    });
+    Promise.all(promises).then(function() {
+      if (failed === 0) {
+        alert('✅ ' + sent + '件の記録を送信しました！\n集計ダッシュボードに反映されます。');
+      } else {
+        alert('⚠️ ' + sent + '件送信成功、' + failed + '件失敗しました。\n失敗した記録は管理者にお問い合わせください。');
+      }
+    });
+  }
+
+  // すでにサインイン済みなら直接送信
+  if (_fbAuth && _fbAuth.currentUser) {
+    _doSend(_fbAuth.currentUser.uid);
+    return;
+  }
+  // 匿名サインインしてから送信
+  if (_fbAuth) {
+    _fbAuth.signInAnonymously()
+      .then(function(result) { _doSend(result.user ? result.user.uid : 'anon'); })
+      .catch(function(e) {
+        console.warn('[FB] anonymous auth err', e);
+        // 匿名認証が失敗した場合も直接試みる（ルールが緩い場合）
+        _doSend('anonymous');
+      });
+  } else {
+    _doSend('anonymous');
+  }
+}
+
 function migrateToFirebase() {
   if (!_isAdmin) { alert('管理者ログインが必要です'); return; }
   if (!_fbDb) { alert('Firebase未接続です'); return; }
@@ -2109,6 +2158,13 @@ function updateAdminBadge() {
   if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
   if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
   var chb=document.getElementById('clearHistBtn'); if(chb) chb.style.display=_isAdmin?'':'none';
+  // 現場管理フォーム: ゲストは登録・削除不可
+  var srf=document.getElementById('siteRegForm');
+  if(srf) srf.style.display=_isAdmin?'':'none';
+  // ゲスト送信ボタン: 非管理者のみ表示
+  var gsb=document.getElementById('guestSendBtn');
+  if(gsb) gsb.style.display=_isAdmin?'none':'';
+  // 削除ボタン（renderSiteList で生成されるものは renderSiteList で制御）
   _updateSyncBadge();
 }
 
@@ -8521,6 +8577,7 @@ function updateSiteBadge() {
 }
 
 function saveSite() {
+  if (!_isAdmin) { alert('現場管理は管理者のみ操作できます。\n右上の🔑ボタンからログインしてください。'); return; }
   const name = document.getElementById('site-name')?.value?.trim();
   if (!name) { alert('現場名を入力してください'); return; }
   const editId = document.getElementById('site-edit-id')?.value;
@@ -8586,6 +8643,7 @@ function editSite(id) {
 }
 
 function deleteSite(id) {
+  if (!_isAdmin) { alert('現場の削除は管理者のみ操作できます。'); return; }
   const s = getSites().find(x => x.id === id);
   if (!s) return;
   if (!confirm(`現場「${s.name}」を削除しますか？\n※この現場の旗揚げマスタも削除されます`)) return;
@@ -8627,8 +8685,8 @@ function renderSiteList() {
         <div>更新: ${s.updatedAt||''}</div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:16px;" onclick="editSite('${s.id}')">✏️ 編集</button>
-        <button class="btn btn-danger" style="padding:6px 12px;font-size:16px;" onclick="deleteSite('${s.id}')">✕ 削除</button>
+        ${_isAdmin ? `<button class="btn btn-ghost" style="padding:6px 12px;font-size:16px;" onclick="editSite('${s.id}')">✏️ 編集</button>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:16px;" onclick="deleteSite('${s.id}')">✕ 削除</button>` : ''}
       </div>
     </div>`;
   }).join('');

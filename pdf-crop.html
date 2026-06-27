@@ -15,12 +15,14 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
-  header { background: linear-gradient(135deg, #1a1d27 0%, #151829 100%); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 200; }
-  .logo { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  header { background: linear-gradient(135deg, #1a1d27 0%, #151829 100%); border-bottom: 1px solid var(--border); padding: 8px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; position: sticky; top: 0; z-index: 200; box-sizing: border-box; }
+  header .hd-top { display: flex; align-items: center; gap: 8px; }
+  header .hd-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .logo { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
   header h1 { font-size: 14px; font-weight: 700; }
   header p  { font-size: 11px; color: var(--text3); margin-top: 1px; }
-  .header-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-  .app { display: flex; height: calc(100vh - 61px); overflow: hidden; }
+  .hd-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: #e2e8f0; border-radius: 6px; padding: 3px 9px; font-size: 13px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .app { display: flex; height: calc(100vh - 68px); overflow: hidden; }
   .panel-left { width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
   .panel-left-header { padding: 10px 12px; font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .thumb-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -85,12 +87,17 @@
 </head>
 <body>
 <header>
-  <div class="logo">✂️</div>
-  <div><h1>断面図切り出しツール</h1><p>PDFを開いて範囲選択 → JPGとして旗揚げ番号付きで保存</p></div>
-  <div class="header-actions">
-    <a href="index.html" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#e2e8f0;border-radius:6px;padding:4px 12px;font-size:13px;text-decoration:none;white-space:nowrap;">🏠 ホーム</a>
+  <div class="hd-top">
+    <div class="logo">✂️</div>
+    <div>
+      <h1>断面図切り出しツール</h1>
+      <p>PDFを開いて範囲選択 → JPGとして旗揚げ番号付きで保存</p>
+    </div>
+  </div>
+  <div class="hd-btns">
     <span id="pageInfo" style="font-size:12px;color:var(--text3);font-family:var(--mono);">―</span>
-    <label class="btn btn-ghost" style="font-size:12px;cursor:pointer;">📂 PDFを開く<input type="file" id="pdfInput" accept=".pdf" style="display:none"></label>
+    <label class="hd-btn" style="cursor:pointer;">📂 PDFを開く<input type="file" id="pdfInput" accept=".pdf" style="display:none"></label>
+    <a href="index.html" class="hd-btn">🏠 ホーム</a>
   </div>
 </header>
 
