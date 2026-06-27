@@ -51,7 +51,9 @@ header .hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,25
 .summary-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
 .summary-card h3{font-size:14px;color:var(--text3);margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
 .kpi-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
-.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:90px;flex:1;}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:90px;flex:1;transition:background .15s,border-color .15s;}
+.kpi.clickable{cursor:pointer;}
+.kpi.clickable:hover{background:rgba(79,142,247,.1);border-color:var(--accent);}
 .kpi-val{font-size:26px;font-weight:700;color:var(--accent);}
 .kpi-lbl{font-size:14px;color:var(--text3);margin-top:2px;}
 
@@ -714,20 +716,45 @@ function fmt(n, d){ return (n||0).toFixed(d===undefined?2:d); }
 // ===== 発注サマリータブ =====
 function renderSummaryTab() {
   if (!_orderRecords) return;
-  var total = _orderRecords.length;
-  var sites = unique(_orderRecords.map(function(r){ return r.site||'(未記入)'; })).length;
-  var authors = unique(_orderRecords.map(function(r){ return r.author||''; })).filter(Boolean).length;
-  var totalRM = _orderRecords.reduce(function(s,r){ return s + (r.rmOrd||0); }, 0);
-  var totalAS = _orderRecords.reduce(function(s,r){ return s + (r.asTon密粒||0) + (r.asTon粗粒||0); }, 0);
+  // ゲストフィルター適用
+  var recs = _isAdmin ? _orderRecords : _orderRecords.filter(guestCanSee);
+  var total = recs.length;
+  var siteArr = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
+  var sites = siteArr.length;
+  var authors = unique(recs.map(function(r){ return r.author||''; })).filter(Boolean).length;
+  var totalRM = recs.reduce(function(s,r){ return s + (r.rmOrd||0); }, 0);
+  var totalAS = recs.reduce(function(s,r){ return s + (r.asTon密粒||0) + (r.asTon粗粒||0); }, 0);
+  // ラベル文脈表示
+  var ctx = _isAdmin
+    ? '<span style="font-size:12px;color:var(--text3);margin-left:4px;">全体</span>'
+    : '<span style="font-size:12px;color:#86efac;margin-left:4px;">あなたのデータ</span>';
   document.getElementById('kpiRow').innerHTML =
-    kpi(total + ' 件', '総発注記録') +
-    kpi(sites + ' 現場', '現場数') +
-    kpi(authors + ' 名', '担当者数') +
-    kpi(fmt(totalAS) + ' t', 'AS合計') +
-    kpi(fmt(totalRM) + ' m³', 'RM合計');
+    kpi(total + ' 件', '総発注記録' + ctx, "switchTab('orders', document.querySelector('.tab-btn:nth-child(2)'))") +
+    kpi(sites + ' 現場', '現場数' + ctx, "showSitesPopup(" + JSON.stringify(siteArr) + ")") +
+    kpi(authors + ' 名', '担当者数' + ctx, '') +
+    kpi(fmt(totalAS) + ' t', 'AS合計' + ctx, '') +
+    kpi(fmt(totalRM) + ' m³', 'RM合計' + ctx, '');
   renderCrossTable();
 }
-function kpi(v, l){ return '<div class="kpi"><div class="kpi-val">'+esc(v)+'</div><div class="kpi-lbl">'+esc(l)+'</div></div>'; }
+function kpi(v, l, onclick){
+  var cls = onclick ? ' clickable' : '';
+  var oc  = onclick ? ' onclick="'+onclick+'"' : '';
+  return '<div class="kpi'+cls+'"'+oc+'><div class="kpi-val">'+esc(v)+'</div><div class="kpi-lbl">'+l+'</div></div>';
+}
+
+// 現場一覧ポップアップ
+function showSitesPopup(siteArr) {
+  var html = '<div class="sites-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:260px;max-width:420px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">'
+    + '<div style="font-weight:700;font-size:16px;margin-bottom:12px;color:var(--accent);">🏗 現場一覧（' + siteArr.length + '件）</div>';
+  siteArr.forEach(function(s){
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">📍 ' + esc(s) + '</div>';
+  });
+  html += '<div style="margin-top:14px;text-align:right;">'
+    + '<button onclick="document.querySelector(\'.sites-popup\').remove()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;">閉じる</button>'
+    + '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
 
 function renderCrossTable() {
   if (!_orderRecords) return;
@@ -735,7 +762,9 @@ function renderCrossTable() {
   var metric = document.getElementById('sumMetric').value;
   var year = document.getElementById('sumYear').value;
 
-  var recs = year ? _orderRecords.filter(function(r){ return (r.date||'').slice(0,4) === year; }) : _orderRecords;
+  // ゲストフィルター
+  var baseRecs = _isAdmin ? _orderRecords : _orderRecords.filter(guestCanSee);
+  var recs = year ? baseRecs.filter(function(r){ return (r.date||'').slice(0,4) === year; }) : baseRecs;
 
   if (!recs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }
 
