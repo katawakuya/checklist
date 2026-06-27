@@ -721,6 +721,7 @@ function renderSummaryTab() {
   var total = recs.length;
   var siteArr = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
   var sites = siteArr.length;
+  window._kpiSiteArr = siteArr; // ポップアップ用グローバル
   var authors = unique(recs.map(function(r){ return r.author||''; })).filter(Boolean).length;
   var totalRM = recs.reduce(function(s,r){ return s + (r.rmOrd||0); }, 0);
   var totalAS = recs.reduce(function(s,r){ return s + (r.asTon密粒||0) + (r.asTon粗粒||0); }, 0);
@@ -730,7 +731,7 @@ function renderSummaryTab() {
     : '<span style="font-size:12px;color:#86efac;margin-left:4px;">あなたのデータ</span>';
   document.getElementById('kpiRow').innerHTML =
     kpi(total + ' 件', '総発注記録' + ctx, "switchTab('orders', document.querySelector('.tab-btn:nth-child(2)'))") +
-    kpi(sites + ' 現場', '現場数' + ctx, "showSitesPopup(" + JSON.stringify(siteArr) + ")") +
+    kpi(sites + ' 現場', '現場数' + ctx, "_showSitesPopup()") +
     kpi(authors + ' 名', '担当者数' + ctx, '') +
     kpi(fmt(totalAS) + ' t', 'AS合計' + ctx, '') +
     kpi(fmt(totalRM) + ' m³', 'RM合計' + ctx, '');
@@ -743,6 +744,7 @@ function kpi(v, l, onclick){
 }
 
 // 現場一覧ポップアップ
+function _showSitesPopup() { showSitesPopup(window._kpiSiteArr || []); }
 function showSitesPopup(siteArr) {
   var html = '<div class="sites-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">'
     + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:260px;max-width:420px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">'
