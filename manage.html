@@ -368,6 +368,7 @@ var _checkRecords = null;  // 全チェックリストレコード
 // ===== Auth =====
 _fbAuth.onAuthStateChanged(function(user) {
   _isAdmin = !!user;
+  _updateLoginStatus();
   var badge = document.getElementById('adminBadge');
   var btn = document.getElementById('adminBtn');
   if (_isAdmin) {
