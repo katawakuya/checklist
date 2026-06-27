@@ -494,6 +494,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <h1>現場資材発注計算書</h1>
       <p>マクロ不要・ブラウザ完結版</p>
     </div>
+    <span id="loginStatus" style="margin-left:auto;font-size:12px;color:var(--text3);padding:2px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;white-space:nowrap;"></span>
   </div>
   <div class="hd-btns">
     <span id="adminBadge" style="display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px;color:#e2e8f0;"></span>
@@ -2164,8 +2165,37 @@ function updateAdminBadge() {
   // ゲスト送信ボタン: 非管理者のみ表示
   var gsb=document.getElementById('guestSendBtn');
   if(gsb) gsb.style.display=_isAdmin?'none':'';
+  // ログイン状態表示
+  _updateLoginStatus();
   // 削除ボタン（renderSiteList で生成されるものは renderSiteList で制御）
   _updateSyncBadge();
+}
+
+function _updateLoginStatus() {
+  var el=document.getElementById('loginStatus');
+  if(!el) return;
+  if(_isAdmin){
+    el.textContent='👑 管理者';
+    el.style.color='#93c5fd';
+    el.style.borderColor='rgba(79,142,247,.4)';
+    el.style.background='rgba(79,142,247,.1)';
+  } else {
+    var parts=[];
+    if(_myCompany) parts.push(_myCompany);
+    if(_myTeam)    parts.push(_myTeam);
+    if(_myName)    parts.push(_myName);
+    if(parts.length>0){
+      el.textContent='🏢 '+parts.join(' / ');
+      el.style.color='#86efac';
+      el.style.borderColor='rgba(34,197,94,.3)';
+      el.style.background='rgba(34,197,94,.08)';
+    } else {
+      el.textContent='👤 ゲスト（未設定）';
+      el.style.color='var(--text3)';
+      el.style.borderColor='rgba(255,255,255,.12)';
+      el.style.background='rgba(255,255,255,.06)';
+    }
+  }
 }
 
 // ─── 未同期バッジ ─────────────────────────────────────────────────────────
@@ -3186,7 +3216,17 @@ function saveHistory(h) {
   updateHistBadge();
 }
 function updateHistBadge() {
-  const h = getHistory();
+  let h = getHistory();
+  if (!_isAdmin) {
+    h = h.filter(function(r) {
+      var rCompany = r.company || '';
+      var rTeam    = r.team    || '';
+      var rAuthor  = r.author  || r.recorder || '';
+      if (_myCompany && rCompany && rCompany !== _myCompany) return false;
+      if (!_myName && !_myTeam) return true;
+      return (_myName && rAuthor === _myName) || (_myTeam && rTeam === _myTeam);
+    });
+  }
   document.getElementById('histBadge').textContent = h.length;
 }
 
@@ -3283,6 +3323,21 @@ function renderHistory() {
   const siteFilter  = document.getElementById('hist-siteFilter')?.value || '';
   const monthFilter = document.getElementById('hist-monthFilter')?.value || '';
   let h = getHistory();
+  // ゲストフィルター: 自分の会社・班・氏名に関係するデータのみ表示
+  if (!_isAdmin) {
+    h = h.filter(function(r) {
+      var rCompany = r.company || '';
+      var rTeam    = r.team    || '';
+      var rAuthor  = r.author  || r.recorder || '';
+      // 会社名設定あり → 会社が違えば非表示
+      if (_myCompany && rCompany && rCompany !== _myCompany) return false;
+      // 氏名・班名どちらも未設定 → 会社名一致だけで表示
+      if (!_myName && !_myTeam) return true;
+      var nameMatch = _myName && rAuthor === _myName;
+      var teamMatch = _myTeam && rTeam   === _myTeam;
+      return nameMatch || teamMatch;
+    });
+  }
   if (siteFilter)  h = h.filter(r => (r.site||'') === siteFilter);
   if (monthFilter) h = h.filter(r => r.date.startsWith(monthFilter));
 
