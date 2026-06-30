@@ -298,7 +298,7 @@ var FIREBASE_CONFIG = {
   appId: "1:640432772833:web:ab2aff11980621322809a0"
 };
 var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
-var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false;
+var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false, _isLoggedIn = false;
 
 function initFirebase() {
   try {
@@ -306,8 +306,9 @@ function initFirebase() {
     _fbDb   = firebase.firestore();
     _fbAuth = firebase.auth();
     _fbAuth.onAuthStateChanged(function(user) {
-      _fbUser  = user;
-      _isAdmin = !!(user && user.email === ADMIN_EMAIL);
+      _fbUser    = user;
+      _isLoggedIn = !!user;
+      _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
       if (_isAdmin && !localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
     });
@@ -504,8 +505,16 @@ function updateViewerLink(a) {
 }
 function updateAdminBadge() {
   var b=document.getElementById('adminBadge'), btn=document.getElementById('adminBtn');
-  if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
-  if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
+  if(_isAdmin){
+    if(b){ b.style.display='inline-block'; b.textContent='👑管理者'; }
+    if(btn){ btn.textContent='🔓'; btn.title='ログアウト'; }
+  } else if(_isLoggedIn){
+    if(b){ b.style.display='inline-block'; b.textContent='🔐ログイン中'; }
+    if(btn){ btn.textContent='🔓'; btn.title='ログアウト'; }
+  } else {
+    if(b){ b.style.display='none'; }
+    if(btn){ btn.textContent='🔑'; btn.title='管理者ログイン'; }
+  }
   _updateSyncBadge();
   _updateLoginStatus();
 }
@@ -2664,11 +2673,16 @@ function closeTeamModal() {
 function _updateLoginStatus() {
   var el=document.getElementById('loginStatus');
   if(!el) return;
-  if(typeof _isAdmin !== 'undefined' && _isAdmin){
-    el.textContent='👑 管理者';
+  if(_isAdmin){
+    el.textContent='👑 スーパー管理者';
     el.style.color='#93c5fd';
     el.style.borderColor='rgba(79,142,247,.4)';
     el.style.background='rgba(79,142,247,.1)';
+  } else if(_isLoggedIn){
+    el.textContent='🔐 ログイン中（閲覧のみ）';
+    el.style.color='#fbbf24';
+    el.style.borderColor='rgba(251,191,36,.4)';
+    el.style.background='rgba(251,191,36,.1)';
   } else {
     var mc=localStorage.getItem('myCompany')||'';
     var mt=localStorage.getItem('myTeam')||'';

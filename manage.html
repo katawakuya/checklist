@@ -359,7 +359,9 @@ var _fb = firebase.initializeApp({
 });
 var _fbDb = firebase.firestore();
 var _fbAuth = firebase.auth();
-var _isAdmin = false;
+var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com'; // スーパー管理者メール
+var _isAdmin = false;    // スーパー管理者フラグ
+var _isLoggedIn = false; // ログイン済みフラグ（一般ユーザー含む）
 
 // ===== データキャッシュ =====
 var _orderRecords = null;  // 全発注レコード
@@ -367,13 +369,19 @@ var _checkRecords = null;  // 全チェックリストレコード
 
 // ===== Auth =====
 _fbAuth.onAuthStateChanged(function(user) {
-  _isAdmin = !!user;
+  _isLoggedIn = !!user;
+  _isAdmin = !!(user && user.email === ADMIN_EMAIL);
   _updateLoginStatus();
   var badge = document.getElementById('adminBadge');
   var btn = document.getElementById('adminBtn');
   if (_isAdmin) {
     badge.style.display = 'inline-block';
     badge.textContent = '👑管理者';
+    btn.textContent = '🔓';
+    btn.title = 'ログアウト';
+  } else if (_isLoggedIn) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '🔐ログイン中';
     btn.textContent = '🔓';
     btn.title = 'ログアウト';
   } else {
@@ -396,11 +404,16 @@ _fbAuth.onAuthStateChanged(function(user) {
 function _updateLoginStatus() {
   var el=document.getElementById('loginStatus');
   if(!el) return;
-  if(typeof _isAdmin !== 'undefined' && _isAdmin){
-    el.textContent='👑 管理者';
+  if(_isAdmin){
+    el.textContent='👑 スーパー管理者';
     el.style.color='#93c5fd';
     el.style.borderColor='rgba(79,142,247,.4)';
     el.style.background='rgba(79,142,247,.1)';
+  } else if(_isLoggedIn){
+    el.textContent='🔐 ログイン中（閲覧のみ）';
+    el.style.color='#fbbf24';
+    el.style.borderColor='rgba(251,191,36,.4)';
+    el.style.background='rgba(251,191,36,.1)';
   } else {
     var mc=localStorage.getItem('myCompany')||'';
     var mt=localStorage.getItem('myTeam')||'';
@@ -423,8 +436,8 @@ function _updateLoginStatus() {
   }
 }
 function onAuthBtnClick() {
-  if (_isAdmin) {
-    if (confirm('管理者ログアウトしますか？')) _fbAuth.signOut();
+  if (_isAdmin || _isLoggedIn) {
+    if (confirm('ログアウトしますか？')) _fbAuth.signOut();
   } else {
     document.getElementById('fbModal').classList.add('open');
     setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
@@ -585,7 +598,7 @@ function renderTeamTab() {
 
   var oRecs = (_orderRecords||[]).filter(function(r){
     if (year && (r.date||'').slice(0,4) !== year) return false;
-    if (!_isAdmin && guestKey) {
+    if (!_isAdmin && !_isLoggedIn && guestKey) {
       return getTeamKey(r) === guestKey;
     }
     if (tf) return getTeamKey(r) === tf;
@@ -593,7 +606,7 @@ function renderTeamTab() {
   });
   var cRecs = (_checkRecords||[]).filter(function(r){
     if (year && (r.date||'').slice(0,4) !== year) return false;
-    if (!_isAdmin && guestKey) {
+    if (!_isAdmin && !_isLoggedIn && guestKey) {
       return getTeamKey(r) === guestKey;
     }
     if (tf) return getTeamKey(r) === tf;
@@ -717,8 +730,8 @@ function fmt(n, d){ return (n||0).toFixed(d===undefined?2:d); }
 // ===== 発注サマリータブ =====
 function renderSummaryTab() {
   if (!_orderRecords) return;
-  // ゲストフィルター適用
-  var recs = _isAdmin ? _orderRecords : _orderRecords.filter(guestCanSee);
+  // フィルター適用: スーパー管理者orログイン→全社, ゲスト→自社のみ
+  var recs = (_isAdmin || _isLoggedIn) ? _orderRecords : _orderRecords.filter(guestCanSee);
   var total = recs.length;
   var siteArr = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
   var sites = siteArr.length;
@@ -729,7 +742,9 @@ function renderSummaryTab() {
   // ラベル文脈表示
   var ctx = _isAdmin
     ? '<span style="font-size:12px;color:var(--text3);margin-left:4px;">全体</span>'
-    : '<span style="font-size:12px;color:#86efac;margin-left:4px;">あなたのデータ</span>';
+    : _isLoggedIn
+      ? '<span style="font-size:12px;color:#fbbf24;margin-left:4px;">全社（閲覧）</span>'
+      : '<span style="font-size:12px;color:#86efac;margin-left:4px;">あなたのデータ</span>';
   document.getElementById('kpiRow').innerHTML =
     kpi(total + ' 件', '総発注記録' + ctx, "switchTab('orders', document.querySelector('.tab-btn:nth-child(2)'))") +
     kpi(sites + ' 現場', '現場数' + ctx, "_showSitesPopup()") +
@@ -765,8 +780,8 @@ function renderCrossTable() {
   var metric = document.getElementById('sumMetric').value;
   var year = document.getElementById('sumYear').value;
 
-  // ゲストフィルター
-  var baseRecs = _isAdmin ? _orderRecords : _orderRecords.filter(guestCanSee);
+  // フィルター: スーパー管理者orログイン→全社, ゲスト→自社のみ
+  var baseRecs = (_isAdmin || _isLoggedIn) ? _orderRecords : _orderRecords.filter(guestCanSee);
   var recs = year ? baseRecs.filter(function(r){ return (r.date||'').slice(0,4) === year; }) : baseRecs;
 
   if (!recs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }

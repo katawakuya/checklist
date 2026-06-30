@@ -1637,7 +1637,7 @@ var FIREBASE_CONFIG = {
   appId: "1:640432772833:web:ab2aff11980621322809a0"
 };
 var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
-var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false;
+var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false, _isLoggedIn = false;
 
 function initFirebase() {
   try {
@@ -1645,8 +1645,9 @@ function initFirebase() {
     _fbDb   = firebase.firestore();
     _fbAuth = firebase.auth();
     _fbAuth.onAuthStateChanged(function(user) {
-      _fbUser  = user;
-      _isAdmin = !!(user && user.email === ADMIN_EMAIL);
+      _fbUser    = user;
+      _isLoggedIn = !!user;
+      _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
       if (_isAdmin) {
         setTimeout(autoRegisterDefaultRoadbeds, 1500);
@@ -2156,15 +2157,23 @@ function updateViewerLink(a) {
 }
 function updateAdminBadge() {
   var b=document.getElementById('adminBadge'), btn=document.getElementById('adminBtn');
-  if(b){ b.style.display=_isAdmin?'inline-block':'none'; b.textContent='👑管理者'; }
-  if(btn){ btn.textContent=_isAdmin?'🔓':'🔑'; btn.title=_isAdmin?'ログアウト':'管理者ログイン'; }
+  if(_isAdmin){
+    if(b){ b.style.display='inline-block'; b.textContent='👑管理者'; }
+    if(btn){ btn.textContent='🔓'; btn.title='ログアウト'; }
+  } else if(_isLoggedIn){
+    if(b){ b.style.display='inline-block'; b.textContent='🔐ログイン中'; }
+    if(btn){ btn.textContent='🔓'; btn.title='ログアウト'; }
+  } else {
+    if(b){ b.style.display='none'; }
+    if(btn){ btn.textContent='🔑'; btn.title='管理者ログイン'; }
+  }
   var chb=document.getElementById('clearHistBtn'); if(chb) chb.style.display=_isAdmin?'':'none';
-  // 現場管理フォーム: ゲストは登録・削除不可
+  // 現場管理フォーム: スーパー管理者のみ登録・削除可
   var srf=document.getElementById('siteRegForm');
   if(srf) srf.style.display=_isAdmin?'':'none';
-  // ゲスト送信ボタン: 非管理者のみ表示
+  // ゲスト送信ボタン: 未ログインのゲストのみ表示
   var gsb=document.getElementById('guestSendBtn');
-  if(gsb) gsb.style.display=_isAdmin?'none':'';
+  if(gsb) gsb.style.display=(!_isAdmin && !_isLoggedIn)?'':'none';
   // ログイン状態表示
   _updateLoginStatus();
   // 削除ボタン（renderSiteList で生成されるものは renderSiteList で制御）
@@ -2175,10 +2184,15 @@ function _updateLoginStatus() {
   var el=document.getElementById('loginStatus');
   if(!el) return;
   if(_isAdmin){
-    el.textContent='👑 管理者';
+    el.textContent='👑 スーパー管理者';
     el.style.color='#93c5fd';
     el.style.borderColor='rgba(79,142,247,.4)';
     el.style.background='rgba(79,142,247,.1)';
+  } else if(_isLoggedIn){
+    el.textContent='🔐 ログイン中（閲覧のみ）';
+    el.style.color='#fbbf24';
+    el.style.borderColor='rgba(251,191,36,.4)';
+    el.style.background='rgba(251,191,36,.1)';
   } else {
     var parts=[];
     if(_myCompany) parts.push(_myCompany);
@@ -3217,7 +3231,8 @@ function saveHistory(h) {
 }
 function updateHistBadge() {
   let h = getHistory();
-  if (!_isAdmin) {
+  // ゲストのみ自社フィルター（ログイン済みは全社表示）
+  if (!_isAdmin && !_isLoggedIn) {
     h = h.filter(function(r) {
       var rCompany = r.company || '';
       var rTeam    = r.team    || '';
@@ -3323,8 +3338,8 @@ function renderHistory() {
   const siteFilter  = document.getElementById('hist-siteFilter')?.value || '';
   const monthFilter = document.getElementById('hist-monthFilter')?.value || '';
   let h = getHistory();
-  // ゲストフィルター: 自分の会社・班・氏名に関係するデータのみ表示
-  if (!_isAdmin) {
+  // ゲストフィルター: 未ログインゲストは自社・班データのみ表示（ログイン済みは全社表示）
+  if (!_isAdmin && !_isLoggedIn) {
     h = h.filter(function(r) {
       var rCompany = r.company || '';
       var rTeam    = r.team    || '';

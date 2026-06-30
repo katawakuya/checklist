@@ -563,7 +563,7 @@ const FIREBASE_CONFIG={
 };
 const ADMIN_EMAIL='sato.k.katawakuya@gmail.com';
 
-let _fbDb=null,_fbAuth=null,_isAdmin=false;
+let _fbDb=null,_fbAuth=null,_isAdmin=false,_isLoggedIn=false;
 let _selectedSiteId='';
 let _kariAsRows=[],_honAsRows=[];
 let _kariRbRows=[],_honRbRows=[];
@@ -742,6 +742,7 @@ function initFirebase(){
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbDb=firebase.firestore(); _fbAuth=firebase.auth();
     _fbAuth.onAuthStateChanged(u=>{
+    _isLoggedIn=!!u;
     _isAdmin=!!(u&&u.email===ADMIN_EMAIL);
     updateAdminUI();
     if(_isAdmin&&!localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
@@ -2212,12 +2213,26 @@ function importHataJSON(ev){
 // 管理者UI
 // ======================================
 function updateAdminUI(){
-  document.getElementById('adminBadge').style.display=_isAdmin?'':'none';
-  document.getElementById('btnAdmin').textContent=_isAdmin?'🔓':'🔑';
-  document.getElementById('btnAdmin').className=_isAdmin?'btn-admin active':'btn-admin';
+  var badge=document.getElementById('adminBadge');
+  var btn=document.getElementById('btnAdmin');
+  if(_isAdmin){
+    badge.style.display='';
+    badge.textContent='👑管理者';
+    btn.textContent='🔓'; btn.className='btn-admin active';
+  } else if(_isLoggedIn){
+    badge.style.display='';
+    badge.textContent='🔐ログイン中';
+    badge.style.background='rgba(251,191,36,.15)';
+    badge.style.color='#fbbf24';
+    badge.style.border='1px solid rgba(251,191,36,.4)';
+    btn.textContent='🔓'; btn.className='btn-admin';
+  } else {
+    badge.style.display='none';
+    btn.textContent='🔑'; btn.className='btn-admin';
+  }
   // 断面図切り出しリンク：管理者のみ表示
   document.querySelectorAll('.pdf-crop-link').forEach(el=>el.style.display=_isAdmin?'':'none');
-  // 変更履歴タブ・コピーボタン：管理者のみ表示
+  // 変更履歴タブ・コピーボタン：スーパー管理者のみ表示
   document.getElementById('modeTabAudit').style.display=_isAdmin?'':'none';
   document.getElementById('btnCopySite').style.display=_isAdmin?'':'none';
   if(_selectedSiteId){renderConfigList(getLocalRb(_selectedSiteId));renderDwgList(getLocalDwg(_selectedSiteId));}
