@@ -57,9 +57,9 @@ body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:50px 20px;gap:16px;text-align:center;
 }
-#loginArea .big-icon{font-size:52px;}
-#loginArea h2{font-size:20px;font-weight:800;}
-#loginArea p{color:var(--text2);font-size:14px;line-height:1.6;}
+#loginArea .big-icon{font-size:56px;}
+#loginArea h2{font-size:22px;font-weight:800;letter-spacing:0.3px;}
+#loginArea p{color:var(--text2);font-size:13px;line-height:1.6;}
 .login-form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;}
 .login-form input{
   background:var(--bg2);border:1px solid var(--border);
@@ -68,9 +68,51 @@ body{
 }
 .login-form input:focus{border-color:var(--accent);}
 .login-form input::placeholder{color:var(--text2);}
+
+/* メインCTA: ゲストログイン（目立つ） */
+.btn-guest-main{
+  display:block;text-align:center;
+  background:var(--accent);color:#fff;
+  border-radius:10px;padding:15px;
+  font-size:17px;font-weight:800;
+  text-decoration:none;letter-spacing:0.5px;
+  box-shadow:0 4px 20px rgba(96,165,250,.35);
+  transition:opacity .15s;
+}
+.btn-guest-main:active{opacity:0.85;}
+
+/* 区切り */
+.or-divider{
+  display:flex;align-items:center;gap:8px;
+  color:rgba(255,255,255,.2);font-size:11px;margin:2px 0;
+}
+.or-divider::before,.or-divider::after{
+  content:'';flex:1;height:1px;background:rgba(255,255,255,.1);
+}
+
+/* 管理者ログインリンク（目立たない） */
+.btn-admin-link{
+  background:none;border:none;
+  color:rgba(255,255,255,.22);
+  font-size:12px;cursor:pointer;
+  text-decoration:underline;padding:4px 0;
+  font-family:inherit;
+}
+.btn-admin-link:hover{color:rgba(255,255,255,.4);}
+
+/* 管理者フォーム（展開） */
+#adminForm{
+  display:flex;flex-direction:column;gap:10px;
+  overflow:hidden;max-height:0;
+  transition:max-height .35s ease, opacity .3s ease;
+  opacity:0;
+}
+#adminForm.open{max-height:300px;opacity:1;}
+
 .btn-primary{
-  background:var(--accent);color:#fff;border:none;
-  border-radius:9px;padding:13px;font-size:15px;font-weight:800;
+  background:rgba(96,165,250,.25);color:var(--accent);
+  border:1px solid rgba(96,165,250,.35);
+  border-radius:9px;padding:11px;font-size:14px;font-weight:700;
   cursor:pointer;letter-spacing:0.5px;
 }
 .btn-primary:active{opacity:0.85;}
@@ -180,7 +222,7 @@ body{
     </div>
     <div class="header-right">
       <span id="adminBadge">管理者</span>
-      <button class="btn-auth" id="btnAuth" onclick="toggleAuth()">ログイン</button>
+      <button class="btn-auth" id="btnAuth" onclick="toggleAuth()" style="display:none;">ログアウト</button>
     </div>
   </div>
 </div>
@@ -190,18 +232,29 @@ body{
 
   <!-- ログイン画面 -->
   <div id="loginArea">
-    <div class="big-icon">🔐</div>
-    <h2>ログインしてください</h2>
-    <p>メールアドレスとパスワードでサインインすると<br>全機能が使えます</p>
+    <div class="big-icon">🏗️</div>
+    <h2>関電工 現場管理システム</h2>
+    <p>所属・氏名を設定してご利用ください</p>
     <div class="login-form">
-      <input type="email" id="loginEmail" placeholder="メールアドレス" value="sato.k.katawakuya@gmail.com">
-      <input type="password" id="loginPass" placeholder="パスワード"
-             onkeydown="if(event.key==='Enter')doLogin()">
-      <div id="loginError" style="display:none;background:rgba(248,113,113,0.15);
-           border:1px solid rgba(248,113,113,0.5);color:#fca5a5;
-           border-radius:8px;padding:10px 14px;font-size:13px;text-align:left;"></div>
-      <button class="btn-primary" id="btnLogin" onclick="doLogin()">ログイン</button>
-      <a href="guest.html" style="display:block;text-align:center;font-size:13px;color:var(--text2);padding:10px 0;border:1px solid var(--border);border-radius:9px;text-decoration:none;background:var(--bg2);">登録なしで一部機能を使う →</a>
+      <!-- ① メインCTA: ゲストとして利用（大きく目立つ） -->
+      <a href="guest.html" class="btn-guest-main">ログイン →</a>
+
+      <!-- 区切り -->
+      <div class="or-divider">または</div>
+
+      <!-- ② 管理者ログイン（目立たない小さなリンク） -->
+      <button class="btn-admin-link" onclick="toggleAdminForm()">🔑 管理者ログイン</button>
+
+      <!-- 管理者フォーム（クリックで展開） -->
+      <div id="adminForm">
+        <input type="email" id="loginEmail" placeholder="メールアドレス">
+        <input type="password" id="loginPass" placeholder="パスワード"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <div id="loginError" style="display:none;background:rgba(248,113,113,0.15);
+             border:1px solid rgba(248,113,113,0.5);color:#fca5a5;
+             border-radius:8px;padding:10px 14px;font-size:13px;text-align:left;"></div>
+        <button class="btn-primary" id="btnLogin" onclick="doLogin()">管理者としてログイン</button>
+      </div>
     </div>
   </div>
 
@@ -337,6 +390,7 @@ _fbAuth.onAuthStateChanged(function(user) {
   if (user) {
     _isAdmin = (user.email === ADMIN_EMAIL);
     document.getElementById('btnAuth').textContent = 'ログアウト';
+    document.getElementById('btnAuth').style.display = '';
     document.getElementById('loginArea').style.display = 'none';
     document.getElementById('mainContent').style.display = '';
     document.getElementById('footer').style.display = '';
@@ -346,7 +400,7 @@ _fbAuth.onAuthStateChanged(function(user) {
     });
     loadData();
   } else {
-    document.getElementById('btnAuth').textContent = 'ログイン';
+    document.getElementById('btnAuth').style.display = 'none';
     document.getElementById('loginArea').style.display = '';
     document.getElementById('mainContent').style.display = 'none';
     document.getElementById('footer').style.display = 'none';
@@ -357,9 +411,14 @@ _fbAuth.onAuthStateChanged(function(user) {
 function toggleAuth() {
   if (_currentUser) {
     _fbAuth.signOut().then(function(){ showToast('ログアウトしました'); });
-  } else {
-    document.getElementById('loginArea').scrollIntoView({behavior:'smooth'});
-    document.getElementById('loginPass').focus();
+  }
+}
+
+function toggleAdminForm() {
+  var form = document.getElementById('adminForm');
+  var isOpen = form.classList.toggle('open');
+  if (isOpen) {
+    setTimeout(function(){ document.getElementById('loginEmail').focus(); }, 350);
   }
 }
 
@@ -377,10 +436,10 @@ function doLogin() {
   btn.disabled = true; btn.textContent = '…';
   _fbAuth.signInWithEmailAndPassword(email, pass)
     .then(function(){
-      btn.disabled = false; btn.textContent = 'ログイン';
+      btn.disabled = false; btn.textContent = '管理者としてログイン';
     })
     .catch(function(e){
-      btn.disabled = false; btn.textContent = 'ログイン';
+      btn.disabled = false; btn.textContent = '管理者としてログイン';
       var msg = e.code === 'auth/wrong-password'    ? 'パスワードが違います' :
                 e.code === 'auth/user-not-found'    ? 'このメールアドレスは登録されていません' :
                 e.code === 'auth/invalid-email'     ? 'メールアドレスの形式が正しくありません' :
