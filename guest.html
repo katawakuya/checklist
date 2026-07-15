@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>現場管理システム（ゲスト）</title>
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#2d3f56;
+  --accent:#60a5fa;--accent-dim:rgba(96,165,250,0.15);
+  --green:#34d399;--yellow:#fbbf24;--purple:#a78bfa;
+  --text:#e2e8f0;--text2:#94a3b8;
+  --border:rgba(255,255,255,0.09);--radius:13px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;
+  min-height:100vh;}
+.header{background:linear-gradient(135deg,#1e3a8a 0%,#1e293b 100%);
+  padding:14px 16px 18px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;}
+.header-row{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto;}
+.app-title{display:flex;align-items:center;gap:10px;}
+.app-title .icon{font-size:26px;line-height:1;}
+.app-title h1{font-size:17px;font-weight:800;}
+.app-title .sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.btn-login{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;cursor:pointer;font-weight:700;text-decoration:none;white-space:nowrap;}
+.btn-reload{background:rgba(255,255,255,0.1);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:700;white-space:nowrap;margin-right:8px;}
+.btn-reload:active{opacity:0.7;}
+.main{max-width:760px;margin:0 auto;padding:16px;}
+.notice{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;}
+.notice .icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+.notice p{font-size:13px;color:var(--text2);line-height:1.6;}
+.notice strong{color:var(--yellow);}
+.sec-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;margin-top:18px;}
+.team-bar{background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.18s,background 0.18s;}
+.team-bar:hover{border-color:rgba(16,185,129,0.6);background:rgba(16,185,129,0.13);}
+.team-icon{font-size:22px;flex-shrink:0;}
+.team-info{flex:1;}
+.team-label{font-size:14px;font-weight:700;color:#fbbf24;}
+.team-sublabel{font-size:11px;color:var(--text2);margin-top:2px;}
+.team-edit{font-size:13px;background:rgba(16,185,129,0.15);border:1.5px solid rgba(16,185,129,0.4);color:#34d399;border-radius:7px;padding:4px 12px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.site-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.site-bar label{font-size:13px;color:var(--text2);white-space:nowrap;}
+.site-bar select{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 10px;font-size:14px;outline:none;}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(min-width:520px){.app-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:740px){.app-grid{grid-template-columns:repeat(5,1fr);}}
+.app-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;cursor:pointer;transition:border-color 0.18s,background 0.18s;text-decoration:none;user-select:none;}
+.app-card:active{transform:scale(0.96);}
+.card-icon{font-size:32px;line-height:1;}
+.card-name{font-size:14px;font-weight:800;color:var(--text);}
+.card-desc{font-size:11px;color:var(--text2);line-height:1.4;}
+.card-green{border-color:rgba(52,211,153,0.2);}
+.card-green:hover{border-color:var(--green);background:rgba(52,211,153,0.07);}
+.card-yellow{border-color:rgba(251,191,36,0.2);}
+.card-yellow:hover{border-color:var(--yellow);background:rgba(251,191,36,0.07);}
+.card-purple{border-color:rgba(167,139,250,0.2);}
+.card-purple:hover{border-color:var(--purple);background:rgba(167,139,250,0.07);}
+.card-blue{border-color:rgba(96,165,250,0.2);}
+.card-blue:hover{border-color:var(--accent);background:rgba(96,165,250,0.07);}
+.card-orange{border-color:rgba(251,146,60,0.2);}
+.card-orange:hover{border-color:#fb923c;background:rgba(251,146,60,0.07);}
+.login-prompt{margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;}
+.login-prompt p{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;}
+.btn-login-full{display:block;width:100%;text-align:center;background:var(--accent);color:#fff;border:2px solid rgba(255,255,255,0.4);border-radius:9px;padding:14px 32px;font-size:15px;font-weight:800;cursor:pointer;text-decoration:none;box-shadow:0 0 0 3px rgba(96,165,250,0.3);}
+.footer{text-align:center;padding:24px 16px 40px;color:var(--text2);font-size:12px;}
+.tm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;}
+.tm-overlay.open{display:flex;}
+.tm-box{background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);}
+.tm-box h2{font-size:20px;font-weight:800;margin-bottom:6px;}
+.tm-box .tm-desc{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5;}
+.tm-box label{font-size:13px;color:var(--text2);font-weight:700;display:block;margin-bottom:4px;}
+.tm-box input{width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.15);border-radius:7px;background:#0f172a;color:var(--text);font-size:16px;margin-bottom:12px;box-sizing:border-box;outline:none;}
+.tm-box input:focus{border-color:rgba(96,165,250,0.5);}
+.tm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;}
+.btn-cancel{padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:var(--text2);font-size:15px;cursor:pointer;}
+.btn-save{padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+
+/* 熱中症緊急ボタン（index.html と同デザイン） */
+.card-emergency{border-color:#ef5350;border-width:2px;background:rgba(198,40,40,0.08);grid-column:1/-1;}
+.card-emergency:hover{border-color:#c62828;background:rgba(198,40,40,0.15);}
+.card-emergency .card-icon{font-size:28px;}
+.card-emergency .card-name{color:#ef5350 !important;font-size:15px;}
+.card-emergency .card-inner{display:flex;align-items:center;gap:14px;}
+.card-emergency .card-texts{flex:1;}
+@keyframes pulse-border{0%,100%{border-color:#ef5350;}50%{border-color:#c62828;box-shadow:0 0 0 3px rgba(198,40,40,0.2);}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="app-title">
+      <div class="icon">&#x1F3D7;&#xFE0F;</div>
+      <div>
+        <h1>現場管理システム</h1>
+        <div class="sub">関電工 &#x2014; ゲストアクセス</div>
+      </div>
+    </div>
+    <button class="btn-reload" onclick="hardReload()" title="最新版に更新">🔄 更新</button>
+    <a href="index.html" class="btn-login">&#x1F511; 管理者ログイン</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="notice">
+    <div class="icon">&#x2139;&#xFE0F;</div>
+    <p><strong>ゲストモード</strong>：発注計算・チェックリストの<strong>入力・保存</strong>と図面の閲覧ができます。<br>
+    路盤マスタ・集計・変更履歴などのフル機能はログインが必要です。</p>
+  </div>
+
+  <div class="sec-label">&#x1F477; あなたの会社・班</div>
+  <div class="team-bar" id="teamBar" onclick="openTeamModal()">
+    <div class="team-icon">&#x1F477;</div>
+    <div class="team-info">
+      <div class="team-label" id="teamLabel">未設定（タップして設定）</div>
+      <div class="team-sublabel">班を設定すると記録に自動でひも付けられます</div>
+    </div>
+    <div class="team-edit">&#x270E; 設定</div>
+  </div>
+
+  <div class="sec-label">&#x1F4CD; 現場を選んでアプリを開く</div>
+  <div class="site-bar">
+    <label>現場</label>
+    <select id="siteSelect" onchange="saveSite()">
+      <option value="">&#x2014; 現場を選択 &#x2014;</option>
+    </select>
+  </div>
+
+  <div class="sec-label">&#x1F5C2; 利用できるアプリ</div>
+  <div class="app-grid">
+
+    <a class="app-card card-emergency" href="heatstroke.html">
+      <div class="card-inner">
+        <div class="card-icon">🚑</div>
+        <div class="card-texts">
+          <div class="card-name">熱中症　緊急連絡</div>
+          <div class="card-desc">タップで即発信・応急処置・連絡組織図</div>
+        </div>
+      </div>
+    </a>
+
+    <a class="app-card card-green" onclick="return goApp('order.html')">
+      <div class="card-icon">&#x1F9EE;</div>
+      <div class="card-name">発注計算</div>
+      <div class="card-desc">材料発注量の計算</div>
+    </a>
+    <a class="app-card card-yellow" onclick="return goApp('checklist.html')">
+      <div class="card-icon">&#x2705;</div>
+      <div class="card-name">チェックリスト</div>
+      <div class="card-desc">施工記録・写真添付</div>
+    </a>
+    <a class="app-card card-purple" onclick="return goApp('viewer.html')">
+      <div class="card-icon">&#x1F4C2;</div>
+      <div class="card-name">図面ビューア</div>
+      <div class="card-desc">図面・写真の表示</div>
+    </a>
+    <a class="app-card card-blue" onclick="return goApp('manage.html')">
+      <div class="card-icon">&#x1F4CA;</div>
+      <div class="card-name">班別集計</div>
+      <div class="card-desc">自班の資材使用量</div>
+    </a>
+    <a class="app-card card-orange" onclick="return goApp('zaimatsu.html')">
+      <div class="card-icon">&#x1F4E6;</div>
+      <div class="card-name">資材管理</div>
+      <div class="card-desc">在庫・使用・発注管理</div>
+    </a>
+  </div>
+
+</div>
+
+<div class="footer">ゲストモード | 関電工</div>
+
+
+<div class="tm-overlay" id="teamModal">
+  <div class="tm-box">
+    <h2>&#x1F477; 会社名・班名の設定</h2>
+    <p class="tm-desc">保存した記録に自動でひも付けられます。<br>設定した班の記録のみ集計で確認できます。</p>
+    <label>会社名</label>
+    <input id="tmCompany" type="text" placeholder="例: 関電工">
+    <label>班名</label>
+    <input id="tmTeam" type="text" placeholder="例: 第1班">
+    <label>氏名（担当者名）</label>
+    <input id="tmName" type="text" placeholder="例: 佐藤 嘉秀">
+    <div class="tm-actions">
+      <button class="btn-cancel" onclick="closeTeamModal()">後で設定</button>
+      <button class="btn-save" onclick="saveTeamSettings()">&#x2705; 保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _myCompany = localStorage.getItem('myCompany') || '';
+var _myTeam    = localStorage.getItem('myTeam')    || '';
+var _myName    = localStorage.getItem('myName')    || '';
+
+function _updateTeamBar() {
+  var lbl = document.getElementById('teamLabel');
+  var bar = document.getElementById('teamBar');
+  if (!lbl) return;
+  if (_myCompany || _myTeam) {
+    var parts = [];
+    if (_myCompany) parts.push(_myCompany);
+    if (_myTeam)    parts.push(_myTeam);
+    lbl.textContent = parts.join(' / ');
+    lbl.style.color = '#34d399';
+    bar.style.borderColor = 'rgba(52,211,153,0.4)';
+  } else {
+    lbl.textContent = '未設定（タップして設定）';
+    lbl.style.color = '#fbbf24';
+    bar.style.borderColor = 'rgba(251,191,36,0.4)';
+  }
+}
+function openTeamModal() {
+  document.getElementById('tmCompany').value = _myCompany;
+  document.getElementById('tmTeam').value    = _myTeam;
+  document.getElementById('tmName').value    = _myName;
+  document.getElementById('teamModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('tmCompany').focus(); }, 100);
+}
+function closeTeamModal() {
+  document.getElementById('teamModal').classList.remove('open');
+}
+function saveTeamSettings() {
+  _myCompany = (document.getElementById('tmCompany').value || '').trim();
+  _myTeam    = (document.getElementById('tmTeam').value    || '').trim();
+  _myName    = (document.getElementById('tmName').value    || '').trim();
+  localStorage.setItem('myCompany', _myCompany);
+  localStorage.setItem('myTeam',    _myTeam);
+  localStorage.setItem('myName',    _myName);
+  _updateTeamBar();
+  closeTeamModal();
+}
+document.getElementById('teamModal').addEventListener('click', function(e){ if(e.target===this) closeTeamModal(); });
+document.getElementById('tmTeam').addEventListener('keydown', function(e){ if(e.key==='Enter') saveTeamSettings(); });
+
+function loadSites() {
+  var cached = localStorage.getItem('site_master');
+  if (!cached) return;
+  try {
+    var sites = JSON.parse(cached);
+    var sel = document.getElementById('siteSelect');
+    var saved = localStorage.getItem('_launcher_site') || '';
+    sites.forEach(function(s) {
+      var id = s.id||s.siteId||s.name, name = s.name||s.siteName||id;
+      var o = document.createElement('option');
+      o.value = id; o.textContent = name; sel.appendChild(o);
+    });
+    if (saved) sel.value = saved;
+  } catch(e) {}
+}
+function saveSite() {
+  var v = document.getElementById('siteSelect').value;
+  if (v) localStorage.setItem('_launcher_site', v);
+}
+function goApp(page) {
+  var siteId = document.getElementById('siteSelect').value;
+  if (siteId) localStorage.setItem('_launcher_site', siteId);
+  window.location.href = page;
+  return false;
+}
+function hardReload() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      var p = regs.map(function(r){ return r.unregister(); });
+      Promise.all(p).then(function(){ location.reload(true); });
+    }).catch(function(){ location.reload(true); });
+  } else {
+    location.reload(true);
+  }
+}
+
+_updateTeamBar();
+loadSites();
+if (!_myCompany && !_myTeam) { setTimeout(openTeamModal, 600); }
+</script>
+</body>
+</html>

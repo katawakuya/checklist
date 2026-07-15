@@ -3,169 +3,547 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>路盤構成管理 v1.1</title>
+<title>路盤・図面管理 v2.0</title>
 <style>
-:root {
-  --bg:#0f1117; --surface:#1a1d2e; --surface2:#22263a; --surface3:#2a2f45;
-  --border:#2e3450; --text:#e2e8f0; --text2:#94a3b8; --text3:#64748b;
-  --blue:#4f8ef7; --green:#22c55e; --orange:#f59e0b; --red:#ef4444;
-  --purple:#a78bfa; --mono:'Consolas',monospace;
+:root{
+  --bg:#0f1117;--surface:#1a1d2e;--surface2:#22263a;--surface3:#2a2f45;
+  --border:#2e3450;--text:#e2e8f0;--text2:#b8c9dd;--text3:#8fa3b8;
+  --blue:#4f8ef7;--green:#22c55e;--orange:#f59e0b;--red:#ef4444;--purple:#a78bfa;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Hiragino Kaku Gothic Pro','Meiryo',sans-serif;font-size:14px;min-height:100vh;}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Kaku Gothic Pro','Meiryo',sans-serif;font-size:18px;min-height:100vh;overscroll-behavior-y:none;}
 
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
-header h1{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap;}
-header .site-sel{flex:1;min-width:160px;max-width:300px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;}
-header .btn-admin{margin-left:auto;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);padding:7px 14px;cursor:pointer;font-size:13px;}
-header .btn-admin.active{background:rgba(79,142,247,.2);border-color:var(--blue);color:var(--blue);}
-.admin-badge{background:rgba(79,142,247,.15);border:1px solid var(--blue);color:var(--blue);border-radius:6px;padding:3px 10px;font-size:12px;display:none;}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;position:sticky;top:0;z-index:100;box-sizing:border-box;}
+header .hd-top{display:flex;align-items:center;gap:8px;width:100%;}
+header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+header h1{font-size:18px;font-weight:700;white-space:nowrap;}
+.hd-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+.hd-btn:hover{background:rgba(79,142,247,.15);color:var(--blue);}
+.site-sel{flex:1;min-width:160px;max-width:300px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:17px;}
+.btn-admin{margin-left:auto;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);padding:7px 14px;cursor:pointer;font-size:17px;}
+.btn-admin.active{background:rgba(79,142,247,.2);border-color:var(--blue);color:var(--blue);}
+.admin-badge{background:rgba(79,142,247,.15);border:1px solid var(--blue);color:var(--blue);border-radius:6px;padding:3px 10px;font-size:16px;display:none;}
 
 .main{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 54px);}
 @media(max-width:700px){.main{grid-template-columns:1fr;height:auto;}}
 
+/* ---- 左パネル ---- */
 .panel-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .viewer-toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.viewer-toolbar label{font-size:12px;color:var(--text2);}
-.btn-file{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-size:12px;white-space:nowrap;}
+.viewer-title{font-size:16px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+.btn-file{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-size:16px;white-space:nowrap;}
+.btn-file-clear{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:7px;padding:7px 10px;cursor:pointer;font-size:16px;}
 .page-nav{display:flex;align-items:center;gap:6px;margin-left:auto;}
-.page-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;}
-.page-nav span{font-size:12px;color:var(--text2);white-space:nowrap;}
+.page-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:17px;}
+.page-nav span{font-size:16px;color:var(--text2);white-space:nowrap;}
+.zoom-ctrl{display:none;align-items:center;gap:4px;margin-left:auto;}
+.zoom-ctrl button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:18px;line-height:1;font-weight:700;}
+.zoom-ctrl button:active{background:var(--border);}
+.zoom-level{font-size:15px;color:var(--text2);min-width:44px;text-align:center;font-variant-numeric:tabular-nums;}
 .viewer-area{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;background:#111;padding:8px;}
 .viewer-area canvas,.viewer-area img{max-width:100%;height:auto;display:block;box-shadow:0 2px 12px rgba(0,0,0,.5);}
-.viewer-empty{color:var(--text3);font-size:13px;text-align:center;margin:auto;padding:40px;}
+.viewer-area iframe{width:100%;height:100%;border:none;background:#fff;}
+.viewer-empty{color:var(--text3);font-size:17px;text-align:center;margin:auto;padding:40px;}
 
-.panel-right{display:flex;flex-direction:column;overflow-y:auto;}
-.form-area{padding:14px 16px;flex:1;}
-.section-title{font-size:13px;font-weight:700;color:var(--text2);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+/* ---- 右パネル ---- */
+.panel-right{display:flex;flex-direction:column;overflow:hidden;}
+.mode-tabs{display:flex;gap:0;background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;}
+.mode-tabs button{flex:1;padding:10px 8px;border:none;background:none;color:var(--text2);cursor:pointer;font-size:17px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.mode-tabs button.active{color:var(--blue);border-bottom-color:var(--blue);}
+.mode-panel{flex:1;display:flex;flex-direction:column;overflow-y:auto;}
+.mode-panel.hidden{display:none;}
+
+/* ---- 共通フォーム ---- */
+.form-area{padding:14px 16px;}
+.section-title{font-size:17px;font-weight:700;color:var(--text2);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
 .field{margin-bottom:10px;}
-.field label{display:block;font-size:11px;color:var(--text3);margin-bottom:4px;}
-.field input[type=text],.field input[type=number],.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 10px;font-size:13px;}
+.field label{display:block;font-size:14px;color:var(--text3);margin-bottom:4px;}
+.field input[type=text],.field input[type=number],.field input[type=url],.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 10px;font-size:17px;}
+.field textarea{resize:vertical;min-height:56px;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .tab-bar{display:flex;gap:4px;margin-bottom:12px;background:var(--surface2);border-radius:9px;padding:4px;}
-.tab-bar button{flex:1;padding:7px;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);background:none;}
+.tab-bar button{flex:1;padding:7px;border:none;border-radius:7px;cursor:pointer;font-size:16px;font-weight:600;color:var(--text2);background:none;}
 .tab-bar button.active{background:var(--blue);color:#fff;}
-.add-btn{background:none;border:1px dashed var(--border);color:var(--text3);border-radius:7px;padding:6px;cursor:pointer;font-size:12px;width:100%;margin-bottom:8px;}
+.add-btn{background:none;border:1px dashed var(--border);color:var(--text3);border-radius:7px;padding:6px;cursor:pointer;font-size:16px;width:100%;margin-bottom:8px;}
 .add-btn:hover{border-color:var(--blue);color:var(--blue);}
-.total-chip{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:12px;color:var(--text2);text-align:right;margin-top:6px;}
+.total-chip{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:16px;color:var(--text2);text-align:right;margin-top:6px;}
 .total-chip b{color:var(--purple);}
-.btn-save{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:12px;cursor:pointer;font-size:14px;font-weight:700;width:100%;margin-top:12px;}
-.btn-cancel{background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:9px;padding:10px;cursor:pointer;font-size:13px;width:100%;margin-top:6px;display:none;}
+.btn-save{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:12px;cursor:pointer;font-size:18px;font-weight:700;width:100%;margin-top:12px;}
+.btn-cancel{background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:9px;padding:10px;cursor:pointer;font-size:17px;width:100%;margin-top:6px;display:none;}
 
+/* ---- 路盤リスト ---- */
 .list-area{border-top:2px solid var(--border);padding:14px 16px;}
-.list-area h3{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;}
+.list-area h3{font-size:17px;font-weight:700;color:var(--text2);margin-bottom:10px;}
 .config-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;}
 .config-card .card-head{display:flex;align-items:center;gap:10px;}
 .config-card .color-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
-.config-card .info{flex:1;}
-.config-card .info .name{font-size:14px;font-weight:600;}
-.config-card .info .sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.config-card .info{flex:1;min-width:0;}
+.config-card .info .name{font-size:18px;font-weight:600;}
+.config-card .info .sub{font-size:14px;color:var(--text3);margin-top:2px;}
 .config-card .actions{display:flex;gap:6px;flex-shrink:0;}
-.config-card .layers-detail{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);}
+.config-card .layers-detail{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:14px;color:var(--text2);}
 .layer-row{display:flex;gap:6px;align-items:center;margin-bottom:3px;}
-.layer-badge{border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;white-space:nowrap;}
-.btn-sm{padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid;}
+.layer-badge{border-radius:4px;padding:2px 6px;font-size:13px;font-weight:700;white-space:nowrap;}
+.btn-sm{padding:5px 10px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid;}
 .btn-edit{background:rgba(79,142,247,.1);border-color:var(--blue);color:var(--blue);}
 .btn-del{background:rgba(239,68,68,.1);border-color:var(--red);color:var(--red);}
-.empty-state{text-align:center;color:var(--text3);font-size:13px;padding:24px 0;}
+.btn-view{background:rgba(34,197,94,.1);border-color:var(--green);color:var(--green);}
+.empty-state{text-align:center;color:var(--text3);font-size:17px;padding:24px 0;}
 
+/* ---- 図面カード ---- */
+.dwg-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.dwg-card .dwg-icon{font-size:26px;flex-shrink:0;}
+.dwg-card .dwg-info{flex:1;min-width:0;}
+.dwg-card .dwg-name{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dwg-card .dwg-sub{font-size:14px;color:var(--text3);margin-top:2px;}
+.dwg-type-badge{display:inline-block;background:rgba(79,142,247,.15);color:var(--blue);border-radius:4px;padding:2px 7px;font-size:13px;font-weight:700;margin-right:4px;}
+
+/* ---- モーダル ---- */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:340px;max-width:90vw;}
-.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;}
-.modal input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;font-size:14px;margin-bottom:10px;}
-.modal .btn-login{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:11px;cursor:pointer;font-size:14px;font-weight:700;width:100%;}
-.modal .btn-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;float:right;margin-top:-4px;}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:300;display:none;white-space:pre-line;text-align:center;}
+.modal h3{font-size:21px;font-weight:700;margin-bottom:16px;}
+.modal input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;font-size:18px;margin-bottom:10px;}
+.modal .btn-login{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:11px;cursor:pointer;font-size:18px;font-weight:700;width:100%;}
+.modal .btn-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:26px;float:right;margin-top:-4px;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:17px;z-index:300;display:none;white-space:pre-line;text-align:center;}
 .toast.show{display:block;}
+.viewer-search-bar{width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;}
+.viewer-search-bar.hidden{display:none!important;}
+.filter-sel{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:5px 8px;font-size:16px;cursor:pointer;}
+.filter-sel:disabled{opacity:0.4;cursor:default;}
+.filter-status{font-size:14px;color:var(--text3);white-space:nowrap;margin-left:2px;}
 </style>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
 </head>
 <body>
 
 <header>
-  <h1>🏗️ 路盤構成管理</h1>
-  <select class="site-sel" id="siteSelect" onchange="onSiteChange(this.value)">
-    <option value="">― 現場を選択 ―</option>
-  </select>
-  <span class="admin-badge" id="adminBadge">👑 管理者</span>
-  <button class="btn-admin" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
+  <div class="hd-top">
+    <div class="logo" style="font-size:22px;line-height:1;">🏗️</div>
+    <div>
+      <h1>路盤・図面管理</h1>
+      <select class="site-sel" id="siteSelect" onchange="onSiteChange(this.value)" style="margin-top:2px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:2px 8px;font-size:13px;max-width:220px;">
+        <option value="">― 現場を選択 ―</option>
+      </select>
+    </div>
+  </div>
+  <div class="hd-btns">
+    <span class="admin-badge" id="adminBadge" style="font-size:13px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);border-radius:4px;color:var(--blue);display:none;">👑 管理者</span>
+    <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
+    <button id="btnCopySite" class="admin-only hd-btn" onclick="openCopyModal()" style="display:none;" title="現場間コピー">📋 コピー</button>
+    <a href="pdf-crop.html" target="_blank" class="hd-btn" title="断面図切り出しツール">✂️ 断面図</a>
+    <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <button class="hd-btn" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
+  </div>
 </header>
 
 <div class="main">
 
-  <!-- 左：図面ビューア -->
+  <!-- ===== 左：ビューア ===== -->
   <div class="panel-left">
     <div class="viewer-toolbar">
-      <label>断面図</label>
+      <span class="viewer-title" id="viewerTitle">図面ビューア</span>
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFile(this.files[0])">
-      <button class="btn-file" onclick="document.getElementById('fileInput').click()">📁 PDF/画像を開く</button>
+      <button class="btn-file" onclick="document.getElementById('fileInput').click()">📁 ファイルを開く</button>
+      <button class="btn-file-clear" id="btnClearViewer" onclick="clearViewer()" style="display:none">✕</button>
+      <div class="zoom-ctrl" id="zoomCtrl">
+        <button onclick="viewerZoom(-0.25)" title="縮小">－</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button onclick="viewerZoom(+0.25)" title="拡大">＋</button>
+        <button onclick="viewerZoomReset()" title="リセット" style="font-size:14px;padding:4px 8px;">Reset</button>
+      </div>
       <div class="page-nav" id="pageNav" style="display:none">
         <button onclick="changePage(-1)">◀</button>
         <span id="pageInfo">1 / 1</span>
         <button onclick="changePage(1)">▶</button>
       </div>
+      <div class="viewer-search-bar hidden" id="viewerSearchBar">
+        <span style="font-size:14px;color:var(--text3);white-space:nowrap;flex-shrink:0;">&#128269; 図面検索</span>
+        <select class="filter-sel" id="filterRbSel" onchange="onFilterRbChange(this.value)" style="flex:1;min-width:100px;">
+          <option value="">&#8213; 型を選択 &#8213;</option>
+        </select>
+        <select class="filter-sel" id="filterHataSel" onchange="onFilterHataChange(this.value)" style="flex:1;min-width:100px;" disabled>
+          <option value="">&#8213; 旗揚げ番号 &#8213;</option>
+        </select>
+        <span class="filter-status" id="filterStatus"></span>
+      </div>
     </div>
     <div class="viewer-area" id="viewerArea">
-      <div class="viewer-empty">📄 PDF または 画像ファイルを開くと<br>ここに断面図が表示されます</div>
+      <div class="viewer-empty">📄 右パネルの図面リストから選択するか<br>ローカルのPDF・画像を開いてください</div>
     </div>
   </div>
 
-  <!-- 右：入力フォーム -->
+  <!-- ===== 右：タブパネル ===== -->
   <div class="panel-right">
-    <div class="form-area">
-      <div class="section-title">路盤構成を登録</div>
-      <input type="hidden" id="editKey">
-
-      <div class="row2">
-        <div class="field">
-          <label>構成名（例：NO1〜NO4）</label>
-          <input type="text" id="rbLabel" placeholder="構成名を入力">
-        </div>
-        <div class="field">
-          <label>表示色</label>
-          <input type="color" id="rbColor" value="#4f8ef7" style="height:38px;padding:2px 4px;">
-        </div>
-      </div>
-
-      <div class="tab-bar">
-        <button id="tabKari" class="active" onclick="switchTab('kari')">仮復旧</button>
-        <button id="tabHon"  onclick="switchTab('hon')">本復旧</button>
-      </div>
-
-      <!-- 仮復旧 -->
-      <div id="formKari">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
-        <div id="kari-as-rows"></div>
-        <button class="add-btn" onclick="addAsRow('kari')">＋ AS層を追加</button>
-
-        <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・単層・その他）</div>
-        <div id="kari-rb-rows"></div>
-        <button class="add-btn" onclick="addRbRow('kari')">＋ 路盤層を追加</button>
-        <div class="total-chip" id="kari-total">合計 H = <b>0 mm</b></div>
-      </div>
-
-      <!-- 本復旧 -->
-      <div id="formHon" style="display:none">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
-        <div id="hon-as-rows"></div>
-        <button class="add-btn" onclick="addAsRow('hon')">＋ AS層を追加</button>
-
-        <div style="font-size:11px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・単層・その他）</div>
-        <div id="hon-rb-rows"></div>
-        <button class="add-btn" onclick="addRbRow('hon')">＋ 路盤層を追加</button>
-        <div class="total-chip" id="hon-total">合計 H = <b>0 mm</b></div>
-      </div>
-
-      <button class="btn-save" onclick="saveConfig()">💾 路盤構成を登録</button>
-      <button class="btn-cancel" id="btnCancel" onclick="cancelEdit()">キャンセル</button>
+    <div class="mode-tabs">
+      <button id="modeTabRoadbed" class="active" onclick="switchMode('roadbed')">🏗️ 路盤構成</button>
+      <button id="modeTabDrawing" onclick="switchMode('drawing')">📋 図面管理</button>
+      <button id="modeTabHata" onclick="switchMode('hata')">🗂 旗揚げマスタ</button>
+      <button id="modeTabAudit" class="admin-only" onclick="switchMode('audit')" style="display:none;">🕑 変更履歴</button>
     </div>
 
-    <div class="list-area">
-      <h3 id="listTitle">登録済み路盤構成</h3>
-      <div id="configList"><div class="empty-state">現場を選択してください</div></div>
+    <!-- ── 路盤構成モード ── -->
+    <div id="modeRoadbed" class="mode-panel">
+      <div class="form-area">
+        <div class="field" style="margin-bottom:10px;">
+          <label>📍 現場を選択</label>
+          <select class="site-sel" id="siteSelectRb" onchange="onSiteChange(this.value)">
+            <option value="">― 現場を選択 ―</option>
+          </select>
+        </div>
+        <!-- 既存構成の選択・編集 -->
+        <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+          <label style="font-size:14px;font-weight:700;color:var(--accent);display:block;margin-bottom:6px;">📋 既存の路盤構成を選んで修正</label>
+          <select id="existingConfigSel" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:17px;" onchange="loadExistingConfig(this.value)">
+            <option value="">― 新規作成（空白から）―</option>
+          </select>
+          <div style="font-size:14px;color:var(--text3);margin-top:5px;">選択すると下のフォームに読み込みます。修正後「路盤構成を登録」で上書き保存されます。</div>
+        </div>
+        <!-- 他現場から流用 -->
+        <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+          <label style="font-size:14px;font-weight:700;color:var(--green);display:block;margin-bottom:6px;">🔄 他現場の構成を流用</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <select id="crossSiteSel" style="flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;" onchange="onCrossSiteChange(this.value)">
+              <option value="">― 現場を選択 ―</option>
+            </select>
+            <select id="crossConfigSel" style="flex:2;min-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;" disabled>
+              <option value="">― 構成を選択 ―</option>
+            </select>
+            <button onclick="copyCrossConfig()" style="background:rgba(34,197,94,0.15);border:1px solid var(--green);color:var(--green);border-radius:6px;padding:6px 12px;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;">📋 流用</button>
+          </div>
+        </div>
+        <!-- 標準型一括登録 -->
+        <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;">
+            <div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:2px;">📐 標準型プリセット</div>
+            <div style="font-size:13px;color:var(--text3);">85型 / 40型 / 30型 / 20型 / 14型切下 / 14型一般 の6種</div>
+          </div>
+          <button onclick="importStandardPresets()" style="background:rgba(79,142,247,0.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:7px 14px;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;">📥 この現場に一括登録</button>
+        </div>
+        <div class="section-title">路盤構成を登録</div>
+        <input type="hidden" id="editKey">
+        <div class="row2">
+          <div class="field">
+            <label>構成名（例：NO1〜NO4）</label>
+            <input type="text" id="rbLabel" placeholder="構成名を入力">
+          </div>
+          <div class="field">
+            <label>表示色</label>
+            <input type="color" id="rbColor" value="#4f8ef7" style="height:38px;padding:2px 4px;">
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <button id="tabKari" class="active" onclick="switchTab('kari')">仮復旧</button>
+          <button id="tabHon"  onclick="switchTab('hon')">本復旧</button>
+        </div>
+
+        <!-- 仮復旧 -->
+        <div id="formKari">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button id="kari-mode-btn" onclick="toggleFreeMode('kari')" style="background:rgba(245,158,11,0.15);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 12px;font-size:14px;cursor:pointer;">🔀 フリーモードに切替</button>
+          </div>
+          <div id="kari-normal-mode">
+            <div style="font-size:14px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
+            <div id="kari-as-rows"></div>
+            <button class="add-btn" onclick="addAsRow('kari')">＋ AS層を追加</button>
+            <div style="font-size:14px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
+            <div id="kari-rb-rows"></div>
+            <button class="add-btn" onclick="addRbRow('kari')">＋ 路盤層を追加</button>
+          </div>
+          <div id="kari-free-mode" style="display:none;">
+            <div style="font-size:14px;color:var(--orange);margin-bottom:6px;">▼ 舗装層（上から順に自由入力 — コンクリート舗装など）</div>
+            <div id="kari-free-rows"></div>
+            <button class="add-btn" onclick="addFreeRow('kari')">＋ 層を追加</button>
+          </div>
+          <div class="total-chip" id="kari-total">合計 H = <b>0 mm</b></div>
+        </div>
+
+        <!-- 本復旧 -->
+        <div id="formHon" style="display:none">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button id="hon-mode-btn" onclick="toggleFreeMode('hon')" style="background:rgba(245,158,11,0.15);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 12px;font-size:14px;cursor:pointer;">🔀 フリーモードに切替</button>
+          </div>
+          <div id="hon-normal-mode">
+            <div style="font-size:14px;color:var(--text3);margin-bottom:6px;">▼ AS層（上から順に追加）</div>
+            <div id="hon-as-rows"></div>
+            <button class="add-btn" onclick="addAsRow('hon')">＋ AS層を追加</button>
+            <div style="font-size:14px;color:var(--text3);margin:10px 0 6px;">▼ 路盤工層（RM・RC・フリー）</div>
+            <div id="hon-rb-rows"></div>
+            <button class="add-btn" onclick="addRbRow('hon')">＋ 路盤層を追加</button>
+          </div>
+          <div id="hon-free-mode" style="display:none;">
+            <div style="font-size:14px;color:var(--orange);margin-bottom:6px;">▼ 舗装層（上から順に自由入力 — コンクリート舗装など）</div>
+            <div id="hon-free-rows"></div>
+            <button class="add-btn" onclick="addFreeRow('hon')">＋ 層を追加</button>
+          </div>
+          <div class="total-chip" id="hon-total">合計 H = <b>0 mm</b></div>
+        </div>
+
+        <button class="btn-save" onclick="saveConfig()">💾 路盤構成を登録</button>
+        <button class="btn-cancel" id="btnCancel" onclick="cancelEdit()">キャンセル</button>
+      </div>
+
+      <div class="list-area">
+        <h3 id="listTitle">登録済み路盤構成</h3>
+        <div id="configList"><div class="empty-state">現場を選択してください</div></div>
+      </div>
+    </div>
+
+    <!-- ── 図面管理モード ── -->
+    <div id="modeDrawing" class="mode-panel hidden">
+      <div class="form-area">
+        <div class="field" style="margin-bottom:10px;">
+          <label>📍 現場を選択</label>
+          <select class="site-sel" id="siteSelectDwg" onchange="onSiteChange(this.value)">
+            <option value="">― 現場を選択 ―</option>
+          </select>
+        </div>
+        <div class="section-title">図面を登録</div>
+        <input type="hidden" id="dwgEditKey">
+        <div class="field">
+          <label>図面名</label>
+          <input type="text" id="dwgName" placeholder="例：NO1〜NO4 横断図">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>種別</label>
+            <select id="dwgType" onchange="onDwgTypeChange(this.value)">
+              <option>断面図</option>
+              <option>平面図</option>
+              <option>縦断図</option>
+              <option>詳細図</option>
+              <option>その他</option>
+            </select>
+            <input type="text" id="dwgTypeOther" placeholder="種別を入力（例：施工図、竣工図）"
+              style="display:none;margin-top:6px;width:100%;box-sizing:border-box;"
+              oninput="onDwgTypeOtherInput(this.value)">
+          </div>
+          <div class="field">
+            <label>関連路盤構成（任意）</label>
+            <select id="dwgRbKey">
+              <option value="">― なし ―</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>ローカルファイル（PDF・画像）</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-cancel" style="padding:6px 14px;margin:0;flex-shrink:0;" onclick="document.getElementById('dwgFileInput').click()">📁 ファイルを選択</button>
+            <span id="dwgFileName" style="font-size:16px;color:var(--text3);">未選択</span>
+            <button type="button" id="btnClearDwgFile" onclick="clearDwgFile()" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;font-size:21px;line-height:1;">✕</button>
+          </div>
+          <input type="file" id="dwgFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onDwgFileSelect(this)">
+        </div>
+        <div class="field">
+          <label>または Google Drive 共有URL <span style="color:var(--text3);font-size:14px;">（ファイル未選択時）</span></label>
+          <input type="url" id="dwgUrl" placeholder="https://drive.google.com/file/d/...">
+        </div>
+        <div class="field">
+          <label>メモ（任意）</label>
+          <input type="text" id="dwgMemo" placeholder="補足説明など">
+        </div>
+        <button class="btn-save" onclick="saveDwg()">💾 図面を登録</button>
+        <button class="btn-cancel" id="btnCancelDwg" onclick="cancelDwg()">キャンセル</button>
+      </div>
+
+      <div class="list-area">
+        <h3 id="dwgListTitle">登録済み図面</h3>
+        <div id="dwgList"><div class="empty-state">現場を選択してください</div></div>
+      </div>
+    </div>
+
+    <!-- ── 旗揚げマスタモード ── -->
+    <div id="modeHata" class="mode-panel hidden">
+      <div class="form-area">
+        <div class="field" style="margin-bottom:10px;">
+          <label>📍 現場を選択</label>
+          <select class="site-sel" id="siteSelectHata" onchange="onSiteChange(this.value)" style="max-width:100%;width:100%;">
+            <option value="">― 現場を選択 ―</option>
+          </select>
+        </div>
+
+        <!-- 既存エントリ選択 -->
+        <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+          <label style="font-size:14px;font-weight:700;color:var(--blue);display:block;margin-bottom:6px;">📋 既存の旗揚げ番号を選んで修正</label>
+          <select id="existingHataSel" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:17px;" onchange="loadExistingHata(this.value)">
+            <option value="">― 新規登録（空白から）―</option>
+          </select>
+        </div>
+
+        <div class="section-title">旗揚げマスタを登録</div>
+        <div class="row2">
+          <div class="field">
+            <label>旗揚げ番号 ＊</label>
+            <input type="text" id="h-hata" placeholder="例: 1, 2, A-1">
+          </div>
+          <div class="field">
+            <label>場所・区間名</label>
+            <input type="text" id="h-name" placeholder="例: NO1〜NO5">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>DP 管中心深度 (m) ＊</label>
+            <input type="number" id="h-dp" step="0.001" placeholder="例: 1.500">
+          </div>
+          <div class="field">
+            <label>管下H (m) ＊</label>
+            <input type="number" id="h-dph" step="0.001" placeholder="例: 1.650">
+          </div>
+        </div>
+        <div class="section-title" style="font-size:14px;margin:8px 0 6px;">区間DP・管下H（任意）</div>
+        <div class="row2">
+          <div class="field"><label>DP 開始 (m)</label><input type="number" id="h-dp1" step="0.001" placeholder="例: 1.400"></div>
+          <div class="field"><label>DP 終了 (m)</label><input type="number" id="h-dp2" step="0.001" placeholder="例: 1.600"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>管下H 開始 (m)</label><input type="number" id="h-dph1" step="0.001" placeholder="例: 1.550"></div>
+          <div class="field"><label>管下H 終了 (m)</label><input type="number" id="h-dph2" step="0.001" placeholder="例: 1.750"></div>
+        </div>
+        <div class="field">
+          <label>管種</label>
+          <select id="h-pipetype" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 10px;font-size:17px;">
+            <option value="">― 選択 ―</option>
+            <option value="VP">VP管</option>
+            <option value="VU">VU管</option>
+            <option value="HIVP">HIVP管</option>
+            <option value="HIVU">HIVU管</option>
+            <option value="SGP">SGP（白）</option>
+            <option value="SGP-VA">SGP-VA（亜鉛）</option>
+            <option value="PE">PE管</option>
+            <option value="CIP">鋳鉄管</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>メモ</label>
+          <textarea id="h-note" placeholder="特記事項など（任意）" style="width:100%;min-height:52px;"></textarea>
+        </div>
+
+        <!-- 図面画像添付 -->
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;">
+            図面画像（任意）
+            <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;font-size:12px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:5px;padding:2px 8px;text-decoration:none;white-space:nowrap;">✂️ PDFから切り出す</a>
+          </label>
+          <div id="h-imgLabel" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
+            onclick="document.getElementById('h-imgFile').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+            ondragleave="this.style.borderColor='var(--border)'"
+            ondrop="handleHataImgDrop(event)">
+            📷 タップ or ドラッグ&ドロップ
+          </div>
+          <input type="file" id="h-imgFile" accept="image/*,.pdf" style="display:none" onchange="handleHataImgSelect(this)">
+          <div id="h-imgPreview" style="display:none;margin-top:8px;">
+            <img id="h-previewImg" style="max-width:100%;border-radius:6px;max-height:120px;object-fit:contain;">
+            <div style="font-size:14px;color:var(--text3);margin-top:4px;" id="h-imgName"></div>
+            <button onclick="clearHataImg()" style="font-size:14px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px;">✕ 削除</button>
+          </div>
+        </div>
+
+        <input type="hidden" id="h-editKey">
+        <button class="btn-save" onclick="saveHata()">💾 旗揚げマスタを登録</button>
+        <button class="btn-cancel" id="btnCancelHata" onclick="clearHataForm()">キャンセル</button>
+      </div>
+
+      <div class="list-area">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <h3 id="hataListTitle" style="margin:0;">登録済み旗揚げマスタ</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;">✂️ 断面図切り出し</a>
+            <button onclick="exportHataCSV()" style="background:rgba(34,197,94,0.1);border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">📤 CSV出力</button>
+            <label style="background:rgba(79,142,247,0.1);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">
+              📥 CSV読込<input type="file" accept=".csv,.txt" style="display:none" onchange="importHataCSV(event)">
+            </label>
+            <button onclick="exportHataJSON()" style="background:rgba(245,158,11,0.1);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">💾 JSONバックアップ</button>
+            <label style="background:rgba(245,158,11,0.1);border:1px solid var(--orange);color:var(--orange);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">
+              📂 JSON復元<input type="file" accept=".json" style="display:none" onchange="importHataJSON(event)">
+            </label>
+          </div>
+        </div>
+        <!-- 複数選択削除バー（管理者のみ表示） -->
+        <div id="hataMultiBar" style="display:none;align-items:center;gap:10px;margin-bottom:8px;padding:7px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;color:var(--text2);">
+            <input type="checkbox" id="hataSelectAll" onchange="toggleAllHata(this.checked)" style="width:16px;height:16px;cursor:pointer;">
+            全選択
+          </label>
+          <button id="hataDelSelBtn" onclick="deleteSelectedHata()" disabled style="background:rgba(239,68,68,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 12px;font-size:14px;cursor:pointer;opacity:0.5;">🗑 選択削除（0件）</button>
+        </div>
+        <div id="hataList"><div class="empty-state">現場を選択してください</div></div>
+      </div>
+    </div>
+
+    <!-- ── 現場間コピーモーダル ── -->
+<div class="modal-overlay" id="copyModal" onclick="if(event.target===this)closeCopyModal()">
+  <div class="modal" style="max-width:420px;width:94%;padding:24px;">
+    <button class="btn-close" onclick="closeCopyModal()">✕</button>
+    <h3 style="font-size:16px;margin-bottom:16px;">📋 現場間コピー</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:12px;color:var(--text2);font-weight:700;">コピー元（現在の現場）</label>
+        <div id="copySrcLabel" style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:14px;margin-top:4px;color:var(--accent);font-weight:700;">—</div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);font-weight:700;">コピー先（現場を選択）</label>
+        <select id="copyDestSel" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:14px;margin-top:4px;">
+          <option value="">― コピー先を選択 ―</option>
+        </select>
+      </div>
+      <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:12px;">
+        <div style="font-size:12px;color:var(--text2);font-weight:700;margin-bottom:8px;">コピーする内容を選択</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:6px;">
+          <input type="checkbox" id="copyOptRb" checked style="width:16px;height:16px;">
+          🏗️ 路盤構成マスタ
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:6px;">
+          <input type="checkbox" id="copyOptHata" style="width:16px;height:16px;">
+          🗂 旗揚げマスタ
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+          <input type="checkbox" id="copyOptDwg" style="width:16px;height:16px;">
+          📋 図面リスト（URLのみ）
+        </label>
+      </div>
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px;font-size:13px;color:var(--text2);">
+        ⚠️ コピー先に既存データがある場合は <strong style="color:var(--yellow);">上書き</strong> されます
+      </div>
+      <button onclick="execCopySite()" style="background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.5);color:#a78bfa;border-radius:8px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">
+        📋 コピー実行
+      </button>
     </div>
   </div>
 </div>
+
+<!-- ── 変更履歴モード（管理者のみ） ── -->
+    <div id="modeAudit" class="mode-panel hidden">
+      <div class="form-area" style="padding-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <h3 style="margin:0;font-size:15px;">🕑 変更履歴ログ</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <select id="auditSiteFilter" onchange="renderAuditLog()"
+              style="background:var(--bg3);border:1px solid var(--border);color:var(--text);
+                     border-radius:6px;padding:5px 8px;font-size:13px;">
+              <option value="">すべての現場</option>
+            </select>
+            <button onclick="loadAuditLog()"
+              style="background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);
+                     border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">🔄 更新</button>
+          </div>
+        </div>
+      </div>
+      <div class="list-area" id="auditLogList">
+        <div class="empty-state">読み込み中...</div>
+      </div>
+    </div>
+
+  </div><!-- /panel-right -->
+</div><!-- /main -->
 
 <div class="modal-overlay" id="loginModal">
   <div class="modal">
@@ -184,7 +562,7 @@ header .btn-admin.active{background:rgba(79,142,247,.2);border-color:var(--blue)
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 'use strict';
-const FIREBASE_CONFIG = {
+const FIREBASE_CONFIG={
   apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
   authDomain:"alrit-kandenkou.firebaseapp.com",
   projectId:"alrit-kandenkou",
@@ -192,197 +570,433 @@ const FIREBASE_CONFIG = {
   messagingSenderId:"640432772833",
   appId:"1:640432772833:web:ab2aff11980621322809a0"
 };
-const ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+const ADMIN_EMAIL='sato.k.katawakuya@gmail.com';
 
-let _fbDb=null,_fbAuth=null,_isAdmin=false;
+let _fbDb=null,_fbAuth=null,_isAdmin=false,_isLoggedIn=false;
 let _selectedSiteId='';
-let _kariAsRows=[], _honAsRows=[];
-let _kariRbRows=[], _honRbRows=[];   // 路盤工層
-let _pdfDoc=null, _pdfPage=1, _pdfTotal=0;
+let _kariAsRows=[],_honAsRows=[];
+let _kariRbRows=[],_honRbRows=[];
+let _kariFreeMode=false,_honFreeMode=false;
+let _kariFreeRows=[],_honFreeRows=[];
+let _pdfDoc=null,_pdfPage=1,_pdfTotal=0;
+let _currentMode='roadbed';
 
 if(typeof pdfjsLib!=='undefined'){
-  pdfjsLib.GlobalWorkerOptions.workerSrc=
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-// AS層選択肢
+// ======================================
+// AS層 選択肢
+// ======================================
 const AS_OPTIONS={
   surface:['再生密粒度AS混合物','密粒度AS混合物','密粒度改質AS混合物','密粒改良1','表層ポーラスAS混合物（透水性）','開粒度AS混合物','その他（自由入力）'],
   base:   ['再生粗粒度AS混合物','粗粒度AS混合物','粗粒度改質AS混合物（改質Ⅱ型）','その他（自由入力）'],
   other:  ['瀝青安定処理','その他（自由入力）'],
 };
 
-// 路盤層 区分ごとの種別選択肢
-const RB_SIZES = {
-  rm:   ['RM-30','RM-40'],
-  rc:   ['RC-30','RC-40'],
-  free: [],
-};
+// ======================================
+// 路盤層 区分定義（cat = 'RM-30'|'RM-40'|'RC-30'|'RC-40'|'free'）
+// ======================================
+const CAT_COLOR={'RM-30':'rgba(34,197,94,0.2)','RM-40':'rgba(34,197,94,0.2)','RC-30':'rgba(167,139,250,0.2)','RC-40':'rgba(167,139,250,0.2)','上層':'rgba(79,142,247,0.2)','下層':'rgba(20,184,166,0.2)',free:'rgba(245,158,11,0.2)',rm:'rgba(34,197,94,0.2)',rc:'rgba(167,139,250,0.2)',rmfree:'rgba(34,197,94,0.15)',rcfree:'rgba(167,139,250,0.15)'};
+const CAT_TC   ={'RM-30':'var(--green)','RM-40':'var(--green)','RC-30':'var(--purple)','RC-40':'var(--purple)','上層':'var(--blue)','下層':'#14b8a6',free:'var(--orange)',blank:'var(--text3)',rm:'var(--green)',rc:'var(--purple)',rmfree:'var(--green)',rcfree:'var(--purple)'};
+const CAT_LBL  ={'RM-30':'RM-30','RM-40':'RM-40','RC-30':'RC-30','RC-40':'RC-40','上層':'上層','下層':'下層',free:'フリー',rm:'RM',rc:'RC',rmfree:'RM+自由',rcfree:'RC+自由'};
 
-// ---- Firebase ----
+// 小区分（subcat）定義
+const SUBCAT_TC ={'RM-30':'var(--green)','RM-40':'var(--green)','RC-30':'var(--purple)','RC-40':'var(--purple)',subfree:'var(--orange)'};
+const SUBCAT_LBL={'RM-30':'RM-30','RM-40':'RM-40','RC-30':'RC-30','RC-40':'RC-40',subfree:'フリー'};
+
+// catがRMグループかRCグループかの判定（旧フォーマット互換含む）
+function isRmCat(c){return c==='rm'||c==='rmfree'||String(c).startsWith('RM');}
+function isRcCat(c){return c==='rc'||c==='rcfree'||String(c).startsWith('RC');}
+
+// ======================================
+// 標準型プリセット（85型〜14型）
+// ======================================
+const STANDARD_PRESETS = [
+  {
+    key:'std_85', label:'車道部 85型 D交通', color:'#4f8ef7',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:50},{name:'再生粗粒度AS混合物',t:50}],
+    kariRbLayers:[
+      {cat:'上層',subcat:'RM-40',name:'',t:150,n:3,totalMm:450},
+      {cat:'下層',subcat:'RC-40',name:'',t:150,n:2,totalMm:300},
+    ],
+    kariTotalH:0.850,
+    honAsLayers:[
+      {name:'表層ポーラスAS混合物（透水性）',t:50},
+      {name:'粗粒度改質AS混合物（改質Ⅱ型）',t:50},
+      {name:'再生粗粒度AS混合物',t:50},
+      {name:'瀝青安定処理',t:100},
+      {name:'瀝青安定処理',t:100},
+    ],
+    honRbLayers:[
+      {cat:'上層',subcat:'RM-40',name:'',t:200,n:1,totalMm:200},
+      {cat:'下層',subcat:'RC-40',name:'',t:300,n:1,totalMm:300},
+    ],
+    honTotalH:0.850, updatedAt:'2026-05-15',
+  },
+  {
+    key:'std_40', label:'車道側道部 40型 L交通', color:'#22c55e',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:50}],
+    kariRbLayers:[
+      {cat:'上層',subcat:'RM-40',name:'',t:150,n:1,totalMm:150},
+      {cat:'下層',subcat:'RC-40',name:'',t:200,n:1,totalMm:200},
+    ],
+    kariTotalH:0.400,
+    honAsLayers:[{name:'密粒度AS混合物',t:50}],
+    honRbLayers:[
+      {cat:'上層',subcat:'RM-40',name:'',t:150,n:1,totalMm:150},
+      {cat:'下層',subcat:'RC-40',name:'',t:200,n:1,totalMm:200},
+    ],
+    honTotalH:0.400, updatedAt:'2026-05-15',
+  },
+  {
+    key:'std_30', label:'歩道切下部 30型 P交通 透水性cタイプ', color:'#f97316',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:50}],
+    kariRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:100,n:1,totalMm:100},
+      {cat:'下層',subcat:'RC-40',name:'',t:150,n:1,totalMm:150},
+    ],
+    kariTotalH:0.300,
+    honAsLayers:[{name:'開粒度AS混合物',t:50}],
+    honRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:250,n:1,totalMm:250},
+    ],
+    honTotalH:0.300, updatedAt:'2026-05-15',
+  },
+  {
+    key:'std_20', label:'歩道切下部 20型 P交通 透水性bタイプ', color:'#eab308',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:50}],
+    kariRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:150,n:1,totalMm:150},
+    ],
+    kariTotalH:0.200,
+    honAsLayers:[{name:'開粒度AS混合物',t:50}],
+    honRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:150,n:1,totalMm:150},
+    ],
+    honTotalH:0.200, updatedAt:'2026-05-15',
+  },
+  {
+    key:'std_14cut', label:'歩道切下部 14型 P交通 透水性aタイプ', color:'#a78bfa',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:40}],
+    kariRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:100,n:1,totalMm:100},
+    ],
+    kariTotalH:0.140,
+    honAsLayers:[{name:'開粒度AS混合物',t:40}],
+    honRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:100,n:1,totalMm:100},
+    ],
+    honTotalH:0.140, updatedAt:'2026-05-15',
+  },
+  {
+    key:'std_14gen', label:'歩道一般部 14型 P交通 透水性舗装', color:'#7c3aed',
+    kariAsLayers:[{name:'再生密粒度AS混合物',t:40}],
+    kariRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:100,n:1,totalMm:100},
+    ],
+    kariTotalH:0.140,
+    honAsLayers:[{name:'開粒度AS混合物',t:40}],
+    honRbLayers:[
+      {cat:'下層',subcat:'RC-40',name:'',t:100,n:1,totalMm:100},
+    ],
+    honTotalH:0.140, updatedAt:'2026-05-15',
+  },
+];
+
+function importStandardPresets(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  const existing=getLocalRb(_selectedSiteId);
+  const existingKeys=new Set(existing.map(r=>r.key));
+  const toAdd=STANDARD_PRESETS.filter(r=>!existingKeys.has(r.key));
+  if(toAdd.length===0){showToast('ℹ️ 標準型はすでにすべて登録済みです');return;}
+  // 各プリセットにsaveConfig互換フィールドを追加
+  const now=new Date().toISOString().slice(0,10);
+  const addFull=toAdd.map(r=>{
+    const sumMm=arr=>arr.reduce((s,x)=>s+(x.totalMm||x.t*x.n||x.t||0),0);
+    const kariAsT=r.kariAsLayers.reduce((s,a)=>s+(a.t||0),0);
+    const honAsT =r.honAsLayers.reduce((s,a)=>s+(a.t||0),0);
+    const kariRbT=sumMm(r.kariRbLayers);
+    const honRbT =sumMm(r.honRbLayers);
+    const isRm=s=>s.startsWith('RM');const isRc=s=>s.startsWith('RC');
+    const sumCatMm=(arr,fn)=>arr.filter(x=>fn(x.subcat||'')).reduce((s,x)=>s+(x.totalMm||x.t*(x.n||1)),0);
+    return{
+      ...r,
+      kariRmSize:40,kariRmH:sumCatMm(r.kariRbLayers,isRm)/1000,kariRmLayers:'',
+      kariRcSize:40,kariRcH:sumCatMm(r.kariRbLayers,isRc)/1000,kariRcLayers:'',
+      kariTotalH:_kariFreeMode?(kariFreeT/1000):(kariAsT+kariRbT)/1000,
+      honRmSize:40,honRmH:sumCatMm(r.honRbLayers,isRm)/1000,honRmLayers:'',
+      honRcSize:40,honRcH:sumCatMm(r.honRbLayers,isRc)/1000,honRcLayers:'',
+      honTotalH:_honFreeMode?(honFreeT/1000):(honAsT+honRbT)/1000,
+    kariFreeMode:_kariFreeMode||undefined,
+    kariFreeRows:_kariFreeMode?_kariFreeRows.filter(r=>r.name||r.t>0):undefined,
+    honFreeMode:_honFreeMode||undefined,
+    honFreeRows:_honFreeMode?_honFreeRows.filter(r=>r.name||r.t>0):undefined,
+      updatedAt:now,
+    };
+  });
+  const updated=[...existing,...addFull];
+  saveRbForSite(_selectedSiteId,updated);
+  renderConfigList(updated);
+  showToast('✅ 標準型 '+toAdd.length+'種を登録しました（'+toAdd.map(r=>r.label).join('、')+'）');
+}
+
+
+// ======================================
+// Firebase
+// ======================================
 function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbDb=firebase.firestore(); _fbAuth=firebase.auth();
-    _fbAuth.onAuthStateChanged(u=>{ _isAdmin=!!(u&&u.email===ADMIN_EMAIL); updateAdminUI(); });
+    _fbAuth.onAuthStateChanged(u=>{
+    _isLoggedIn=!!u;
+    _isAdmin=!!(u&&u.email===ADMIN_EMAIL);
+    updateAdminUI();
+    if(_isAdmin&&!localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
+  });
     loadSitesFromFirebase();
-  }catch(e){ console.warn('[FB]',e); loadSitesLocal(); }
+  }catch(e){console.warn('[FB]',e);loadSitesLocal();}
 }
 function loadSitesFromFirebase(){
-  if(!_fbDb){loadSitesLocal();return;}
+  loadSitesLocal(); // 即時キャッシュ表示
+  if(!_fbDb){return;}
   _fbDb.collection('masters').doc('site_master').get()
-    .then(doc=>{ if(doc.exists&&doc.data().data) localStorage.setItem('site_master',JSON.stringify(doc.data().data)); loadSitesLocal(); })
-    .catch(()=>loadSitesLocal());
+    .then(doc=>{if(doc.exists&&doc.data().data){localStorage.setItem('site_master',JSON.stringify(doc.data().data));loadSitesLocal();}})
+    .catch(()=>{});
 }
 function loadSitesLocal(){
   const sites=JSON.parse(localStorage.getItem('site_master')||'[]');
-  const sel=document.getElementById('siteSelect');
-  sel.innerHTML='<option value="">― 現場を選択 ―</option>';
-  sites.forEach(s=>{ const o=document.createElement('option'); o.value=s.id||s.siteId||s.name; o.textContent=s.name||s.siteName||s.id; sel.appendChild(o); });
+  ['siteSelect','siteSelectRb','siteSelectDwg','siteSelectHata'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    sel.innerHTML='<option value="">― 現場を選択 ―</option>';
+    sites.forEach(s=>{const o=document.createElement('option');o.value=s.id||s.siteId||s.name;o.textContent=s.name||s.siteName||s.id;sel.appendChild(o);});
+    if(_selectedSiteId) sel.value=_selectedSiteId;
+  });
+  initCrossSiteSel();
 }
 
-// ---- 現場選択 ----
-function onSiteChange(id){ _selectedSiteId=id; if(!id){document.getElementById('configList').innerHTML='<div class="empty-state">現場を選択してください</div>';return;} loadRoadbedsForSite(id); }
-function getRbKey(id){ return 'roadbed_masters_'+id; }
+// ======================================
+// 現場選択
+// ======================================
+function onSiteChange(id){
+  _selectedSiteId=id;
+  ['siteSelect','siteSelectRb','siteSelectDwg','siteSelectHata'].forEach(sid=>{const el=document.getElementById(sid);if(el)el.value=id;});
+  if(!id){
+    document.getElementById('configList').innerHTML='<div class="empty-state">現場を選択してください</div>';
+    document.getElementById('dwgList').innerHTML='<div class="empty-state">現場を選択してください</div>';
+    return;
+  }
+  loadRoadbedsForSite(id);
+  loadDrawingsForSite(id);
+  updateExistingConfigSel();
+  initCrossSiteSel();
+  loadHataForSite(id);
+  refreshViewerFilter();
+}
+
+// ======================================
+// 路盤構成 CRUD
+// ======================================
+function getRbKey(id){return 'roadbed_masters_'+id;}
+function getLocalRb(id){return JSON.parse(localStorage.getItem(getRbKey(id))||'[]');}
+
 function loadRoadbedsForSite(id){
   if(!_fbDb){renderConfigList(getLocalRb(id));return;}
-  _fbDb.collection('masters').doc('roadbed_masters').get()
-    .then(doc=>{ if(doc.exists&&doc.data().data){ const all=doc.data().data; if(all[id]) localStorage.setItem(getRbKey(id),JSON.stringify(all[id])); } renderConfigList(getLocalRb(id)); })
-    .catch(()=>renderConfigList(getLocalRb(id)));
+  // 現場別ドキュメントを優先して読む
+  _fbDb.collection('masters').doc('roadbed_masters_'+id).get()
+    .then(doc=>{
+      if(doc.exists&&doc.data().data&&doc.data().data.length>0){
+        localStorage.setItem(getRbKey(id),JSON.stringify(doc.data().data));
+        renderConfigList(getLocalRb(id));
+        return;
+      }
+      // フォールバック: モノリシック形式
+      return _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(doc2=>{
+          if(doc2.exists&&doc2.data().data){const all=doc2.data().data;if(all[id])localStorage.setItem(getRbKey(id),JSON.stringify(all[id]));}
+          renderConfigList(getLocalRb(id));
+        });
+    }).catch(()=>{
+      _fbDb.collection('masters').doc('roadbed_masters').get()
+        .then(doc2=>{
+          if(doc2.exists&&doc2.data().data){const all=doc2.data().data;if(all[id])localStorage.setItem(getRbKey(id),JSON.stringify(all[id]));}
+          renderConfigList(getLocalRb(id));
+        }).catch(()=>renderConfigList(getLocalRb(id)));
+    });
 }
-function getLocalRb(id){ return JSON.parse(localStorage.getItem(getRbKey(id))||'[]'); }
 function saveRbForSite(id,configs){
   localStorage.setItem(getRbKey(id),JSON.stringify(configs));
-  if(!_fbDb||!_isAdmin) return;
+  if(!_fbDb||!_isAdmin){_markLocalModified();return;}
+  // undefined を含むフィールドを除去（Firebase は undefined を拒否する）
+  var safe;
+  try{safe=JSON.parse(JSON.stringify(configs));}catch(e){safe=configs;}
+  // 現場別ドキュメントに保存（推奨フォーマット）
+  try{
+    _fbDb.collection('masters').doc('roadbed_masters_'+id).set({data:safe,updatedAt:new Date().toISOString()})
+      .catch(e=>console.warn('[FB rb per-site save]',e));
+  }catch(e){console.warn('[FB rb per-site save sync]',e);}
+  // モノリシック形式にも保存（後方互換）
   _fbDb.collection('masters').doc('roadbed_masters').get()
-    .then(doc=>{ const all=(doc.exists&&doc.data().data)?doc.data().data:{}; all[id]=configs; return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()}); })
-    .catch(e=>console.warn('[FB]',e));
+    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=safe;return _fbDb.collection('masters').doc('roadbed_masters').set({data:all,updatedAt:new Date().toISOString()});})
+    .then(()=>{
+      _markSynced();
+      var count=Array.isArray(configs)?configs.length:Object.keys(configs).length;
+      _auditLog('roadbed_save','路盤構成 '+count+'件 保存 ['+id+']');
+    })
+    .catch(e=>{console.warn('[FB]',e);_markLocalModified();});
 }
 
-// ---- AS層 ----
-function addAsRow(s){ (s==='kari'?_kariAsRows:_honAsRows).push({role:'surface',preset:'',custom:'',t:0}); renderAsRows(s); }
-function removeAsRow(s,i){ (s==='kari'?_kariAsRows:_honAsRows).splice(i,1); renderAsRows(s); updateTotal(s); }
+// ======================================
+// AS層
+// ======================================
+function addAsRow(s){(s==='kari'?_kariAsRows:_honAsRows).push({role:'surface',preset:'',custom:'',t:0});renderAsRows(s);}
+function removeAsRow(s,i){(s==='kari'?_kariAsRows:_honAsRows).splice(i,1);renderAsRows(s);updateTotal(s);}
 function updateAsRow(s,i,f,v){
-  const arr=s==='kari'?_kariAsRows:_honAsRows; if(!arr[i])return;
-  arr[i][f]=v; if(f==='role'){arr[i].preset='';arr[i].custom='';}
-  renderAsRows(s); updateTotal(s);
+  const arr=s==='kari'?_kariAsRows:_honAsRows;if(!arr[i])return;
+  arr[i][f]=v;
+  if(f==='role'){arr[i].preset='';arr[i].custom='';renderAsRows(s);}
+  updateTotal(s);
 }
 function renderAsRows(s){
   const arr=s==='kari'?_kariAsRows:_honAsRows;
-  const el=document.getElementById(s+'-as-rows'); if(!el)return;
-  const f='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:12px;';
+  const el=document.getElementById(s+'-as-rows');if(!el)return;
+  const fs='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;';
   el.innerHTML=arr.map((a,i)=>{
     const role=a.role||'surface';
-    const opts=AS_OPTIONS[role]||AS_OPTIONS.surface;
+    const opts=role==='blank'?[]:AS_OPTIONS[role]||AS_OPTIONS.surface;
     const isOther=a.preset==='その他（自由入力）';
-    const rc=role==='surface'?'rgba(79,142,247,0.9)':role==='base'?'rgba(34,197,94,0.9)':'var(--orange)';
+    const rc=role==='surface'?'rgba(79,142,247,0.9)':role==='base'?'rgba(34,197,94,0.9)':role==='blank'?'var(--text3)':'var(--orange)';
     const optHtml=opts.map(o=>`<option value="${o}"${a.preset===o?' selected':''}>${o}</option>`).join('');
-    const preview=isOther?a.custom:a.preset;
+    const preview=(isOther||role==='blank')?a.custom:a.preset;
     return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <select style="${f}width:72px;flex-shrink:0;color:${rc};font-weight:700;" onchange="updateAsRow('${s}',${i},'role',this.value)">
+        <select style="${fs}width:90px;flex-shrink:0;color:${rc};font-weight:700;" onchange="updateAsRow('${s}',${i},'role',this.value);renderAsRows('${s}')">
           <option value="surface"${role==='surface'?' selected':''}>表層</option>
           <option value="base"${role==='base'?' selected':''}>基層</option>
-          <option value="other"${role==='other'?' selected':''}>その他</option>
+          <option value="other"${role==='other'?' selected':''}>その他フリー入力</option>
+          <option value="blank"${role==='blank'?' selected':''}>未記入</option>
         </select>
-        <select style="${f}flex:1;min-width:100px;" onchange="updateAsRow('${s}',${i},'preset',this.value);var ci=document.getElementById('aci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'">
+        ${role==='blank' ? '' : `<select style="${fs}flex:1;min-width:100px;" onchange="updateAsRow('${s}',${i},'preset',this.value);var ci=document.getElementById('aci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'">
           <option value="">― 選択 ―</option>${optHtml}
-        </select>
+        </select>`}
         <input id="aci-${s}-${i}" type="text" value="${a.custom||''}" placeholder="材料名"
-          style="${f}flex:1;min-width:70px;${isOther?'':'display:none;'}"
+          style="${fs}flex:1;min-width:70px;${(isOther||role==='blank')?'':'display:none;'}"
           onchange="updateAsRow('${s}',${i},'custom',this.value)">
         <input type="number" value="${a.t||''}" placeholder="mm" min="0" step="5"
-          style="${f}width:58px;text-align:right;flex-shrink:0;"
+          style="${fs}width:58px;text-align:right;flex-shrink:0;"
           onchange="updateAsRow('${s}',${i},'t',+this.value)">
-        <span style="font-size:11px;color:var(--text3);">mm</span>
-        <button onclick="removeAsRow('${s}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;">✕</button>
+        <span style="font-size:14px;color:var(--text3);">mm</span>
+        <button onclick="removeAsRow('${s}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:21px;padding:2px 4px;line-height:1;">✕</button>
       </div>
-      ${preview||a.t>0?`<div style="font-size:10px;color:var(--text3);margin-top:3px;margin-left:4px;">→ ${preview||'未入力'}${a.t>0?' t='+a.t+'mm':''}</div>`:''}
+      ${preview||a.t>0?`<div style="font-size:13px;color:var(--text3);margin-top:3px;margin-left:4px;">→ ${role==='blank'?'':role==='surface'?'[表層] ':role==='base'?'[基層] ':'[その他] '}${preview||'未入力'}${a.t>0?' t='+a.t+'mm':''}</div>`:''}
     </div>`;
   }).join('');
 }
 
-// ---- 路盤工層（RB）----
-// row: { cat:'rm'|'rc'|'free', size:'RM-30'|'RM-40'|'RC-30'|'RC-40'|'', name:'', t:0, n:1 }
-function addRbRow(s){ (s==='kari'?_kariRbRows:_honRbRows).push({cat:'rm',size:'RM-40',name:'',t:0,n:1}); renderRbRows(s); }
-function removeRbRow(s,i){ (s==='kari'?_kariRbRows:_honRbRows).splice(i,1); renderRbRows(s); updateTotal(s); }
+// ======================================
+// 路盤層（RB）
+// ======================================
+function addRbRow(s){(s==='kari'?_kariRbRows:_honRbRows).push({cat:'上層',subcat:'RM-40',name:'',t:0,n:1});renderRbRows(s);}
+function removeRbRow(s,i){(s==='kari'?_kariRbRows:_honRbRows).splice(i,1);renderRbRows(s);updateTotal(s);}
+function rbRowTotal(r){return(r.t||0)*(r.n||1);}
+
 function updateRbRow(s,i,f,v){
-  const arr=s==='kari'?_kariRbRows:_honRbRows; if(!arr[i])return;
+  const arr=s==='kari'?_kariRbRows:_honRbRows;if(!arr[i])return;
   arr[i][f]=v;
-  if(f==='cat'){
-    // 区分変更時にsize初期化
-    if(v==='rm') arr[i].size='RM-40';
-    else if(v==='rc') arr[i].size='RC-40';
-    else arr[i].size='';
+  if(f==='cat'||f==='subcat'){
+    renderRbRows(s); // cat/subcat変更時のみ再描画（入力欄の表示が変わる）
+  } else {
+    const rowMm=rbRowTotal(arr[i]);
+    const el=document.getElementById('rb-total-'+s+'-'+i);
+    if(el) el.textContent='= '+rowMm+'mm';
   }
-  renderRbRows(s); updateTotal(s);
+  updateTotal(s);
 }
-function rbRowTotal(r){ return (r.t||0)*(r.n||1); }
 
 function renderRbRows(s){
   const arr=s==='kari'?_kariRbRows:_honRbRows;
-  const el=document.getElementById(s+'-rb-rows'); if(!el)return;
-  const f='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:12px;';
-  if(arr.length===0){ el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0 8px;">（路盤層なし）＋ボタンで追加</div>'; return; }
+  const el=document.getElementById(s+'-rb-rows');if(!el)return;
+  const fs='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;';
+  if(arr.length===0){el.innerHTML='<div style="font-size:14px;color:var(--text3);padding:4px 0 8px;">（路盤層なし）＋ボタンで追加</div>';return;}
   el.innerHTML=arr.map((r,i)=>{
-    const cat=r.cat||'rm';
-    const catColor=cat==='rm'?'rgba(34,197,94,0.9)':cat==='rc'?'rgba(167,139,250,0.9)':'var(--orange)';
-    const catLabel=cat==='rm'?'上層RM':cat==='rc'?'下層RC':'フリー';
-    const sizes=RB_SIZES[cat]||[];
-    const sizeOpts=sizes.map(sz=>`<option value="${sz}"${r.size===sz?' selected':''}>${sz}</option>`).join('');
-    const isFree=cat==='free';
+    const cat=r.cat||'上層';
+    const subcat=r.subcat||'RM-40';
+    const isCatFree=cat==='free'||cat==='blank';
+    const isSubFree=subcat==='subfree';
+    const catColor=CAT_TC[cat]||'var(--text2)';
+    const subcatColor=SUBCAT_TC[subcat]||'var(--text2)';
     const rowMm=rbRowTotal(r);
+    const lblFull=cat==='blank'?(r.name||'未記入'):isCatFree?(r.name||'フリー'):isSubFree?(cat+' '+(r.name||'フリー')):(cat+' '+subcat);
+    const subcatSel=!isCatFree?`<select style="${fs}width:80px;flex-shrink:0;color:${subcatColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'subcat',this.value)"><option value="RM-30"${subcat==='RM-30'?' selected':''}>RM-30</option><option value="RM-40"${subcat==='RM-40'?' selected':''}>RM-40</option><option value="RC-30"${subcat==='RC-30'?' selected':''}>RC-30</option><option value="RC-40"${subcat==='RC-40'?' selected':''}>RC-40</option><option value="subfree"${isSubFree?' selected':''}>フリー</option></select>`:'';
+    const nameInput=(isCatFree||isSubFree)?`<input type="text" value="${r.name||''}" placeholder="層名（例：既設路盤）" style="${fs}flex:1;min-width:80px;" onchange="updateRbRow('${s}',${i},'name',this.value)">`:'';
     return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <!-- 区分 -->
-        <select style="${f}width:76px;flex-shrink:0;color:${catColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'cat',this.value)">
-          <option value="rm"${cat==='rm'?' selected':''}>上層RM</option>
-          <option value="rc"${cat==='rc'?' selected':''}>下層RC</option>
-          <option value="free"${cat==='free'?' selected':''}>フリー</option>
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+        <select style="${fs}width:100px;flex-shrink:0;color:${catColor};font-weight:700;" onchange="updateRbRow('${s}',${i},'cat',this.value);renderRbRows('${s}')">
+          <option value="上層"${cat==='上層'?' selected':''}>上層路盤</option>
+          <option value="下層"${cat==='下層'?' selected':''}>下層路盤</option>
+          <option value="free"${isCatFree?' selected':''}>その他フリー入力</option>
+          <option value="blank"${cat==='blank'?' selected':''}>未記入</option>
         </select>
-        <!-- 種別 or 名称 -->
-        ${isFree
-          ?`<input type="text" value="${r.name||''}" placeholder="層名（例：既設路盤）"
-              style="${f}flex:1;min-width:90px;"
-              onchange="updateRbRow('${s}',${i},'name',this.value)">`
-          :`<select style="${f}width:80px;flex-shrink:0;" onchange="updateRbRow('${s}',${i},'size',this.value)">
-              ${sizeOpts}
-            </select>`
-        }
-        <!-- 1層の厚み -->
-        <input type="number" value="${r.t||''}" placeholder="t(mm)" min="0" step="10"
-          style="${f}width:68px;text-align:right;flex-shrink:0;"
+        ${subcatSel}
+        ${nameInput}
+        <input type="number" value="${r.t||''}" placeholder="t" min="0" step="10"
+          style="${fs}width:62px;text-align:right;flex-shrink:0;"
           onchange="updateRbRow('${s}',${i},'t',+this.value)">
-        <span style="font-size:11px;color:var(--text3);flex-shrink:0;">mm</span>
-        <!-- 層数 -->
-        <span style="font-size:11px;color:var(--text3);flex-shrink:0;">×</span>
+        <span style="font-size:14px;color:var(--text3);flex-shrink:0;">mm×</span>
         <input type="number" value="${r.n||1}" min="1" step="1"
-          style="${f}width:48px;text-align:center;flex-shrink:0;"
+          style="${fs}width:40px;text-align:center;flex-shrink:0;"
           onchange="updateRbRow('${s}',${i},'n',+this.value)">
-        <span style="font-size:11px;color:var(--text3);flex-shrink:0;">層</span>
-        <!-- 合計表示 -->
-        <span style="font-size:12px;color:var(--purple);font-weight:700;flex-shrink:0;min-width:52px;text-align:right;">= ${rowMm}mm</span>
-        <button onclick="removeRbRow('${s}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;">✕</button>
+        <span style="font-size:14px;color:var(--text3);flex-shrink:0;">層</span>
+        <span id="rb-total-${s}-${i}" style="font-size:16px;color:var(--purple);font-weight:700;flex-shrink:0;min-width:52px;text-align:right;">= ${rowMm}mm</span>
+        <button onclick="removeRbRow('${s}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:21px;padding:2px 4px;line-height:1;">✕</button>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:3px;margin-left:4px;">
-        → ${catLabel}${isFree?(r.name?' ('+r.name+')'):''}${r.size?' '+r.size:''}${r.t>0?' t='+r.t+'mm':''}${(r.n||1)>1?' × '+(r.n||1)+'層':''}${rowMm>0?' = '+rowMm+'mm':''}
+      <div style="font-size:13px;color:var(--text3);margin-top:3px;margin-left:2px;">
+        → ${lblFull}${r.t>0?' t='+r.t+'mm':''}${(r.n||1)>1?' × '+(r.n||1)+'層':''}${rowMm>0?' = '+rowMm+'mm':''}
       </div>
     </div>`;
   }).join('');
 }
 
-// ---- 合計計算 ----
+// ======================================
+// 合計計算
+// ======================================
 function updateTotal(s){
+  if(s==='kari'&&_kariFreeMode){_updateFreeTotal('kari',_kariFreeRows);return;}
+  if(s==='hon'&&_honFreeMode){_updateFreeTotal('hon',_honFreeRows);return;}
+  _updateTotalNormal(s);
+}
+function _updateFreeTotal(s,arr){
+  const total=arr.reduce((a,r)=>a+(+r.t||0),0);
+  const _isAS=t=>!t||t==='AS'||t==='surface'||t==='base';
+  const _isRB=t=>t==='路盤'||t==='upper_rb'||t==='lower_rb';
+  const _isCN=t=>t==='コンクリート'||t==='concrete';
+  const _isCNRC=t=>t==='cn_rc';
+  const asT=arr.filter(r=>_isAS(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const rbT=arr.filter(r=>_isRB(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const cnT=arr.filter(r=>_isCN(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const cnrcT=arr.filter(r=>_isCNRC(r.type)).reduce((a,r)=>a+(+r.t||0),0);
+  const parts=[];
+  if(asT>0) parts.push('<span style="color:var(--blue)">AS '+asT+'mm</span>');
+  if(rbT>0) parts.push('<span style="color:var(--green)">路盤 '+rbT+'mm</span>');
+  if(cnT>0) parts.push('<span style="color:var(--purple)">コンクリート '+cnT+'mm</span>');
+  if(cnrcT>0) parts.push('<span style="color:rgba(234,88,12,0.9)">CN間路盤 '+cnrcT+'mm</span>');
+  const breakdown=parts.length>1?' <span style="font-size:13px;color:var(--text3)">('+parts.join(' / ')+')</span>':'';
+  const el=document.getElementById(s+'-total');
+  if(el) el.innerHTML='合計 H = <b>'+total+' mm</b>'+breakdown;
+}
+function _updateTotalNormal(s){
   const asArr=s==='kari'?_kariAsRows:_honAsRows;
   const rbArr=s==='kari'?_kariRbRows:_honRbRows;
-  const asTotal=asArr.reduce((a,r)=>a+(r.t||0),0);
-  const rbTotal=rbArr.reduce((a,r)=>a+rbRowTotal(r),0);
-  const total=asTotal+rbTotal;
+  const total=asArr.reduce((a,r)=>a+(r.t||0),0)+rbArr.reduce((a,r)=>a+rbRowTotal(r),0);
   const el=document.getElementById(s+'-total');
   if(el) el.innerHTML=`合計 H = <b>${total} mm</b>`;
 }
 
-// ---- タブ ----
+// ======================================
+// タブ切替（仮復旧/本復旧）
+// ======================================
 function switchTab(tab){
   document.getElementById('formKari').style.display=tab==='kari'?'':'none';
   document.getElementById('formHon').style.display=tab==='hon'?'':'none';
@@ -390,7 +1004,27 @@ function switchTab(tab){
   document.getElementById('tabHon').className=tab==='hon'?'active':'';
 }
 
-// ---- 登録 ----
+// ======================================
+// モード切替（路盤構成/図面管理）
+// ======================================
+function switchMode(mode){
+  _currentMode=mode;
+  document.getElementById('modeRoadbed').classList.toggle('hidden',mode!=='roadbed');
+  document.getElementById('modeDrawing').classList.toggle('hidden',mode!=='drawing');
+  document.getElementById('modeHata').classList.toggle('hidden',mode!=='hata');
+  document.getElementById('modeAudit').classList.toggle('hidden',mode!=='audit');
+  document.getElementById('modeTabRoadbed').className=mode==='roadbed'?'active':'';
+  document.getElementById('modeTabDrawing').className=mode==='drawing'?'active':'';
+  document.getElementById('modeTabHata').className=mode==='hata'?'active':'';
+  document.getElementById('modeTabAudit').className=mode==='audit'?'active admin-only':'admin-only';
+  if(mode==='drawing'&&_selectedSiteId) populateDwgRbSelect();
+  if(mode==='hata'&&_selectedSiteId) loadHataForSite(_selectedSiteId);
+  if(mode==='audit') loadAuditLog();
+}
+
+// ======================================
+// 路盤構成 登録・編集・削除
+// ======================================
 function saveConfig(){
   if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
   if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
@@ -399,224 +1033,1728 @@ function saveConfig(){
   const color=document.getElementById('rbColor').value;
   const editKey=document.getElementById('editKey').value;
 
-  // AS層
-  const asFilter=arr=>arr.filter(a=>a.preset||a.custom||a.t>0).map(a=>({name:a.preset==='その他（自由入力）'?a.custom:a.preset, t:+a.t}));
-  // RB層 → 保存 + order.html互換フィールド自動生成
-  const rbToLayers=arr=>arr.filter(r=>r.t>0||r.name||r.size).map(r=>({cat:r.cat, size:r.size||'', name:r.name||'', t:r.t||0, n:r.n||1, totalMm:rbRowTotal(r)}));
-  const kariRbL=rbToLayers(_kariRbRows);
-  const honRbL =rbToLayers(_honRbRows);
+  const asFilter=arr=>arr.filter(a=>a.preset||a.custom||a.t>0).map(a=>({name:a.preset==='その他（自由入力）'?a.custom:a.preset,t:+a.t}));
+  const rbToLayers=arr=>arr.filter(r=>r.t>0||r.name).map(r=>({cat:r.cat,subcat:r.subcat||'',size:r.subcat&&r.subcat!=='subfree'?r.subcat:'',name:r.name||'',t:r.t||0,n:r.n||1,totalMm:rbRowTotal(r)}));
 
-  // order.html互換: RM/RC合算
-  const sumCat=(arr,cat)=>arr.filter(r=>r.cat===cat).reduce((s,r)=>s+rbRowTotal(r),0);
-  const firstSize=(arr,cat)=>{ const r=arr.find(x=>x.cat===cat&&x.size); return r?parseInt(r.size.replace(/\D/g,''))||40:40; };
-  const layerStr=(arr,cat)=>arr.filter(r=>r.cat===cat&&r.t>0).map(r=>`${r.size||r.name} t=${r.t}mm${(r.n||1)>1?'×'+r.n+'層':''}`).join('、');
+  // order.html互換フィールド（subcatでRM/RC判定）
+  const sumCat=(arr,fn)=>arr.filter(r=>fn(r.subcat||'')).reduce((s,r)=>s+rbRowTotal(r),0);
+  const firstSize=(arr,fn)=>{const r=arr.find(x=>fn(x.subcat||''));return r?parseInt(String(r.subcat||'').replace(/\D/g,''))||40:40;};
+  const layerStr=(arr,fn)=>arr.filter(r=>fn(r.subcat||'')&&r.t>0).map(r=>{const lbl=(r.cat==='free'||r.subcat==='subfree')?(r.name||'フリー'):(r.cat+' '+r.subcat);return lbl+' t='+r.t+'mm'+((r.n||1)>1?'×'+r.n+'層':'');}).join('、');
 
-  const kariAsTotal=_kariAsRows.reduce((s,a)=>s+(a.t||0),0);
-  const honAsTotal =_honAsRows.reduce((s,a)=>s+(a.t||0),0);
-  const kariRbTotal=_kariRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
-  const honRbTotal =_honRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
+  const kariFreeT=_kariFreeRows.reduce((s,r)=>s+(+r.t||0),0);
+  const honFreeT =_honFreeRows.reduce((s,r)=>s+(+r.t||0),0);
+  const kariAsT=_kariFreeMode?0:_kariAsRows.reduce((s,a)=>s+(a.t||0),0);
+  const honAsT =_honFreeMode?0:_honAsRows.reduce((s,a)=>s+(a.t||0),0);
+  const kariRbT=_kariFreeMode?0:_kariRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
+  const honRbT =_honFreeMode?0:_honRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
 
   const entry={
-    key: editKey||('rb_'+Date.now()),
-    label, color,
-    kariAsLayers:  asFilter(_kariAsRows),
-    kariRbLayers:  kariRbL,
-    kariRmSize:    firstSize(_kariRbRows,'rm'),
-    kariRmH:       sumCat(_kariRbRows,'rm')/1000,
-    kariRmLayers:  layerStr(_kariRbRows,'rm'),
-    kariRcSize:    firstSize(_kariRbRows,'rc'),
-    kariRcH:       sumCat(_kariRbRows,'rc')/1000,
-    kariRcLayers:  layerStr(_kariRbRows,'rc'),
-    kariTotalH:    (kariAsTotal+kariRbTotal)/1000,
-    honAsLayers:   asFilter(_honAsRows),
-    honRbLayers:   honRbL,
-    honRmSize:     firstSize(_honRbRows,'rm'),
-    honRmH:        sumCat(_honRbRows,'rm')/1000,
-    honRmLayers:   layerStr(_honRbRows,'rm'),
-    honRcSize:     firstSize(_honRbRows,'rc'),
-    honRcH:        sumCat(_honRbRows,'rc')/1000,
-    honRcLayers:   layerStr(_honRbRows,'rc'),
-    honTotalH:     (honAsTotal+honRbTotal)/1000,
-    updatedAt: new Date().toISOString().slice(0,10),
+    key:editKey||('rb_'+Date.now()),label,color,
+    kariAsLayers:asFilter(_kariAsRows),kariRbLayers:rbToLayers(_kariRbRows),
+    kariRmSize:firstSize(_kariRbRows,isRmCat),kariRmH:sumCat(_kariRbRows,isRmCat)/1000,kariRmLayers:layerStr(_kariRbRows,isRmCat),
+    kariRcSize:firstSize(_kariRbRows,isRcCat),kariRcH:sumCat(_kariRbRows,isRcCat)/1000,kariRcLayers:layerStr(_kariRbRows,isRcCat),
+    kariTotalH:_kariFreeMode?kariFreeT/1000:(kariAsT+kariRbT)/1000,
+    kariFreeMode:_kariFreeMode||undefined,
+    kariFreeRows:_kariFreeMode?_kariFreeRows.filter(r=>r.t>0||r.name||r.preset):undefined,
+    honAsLayers:asFilter(_honAsRows),honRbLayers:rbToLayers(_honRbRows),
+    honRmSize:firstSize(_honRbRows,isRmCat),honRmH:sumCat(_honRbRows,isRmCat)/1000,honRmLayers:layerStr(_honRbRows,isRmCat),
+    honRcSize:firstSize(_honRbRows,isRcCat),honRcH:sumCat(_honRbRows,isRcCat)/1000,honRcLayers:layerStr(_honRbRows,isRcCat),
+    honTotalH:_honFreeMode?honFreeT/1000:(honAsT+honRbT)/1000,
+    honFreeMode:_honFreeMode||undefined,
+    honFreeRows:_honFreeMode?_honFreeRows.filter(r=>r.t>0||r.name||r.preset):undefined,
+    updatedAt:new Date().toISOString().slice(0,10),
   };
 
   const configs=getLocalRb(_selectedSiteId);
   const idx=configs.findIndex(r=>r.key===entry.key);
-  if(idx>=0) configs[idx]=entry; else configs.push(entry);
+  // editKey未指定でも同名ラベルが存在する場合は上書き（重複防止）
+  const labelIdx=idx<0?configs.findIndex(r=>r.label===label):-1;
+  if(idx>=0){ configs[idx]=entry; }
+  else if(labelIdx>=0){ entry.key=configs[labelIdx].key; configs[labelIdx]=entry; }
+  else{ configs.push(entry); }
   saveRbForSite(_selectedSiteId,configs);
   renderConfigList(configs);
   clearForm();
-  showToast(`✅「${label}」を登録しました`);
+  showToast('✅「'+label+'」を登録しました');
 }
 
-// ---- 編集 ----
-function editConfig(key){
-  const r=getLocalRb(_selectedSiteId).find(x=>x.key===key); if(!r)return;
+function _asRowFromSaved(a){
+  // 保存済みAS層 {name,t} を {role,preset,custom,t} に変換
+  const name=a.name||a.preset||'';
+  if(a.role&&a.preset!==undefined){return{role:a.role||'surface',preset:a.preset||'',custom:a.custom||'',t:a.t||0};}
+  if(!name) return{role:'surface',preset:'',custom:'',t:a.t||0};
+  for(const [r,opts] of Object.entries(AS_OPTIONS)){
+    if(opts.includes(name)) return{role:r,preset:name,custom:'',t:a.t||0};
+  }
+  return{role:'surface',preset:'その他（自由入力）',custom:name,t:a.t||0};
+}
+function _loadConfigToForm(r){
+  // 共通ロード処理（editConfig・loadExistingConfig 両方で使う）
   document.getElementById('editKey').value=r.key;
   document.getElementById('rbLabel').value=r.label||'';
   document.getElementById('rbColor').value=r.color||'#4f8ef7';
-  // AS層
-  _kariAsRows=(r.kariAsLayers||[]).map(a=>({role:'surface',preset:'',custom:a.name||'',t:a.t||0}));
-  _honAsRows =(r.honAsLayers ||[]).map(a=>({role:'surface',preset:'',custom:a.name||'',t:a.t||0}));
+  _kariFreeMode=!!r.kariFreeMode;
+  _honFreeMode =!!r.honFreeMode;
+  _kariFreeRows=_kariFreeMode?(r.kariFreeRows||[]).map(x=>({type:x.type||'surface',subcat:x.subcat||'',preset:x.preset||'',name:x.name||'',t:x.t||0})):[];
+  _honFreeRows =_honFreeMode ?(r.honFreeRows ||[]).map(x=>({type:x.type||'surface',subcat:x.subcat||'',preset:x.preset||'',name:x.name||'',t:x.t||0})):[];
+  _applyFreeMode('kari',_kariFreeMode);
+  _applyFreeMode('hon', _honFreeMode);
+  _kariAsRows=(r.kariAsLayers||[]).map(_asRowFromSaved);
+  _honAsRows =(r.honAsLayers ||[]).map(_asRowFromSaved);
   if(!_kariAsRows.length) _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
   if(!_honAsRows.length)  _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
-  // RB層: kariRbLayers があれば使用、なければ旧RM/RCから復元
   _kariRbRows=restoreRbRows(r,'kari');
   _honRbRows =restoreRbRows(r,'hon');
-  renderAsRows('kari'); renderAsRows('hon');
-  renderRbRows('kari'); renderRbRows('hon');
-  updateTotal('kari'); updateTotal('hon');
+  renderAsRows('kari');renderAsRows('hon');
+  renderRbRows('kari');renderRbRows('hon');
+  if(_kariFreeMode) renderFreeRows('kari');
+  if(_honFreeMode)  renderFreeRows('hon');
+  updateTotal('kari');updateTotal('hon');
   document.getElementById('btnCancel').style.display='';
+  switchTab('kari');
+}
+
+function loadExistingConfig(key){
+  if(!key){ clearForm(); return; }
+  const r=getLocalRb(_selectedSiteId).find(x=>x.key===key);
+  if(!r) return;
+  _loadConfigToForm(r);
+  showToast('📂「'+r.label+'」を読み込みました。修正後に「路盤構成を登録」で上書き保存されます。');
+  document.getElementById('rbLabel').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// ======================================
+// 他現場から流用
+// ======================================
+function initCrossSiteSel(){
+  const sel=document.getElementById('crossSiteSel');if(!sel)return;
+  const sites=getLocalSites();
+  sel.innerHTML='<option value="">― 現場を選択 ―</option>';
+  sites.forEach(s=>{
+    const id=s.id||s.siteId||s.name;
+    if(id===_selectedSiteId) return; // 自現場は除外
+    const o=document.createElement('option');o.value=id;o.textContent=s.name||s.siteName||id;sel.appendChild(o);
+  });
+}
+function onCrossSiteChange(siteId){
+  const sel=document.getElementById('crossConfigSel');if(!sel)return;
+  if(!siteId){sel.innerHTML='<option value="">― 構成を選択 ―</option>';sel.disabled=true;return;}
+  const configs=getLocalRb(siteId);
+  sel.innerHTML='<option value="">― 構成を選択 ―</option>'+configs.map(r=>`<option value="${r.key}">${r.label||r.key}</option>`).join('');
+  sel.disabled=configs.length===0;
+}
+function copyCrossConfig(){
+  const siteId=document.getElementById('crossSiteSel').value;
+  const key=document.getElementById('crossConfigSel').value;
+  if(!siteId||!key){showToast('⚠️ 現場と構成を選択してください');return;}
+  if(!_selectedSiteId){showToast('⚠️ コピー先の現場を選択してください');return;}
+  const configs=getLocalRb(siteId);
+  const r=configs.find(x=>x.key===key);
+  if(!r){showToast('⚠️ 構成が見つかりません');return;}
+  document.getElementById('editKey').value=''; // 新規
+  document.getElementById('rbLabel').value=(r.label||'')+'（コピー）';
+  document.getElementById('rbColor').value=r.color||'#4f8ef7';
+  _kariAsRows=(r.kariAsLayers||[]).map(_asRowFromSaved);
+  _honAsRows =(r.honAsLayers ||[]).map(_asRowFromSaved);
+  if(!_kariAsRows.length) _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
+  if(!_honAsRows.length)  _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
+  _kariRbRows=restoreRbRows(r,'kari');
+  _honRbRows =restoreRbRows(r,'hon');
+  renderAsRows('kari');renderAsRows('hon');
+  renderRbRows('kari');renderRbRows('hon');
+  updateTotal('kari');updateTotal('hon');
+  document.getElementById('btnCancel').style.display='';
+  showToast('📋「'+r.label+'」を流用しました。名前を変更して保存してください。');
   document.getElementById('rbLabel').scrollIntoView({behavior:'smooth',block:'center'});
   switchTab('kari');
+  // リセット
+  document.getElementById('crossSiteSel').value='';
+  document.getElementById('crossConfigSel').innerHTML='<option value="">― 構成を選択 ―</option>';
+  document.getElementById('crossConfigSel').disabled=true;
+}
+
+
+function updateExistingConfigSel(){
+  const sel=document.getElementById('existingConfigSel');
+  if(!sel) return;
+  const configs=getLocalRb(_selectedSiteId);
+  const cur=sel.value;
+  sel.innerHTML='<option value="">― 新規作成（空白から）―</option>'+
+    configs.map(r=>`<option value="${r.key}"${r.key===cur?' selected':''}>${r.label||r.key}</option>`).join('');
+}
+
+function editConfig(key){
+  const r=getLocalRb(_selectedSiteId).find(x=>x.key===key);if(!r)return;
+  switchMode('roadbed');
+  _loadConfigToForm(r);
+  // ドロップダウンも同期
+  const sel=document.getElementById('existingConfigSel');
+  if(sel) sel.value=key;
+  document.getElementById('rbLabel').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 function restoreRbRows(r,s){
   const key=s+'RbLayers';
   if(r[key]&&r[key].length>0){
-    return r[key].map(x=>({cat:x.cat||'rm',size:x.size||'',name:x.name||'',t:x.t||0,n:x.n||1}));
+    return r[key].map(x=>{
+      let cat=x.cat||'上層';
+      let subcat=x.subcat||'';
+      // 旧フォーマット変換: cat が RM-xx / RC-xx だった場合
+      if(String(cat).startsWith('RM-')){subcat=cat;cat='上層';}
+      else if(String(cat).startsWith('RC-')){subcat=cat;cat='上層';}
+      else if(cat==='rm'||cat==='rmfree'){subcat='RM-'+(parseInt(String(x.size||'').replace(/\D/g,''))||40);cat='上層';}
+      else if(cat==='rc'||cat==='rcfree'){subcat='RC-'+(parseInt(String(x.size||'').replace(/\D/g,''))||40);cat='上層';}
+      else if(cat==='free'){subcat='';}
+      // 新フォーマット: cat=上層/下層/free、subcat未設定なら RM-40
+      if(!subcat&&cat!=='free') subcat='RM-40';
+      return {cat, subcat, name:x.name||'', t:x.t||0, n:x.n||1};
+    });
   }
-  // 旧データ互換: RM/RCフィールドから復元
+  // 旧RM/RCフィールドから復元
   const rows=[];
-  const rmH=r[s+'RmH']||0; const rcH=r[s+'RcH']||0;
-  const rmSz=r[s+'RmSize']||40; const rcSz=r[s+'RcSize']||40;
-  if(rmH>0) rows.push({cat:'rm',size:'RM-'+rmSz,name:'',t:Math.round(rmH*1000),n:1});
-  if(rcH>0) rows.push({cat:'rc',size:'RC-'+rcSz,name:'',t:Math.round(rcH*1000),n:1});
-  return rows.length?rows:[{cat:'rm',size:'RM-40',name:'',t:0,n:1}];
+  const rmH=r[s+'RmH']||0,rcH=r[s+'RcH']||0;
+  const rmSz=r[s+'RmSize']||40,rcSz=r[s+'RcSize']||40;
+  if(rmH>0) rows.push({cat:'上層',subcat:'RM-'+rmSz,name:'',t:Math.round(rmH*1000),n:1});
+  if(rcH>0) rows.push({cat:'上層',subcat:'RC-'+rcSz,name:'',t:Math.round(rcH*1000),n:1});
+  return rows.length?rows:[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
 }
 
-// ---- 削除 ----
+function copyConfig(key){
+  const r=getLocalRb(_selectedSiteId).find(x=>x.key===key);if(!r)return;
+  switchMode('roadbed');
+  document.getElementById('editKey').value=''; // 新規として保存させる
+  document.getElementById('rbLabel').value=(r.label||'')+'（コピー）';
+  document.getElementById('rbColor').value=r.color||'#4f8ef7';
+  _kariAsRows=(r.kariAsLayers||[]).map(_asRowFromSaved);
+  _honAsRows =(r.honAsLayers ||[]).map(_asRowFromSaved);
+  if(!_kariAsRows.length) _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
+  if(!_honAsRows.length)  _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
+  _kariRbRows=restoreRbRows(r,'kari');
+  _honRbRows =restoreRbRows(r,'hon');
+  renderAsRows('kari');renderAsRows('hon');
+  renderRbRows('kari');renderRbRows('hon');
+  updateTotal('kari');updateTotal('hon');
+  document.getElementById('btnCancel').style.display='';
+  showToast('📋 構成をコピーしました。名前を変更して保存してください。');
+  document.getElementById('rbLabel').scrollIntoView({behavior:'smooth',block:'center'});
+  switchTab('kari');
+}
+
 function deleteConfig(key){
   const r=getLocalRb(_selectedSiteId).find(x=>x.key===key);
-  if(!r||!confirm(`「${r.label}」を削除しますか？`))return;
-  saveRbForSite(_selectedSiteId,getLocalRb(_selectedSiteId).filter(x=>x.key!==key));
-  renderConfigList(getLocalRb(_selectedSiteId));
+  if(!r||!confirm('「'+r.label+'」を削除しますか？'))return;
+  const updated=getLocalRb(_selectedSiteId).filter(x=>x.key!==key);
+  saveRbForSite(_selectedSiteId,updated);
+  renderConfigList(updated);
   showToast('🗑️ 削除しました');
 }
 
-function cancelEdit(){ clearForm(); }
+function cancelEdit(){clearForm();}
+// ── フリーレイヤーモード ──
+function _applyFreeMode(s, on){
+  const nm=document.getElementById(s+'-normal-mode');
+  const fm=document.getElementById(s+'-free-mode');
+  const btn=document.getElementById(s+'-mode-btn');
+  if(nm) nm.style.display=on?'none':'';
+  if(fm) fm.style.display=on?'':'none';
+  if(btn) btn.textContent=on?'🔀 通常モードに切替':'🔀 フリーモードに切替';
+}
+function toggleFreeMode(s){
+  const on=s==='kari'?!_kariFreeMode:!_honFreeMode;
+  if(s==='kari'){_kariFreeMode=on;if(!_kariFreeRows.length)_kariFreeRows=[{type:'surface',subcat:'',preset:'',name:'',t:0}];}
+  else           {_honFreeMode=on; if(!_honFreeRows.length) _honFreeRows=[{type:'surface',subcat:'',preset:'',name:'',t:0}];}
+  _applyFreeMode(s,on);
+  if(on) renderFreeRows(s);
+  updateTotal(s);
+}
+function addFreeRow(s){
+  (s==='kari'?_kariFreeRows:_honFreeRows).push({type:'surface',subcat:'RM-40',preset:'',name:'',t:0});
+  renderFreeRows(s);
+}
+function removeFreeRow(s,i){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  arr.splice(i,1);
+  renderFreeRows(s);
+  updateTotal(s);
+}
+function updateFreeRow(s,i,f,v){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  if(!arr[i])return;
+  arr[i][f]=f==='t'?Math.max(0,parseInt(v)||0):v;
+  updateTotal(s);
+}
+function _freeTypeColor(type){
+  if(type==='base') return 'rgba(79,142,247,0.7)';
+  if(type==='upper_rb'||type==='lower_rb'||type==='路盤') return 'var(--green)';
+  if(type==='concrete'||type==='コンクリート') return 'var(--purple)';
+  if(type==='cn_rc') return 'rgba(234,88,12,0.85)';
+  if(type==='other') return 'var(--orange)';
+  if(type==='blank') return 'var(--text3)';
+  return 'var(--blue)';  // surface / AS
+}
+function _freeTypeLabelShort(type){
+  if(type==='surface'||type==='AS') return '表層';
+  if(type==='base') return '基層';
+  if(type==='upper_rb') return '上層路盤';
+  if(type==='lower_rb') return '下層路盤';
+  if(type==='路盤') return '路盤';
+  if(type==='concrete'||type==='コンクリート') return 'コンクリート';
+  if(type==='cn_rc') return 'CN間路盤';
+  if(type==='other') return 'その他';
+  if(type==='blank') return '';
+  return type||'';
+}
+function renderFreeRows(s){
+  const arr=s==='kari'?_kariFreeRows:_honFreeRows;
+  const el=document.getElementById(s+'-free-rows');if(!el)return;
+  const fs='background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;';
+  const AS_TYPE_OPTS=[
+    {v:'surface',l:'表層'},
+    {v:'base',   l:'基層'},
+    {v:'upper_rb',l:'上層路盤'},
+    {v:'lower_rb',l:'下層路盤'},
+    {v:'concrete',l:'コンクリート'},
+    {v:'cn_rc',  l:'コンクリート間路盤材'},
+    {v:'other',  l:'その他フリー'},
+    {v:'blank',  l:'未記入'},
+  ];
+  el.innerHTML=arr.map((r,i)=>{
+    const tp=r.type||'surface';
+    const tc=_freeTypeColor(tp);
+    const typeSelOpts=AS_TYPE_OPTS.map(o=>`<option value="${o.v}"${tp===o.v?' selected':''}>${o.l}</option>`).join('');
+    // 材料名入力エリア: type によって変わる
+    const isAS=tp==='surface'||tp==='AS'||tp==='base';
+    const isRB=tp==='upper_rb'||tp==='lower_rb'||tp==='路盤';
+    const isCN=tp==='concrete'||tp==='コンクリート';
+    const isCNRC=tp==='cn_rc';
+    const isOther=tp==='other';
+    const isFree=isOther||tp==='blank';
+    let matHtml='';
+    if(isAS){
+      const aopts=tp==='base'?AS_OPTIONS.base:AS_OPTIONS.surface;
+      const pv=r.preset||'';
+      const isOtherP=pv==='その他（自由入力）';
+      const optHtml=aopts.map(o=>`<option value="${o}"${pv===o?' selected':''}>${o}</option>`).join('');
+      matHtml=`<select style="${fs}flex:1;min-width:90px;" onchange="updateFreeRow('${s}',${i},'preset',this.value);var ci=document.getElementById('faci-${s}-${i}');if(ci)ci.style.display=this.value==='その他（自由入力）'?'':'none'"><option value="">― 選択 ―</option>${optHtml}</select>`
+        +`<input id="faci-${s}-${i}" type="text" value="${r.name||''}" placeholder="材料名" style="${fs}flex:1;min-width:60px;${isOtherP?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isRB){
+      const sc=r.subcat||'RM-40';
+      const subcatOpts=['RM-30','RM-40','RC-30','RC-40','フリー'].map(v=>`<option value="${v}"${sc===v?' selected':''}>${v}</option>`).join('');
+      const isSCFree=sc==='フリー';
+      matHtml=`<select style="${fs}width:80px;flex-shrink:0;" onchange="updateFreeRow('${s}',${i},'subcat',this.value);renderFreeRows('${s}')"><option value="">― ―</option>${subcatOpts}</select>`
+        +`<input type="text" value="${r.name||''}" placeholder="層名" style="${fs}flex:1;min-width:60px;${isSCFree?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isCNRC){
+      // コンクリート間路盤材: RC/RMサイズ選択 + オプション名称
+      const sc=r.subcat||'RC-40';
+      const subcatOpts=['RC-30','RC-40','RM-30','RM-40','フリー'].map(v=>`<option value="${v}"${sc===v?' selected':''}>${v}</option>`).join('');
+      const isSCFree=sc==='フリー';
+      matHtml=`<select style="${fs}width:80px;flex-shrink:0;" onchange="updateFreeRow('${s}',${i},'subcat',this.value);renderFreeRows('${s}')"><option value="">― ―</option>${subcatOpts}</select>`
+        +`<input type="text" value="${r.name||''}" placeholder="備考（省略可）" style="${fs}flex:1;min-width:60px;${isSCFree?'':'display:none;'}" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else if(isOther){
+      // その他フリー: 材料名を自由入力
+      matHtml=`<input type="text" value="${r.name||''}" placeholder="材料名（自由入力）" style="${fs}flex:1;min-width:90px;" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    } else {
+      // concrete / blank: 直接テキスト入力
+      matHtml=`<input type="text" value="${r.name||''}" placeholder="${isCN?'コンクリート':'層名（省略可）'}" style="${fs}flex:1;min-width:90px;" oninput="updateFreeRow('${s}',${i},'name',this.value)">`;
+    }
+    // プレビューラベル
+    const prevLabel=isRB?(r.subcat&&r.subcat!=='フリー'?r.subcat:r.name||''):isCNRC?(r.subcat&&r.subcat!=='フリー'?r.subcat:r.name||''):isAS?(r.preset==='その他（自由入力）'?r.name:r.preset)||r.name:r.name;
+    const typeLabel=_freeTypeLabelShort(tp);
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:6px 8px;flex-wrap:wrap;">
+      <select style="${fs}width:100px;flex-shrink:0;color:${tc};font-weight:700;" onchange="updateFreeRow('${s}',${i},'type',this.value);renderFreeRows('${s}');updateTotal('${s}')">${typeSelOpts}</select>
+      ${matHtml}
+      <input style="${fs}width:60px;text-align:right;flex-shrink:0;" type="number" min="0" placeholder="厚さ" value="${r.t||''}" oninput="updateFreeRow('${s}',${i},'t',this.value)">
+      <span style="font-size:14px;color:var(--text3);white-space:nowrap;">mm</span>
+      <button onclick="removeFreeRow('${s}',${i})" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:16px;">✕</button>
+      ${prevLabel||r.t>0?`<div style="font-size:13px;color:var(--text3);width:100%;margin-top:2px;padding-left:2px;">→ ${typeLabel?'['+typeLabel+'] ':''}${prevLabel||'未入力'}${r.t>0?' t='+r.t+'mm':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 function clearForm(){
   document.getElementById('editKey').value='';
   document.getElementById('rbLabel').value='';
   document.getElementById('rbColor').value='#4f8ef7';
   _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
   _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
-  _kariRbRows=[{cat:'rm',size:'RM-40',name:'',t:0,n:1}];
-  _honRbRows =[{cat:'rm',size:'RM-40',name:'',t:0,n:1}];
-  renderAsRows('kari'); renderAsRows('hon');
-  renderRbRows('kari'); renderRbRows('hon');
+  _kariRbRows=[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
+  _honRbRows =[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
+  _kariFreeMode=false;_honFreeMode=false;
+  _kariFreeRows=[];_honFreeRows=[];
+  _applyFreeMode('kari',false);_applyFreeMode('hon',false);
+  renderAsRows('kari');renderAsRows('hon');
+  renderRbRows('kari');renderRbRows('hon');
   document.getElementById('kari-total').innerHTML='合計 H = <b>0 mm</b>';
   document.getElementById('hon-total').innerHTML='合計 H = <b>0 mm</b>';
+  document.getElementById('hon-total').innerHTML='合計 H = <b>0 mm</b>';
   document.getElementById('btnCancel').style.display='none';
+  // ドロップダウンをリセット
+  const sel=document.getElementById('existingConfigSel');
+  if(sel) sel.value='';
 }
 
-// ---- リスト描画 ----
-const CAT_COLOR={rm:'rgba(34,197,94,0.2)',rc:'rgba(167,139,250,0.2)',free:'rgba(245,158,11,0.2)'};
-const CAT_TC   ={rm:'var(--green)',rc:'var(--purple)',free:'var(--orange)'};
-const CAT_LBL  ={rm:'上層RM',rc:'下層RC',free:'フリー'};
-
+// ======================================
+// 路盤構成リスト描画
+// ======================================
 function renderConfigList(configs){
+  updateExistingConfigSel();
+  refreshViewerFilter();
   const el=document.getElementById('configList');
   const siteName=document.getElementById('siteSelect').options[document.getElementById('siteSelect').selectedIndex]?.text||'';
-  document.getElementById('listTitle').textContent=`登録済み路盤構成（${siteName}）`;
-  if(!configs||configs.length===0){ el.innerHTML='<div class="empty-state">📐 まだ登録されていません</div>'; return; }
+  document.getElementById('listTitle').textContent='登録済み路盤構成（'+siteName+'）';
+  if(!configs||configs.length===0){el.innerHTML='<div class="empty-state">📐 まだ登録されていません</div>';return;}
   el.innerHTML=configs.map(r=>{
     const kariMm=Math.round((r.kariTotalH||0)*1000);
     const honMm =Math.round((r.honTotalH||0)*1000);
-    const diff=kariMm!==honMm;
-    const sub=diff?`仮:${kariMm}mm ／ 本:${honMm}mm`:`H=${kariMm}mm`;
-    // AS層サマリ
+    const sub=kariMm!==honMm?'仮:'+kariMm+'mm ／ 本:'+honMm+'mm':'H='+kariMm+'mm';
+    if(r.kariFreeMode){
+      const freeStr=(r.kariFreeRows||[]).map(x=>x.name+(x.t?' t='+x.t+'mm':'')).join(' / ')||'（レイヤーなし）';
+      const totalMm=Math.round((r.kariTotalH||0)*1000);
+      const honTotalMm=Math.round((r.honTotalH||0)*1000);
+      const sub2=totalMm!==honTotalMm?'仮:'+totalMm+'mm ／ 本:'+honTotalMm+'mm':'H='+totalMm+'mm';
+      const adminBtns=_isAdmin?`<button class="btn-sm btn-edit" onclick="editConfig('${r.key}')">編集</button><button class="btn-sm btn-del" onclick="deleteConfig('${r.key}')">削除</button>`:'';
+      return`<div class="config-card"><div class="card-head"><div class="color-dot" style="background:${r.color||'#4f8ef7'};"></div><div style="flex:1;"><div class="name">${r.label} <span style="font-size:13px;color:var(--orange);border:1px solid var(--orange);border-radius:4px;padding:1px 5px;margin-left:4px;">フリー</span></div><div class="sub">${sub2}</div><div style="font-size:14px;color:var(--text3);margin-top:2px;">${freeStr}</div></div><div class="actions">${adminBtns}</div></div></div>`;
+    }
     const asStr=(r.kariAsLayers||[]).map(a=>a.name).filter(Boolean).join('＋')||'（AS層なし）';
-    // 路盤層詳細
-    const rbRows=(r.kariRbLayers||[]);
-    const rbDetail=rbRows.map(rb=>{
-      const lbl=rb.cat==='free'?(rb.name||'フリー'):(rb.size||CAT_LBL[rb.cat]||'');
-      const nStr=(rb.n||1)>1?` × ${rb.n}層`:'';
+    const rbDetail=(r.kariRbLayers||[]).map(rb=>{
+      const isFree=rb.cat==='free'||rb.subcat==='subfree';
+      const lbl=rb.cat==='free'?(rb.name||'フリー'):rb.subcat==='subfree'?(rb.cat+' '+(rb.name||'フリー')):(rb.cat||'')+(rb.subcat?' '+rb.subcat:'');
+      const badgeCat=rb.subcat&&rb.subcat!=='subfree'?rb.subcat:(rb.cat||'');
+      const nStr=(rb.n||1)>1?' × '+rb.n+'層':'';
       const total=rbRowTotal(rb);
-      return`<div class="layer-row">
-        <span class="layer-badge" style="background:${CAT_COLOR[rb.cat]||'var(--surface2)'};color:${CAT_TC[rb.cat]||'var(--text2)'};">${CAT_LBL[rb.cat]||''}</span>
-        <span style="color:var(--text);">${lbl}</span>
-        <span style="color:var(--text3);margin-left:auto;">t=${rb.t}mm${nStr} = <b style="color:var(--purple);">${total}mm</b></span>
-      </div>`;
+      const bgCol=SUBCAT_TC[rb.subcat]?'rgba(0,0,0,0.15)':(CAT_COLOR[rb.cat]||'var(--surface2)');
+      const txCol=SUBCAT_TC[rb.subcat]||CAT_TC[rb.cat]||'var(--text2)';
+      return'<div class="layer-row"><span class="layer-badge" style="background:'+bgCol+';color:'+txCol+';">'+
+        (SUBCAT_LBL[rb.subcat]||CAT_LBL[rb.cat]||badgeCat)+'</span><span style="color:var(--text);">'+lbl+
+        '</span><span style="color:var(--text3);margin-left:auto;">t='+rb.t+'mm'+nStr+' = <b style="color:var(--purple);">'+total+'mm</b></span></div>';
     }).join('');
-    const adminBtns=_isAdmin
-      ?`<button class="btn-sm btn-edit" onclick="editConfig('${r.key}')">編集</button>
-        <button class="btn-sm btn-del"  onclick="deleteConfig('${r.key}')">削除</button>`:'';
-    return`<div class="config-card">
-      <div class="card-head">
-        <div class="color-dot" style="background:${r.color||'#4f8ef7'}"></div>
-        <div class="info"><div class="name">${r.label}</div><div class="sub">${asStr}　${sub}</div></div>
-        <div class="actions">${adminBtns}</div>
-      </div>
-      ${rbRows.length?`<div class="layers-detail">${rbDetail}</div>`:''}
-    </div>`;
+    const copyBtn=`<button class="btn-sm" style="background:rgba(34,197,94,0.1);border:1px solid var(--green);color:var(--green);" onclick="copyConfig('${r.key}')">📋 流用</button>`;
+    const adminBtns=_isAdmin?`<button class="btn-sm btn-edit" onclick="editConfig('${r.key}')">編集</button><button class="btn-sm btn-del" onclick="deleteConfig('${r.key}')">削除</button>`:'';
+    const actionBtns=copyBtn+adminBtns;
+    return`<div class="config-card"><div class="card-head"><div class="color-dot" style="background:${r.color||'#4f8ef7'}"></div><div class="info"><div class="name">${r.label}</div><div class="sub">${asStr}　${sub}</div></div><div class="actions">${actionBtns}</div></div>${rbDetail?'<div class="layers-detail">'+rbDetail+'</div>':''}</div>`;
   }).join('');
 }
 
-// ---- PDF/画像ビューア ----
+// ======================================
+// 図面管理 CRUD
+// ======================================
+function getDwgKey(id){return 'drawings_'+id;}
+function getLocalDwg(id){return JSON.parse(localStorage.getItem(getDwgKey(id))||'[]');}
+
+function loadDrawingsForSite(id){
+  if(!_fbDb){renderDwgList(getLocalDwg(id));return;}
+  _fbDb.collection('masters').doc('drawings').get()
+    .then(doc=>{
+      if(doc.exists&&doc.data().data){const all=doc.data().data;if(all[id])localStorage.setItem(getDwgKey(id),JSON.stringify(all[id]));}
+      renderDwgList(getLocalDwg(id));
+    }).catch(()=>renderDwgList(getLocalDwg(id)));
+}
+function saveDwgsForSite(id,list){
+  localStorage.setItem(getDwgKey(id),JSON.stringify(list));
+  if(!_fbDb||!_isAdmin)return;
+  _fbDb.collection('masters').doc('drawings').get()
+    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=list;return _fbDb.collection('masters').doc('drawings').set({data:all,updatedAt:new Date().toISOString()});})
+    .catch(e=>console.warn('[FB dwg]',e));
+}
+
+function toDriveEmbedUrl(url){
+  if(!url)return '';
+  const m=url.match(/\/file\/d\/([^/?\s]+)/);
+  if(m) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+  const m2=url.match(/[?&]id=([^&\s]+)/);
+  if(m2) return 'https://drive.google.com/file/d/'+m2[1]+'/preview';
+  return url;
+}
+
+function saveDwg(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  const name=document.getElementById('dwgName').value.trim();
+  if(!name){showToast('⚠️ 図面名を入力してください');return;}
+  const url=document.getElementById('dwgUrl').value.trim();
+  if(!url&&!_dwgPendingFileData){showToast('⚠️ ファイルを選択するかURLを入力してください');return;}
+  const editKey=document.getElementById('dwgEditKey').value;
+  const entry={
+    key:editKey||('dwg_'+Date.now()),
+    name:name,
+    type:_getDwgType(),
+    rbKey:document.getElementById('dwgRbKey').value,
+    url:url,
+    embedUrl:toDriveEmbedUrl(url),
+    memo:document.getElementById('dwgMemo').value.trim(),
+    updatedAt:new Date().toISOString().slice(0,10),
+  };
+  if(_dwgPendingFileData){
+    entry.fileData=_dwgPendingFileData;
+    entry.fileType=_dwgPendingFileType||'';
+  }
+  const list=getLocalDwg(_selectedSiteId);
+  const idx=list.findIndex(d=>d.key===entry.key);
+  if(idx>=0) list[idx]=entry; else list.push(entry);
+  saveDwgsForSite(_selectedSiteId,list);
+  renderDwgList(list);
+  clearDwgForm();
+  showToast('✅「'+name+'」を登録しました');
+  _auditLog('dwg_save','図面登録「'+name+'」['+_selectedSiteId+']');
+}
+
+function editDwg(key){
+  const d=getLocalDwg(_selectedSiteId).find(x=>x.key===key);if(!d)return;
+  document.getElementById('dwgEditKey').value=d.key;
+  document.getElementById('dwgName').value=d.name||'';
+  const _stdTypes=['断面図','平面図','縦断図','詳細図','その他'];
+  if(_stdTypes.includes(d.type||'断面図')){
+    document.getElementById('dwgType').value=d.type||'断面図';
+    document.getElementById('dwgTypeOther').style.display='none';
+  } else {
+    document.getElementById('dwgType').value='その他';
+    document.getElementById('dwgTypeOther').style.display='';
+    document.getElementById('dwgTypeOther').value=d.type||'';
+  }
+  document.getElementById('dwgUrl').value=d.url||'';
+  document.getElementById('dwgMemo').value=d.memo||'';
+  populateDwgRbSelect(d.rbKey);
+  document.getElementById('btnCancelDwg').style.display='';
+  if(d.fileData){
+    _dwgPendingFileData=d.fileData;
+    _dwgPendingFileType=d.fileType||'';
+    document.getElementById('dwgFileName').textContent='（保存済みファイル）';
+    document.getElementById('btnClearDwgFile').style.display='';
+  } else {
+    clearDwgFile();
+  }
+  document.getElementById('dwgName').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function deleteDwg(key){
+  const d=getLocalDwg(_selectedSiteId).find(x=>x.key===key);
+  if(!d||!confirm('「'+d.name+'」を削除しますか？'))return;
+  const updated=getLocalDwg(_selectedSiteId).filter(x=>x.key!==key);
+  saveDwgsForSite(_selectedSiteId,updated);
+  renderDwgList(updated);
+  showToast('🗑️ 削除しました');
+}
+
+function cancelDwg(){clearDwgForm();}
+function _getDwgType(){
+  const sel=document.getElementById('dwgType');
+  if(sel.value==='その他'){
+    const ot=document.getElementById('dwgTypeOther').value.trim();
+    return ot||'その他';
+  }
+  return sel.value;
+}
+function onDwgTypeChange(val){
+  const el=document.getElementById('dwgTypeOther');
+  el.style.display=val==='その他'?'':'none';
+  if(val==='その他') el.focus();
+}
+function onDwgTypeOtherInput(val){}
+
+function clearDwgForm(){
+  document.getElementById('dwgEditKey').value='';
+  document.getElementById('dwgName').value='';
+  document.getElementById('dwgType').value='断面図';
+  document.getElementById('dwgTypeOther').style.display='none';
+  document.getElementById('dwgTypeOther').value='';
+  document.getElementById('dwgUrl').value='';
+  document.getElementById('dwgMemo').value='';
+  document.getElementById('btnCancelDwg').style.display='none';
+  populateDwgRbSelect();
+  clearDwgFile();
+}
+
+function populateDwgRbSelect(selectedKey){
+  const sel=document.getElementById('dwgRbKey');
+  const configs=getLocalRb(_selectedSiteId);
+  sel.innerHTML='<option value="">― なし ―</option>';
+  configs.forEach(r=>{
+    const o=document.createElement('option');
+    o.value=r.key; o.textContent=r.label;
+    if(selectedKey&&r.key===selectedKey) o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+// ======================================
+// 図面リスト描画
+// ======================================
+const DWG_ICON={断面図:'📐',平面図:'🗺️',縦断図:'📏',詳細図:'🔍',その他:'📄'};
+function renderDwgList(list){
+  const el=document.getElementById('dwgList');
+  const siteName=document.getElementById('siteSelect').options[document.getElementById('siteSelect').selectedIndex]?.text||'';
+  document.getElementById('dwgListTitle').textContent='登録済み図面（'+siteName+'）';
+  if(!list||list.length===0){el.innerHTML='<div class="empty-state">📋 まだ登録されていません</div>';return;}
+  el.innerHTML=list.map(d=>{
+    const icon=DWG_ICON[d.type]||'📄';
+    const rb=d.rbKey?getLocalRb(_selectedSiteId).find(r=>r.key===d.rbKey):null;
+    const adminBtns=_isAdmin?`<button class="btn-sm btn-edit" onclick="editDwg('${d.key}')">編集</button><button class="btn-sm btn-del" onclick="deleteDwg('${d.key}')">削除</button>`:'';
+    return`<div class="dwg-card"><div class="dwg-icon">${icon}</div><div class="dwg-info"><div class="dwg-name">${d.name}</div><div class="dwg-sub"><span class="dwg-type-badge">${d.type}</span>${rb?'<span style="color:var(--text3);">🏗️ '+rb.label+'</span>':''}${d.memo?'<span style="color:var(--text3);margin-left:4px;">'+d.memo+'</span>':''}</div></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;"><button class="btn-sm btn-view" onclick="viewDwg('${d.key}')">📋 表示</button>${adminBtns}</div></div>`;
+  }).join('');
+}
+
+function viewDwg(key){
+  const d=getLocalDwg(_selectedSiteId).find(x=>x.key===key);if(!d)return;
+  _showDwgInViewer(d);
+}
+async function _showDwgInViewer(d){
+  document.getElementById('viewerTitle').textContent=d.name;
+  document.getElementById('btnClearViewer').style.display='';
+  _zoomCtrlShow(true);viewerZoomReset();
+  _pdfDoc=null;
+  if(d.fileData){
+    const isPdf=(d.fileType&&d.fileType.indexOf('pdf')>=0)||d.name.toLowerCase().endsWith('.pdf');
+    if(isPdf){
+      try{
+        const b64=d.fileData.split(',')[1];
+        const bin=atob(b64);
+        const buf=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+        _pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
+        _pdfTotal=_pdfDoc.numPages; _pdfPage=1;
+        renderPdfPage(1);
+        document.getElementById('pageNav').style.display=_pdfTotal>1?'':'none';
+        document.getElementById('pageInfo').textContent='1 / '+_pdfTotal;
+      }catch(e){showToast('❌ PDF読み込みエラー: '+e.message);}
+    } else {
+      document.getElementById('viewerArea').innerHTML='<img src="'+d.fileData+'" alt="'+d.name+'" style="max-width:100%;height:auto;">';
+      document.getElementById('pageNav').style.display='none';
+    }
+    return;
+  }
+  const embedUrl=d.embedUrl||toDriveEmbedUrl(d.url);
+  const va=document.getElementById('viewerArea');
+  va.innerHTML='<iframe src="'+embedUrl+'" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>';
+  document.getElementById('pageNav').style.display='none';
+}
+
+// ======================================
+// PDF/画像ビューア
+// ======================================
 async function handleFile(file){
   if(!file)return;
-  if(file.name.split('.').pop().toLowerCase()==='pdf') await loadPdf(file); else loadImage(file);
+  _pdfDoc=null;
+  document.getElementById('viewerTitle').textContent=file.name;
+  document.getElementById('btnClearViewer').style.display='';
+  _zoomCtrlShow(true);viewerZoomReset();
+  if(file.name.split('.').pop().toLowerCase()==='pdf') await loadPdf(file);
+  else loadImage(file);
 }
+// ── 図面管理 ローカルファイル ──
+var _dwgPendingFileData=null, _dwgPendingFileType=null;
+function onDwgFileSelect(input){
+  const file=input.files[0];if(!file)return;
+  const MB=file.size/1024/1024;
+  if(MB>5){showToast('⚠️ ファイルが大きすぎます（'+MB.toFixed(1)+'MB）。5MB以下を推奨します');return;}
+  const fr=new FileReader();
+  fr.onload=function(e){
+    _dwgPendingFileData=e.target.result;
+    _dwgPendingFileType=file.type||(file.name.toLowerCase().endsWith('.pdf')?'application/pdf':'image/jpeg');
+    document.getElementById('dwgFileName').textContent=file.name+(MB>2?' ⚠️'+MB.toFixed(1)+'MB':'');
+    document.getElementById('btnClearDwgFile').style.display='';
+  };
+  fr.readAsDataURL(file);
+}
+function clearDwgFile(){
+  _dwgPendingFileData=null; _dwgPendingFileType=null;
+  document.getElementById('dwgFileName').textContent='未選択';
+  document.getElementById('btnClearDwgFile').style.display='none';
+  const fi=document.getElementById('dwgFileInput');if(fi)fi.value='';
+}
+
 async function loadPdf(file){
   const buf=await file.arrayBuffer();
   _pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
   _pdfTotal=_pdfDoc.numPages; _pdfPage=1;
   renderPdfPage(1);
   document.getElementById('pageNav').style.display=_pdfTotal>1?'':'none';
-  document.getElementById('pageInfo').textContent=`1 / ${_pdfTotal}`;
+  document.getElementById('pageInfo').textContent='1 / '+_pdfTotal;
 }
 async function renderPdfPage(p){
   if(!_pdfDoc)return;
   const page=await _pdfDoc.getPage(p);
   const vp=page.getViewport({scale:1.5});
-  const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
+  const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
   await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
-  const va=document.getElementById('viewerArea'); va.innerHTML=''; va.appendChild(c);
+  const va=document.getElementById('viewerArea');va.innerHTML='';va.appendChild(c);
+  _viewerBaseW=c.width;
+  if(_viewerZoom!==1.0)_applyViewerZoom();
 }
 function loadImage(file){
   const fr=new FileReader();
-  fr.onload=e=>{ document.getElementById('viewerArea').innerHTML=`<img src="${e.target.result}" alt="断面図">`; _pdfDoc=null; document.getElementById('pageNav').style.display='none'; };
+  fr.onload=e=>{
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+e.target.result+'" alt="図面" style="max-width:100%;height:auto;">';
+    document.getElementById('pageNav').style.display='none';
+    var imgEl=va.querySelector('img');
+    if(imgEl){imgEl.onload=function(){_viewerBaseW=imgEl.naturalWidth||imgEl.offsetWidth||800;};}
+  };
   fr.readAsDataURL(file);
 }
 function changePage(d){
   if(!_pdfDoc)return;
   _pdfPage=Math.max(1,Math.min(_pdfTotal,_pdfPage+d));
-  document.getElementById('pageInfo').textContent=`${_pdfPage} / ${_pdfTotal}`;
+  document.getElementById('pageInfo').textContent=_pdfPage+' / '+_pdfTotal;
   renderPdfPage(_pdfPage);
 }
-
-// ---- 管理者UI ----
-function updateAdminUI(){
-  document.getElementById('adminBadge').style.display=_isAdmin?'':'none';
-  document.getElementById('btnAdmin').textContent=_isAdmin?'🔓':'🔑';
-  document.getElementById('btnAdmin').className=_isAdmin?'btn-admin active':'btn-admin';
-  if(_selectedSiteId) renderConfigList(getLocalRb(_selectedSiteId));
+// ======== ビューア ズーム ========
+var _viewerZoom=1.0;
+var _viewerBaseW=0;
+function viewerZoom(delta){
+  _viewerZoom=Math.max(0.25,Math.min(4.0,parseFloat((_viewerZoom+delta).toFixed(2))));
+  _applyViewerZoom();
 }
-function onAdminBtn(){ if(_isAdmin){if(confirm('ログアウトしますか？'))_fbAuth.signOut();}else document.getElementById('loginModal').classList.add('open'); }
+function viewerZoomReset(){
+  _viewerZoom=1.0;_viewerBaseW=0;
+  var el=document.querySelector('#viewerArea > img, #viewerArea > canvas');
+  if(el){el.style.width='';el.style.maxWidth='100%';el.style.height='auto';}
+  var va=document.getElementById('viewerArea');if(va)va.style.justifyContent='center';
+  var zl=document.getElementById('zoomLevel');if(zl)zl.textContent='100%';
+}
+function _applyViewerZoom(){
+  var el=document.querySelector('#viewerArea > img, #viewerArea > canvas');
+  if(!el)return;
+  if(!_viewerBaseW)_viewerBaseW=el.naturalWidth||el.offsetWidth||800;
+  el.style.width=Math.round(_viewerBaseW*_viewerZoom)+'px';
+  el.style.maxWidth='none';
+  el.style.height='auto';
+  var va=document.getElementById('viewerArea');
+  if(va)va.style.justifyContent=_viewerZoom>1?'flex-start':'center';
+  var zl=document.getElementById('zoomLevel');
+  if(zl)zl.textContent=Math.round(_viewerZoom*100)+'%';
+}
+function _zoomCtrlShow(v){
+  var zc=document.getElementById('zoomCtrl');
+  if(zc)zc.style.display=v?'flex':'none';
+}
+// ホイールズーム（Ctrl+scroll）
+document.addEventListener('DOMContentLoaded',function(){
+  var va=document.getElementById('viewerArea');
+  if(va)va.addEventListener('wheel',function(e){
+    if(e.ctrlKey||e.metaKey){e.preventDefault();viewerZoom(e.deltaY<0?0.1:-0.1);}
+  },{passive:false});
+});
+// ======== /ビューア ズーム ========
+
+function clearViewer(){
+  document.getElementById('viewerArea').innerHTML='<div class="viewer-empty">📄 右パネルの図面リストから選択するか<br>ローカルのPDF・画像を開いてください</div>';
+  document.getElementById('viewerTitle').textContent='図面ビューア';
+  document.getElementById('pageNav').style.display='none';
+  document.getElementById('btnClearViewer').style.display='none';
+  _zoomCtrlShow(false);viewerZoomReset();
+  _pdfDoc=null;
+  document.getElementById('fileInput').value='';
+}
+
+// ======================================
+// ビューア 絞り込みフィルター
+// ======================================
+function _hataKey(r){return r.key||String(r.num||r.hata||'');}
+function setFilterStatus(text){var el=document.getElementById('filterStatus');if(el)el.textContent=text;}
+
+function refreshViewerFilter(){
+  // 検索バーの表示制御
+  var bar=document.getElementById('viewerSearchBar');
+  if(bar) bar.classList.toggle('hidden',!_selectedSiteId);
+  // 型（路盤構成）セレクト
+  var rbSel=document.getElementById('filterRbSel');
+  if(rbSel){
+    rbSel.innerHTML='<option value="">― 型を選択 ―</option>';
+    if(_selectedSiteId){
+      getLocalRb(_selectedSiteId).forEach(function(r){
+        var o=document.createElement('option');
+        o.value=r.key||r.label||'';
+        o.textContent=r.label||r.key||'?';
+        rbSel.appendChild(o);
+      });
+    }
+    rbSel.value='';
+  }
+  // 旗揚げ番号セレクト
+  var hSel=document.getElementById('filterHataSel');
+  if(hSel){
+    hSel.innerHTML='<option value="">― 旗揚げ番号 ―</option>';
+    hSel.disabled=true;
+    if(_selectedSiteId){
+      getLocalHata(_selectedSiteId).forEach(function(r){
+        var o=document.createElement('option');
+        o.value=_hataKey(r);
+        o.textContent='No.'+(r.num||r.hata||'?')+(r.name?' '+r.name:'');
+        hSel.appendChild(o);
+      });
+      if(hSel.options.length>1)hSel.disabled=false;
+    }
+    hSel.value='';
+  }
+  setFilterStatus('');
+}
+
+function onFilterRbChange(rbKey){
+  // 旗揚げセレクトをリセット
+  var hSel=document.getElementById('filterHataSel');
+  if(hSel){hSel.value='';hSel.disabled=!rbKey;}
+  if(!rbKey){setFilterStatus('');return;}
+  var dwgList=getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey;});
+  if(dwgList.length>0){
+    _viewDwgEntry(dwgList[0]);
+    setFilterStatus('📋 図面 '+dwgList.length+'件');
+  } else {
+    setFilterStatus('図面未登録');
+  }
+}
+
+function onFilterHataChange(hataKey){
+  if(!hataKey){
+    var rbKey=document.getElementById('filterRbSel').value;
+    if(rbKey) onFilterRbChange(rbKey); else setFilterStatus('');
+    return;
+  }
+  var r=getLocalHata(_selectedSiteId).find(function(x){return _hataKey(x)===hataKey;});
+  if(!r){setFilterStatus('⚠️ 見つかりません');return;}
+  var imgSrc=r.img||r.imgData||'';
+  if(imgSrc){
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
+    document.getElementById('btnClearViewer').style.display='';
+    document.getElementById('pageNav').style.display='none';
+    _zoomCtrlShow(true);viewerZoomReset();
+    _pdfDoc=null;
+    var imgEl=va.querySelector('img');
+    if(imgEl)imgEl.onload=function(){_viewerBaseW=imgEl.naturalWidth||imgEl.offsetWidth||800;};
+    var dpStr=r.dp?'DP:'+r.dp+'m　':'';
+    var khStr=(r.kanH!=null&&r.kanH!=='')?'管下H:'+(r.kanH||r.dph||'')+'m':'';
+    setFilterStatus('📷 '+dpStr+khStr);
+  } else {
+    var rbKey2=document.getElementById('filterRbSel').value;
+    var dwgList2=rbKey2?getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey2;}):[];
+    if(dwgList2.length>0){
+      _viewDwgEntry(dwgList2[0]);
+      setFilterStatus('📋 図面（旗揚げ画像なし）');
+    } else {
+      setFilterStatus('⚠️ 画像・図面なし');
+    }
+  }
+}
+
+function _viewDwgEntry(d){
+  if(!d)return;
+  _showDwgInViewer(d);
+}
+
+// ======================================
+// 旗揚げマスタ CRUD
+// ======================================
+function getHataKey(id){return 'hata_master_'+id;}
+function getLocalHata(id){return JSON.parse(localStorage.getItem(getHataKey(id))||'[]');}
+function saveLocalHata(id,list){localStorage.setItem(getHataKey(id),JSON.stringify(list));}
+function getLocalSites(){return JSON.parse(localStorage.getItem('site_master')||'[]');}
+
+function fbSaveAllHata(id,list){
+  if(!_fbDb||!_isAdmin)return;
+  // undefined を除去して safeList を生成
+  var safeList;
+  try{safeList=JSON.parse(JSON.stringify(list));}catch(e){safeList=list;}
+  // Firestoreドキュメント上限(1MB)対策:
+  // 圧縮済み画像(~20KB/枚)は保存する。合計が800KBを超える場合は画像を除外してwarning。
+  var totalBytes=JSON.stringify(safeList).length;
+  if(totalBytes>800*1024){
+    console.warn('[FB hata] 合計サイズ'+Math.round(totalBytes/1024)+'KB > 800KB → img を除外してFirestore保存');
+    safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;return s;});
+  }
+  // 現場別ドキュメントに保存（checklist.html の fbSyncHataMasterForSite が読む形式）
+  try{
+    _fbDb.collection('masters').doc('hata_master_'+id).set({data:safeList,updatedAt:new Date().toISOString()})
+      .catch(e=>console.warn('[FB hata per-site save]',e));
+  }catch(e){console.warn('[FB hata per-site save sync]',e);}
+  // モノリシック形式にも保存（後方互換）
+  _fbDb.collection('masters').doc('hata_master').get()
+    .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
+    .catch(e=>console.warn('[FB hata save]',e));
+}
+
+function loadHataFromFb(id){
+  if(!_fbDb){renderHataList(getLocalHata(id));return;}
+  // 現場別ドキュメント（checklist.html / order.html が書く形式）を優先して読み込む
+  // → hata_master_<id> が存在すればそちらを使い、なければ旧モノリシック hata_master を参照
+  _fbDb.collection('masters').doc('hata_master_'+id).get()
+    .then(doc=>{
+      if(doc.exists&&doc.data().data){
+        // per-site ドキュメントが存在する場合はローカルへマージ（キーで重複排除、新しい方を優先）
+        var fbList=doc.data().data||[];
+        var localList=getLocalHata(id);
+        var merged={};
+        localList.forEach(function(r){var k=r.key||String(r.num||r.hata||'');if(k)merged[k]=r;});
+        fbList.forEach(function(r){
+          var k=r.key||String(r.num||r.hata||'');
+          if(!k)return;
+          var loc=merged[k];
+          // dp/kanH/dph が新しい方（Firestoreにあればそちら優先、ただしnullで上書きはしない）
+          if(loc){
+            if(r.dp!=null)       loc.dp=r.dp;
+            if(r.kanH!=null)     loc.kanH=r.kanH;
+            if(r.dph!=null)      loc.dph=r.dph;
+            if(r.rangeFrom!=null)loc.rangeFrom=r.rangeFrom;
+            if(r.rangeTo!=null)  loc.rangeTo=r.rangeTo;
+            if(r.dph1!=null)     loc.dph1=r.dph1;
+            if(r.dph2!=null)     loc.dph2=r.dph2;
+            if(r.name)           loc.name=r.name;
+            if(r.note)           loc.note=r.note;
+            if(r.kanType)        loc.kanType=r.kanType;
+            // img はFirestoreに保存されないため、ローカルの値を優先して保持
+            // Firestoreに img がある（旧データ）場合のみローカルに取り込む
+            if(!loc.img&&!loc.imgData&&(r.img||r.imgData)){
+              if(r.img)     loc.img=r.img;
+              if(r.imgData) loc.imgData=r.imgData;
+            }
+          } else {
+            merged[k]=r;
+          }
+        });
+        saveLocalHata(id,Object.values(merged));
+        renderHataList(getLocalHata(id));
+      } else {
+        // per-site ドキュメントがない場合はモノリシック形式にフォールバック
+        _fbDb.collection('masters').doc('hata_master').get()
+          .then(function(doc2){
+            if(doc2.exists&&doc2.data().data){var all=doc2.data().data;if(all[id])saveLocalHata(id,all[id]);}
+            renderHataList(getLocalHata(id));
+          }).catch(function(){renderHataList(getLocalHata(id));});
+      }
+    }).catch(function(){
+      // per-site 取得失敗 → モノリシックフォールバック
+      _fbDb.collection('masters').doc('hata_master').get()
+        .then(function(doc2){
+          if(doc2.exists&&doc2.data().data){var all=doc2.data().data;if(all[id])saveLocalHata(id,all[id]);}
+          renderHataList(getLocalHata(id));
+        }).catch(function(){renderHataList(getLocalHata(id));});
+    });
+}
+
+function loadHataForSite(id){
+  if(!id){document.getElementById('hataList').innerHTML='<div class="empty-state">現場を選択してください</div>';return;}
+  loadHataFromFb(id);
+  updateExistingHataSel();
+}
+
+// 旗揚げ画像を幅500px・JPEG60%に圧縮してプレビューにセット
+// → 1枚あたり15〜25KB程度になりFirestore(1MBドキュメント上限)に安全に保存できる
+function _compressAndSetHataImg(dataUrl, fileName){
+  var img=new Image();
+  img.onload=function(){
+    var MAX=500;
+    var w=img.width, h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    var cv=document.createElement('canvas');
+    cv.width=w;cv.height=h;
+    var ctx=cv.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    var compressed=cv.toDataURL('image/jpeg',0.60);
+    var kb=Math.round(compressed.length*0.75/1024);
+    document.getElementById('h-previewImg').src=compressed;
+    document.getElementById('h-imgName').textContent=(fileName||'画像')+'（圧縮後 '+kb+'KB）';
+    document.getElementById('h-imgPreview').style.display='';
+    document.getElementById('h-imgLabel').style.display='none';
+  };
+  img.src=dataUrl;
+}
+function handleHataImgSelect(input){
+  const file=input.files[0];if(!file)return;
+  const fr=new FileReader();
+  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name);
+  fr.readAsDataURL(file);
+}
+
+function handleHataImgDrop(ev){
+  ev.preventDefault();
+  ev.currentTarget.style.borderColor='var(--border)';
+  const file=ev.dataTransfer.files[0];if(!file)return;
+  document.getElementById('h-imgFile').files=ev.dataTransfer.files;
+  handleHataImgSelect(document.getElementById('h-imgFile'));
+}
+
+function clearHataImg(){
+  document.getElementById('h-previewImg').src='';
+  document.getElementById('h-imgPreview').style.display='none';
+  document.getElementById('h-imgLabel').style.display='';
+  document.getElementById('h-imgFile').value='';
+}
+
+function saveHata(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  const num=document.getElementById('h-hata').value.trim();
+  if(!num){showToast('⚠️ 旗揚げ番号を入力してください');return;}
+  const gN=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
+  const dp=gN('h-dp')||0;
+  const kanH=gN('h-dph')||0;          // 管下H（通常）← h-dph
+  const dp1=gN('h-dp1');               // DP 開始（勾配）
+  const dp2=gN('h-dp2');               // DP 終了（勾配）
+  const dph1=gN('h-dph1');             // 管下H 開始（勾配）
+  const dph2=gN('h-dph2');             // 管下H 終了（勾配）
+  const editKey=document.getElementById('h-editKey').value;
+  const imgSrc=document.getElementById('h-previewImg').src||'';
+  const rec={
+    key:editKey||('h_'+Date.now()),
+    num,
+    name:document.getElementById('h-name')?.value?.trim()||'',
+    dp,
+    kanH,                              // normalizeHataEntry maps kanH → dph
+    rangeFrom:dp1!=null?dp1:null,      // normalizeHataEntry maps rangeFrom → dp_start
+    rangeTo:dp2!=null?dp2:null,        // normalizeHataEntry maps rangeTo  → dp_end
+    dph1:dph1!=null?dph1:null,
+    dph2:dph2!=null?dph2:null,
+    kanType:document.getElementById('h-pipetype').value,
+    note:document.getElementById('h-note').value,
+    img:imgSrc&&imgSrc!==location.href?imgSrc:'',
+  };
+  const id=_selectedSiteId;
+  let list=getLocalHata(id);
+  if(editKey){const idx=list.findIndex(r=>r.key===editKey);if(idx>=0)list[idx]=rec;else list.push(rec);}
+  else list.push(rec);
+  saveLocalHata(id,list);
+  fbSaveAllHata(id,list);
+  renderHataList(list);
+  updateExistingHataSel();
+  clearHataForm();
+  showToast('✅ 旗揚げマスタを保存しました');
+  var action=editKey?'旗揚げ編集':'旗揚げ新規';
+  _auditLog('hata_save',action+' No.'+rec.num+(rec.name?' 「'+rec.name+'」':'')+' ['+id+']');
+}
+
+function clearHataForm(){
+  ['h-hata','h-name','h-dp','h-dph','h-dp1','h-dp2','h-dph1','h-dph2','h-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const kt=document.getElementById('h-pipetype');if(kt)kt.value='';
+  document.getElementById('h-editKey').value='';
+  clearHataImg();
+  const sel=document.getElementById('existingHataSel');if(sel)sel.value='';
+  document.getElementById('btnCancelHata').style.display='none';
+}
+
+function loadExistingHata(key){
+  if(!key||!_selectedSiteId)return;
+  const list=getLocalHata(_selectedSiteId);
+  // key フィールドで検索、なければ num または hata フィールドで照合（order.html 由来エントリ対応）
+  const r=list.find(x=>x.key===key)||list.find(x=>String(x.num||x.hata||'')===String(key));
+  if(!r)return;
+  document.getElementById('h-hata').value=r.num||r.hata||'';
+  const _nameEl=document.getElementById('h-name');if(_nameEl)_nameEl.value=r.name||'';
+  document.getElementById('h-dp').value=r.dp!=null?r.dp:'';
+  const _dphEl=document.getElementById('h-dph');if(_dphEl)_dphEl.value=r.kanH!=null?r.kanH:(r.dph!=null?r.dph:'');
+  const _dp1El=document.getElementById('h-dp1');if(_dp1El)_dp1El.value=r.rangeFrom!=null?r.rangeFrom:(r.dp_start!=null?r.dp_start:'');
+  const _dp2El=document.getElementById('h-dp2');if(_dp2El)_dp2El.value=r.rangeTo!=null?r.rangeTo:(r.dp_end!=null?r.dp_end:'');
+  const _dph1El=document.getElementById('h-dph1');if(_dph1El)_dph1El.value=r.dph1!=null?r.dph1:'';
+  const _dph2El=document.getElementById('h-dph2');if(_dph2El)_dph2El.value=r.dph2!=null?r.dph2:'';
+  const kt=document.getElementById('h-pipetype');if(kt)kt.value=r.kanType||r.pipetype||'';
+  document.getElementById('h-note').value=r.note||'';
+  document.getElementById('h-editKey').value=r.key;
+  if(r.img){
+    document.getElementById('h-previewImg').src=r.img;
+    document.getElementById('h-imgPreview').style.display='';
+    document.getElementById('h-imgLabel').style.display='none';
+    document.getElementById('h-imgName').textContent='（保存済み画像）';
+  }else clearHataImg();
+  document.getElementById('btnCancelHata').style.display='';
+}
+
+function editHata(key){
+  const sel=document.getElementById('existingHataSel');if(sel)sel.value=key;
+  loadExistingHata(key);
+  document.getElementById('modeHata').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function _updateHataDeleteBar(){
+  const checked=document.querySelectorAll('.hata-chk:checked');
+  const all=document.querySelectorAll('.hata-chk');
+  const btn=document.getElementById('hataDelSelBtn');
+  const selAll=document.getElementById('hataSelectAll');
+  if(btn){
+    btn.disabled=checked.length===0;
+    btn.style.opacity=checked.length===0?'0.5':'1';
+    btn.textContent='🗑 選択削除（'+checked.length+'件）';
+  }
+  if(selAll){
+    selAll.indeterminate=checked.length>0&&checked.length<all.length;
+    if(!selAll.indeterminate) selAll.checked=all.length>0&&checked.length===all.length;
+  }
+}
+
+function toggleAllHata(checked){
+  document.querySelectorAll('.hata-chk').forEach(cb=>cb.checked=checked);
+  _updateHataDeleteBar();
+}
+
+function deleteSelectedHata(){
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  const keys=[...document.querySelectorAll('.hata-chk:checked')].map(cb=>cb.value);
+  if(keys.length===0){showToast('削除する項目を選択してください');return;}
+  if(!confirm(keys.length+'件の旗揚げマスタを削除しますか？'))return;
+  const id=_selectedSiteId;
+  let list=getLocalHata(id).filter(r=>!keys.includes(r.key||String(r.hata||'')));
+  saveLocalHata(id,list);
+  if(_fbDb&&_isAdmin){
+    var safeList;
+    try{safeList=JSON.parse(JSON.stringify(list));}catch(e){safeList=list;}
+    var totalBytes=JSON.stringify(safeList).length;
+    if(totalBytes>800*1024) safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;return s;});
+    _fbDb.collection('masters').doc('hata_master_'+id).set({data:safeList,updatedAt:new Date().toISOString()})
+      .then(function(){
+        _fbDb.collection('masters').doc('hata_master').get()
+          .then(function(doc2){var all=(doc2.exists&&doc2.data().data)?doc2.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
+          .catch(function(e){console.warn('[FB hata mono save]',e);});
+      })
+      .catch(function(e){
+        console.warn('[FB hata multi-delete save]',e);
+        showToast('⚠️ Firestore保存失敗 ('+e.code+'): キャッシュには反映済みです');
+      });
+  }
+  renderHataList(list);
+  updateExistingHataSel();
+  showToast('🗑 '+keys.length+'件削除しました');
+}
+
+function deleteHata(key){
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  if(!confirm('この旗揚げマスタを削除しますか？'))return;
+  const id=_selectedSiteId;
+  // r.key が未設定の旧フォーマット（r.hata に番号が入る）にも対応
+  let list=getLocalHata(id).filter(r=>(r.key||String(r.hata||''))!==key);
+  saveLocalHata(id,list);
+  // Firestoreへ保存（失敗時はトーストで通知）
+  if(_fbDb&&_isAdmin){
+    var safeList;
+    try{safeList=JSON.parse(JSON.stringify(list));}catch(e){safeList=list;}
+    var totalBytes=JSON.stringify(safeList).length;
+    if(totalBytes>800*1024) safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;return s;});
+    _fbDb.collection('masters').doc('hata_master_'+id).set({data:safeList,updatedAt:new Date().toISOString()})
+      .then(function(){
+        // モノリシック形式にも保存（後方互換）
+        _fbDb.collection('masters').doc('hata_master').get()
+          .then(function(doc2){var all=(doc2.exists&&doc2.data().data)?doc2.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
+          .catch(function(e){console.warn('[FB hata mono save]',e);});
+      })
+      .catch(function(e){
+        console.warn('[FB hata delete save]',e);
+        showToast('⚠️ Firestore保存失敗 ('+e.code+'): キャッシュには反映済みです');
+      });
+  }
+  renderHataList(list);
+  updateExistingHataSel();
+  showToast('🗑 削除しました');
+}
+
+function updateExistingHataSel(){
+  const sel=document.getElementById('existingHataSel');if(!sel)return;
+  const list=_selectedSiteId?getLocalHata(_selectedSiteId):[];
+  sel.innerHTML='<option value="">― 既存のマスタを選択して編集 ―</option>';
+  list.forEach(r=>{const o=document.createElement('option');o.value=r.key||String(r.hata||'');o.textContent='No.'+(r.num||r.hata||'?')+((r.kanType||r.pipetype)?' ['+(r.kanType||r.pipetype)+']':'');sel.appendChild(o);});
+}
+
+function renderHataList(list){
+  updateExistingHataSel();
+  refreshViewerFilter();
+  const el=document.getElementById('hataList');if(!el)return;
+  const siteName=document.getElementById('siteSelectHata')?.options[document.getElementById('siteSelectHata')?.selectedIndex]?.text||'';
+  document.getElementById('hataListTitle').textContent='登録済み旗揚げマスタ（'+siteName+'）';
+  if(!list||list.length===0){el.innerHTML='<div class="empty-state">📋 まだ登録されていません</div>';return;}
+  el.innerHTML=list.map(r=>{
+    // 旧order.html形式(hata/dph/dp_start/pipetype/imgData)と新形式(num/kanH/rangeFrom/kanType/img)の両対応
+    const num    = r.num    || r.hata    || '?';
+    const dp     = r.dp     ?? '—';
+    const kanH   = r.kanH   ?? r.dph     ?? '—';
+    const from   = r.rangeFrom ?? r.dp_start ?? '—';
+    const to     = r.rangeTo   ?? r.dp_end   ?? '—';
+    const kanType= r.kanType   || r.pipetype  || '';
+    const note   = r.note  || '';
+    const name   = r.name  || '';
+    const imgSrc = r.img   || r.imgData  || '';
+    const key    = r.key   || String(r.hata||'');
+    const adminBtns=_isAdmin?`<button class="btn-sm btn-edit" onclick="editHata('${key}')">編集</button><button class="btn-sm btn-del" onclick="deleteHata('${key}')">削除</button>`:'';
+    const chkHtml=_isAdmin?`<input type="checkbox" class="hata-chk" value="${key}" onchange="_updateHataDeleteBar()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;margin-right:6px;">`:'';
+    const imgHtml=imgSrc?`<div style="margin-top:6px;"><img src="${imgSrc}" style="max-width:100%;max-height:100px;border-radius:6px;object-fit:contain;"></div>`:'';
+    return`<div class="config-card">
+      <div class="card-head">
+        ${chkHtml}
+        <div style="flex:1;">
+          <div class="name">No.${num}${name?' — '+name:''} ${kanType?'['+kanType+']':''}</div>
+          <div class="sub">DP:${dp}m　管下H:${kanH}m　測点:${from}〜${to}</div>
+          ${note?`<div style="font-size:14px;color:var(--text3);margin-top:2px;">${note}</div>`:''}
+        </div>
+        <div class="actions">${adminBtns}</div>
+      </div>${imgHtml}
+    </div>`;
+  }).join('');
+}
+
+
+// ======================================
+// 旗揚げマスタ CSV / JSON エクスポート・インポート
+// ======================================
+function exportHataCSV(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  const list=getLocalHata(_selectedSiteId);
+  if(!list.length){showToast('⚠️ エクスポートするデータがありません');return;}
+  const BOM='﻿';
+  const header='旗揚げ番号,場所区間名,DP管中心深度(m),管下H(m),測点DP開始(m),測点DP終了(m),管種,メモ';
+  const rows=list.map(r=>[
+    r.num||r.hata||'',
+    (r.name||'').replace(/,/g,'　'),
+    r.dp??'',
+    (r.kanH??r.dph??''),
+    (r.rangeFrom??r.dp_start??''),
+    (r.rangeTo??r.dp_end??''),
+    r.kanType||r.pipetype||'',
+    (r.note||'').split('\n').join(' ').replace(/,/g,'　'),
+  ].join(','));
+  const csv=BOM+header+'\n'+rows.join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='hata_'+(_selectedSiteId||'site')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('📤 CSVをダウンロードしました');
+}
+
+function importHataCSV(ev){
+  const file=ev.target.files[0];if(!file)return;
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');ev.target.value='';return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');ev.target.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const text=e.target.result.replace(/^﻿/,''); // BOM除去
+      const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+      // ヘッダー行をスキップ（旗揚げ番号で始まらない行）
+      const dataLines=lines.filter(l=>!l.startsWith('旗揚げ'));
+      let added=0;
+      const existing=getLocalHata(_selectedSiteId);
+      const existingNums=new Set(existing.map(r=>String(r.num||r.hata||'')));
+      const newEntries=[];
+      dataLines.forEach(line=>{
+        const cols=line.split(',');
+        if(!cols[0]||!cols[0].trim())return;
+        const num=cols[0].trim();
+        if(existingNums.has(num))return; // 重複スキップ
+        newEntries.push({
+          key:'h_csv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+          num, name:cols[1]?.trim()||'',
+          dp:parseFloat(cols[2])||0,
+          kanH:parseFloat(cols[3])||0,
+          rangeFrom:parseFloat(cols[4])||0,
+          rangeTo:parseFloat(cols[5])||0,
+          kanType:cols[6]?.trim()||'',
+          note:cols[7]?.trim()||'',
+          img:'',
+        });
+        added++;
+      });
+      const updated=[...existing,...newEntries];
+      saveLocalHata(_selectedSiteId,updated);
+      fbSaveAllHata(_selectedSiteId,updated);
+      renderHataList(updated);
+      showToast('✅ '+added+'件インポートしました'+(dataLines.length-added>0?'（'+(dataLines.length-added)+'件は旗揚げ番号重複でスキップ）':''));
+    }catch(err){showToast('❌ CSV読み込みエラー: '+err.message);}
+    ev.target.value='';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function exportHataJSON(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  const list=getLocalHata(_selectedSiteId);
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(list,null,2));
+  a.download='hata_'+(_selectedSiteId||'site')+'_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  showToast('💾 JSONバックアップをダウンロードしました');
+}
+
+function importHataJSON(ev){
+  const file=ev.target.files[0];if(!file)return;
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');ev.target.value='';return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');ev.target.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!Array.isArray(data))throw new Error('配列形式のJSONが必要です');
+      saveLocalHata(_selectedSiteId,data);
+      fbSaveAllHata(_selectedSiteId,data);
+      renderHataList(data);
+      showToast('✅ '+data.length+'件をJSONから復元しました');
+    }catch(err){showToast('❌ JSON読み込みエラー: '+err.message);}
+    ev.target.value='';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+
+// ======================================
+// 管理者UI
+// ======================================
+function updateAdminUI(){
+  var badge=document.getElementById('adminBadge');
+  var btn=document.getElementById('btnAdmin');
+  if(_isAdmin){
+    badge.style.display='';
+    badge.textContent='👑管理者';
+    btn.textContent='🔓'; btn.className='btn-admin active';
+  } else if(_isLoggedIn){
+    badge.style.display='';
+    badge.textContent='🔐ログイン中';
+    badge.style.background='rgba(251,191,36,.15)';
+    badge.style.color='#fbbf24';
+    badge.style.border='1px solid rgba(251,191,36,.4)';
+    btn.textContent='🔓'; btn.className='btn-admin';
+  } else {
+    badge.style.display='none';
+    btn.textContent='🔑'; btn.className='btn-admin';
+  }
+  // 断面図切り出しリンク：管理者のみ表示
+  document.querySelectorAll('.pdf-crop-link').forEach(el=>el.style.display=_isAdmin?'':'none');
+  // 旗揚げ複数削除バー：管理者のみ表示
+  var mb=document.getElementById('hataMultiBar');
+  if(mb) mb.style.display=_isAdmin?'flex':'none';
+  // 変更履歴タブ・コピーボタン：スーパー管理者のみ表示
+  document.getElementById('modeTabAudit').style.display=_isAdmin?'':'none';
+  document.getElementById('btnCopySite').style.display=_isAdmin?'':'none';
+  if(_selectedSiteId){renderConfigList(getLocalRb(_selectedSiteId));renderDwgList(getLocalDwg(_selectedSiteId));}
+  _updateSyncBadge();
+}
+
+// ─── 未同期バッジ ─────────────────────────────────────────────────────────
+var _SYNC_MOD_KEY='__masterModifiedAt', _SYNC_AT_KEY='__fbSyncedAt';
+function _markLocalModified(){localStorage.setItem(_SYNC_MOD_KEY,Date.now().toString());_updateSyncBadge();}
+function _markSynced(){localStorage.setItem(_SYNC_AT_KEY,Date.now().toString());_updateSyncBadge();}
+function _isSyncPending(){
+  if(!_isAdmin)return false;
+  var mod=parseInt(localStorage.getItem(_SYNC_MOD_KEY)||'0');
+  var syn=parseInt(localStorage.getItem(_SYNC_AT_KEY)||'0');
+  return mod>syn;
+}
+function _updateSyncBadge(){
+  var btn=document.getElementById('migrateBtn');
+  if(!btn)return;
+  if(!_isAdmin){btn.style.display='none';return;}
+  btn.style.display='';
+  var p=_isSyncPending();
+  btn.style.background =p?'rgba(239,68,68,.25)':'rgba(34,197,94,.2)';
+  btn.style.border     =p?'1px solid rgba(239,68,68,.5)':'1px solid rgba(34,197,94,.4)';
+  btn.style.color      =p?'#fca5a5':'#86efac';
+  btn.textContent      =p?'⚠️ 未同期':'📤 移行';
+  btn.title            =p?'Firestoreと未同期のデータがあります（クリックでアップロード）':'既存データをFirebaseへ移行';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function migrateToFirebase(){
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  if(!_fbDb){showToast('⚠️ Firebase未接続です');return;}
+  if(!confirm('このPCのlocalStorageにある\n現場・旗揚げ・路盤マスタをFirebaseにアップロードします。\nよろしいですか？'))return;
+  var results=[];
+  // 現場マスタ
+  try{
+    var sites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    if(sites.length>0){_fbDb.collection('masters').doc('site_master').set({data:sites,updatedAt:new Date().toISOString()});results.push('現場マスタ: '+sites.length+'件');}
+  }catch(e){results.push('現場マスタ: エラー '+e);}
+  // 旗揚げマスタ
+  try{
+    var totalHata=0;
+    var mSites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    mSites.forEach(function(s){
+      var sh=JSON.parse(localStorage.getItem('hata_master_'+s.id)||'[]');
+      if(sh.length>0){totalHata+=sh.length;_fbDb.collection('masters').doc('hata_master_'+s.id).set({data:sh,updatedAt:new Date().toISOString()});}
+    });
+    var hg=JSON.parse(localStorage.getItem('hata_master')||'[]');
+    if(hg.length>0){totalHata+=hg.length;_fbDb.collection('masters').doc('hata_master_global').set({data:hg,updatedAt:new Date().toISOString()});}
+    if(totalHata>0)results.push('旗揚げマスタ: '+totalHata+'件');
+  }catch(e){results.push('旗揚げマスタ: エラー '+e);}
+  // 路盤マスタ
+  try{
+    var allRb={},totalRb=0;
+    var mSites2=JSON.parse(localStorage.getItem('site_master')||'[]');
+    mSites2.forEach(function(s){
+      var rb=JSON.parse(localStorage.getItem('roadbed_masters_'+s.id)||'null');
+      if(rb&&rb.length>0){allRb[s.id]=rb;totalRb+=rb.length;}
+    });
+    if(totalRb>0){
+      _fbDb.collection('masters').doc('roadbed_masters').get().then(function(doc){
+        var existing=(doc.exists&&doc.data().data&&!Array.isArray(doc.data().data))?doc.data().data:{};
+        Object.keys(allRb).forEach(function(sid){existing[sid]=allRb[sid];});
+        return _fbDb.collection('masters').doc('roadbed_masters').set({data:existing,updatedAt:new Date().toISOString()});
+      });
+      results.push('路盤マスタ: '+totalRb+'件（'+Object.keys(allRb).length+'現場）');
+    }
+  }catch(e){results.push('路盤マスタ: エラー '+e);}
+  setTimeout(function(){alert('✅ Firebaseへのアップロード完了\n\n'+results.join('\n'));_markSynced();},800);
+}
+
+function onAdminBtn(){if(_isAdmin){if(confirm('ログアウトしますか？'))_fbAuth.signOut();}else document.getElementById('loginModal').classList.add('open');}
 function doLogin(){
   _fbAuth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(),document.getElementById('loginPass').value)
-    .then(()=>{closeModal();showToast('✅ 管理者ログイン成功');})
-    .catch(e=>showToast('❌ '+e.message));
+    .then(()=>{closeModal();showToast('\u2705 管理者ログイン成功');})
+    .catch(e=>showToast('\u274c '+e.message));
 }
-function closeModal(){ document.getElementById('loginModal').classList.remove('open'); document.getElementById('loginPass').value=''; }
+function closeModal(){document.getElementById('loginModal').classList.remove('open');document.getElementById('loginPass').value='';}
 
-// ---- トースト ----
+// ======================================
+// トースト
+// ======================================
 function showToast(msg,d=2500){
-  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),d);
 }
 
-// ---- 初期化 ----
+// ======================================
+// 図面クイック検索（ビューアツールバー）
+// ======================================
+function refreshViewerFilter(){
+  var bar=document.getElementById('viewerSearchBar');
+  if(!bar)return;
+  if(!_selectedSiteId){bar.classList.add('hidden');return;}
+  bar.classList.remove('hidden');
+  var rbSel=document.getElementById('filterRbSel');
+  var curRb=rbSel.value;
+  var configs=getLocalRb(_selectedSiteId);
+  rbSel.innerHTML='<option value="">― 型を選択 ―</option>';
+  configs.forEach(function(r){
+    var o=document.createElement('option');
+    o.value=r.key; o.textContent=r.label||r.key;
+    if(curRb===r.key) o.selected=true;
+    rbSel.appendChild(o);
+  });
+  _refreshHataSel(document.getElementById('filterHataSel').value, curRb);
+}
+
+function _hataKey(r){ return r.key || String(r.hata || r.num || ''); }
+
+function _refreshHataSel(curHata, rbKey){
+  var hataSel=document.getElementById('filterHataSel');
+  var hataList=getLocalHata(_selectedSiteId);
+  hataSel.innerHTML='<option value="">&#x2015; 旗揚げ番号 &#x2015;</option>';
+  hataList.forEach(function(r){
+    var o=document.createElement('option');
+    var k=_hataKey(r);
+    o.value=k;
+    o.textContent='No.'+(r.num||r.hata||'?')+(r.name?' '+r.name:'');
+    if(curHata===k) o.selected=true;
+    hataSel.appendChild(o);
+  });
+  hataSel.disabled=hataList.length===0;
+}
+
+function onFilterRbChange(rbKey){
+  _refreshHataSel('', rbKey);
+  document.getElementById('filterHataSel').value='';
+  if(!rbKey){setFilterStatus('');return;}
+  var dwgList=getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey;});
+  if(dwgList.length>0){
+    _viewDwgEntry(dwgList[0]);
+    setFilterStatus('📋 図面 '+dwgList.length+'件');
+  } else {
+    setFilterStatus('図面未登録');
+  }
+}
+
+function onFilterHataChange(hataKey){
+  if(!hataKey){
+    var rbKey=document.getElementById('filterRbSel').value;
+    if(rbKey) onFilterRbChange(rbKey); else setFilterStatus('');
+    return;
+  }
+  var r=getLocalHata(_selectedSiteId).find(function(x){return _hataKey(x)===hataKey;});
+  if(!r){setFilterStatus('⚠️ 見つかりません');return;}
+  var imgSrc=r.img||r.imgData||'';
+  if(imgSrc){
+    var va=document.getElementById('viewerArea');
+    va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
+    document.getElementById('btnClearViewer').style.display='';
+    document.getElementById('pageNav').style.display='none';
+    _zoomCtrlShow(true);viewerZoomReset();
+    _pdfDoc=null;
+    var dpStr=r.dp?'DP:'+r.dp+'m　':'';
+    var khStr=(r.kanH!=null&&r.kanH!=='')?'管下H:'+(r.kanH||r.dph||'')+'m':'';
+    setFilterStatus('📷 '+dpStr+khStr);
+  } else {
+    var rbKey2=document.getElementById('filterRbSel').value;
+    var dwgList2=rbKey2?getLocalDwg(_selectedSiteId).filter(function(d){return d.rbKey===rbKey2;}):[];
+    if(dwgList2.length>0){
+      _viewDwgEntry(dwgList2[0]);
+      setFilterStatus('📋 図面（旗揚げ画像なし）');
+    } else {
+      setFilterStatus('⚠️ 画像・図面なし');
+    }
+  }
+}
+
+function _viewDwgEntry(d){
+  if(!d)return;
+  _showDwgInViewer(d);
+}
+
+function setFilterStatus(msg){
+  var el=document.getElementById('filterStatus');
+  if(el) el.textContent=msg;
+}
+
+// ======================================
+// 初期化
+// ======================================
 window.addEventListener('DOMContentLoaded',()=>{
   _kariAsRows=[{role:'surface',preset:'',custom:'',t:0}];
   _honAsRows =[{role:'surface',preset:'',custom:'',t:0}];
-  _kariRbRows=[{cat:'rm',size:'RM-40',name:'',t:0,n:1}];
-  _honRbRows =[{cat:'rm',size:'RM-40',name:'',t:0,n:1}];
-  renderAsRows('kari'); renderAsRows('hon');
-  renderRbRows('kari'); renderRbRows('hon');
+  _kariRbRows=[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
+  _honRbRows =[{cat:'上層',subcat:'RM-40',name:'',t:0,n:1}];
+  renderAsRows('kari');renderAsRows('hon');
+  renderRbRows('kari');renderRbRows('hon');
   initFirebase();
 });
+
+// ======================================
+// 現場間コピー
+// ======================================
+function openCopyModal() {
+  if(!_selectedSiteId){showToast('⚠️ コピー元の現場を先に選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者権限が必要です');return;}
+
+  // ラベルを更新
+  var sites=JSON.parse(localStorage.getItem('site_master')||'[]');
+  var srcSite=sites.find(function(s){return (s.id||s.siteId||s.name)===_selectedSiteId;})||{};
+  document.getElementById('copySrcLabel').textContent=(srcSite.name||srcSite.siteName||_selectedSiteId);
+
+  // コピー先セレクタ（コピー元以外）
+  var sel=document.getElementById('copyDestSel');
+  sel.innerHTML='<option value="">― コピー先を選択 ―</option>';
+  sites.forEach(function(s){
+    var id=s.id||s.siteId||s.name;
+    if(id===_selectedSiteId) return; // 自分自身は除外
+    var o=document.createElement('option');
+    o.value=id; o.textContent=s.name||s.siteName||id;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('copyModal').classList.add('open');
+}
+
+function closeCopyModal(){
+  document.getElementById('copyModal').classList.remove('open');
+}
+
+function execCopySite(){
+  var destId=document.getElementById('copyDestSel').value;
+  if(!destId){showToast('⚠️ コピー先を選択してください');return;}
+  if(!_selectedSiteId){showToast('⚠️ コピー元の現場が不明です');return;}
+
+  var copyRb   = document.getElementById('copyOptRb').checked;
+  var copyHata = document.getElementById('copyOptHata').checked;
+  var copyDwg  = document.getElementById('copyOptDwg').checked;
+
+  if(!copyRb&&!copyHata&&!copyDwg){showToast('⚠️ コピーする内容を1つ以上選んでください');return;}
+
+  var srcId=_selectedSiteId;
+  var tasks=[];
+  var copied=[];
+
+  // 路盤構成
+  if(copyRb){
+    var rbData=getLocalRb(srcId);
+    if(rbData&&(Array.isArray(rbData)?rbData.length:Object.keys(rbData).length)>0){
+      tasks.push(new Promise(function(resolve){
+        saveRbForSite(destId,rbData);
+        copied.push('路盤構成');
+        resolve();
+      }));
+    }
+  }
+
+  // 旗揚げマスタ
+  if(copyHata){
+    var hataData=getLocalHata(srcId);
+    if(hataData&&hataData.length>0){
+      tasks.push(new Promise(function(resolve){
+        saveLocalHata(destId,hataData);
+        fbSaveAllHata(destId,hataData);
+        copied.push('旗揚げ('+hataData.length+'件)');
+        resolve();
+      }));
+    }
+  }
+
+  // 図面リスト
+  if(copyDwg){
+    var dwgData=getLocalDwg(srcId);
+    // ローカルファイルデータは除外してURLのみコピー
+    var dwgCopy=(dwgData||[]).map(function(d){
+      var c=Object.assign({},d);
+      delete c.fileData; // Base64除外
+      c.key='dwg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      return c;
+    });
+    if(dwgCopy.length>0){
+      tasks.push(new Promise(function(resolve){
+        saveDwgsForSite(destId,dwgCopy);
+        copied.push('図面('+dwgCopy.length+'件)');
+        resolve();
+      }));
+    }
+  }
+
+  Promise.all(tasks).then(function(){
+    var destSites=JSON.parse(localStorage.getItem('site_master')||'[]');
+    var destSite=destSites.find(function(s){return (s.id||s.siteId||s.name)===destId;})||{};
+    var destName=destSite.name||destSite.siteName||destId;
+    if(copied.length>0){
+      showToast('✅ コピー完了: '+copied.join(' / ')+' → '+destName);
+      _auditLog('site_copy','['+srcId+'] → ['+destId+'] '+copied.join(','));
+    }else{
+      showToast('⚠️ コピーするデータがありませんでした');
+    }
+    closeCopyModal();
+  });
+}
+
+// ======================================
+// 変更履歴ログ (audit_log)
+// ======================================
+var _auditCache = [];
+
+/**
+ * Firestoreのaudit_logコレクションに1件記録する
+ * @param {string} action  - 'roadbed_save' | 'hata_save' | 'dwg_save' | 'site_add' など
+ * @param {string} detail  - 人間が読める変更内容の概要
+ */
+function _auditLog(action, detail) {
+  if (!_fbDb || !_currentUser) return;
+  var entry = {
+    ts:     new Date().toISOString(),
+    user:   _currentUser.email || '不明',
+    siteId: _selectedSiteId || '',
+    action: action,
+    detail: detail || ''
+  };
+  _fbDb.collection('audit_log').add(entry)
+    .catch(function(e){ console.warn('[audit]', e); });
+}
+
+/** audit_logをFirestoreから読み込んでキャッシュ */
+function loadAuditLog() {
+  var listEl = document.getElementById('auditLogList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state">読み込み中...</div>';
+  _fbDb.collection('audit_log')
+    .orderBy('ts', 'desc')
+    .limit(200)
+    .get()
+    .then(function(snap) {
+      _auditCache = [];
+      snap.forEach(function(d){ _auditCache.push(d.data()); });
+      var sites = Array.from(new Set(_auditCache.map(function(r){return r.siteId||'';})))
+                       .filter(Boolean).sort();
+      var sel = document.getElementById('auditSiteFilter');
+      if (sel) {
+        var prev = sel.value;
+        sel.innerHTML = '<option value="">すべての現場</option>';
+        sites.forEach(function(s){
+          var o=document.createElement('option');
+          o.value=s; o.textContent=s; sel.appendChild(o);
+        });
+        if (prev) sel.value = prev;
+      }
+      renderAuditLog();
+    })
+    .catch(function(e){
+      if (listEl) listEl.innerHTML = '<div class="empty-state">⚠️ 読み込みエラー: '+e.message+'</div>';
+    });
+}
+
+var ACTION_LABELS = {
+  roadbed_save: '🏗️ 路盤構成 保存',
+  roadbed_delete: '🗑️ 路盤構成 削除',
+  hata_save:    '🗂 旗揚げマスタ 保存',
+  hata_delete:  '🗑️ 旗揚げマスタ 削除',
+  dwg_save:     '📋 図面 登録',
+  dwg_delete:   '🗑️ 図面 削除',
+  site_add:     '📍 現場 追加',
+  site_copy:    '📋 現場間コピー',
+};
+
+function renderAuditLog() {
+  var listEl = document.getElementById('auditLogList');
+  if (!listEl) return;
+  var siteFilter = (document.getElementById('auditSiteFilter')||{}).value || '';
+  var rows = _auditCache.filter(function(r){
+    return !siteFilter || r.siteId === siteFilter;
+  });
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="empty-state">変更履歴がありません</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    + '<thead><tr style="border-bottom:1px solid var(--border);color:var(--text2);">'
+    + '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">日時</th>'
+    + '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">操作</th>'
+    + '<th style="text-align:left;padding:6px 8px;">現場</th>'
+    + '<th style="text-align:left;padding:6px 8px;">詳細</th>'
+    + '</tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var dt = r.ts ? r.ts.replace('T',' ').slice(0,16) : '—';
+    var label = ACTION_LABELS[r.action] || r.action;
+    var site = r.siteId || '—';
+    var det = (r.detail||'').replace(/</g,'&lt;');
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">'
+      + '<td style="padding:6px 8px;white-space:nowrap;color:var(--text2);">'+dt+'</td>'
+      + '<td style="padding:6px 8px;white-space:nowrap;">'+label+'</td>'
+      + '<td style="padding:6px 8px;color:var(--accent);">'+site+'</td>'
+      + '<td style="padding:6px 8px;color:var(--text2);">'+det+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
+
+// =====================================================================
+// 赤バナー警告 + iPadプルダウンリフレッシュ防止 + トップへ戻るボタン
+// =====================================================================
+var _warnToast = null, _warnTimer = null;
+function _hideWarningBanner() { if (_warnToast) _warnToast.style.transform = 'translateY(-100%)'; }
+function showWarningBanner(msg, focusId) {
+  var el = focusId ? document.getElementById(focusId) : null;
+  if (!_warnToast) {
+    _warnToast = document.createElement('div');
+    _warnToast.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;font-size:18px;font-weight:700;padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);transform:translateY(-100%);transition:transform 0.25s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;';
+    document.body.appendChild(_warnToast);
+    _warnToast.addEventListener('click', function() {
+      _hideWarningBanner();
+      if (_warnToast._targetEl) { _warnToast._targetEl.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ if(_warnToast._targetEl) _warnToast._targetEl.focus(); }, 350); }
+    });
+  }
+  _warnToast._targetEl = el || null;
+  _warnToast.innerHTML = '⚠️ ' + msg + (el ? '　<span style="text-decoration:underline;font-size:15px;">（ここをタップして移動）</span>' : '');
+  _warnToast.style.transform = 'translateY(0)';
+  clearTimeout(_warnTimer);
+  _warnTimer = setTimeout(_hideWarningBanner, 6000);
+}
+(function() {
+  var _sy = 0, _wd = false;
+  document.addEventListener('touchstart', function(e) { _sy = e.touches[0] ? e.touches[0].clientY : 0; _wd = false; }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    var y = e.touches[0] ? e.touches[0].clientY : 0;
+    var st = document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (st <= 0 && y > _sy + 8) {
+      e.preventDefault();
+      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
+    }
+  }, { passive: false });
+  document.addEventListener('DOMContentLoaded', function() {
+    var b = document.createElement('button');
+    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
+    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(b);
+    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
+    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
+  });
+})();
+
 </script>
 </body>
 </html>

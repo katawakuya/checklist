@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>熱中症緊急連絡カード 印刷用｜小田原市富士フィルム地下埋設管</title>
+<style>
+*{
+  box-sizing:border-box;margin:0;padding:0;
+  -webkit-print-color-adjust:exact !important;
+  print-color-adjust:exact !important;
+  color-adjust:exact !important;
+}
+body{
+  font-family:'Meiryo','ヒラギノ角ゴ Pro','Hiragino Kaku Gothic Pro',sans-serif;
+  background:#ccc;padding:10mm;
+}
+@page{size:A4 portrait;margin:8mm;}
+@media print{
+  body{background:#fff;padding:0;}
+  .screen-note{display:none;}
+  .sheet{page-break-after:always;background:#fff;box-shadow:none;padding:0;}
+  .sheet:last-child{page-break-after:auto;}
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}
+}
+
+.screen-note{
+  background:#1565c0;color:#fff;padding:10px 16px;margin-bottom:10px;
+  border-radius:6px;font-size:13px;line-height:1.6;
+}
+
+/* ===== シート ===== */
+.sheet{
+  width:210mm;margin:0 auto 10mm;
+  background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.25);
+  padding:4mm;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:3mm;
+  min-height:272mm;
+}
+
+/* ===== カード共通 ===== */
+.card{
+  border:2px solid #222;border-radius:4px;
+  overflow:hidden;display:flex;flex-direction:column;
+}
+
+/* ヘッダー */
+.card-hdr{
+  padding:6px 9px;color:#fff;
+  display:flex;align-items:center;gap:6px;
+  flex-shrink:0;
+}
+.card-hdr.red{background:#b71c1c;}
+.card-hdr.navy{background:#1a3a5c;}
+.card-hdr-icon{font-size:18px;line-height:1;flex-shrink:0;}
+.card-hdr-title{font-size:14px;font-weight:900;line-height:1.2;letter-spacing:.02em;}
+.card-hdr-sub{font-size:8.5px;opacity:.85;font-weight:400;margin-top:2px;}
+
+/* ===== 表面ボディ ===== */
+.card-body{flex:1;padding:5px 8px 5px;display:flex;flex-direction:column;gap:5px;}
+
+/* 119ブロック */
+.sos-block{
+  background:#b71c1c;border-radius:5px;
+  padding:6px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.sos-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,.95);}
+.sos-hint{font-size:8.5px;color:rgba(255,255,255,.75);margin-top:2px;}
+.sos-num{font-size:44px;font-weight:900;color:#fff;letter-spacing:.02em;line-height:1;}
+
+/* 連絡先テーブル */
+.ctable{width:100%;border-collapse:collapse;flex-shrink:0;}
+.ctable tr{border-bottom:1px solid #ddd;}
+.ctable tr:last-child{border-bottom:1.5px solid #aaa;}
+.ctable td{padding:4px 3px;vertical-align:middle;}
+.ct-role{font-size:8.5px;color:#777;width:27%;line-height:1.3;}
+.ct-name{font-size:12px;font-weight:700;color:#111;width:30%;}
+.ct-romaji{font-size:8px;color:#444;display:block;font-weight:600;letter-spacing:.02em;}
+.ct-num{font-size:14px;font-weight:900;color:#1a237e;text-align:right;letter-spacing:.04em;white-space:nowrap;}
+.ct-night td{background:#fff8e1;}
+.ct-night .ct-role{color:#bf360c;}
+.ct-night .ct-name{color:#bf360c;}
+.ct-night .ct-num{color:#bf360c;}
+
+/* 病院ブロック */
+.hosp-block{
+  background:#e3f2fd;border-radius:5px;border-left:4px solid #1565c0;
+  padding:6px 9px;flex-shrink:0;
+}
+.hosp-name{font-size:9px;font-weight:700;color:#0d47a1;}
+.hosp-addr{font-size:7.5px;color:#555;margin-top:1px;}
+.hosp-num{font-size:19px;font-weight:900;color:#0d47a1;margin-top:4px;letter-spacing:.04em;}
+
+/* QRエリア */
+.qr-area{
+  border-top:1px dashed #ccc;padding-top:4px;
+  display:flex;align-items:center;gap:7px;flex-shrink:0;
+}
+.qr-text{flex:1;}
+.qr-main{font-size:8px;font-weight:700;color:#1a3a5c;line-height:1.5;word-break:break-all;}
+.qr-hint{font-size:7px;color:#888;margin-top:2px;line-height:1.4;}
+
+/* 表フッター */
+.card-foot{
+  background:#37474f;padding:4px 8px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.foot-site{font-size:8px;color:rgba(255,255,255,.8);}
+.foot-year{font-size:8px;color:rgba(255,255,255,.65);}
+
+/* ===== 裏面 ===== */
+/* 警告バナー */
+.warn-banner{
+  background:#b71c1c;color:#fff;
+  padding:8px 10px;text-align:center;line-height:1.4;
+  flex-shrink:0;
+}
+.warn-icon{font-size:18px;display:block;margin-bottom:2px;}
+.warn-text{font-size:14px;font-weight:900;letter-spacing:.04em;}
+.warn-sub{font-size:9px;opacity:.85;margin-top:1px;}
+
+/* 裏ボディ */
+.card-body-back{flex:1;padding:6px 8px 5px;display:flex;flex-direction:column;gap:5px;}
+
+/* 応急処置 */
+.aid-title{
+  font-size:11px;font-weight:900;color:#b71c1c;
+  border-bottom:2.5px solid #b71c1c;padding-bottom:3px;margin-bottom:2px;
+  flex-shrink:0;
+}
+.steps{list-style:none;flex:1;}
+.steps li{
+  display:flex;align-items:flex-start;gap:5px;
+  font-size:11.5px;color:#111;font-weight:500;
+  padding:4px 0;border-bottom:1px solid #eee;line-height:1.4;
+}
+.steps li:last-child{border:none;}
+.step-num{
+  font-size:15px;font-weight:900;color:#b71c1c;
+  flex-shrink:0;width:19px;line-height:1.2;text-align:center;
+}
+
+/* 連絡の流れ */
+.org-section{
+  border-top:2.5px solid #1a3a5c;
+  padding-top:5px;flex-shrink:0;
+}
+.org-title{font-size:10.5px;font-weight:900;color:#1a3a5c;margin-bottom:5px;letter-spacing:.02em;}
+.org-row1{display:flex;align-items:center;justify-content:center;gap:4px;}
+.org-row2{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;}
+.o-box{
+  font-size:11px;font-weight:700;
+  padding:5px 7px;border-radius:4px;
+  text-align:center;line-height:1.35;
+}
+.o-box.sos{background:#ffebee;color:#b71c1c;border:1.5px solid #ef9a9a;}
+.o-box.mid{background:#e8eaf6;color:#1a237e;border:1.5px solid #9fa8da;}
+.o-box.btm{background:#f3f3f3;color:#444;border:1.5px solid #bdbdbd;}
+.o-arr{font-size:15px;color:#555;font-weight:700;line-height:1;}
+
+/* 裏フッター（病院番号を大きく） */
+.card-foot-back{
+  background:#1a3a5c;
+  padding:6px 9px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.foot-hosp{font-size:15px;font-weight:900;color:#fff;letter-spacing:.04em;}
+.foot-year-back{font-size:8px;color:rgba(255,255,255,.6);}
+</style>
+</head>
+<body>
+
+<div class="screen-note">
+  ◆ 印刷手順：①このページをそのまま印刷（A4・縦）→ 【ページ1】4枚の表が印刷されます<br>
+  ②用紙を裏返して再度印刷 → 【ページ2】4枚の裏が印刷されます<br>
+  ③4つに切り取り → ラミネート加工 → 名札ホルダーまたは安全チョッキポケットへ<br>
+  ※ブラウザの「ヘッダー・フッターを印刷」はOFFにしてください
+</div>
+
+<!-- ===== ページ1：表 ===== -->
+<div class="sheet">
+
+  <!-- カード1〜4（表）共通テンプレート ここから -->
+  <div class="card">
+    <div class="card-hdr red">
+      <span class="card-hdr-icon">🌡</span>
+      <div>
+        <div class="card-hdr-title">熱中症　緊急連絡先</div>
+        <div class="card-hdr-sub">小田原市富士フィルム地下埋設管敷設工事</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sos-block">
+        <div>
+          <div class="sos-lbl">🚑 救急・消防</div>
+          <div class="sos-hint">まず119番に電話！</div>
+        </div>
+        <div class="sos-num">119</div>
+      </div>
+      <table class="ctable">
+        <tr>
+          <td class="ct-role">現場責任者</td>
+          <td class="ct-name">三枝　裕太<span class="ct-romaji">Saegusa Yuta</span></td>
+          <td class="ct-num">090-9290-1004</td>
+        </tr>
+        <tr>
+          <td class="ct-role">安全衛生管理者</td>
+          <td class="ct-name">柴田　興平<span class="ct-romaji">Shibata Kohei</span></td>
+          <td class="ct-num">080-5704-7075</td>
+        </tr>
+        <tr>
+          <td class="ct-role">元請担当（昼）</td>
+          <td class="ct-name">山本　克貴<span class="ct-romaji">Yamamoto Katsuki</span></td>
+          <td class="ct-num">080-5400-0259</td>
+        </tr>
+        <tr class="ct-night">
+          <td class="ct-role">元請 夜間・休日</td>
+          <td class="ct-name">緊急専用<span class="ct-romaji">Emergency</span></td>
+          <td class="ct-num">090-4812-4651</td>
+        </tr>
+      </table>
+      <div class="hosp-block">
+        <div class="hosp-name">医療法人財団報徳会　西湘病院 / Seisho Hospital</div>
+        <div class="hosp-addr">神奈川県小田原市扇町1-16-35</div>
+        <div class="hosp-num">📞 0465-35-5773</div>
+      </div>
+      <div class="qr-area">
+        <div id="qr-front1" style="width:48px;height:48px;flex-shrink:0;"></div>
+        <div class="qr-text">
+          <div class="qr-main">katawakuya.github.io/<br>checklist/heatstroke.html</div>
+          <div class="qr-hint">QR読取またはURL手打ちで<br>スマホから即発信できます</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <span class="foot-site">現場：小田原市扇町2-33-11他</span>
+      <span class="foot-year">令和7年度</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr red">
+      <span class="card-hdr-icon">🌡</span>
+      <div>
+        <div class="card-hdr-title">熱中症　緊急連絡先</div>
+        <div class="card-hdr-sub">小田原市富士フィルム地下埋設管敷設工事</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sos-block">
+        <div>
+          <div class="sos-lbl">🚑 救急・消防</div>
+          <div class="sos-hint">まず119番に電話！</div>
+        </div>
+        <div class="sos-num">119</div>
+      </div>
+      <table class="ctable">
+        <tr>
+          <td class="ct-role">現場責任者</td>
+          <td class="ct-name">三枝　裕太<span class="ct-romaji">Saegusa Yuta</span></td>
+          <td class="ct-num">090-9290-1004</td>
+        </tr>
+        <tr>
+          <td class="ct-role">安全衛生管理者</td>
+          <td class="ct-name">柴田　興平<span class="ct-romaji">Shibata Kohei</span></td>
+          <td class="ct-num">080-5704-7075</td>
+        </tr>
+        <tr>
+          <td class="ct-role">元請担当（昼）</td>
+          <td class="ct-name">山本　克貴<span class="ct-romaji">Yamamoto Katsuki</span></td>
+          <td class="ct-num">080-5400-0259</td>
+        </tr>
+        <tr class="ct-night">
+          <td class="ct-role">元請 夜間・休日</td>
+          <td class="ct-name">緊急専用<span class="ct-romaji">Emergency</span></td>
+          <td class="ct-num">090-4812-4651</td>
+        </tr>
+      </table>
+      <div class="hosp-block">
+        <div class="hosp-name">医療法人財団報徳会　西湘病院 / Seisho Hospital</div>
+        <div class="hosp-addr">神奈川県小田原市扇町1-16-35</div>
+        <div class="hosp-num">📞 0465-35-5773</div>
+      </div>
+      <div class="qr-area">
+        <div id="qr-front2" style="width:48px;height:48px;flex-shrink:0;"></div>
+        <div class="qr-text">
+          <div class="qr-main">katawakuya.github.io/<br>checklist/heatstroke.html</div>
+          <div class="qr-hint">QR読取またはURL手打ちで<br>スマホから即発信できます</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <span class="foot-site">現場：小田原市扇町2-33-11他</span>
+      <span class="foot-year">令和7年度</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr red">
+      <span class="card-hdr-icon">🌡</span>
+      <div>
+        <div class="card-hdr-title">熱中症　緊急連絡先</div>
+        <div class="card-hdr-sub">小田原市富士フィルム地下埋設管敷設工事</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sos-block">
+        <div>
+          <div class="sos-lbl">🚑 救急・消防</div>
+          <div class="sos-hint">まず119番に電話！</div>
+        </div>
+        <div class="sos-num">119</div>
+      </div>
+      <table class="ctable">
+        <tr>
+          <td class="ct-role">現場責任者</td>
+          <td class="ct-name">三枝　裕太<span class="ct-romaji">Saegusa Yuta</span></td>
+          <td class="ct-num">090-9290-1004</td>
+        </tr>
+        <tr>
+          <td class="ct-role">安全衛生管理者</td>
+          <td class="ct-name">柴田　興平<span class="ct-romaji">Shibata Kohei</span></td>
+          <td class="ct-num">080-5704-7075</td>
+        </tr>
+        <tr>
+          <td class="ct-role">元請担当（昼）</td>
+          <td class="ct-name">山本　克貴<span class="ct-romaji">Yamamoto Katsuki</span></td>
+          <td class="ct-num">080-5400-0259</td>
+        </tr>
+        <tr class="ct-night">
+          <td class="ct-role">元請 夜間・休日</td>
+          <td class="ct-name">緊急専用<span class="ct-romaji">Emergency</span></td>
+          <td class="ct-num">090-4812-4651</td>
+        </tr>
+      </table>
+      <div class="hosp-block">
+        <div class="hosp-name">医療法人財団報徳会　西湘病院 / Seisho Hospital</div>
+        <div class="hosp-addr">神奈川県小田原市扇町1-16-35</div>
+        <div class="hosp-num">📞 0465-35-5773</div>
+      </div>
+      <div class="qr-area">
+        <div id="qr-front3" style="width:48px;height:48px;flex-shrink:0;"></div>
+        <div class="qr-text">
+          <div class="qr-main">katawakuya.github.io/<br>checklist/heatstroke.html</div>
+          <div class="qr-hint">QR読取またはURL手打ちで<br>スマホから即発信できます</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <span class="foot-site">現場：小田原市扇町2-33-11他</span>
+      <span class="foot-year">令和7年度</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr red">
+      <span class="card-hdr-icon">🌡</span>
+      <div>
+        <div class="card-hdr-title">熱中症　緊急連絡先</div>
+        <div class="card-hdr-sub">小田原市富士フィルム地下埋設管敷設工事</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sos-block">
+        <div>
+          <div class="sos-lbl">🚑 救急・消防</div>
+          <div class="sos-hint">まず119番に電話！</div>
+        </div>
+        <div class="sos-num">119</div>
+      </div>
+      <table class="ctable">
+        <tr>
+          <td class="ct-role">現場責任者</td>
+          <td class="ct-name">三枝　裕太<span class="ct-romaji">Saegusa Yuta</span></td>
+          <td class="ct-num">090-9290-1004</td>
+        </tr>
+        <tr>
+          <td class="ct-role">安全衛生管理者</td>
+          <td class="ct-name">柴田　興平<span class="ct-romaji">Shibata Kohei</span></td>
+          <td class="ct-num">080-5704-7075</td>
+        </tr>
+        <tr>
+          <td class="ct-role">元請担当（昼）</td>
+          <td class="ct-name">山本　克貴<span class="ct-romaji">Yamamoto Katsuki</span></td>
+          <td class="ct-num">080-5400-0259</td>
+        </tr>
+        <tr class="ct-night">
+          <td class="ct-role">元請 夜間・休日</td>
+          <td class="ct-name">緊急専用<span class="ct-romaji">Emergency</span></td>
+          <td class="ct-num">090-4812-4651</td>
+        </tr>
+      </table>
+      <div class="hosp-block">
+        <div class="hosp-name">医療法人財団報徳会　西湘病院 / Seisho Hospital</div>
+        <div class="hosp-addr">神奈川県小田原市扇町1-16-35</div>
+        <div class="hosp-num">📞 0465-35-5773</div>
+      </div>
+      <div class="qr-area">
+        <div id="qr-front4" style="width:48px;height:48px;flex-shrink:0;"></div>
+        <div class="qr-text">
+          <div class="qr-main">katawakuya.github.io/<br>checklist/heatstroke.html</div>
+          <div class="qr-hint">QR読取またはURL手打ちで<br>スマホから即発信できます</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <span class="foot-site">現場：小田原市扇町2-33-11他</span>
+      <span class="foot-year">令和7年度</span>
+    </div>
+  </div>
+
+</div><!-- /sheet page1 -->
+
+<!-- ===== ページ2：裏 ===== -->
+<div class="sheet">
+
+  <!-- 裏1 -->
+  <div class="card">
+    <div class="card-hdr navy">
+      <span class="card-hdr-icon">⛑</span>
+      <div>
+        <div class="card-hdr-title">応急処置・連絡の流れ</div>
+        <div class="card-hdr-sub">熱中症対応【裏面】/ First Aid &amp; Emergency Flow</div>
+      </div>
+    </div>
+    <div class="warn-banner">
+      <span class="warn-icon">⚠</span>
+      <span class="warn-text">迷ったら必ず119番！一人で判断しない</span>
+      <div class="warn-sub">When in doubt, call 119. Never decide alone.</div>
+    </div>
+    <div class="card-body-back">
+      <div class="aid-title">🩹 応急処置の手順 / First Aid Steps</div>
+      <ul class="steps">
+        <li><span class="step-num">①</span>涼しい場所（日陰・冷房）へ移動する</li>
+        <li><span class="step-num">②</span>衣服を緩め、首・脇の下・股を冷やす</li>
+        <li><span class="step-num">③</span>意識あり → 水分・経口補水液を飲ませる</li>
+        <li><span class="step-num">④</span>意識なし → 回復体位で救急待機</li>
+        <li><span class="step-num">⑤</span>絶対に一人にしない</li>
+      </ul>
+      <div class="org-section">
+        <div class="org-title">📋 連絡の流れ / Emergency Contact Flow</div>
+        <div class="org-row1">
+          <div class="o-box sos" style="font-size:11px;">発見者<br>・本人</div>
+          <span class="o-arr">→</span>
+          <div class="o-box mid" style="font-size:11px;">三枝 裕太<br><span style="font-size:8.5px;font-weight:600;color:#3949ab;">Saegusa</span></div>
+          <span class="o-arr">→</span>
+          <div class="o-box btm" style="font-size:10px;line-height:1.4;">他各員<br><span style="font-size:8.5px;font-weight:600;">柴田・山本<br>119・夜間</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot-back">
+      <span class="foot-hosp">西湘病院 📞 0465-35-5773</span>
+      <span class="foot-year-back">令和7年度</span>
+    </div>
+  </div>
+
+  <!-- 裏2 -->
+  <div class="card">
+    <div class="card-hdr navy">
+      <span class="card-hdr-icon">⛑</span>
+      <div>
+        <div class="card-hdr-title">応急処置・連絡の流れ</div>
+        <div class="card-hdr-sub">熱中症対応【裏面】/ First Aid &amp; Emergency Flow</div>
+      </div>
+    </div>
+    <div class="warn-banner">
+      <span class="warn-icon">⚠</span>
+      <span class="warn-text">迷ったら必ず119番！一人で判断しない</span>
+      <div class="warn-sub">When in doubt, call 119. Never decide alone.</div>
+    </div>
+    <div class="card-body-back">
+      <div class="aid-title">🩹 応急処置の手順 / First Aid Steps</div>
+      <ul class="steps">
+        <li><span class="step-num">①</span>涼しい場所（日陰・冷房）へ移動する</li>
+        <li><span class="step-num">②</span>衣服を緩め、首・脇の下・股を冷やす</li>
+        <li><span class="step-num">③</span>意識あり → 水分・経口補水液を飲ませる</li>
+        <li><span class="step-num">④</span>意識なし → 回復体位で救急待機</li>
+        <li><span class="step-num">⑤</span>絶対に一人にしない</li>
+      </ul>
+      <div class="org-section">
+        <div class="org-title">📋 連絡の流れ / Emergency Contact Flow</div>
+        <div class="org-row1">
+          <div class="o-box sos" style="font-size:11px;">発見者<br>・本人</div>
+          <span class="o-arr">→</span>
+          <div class="o-box mid" style="font-size:11px;">三枝 裕太<br><span style="font-size:8.5px;font-weight:600;color:#3949ab;">Saegusa</span></div>
+          <span class="o-arr">→</span>
+          <div class="o-box btm" style="font-size:10px;line-height:1.4;">他各員<br><span style="font-size:8.5px;font-weight:600;">柴田・山本<br>119・夜間</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot-back">
+      <span class="foot-hosp">西湘病院 📞 0465-35-5773</span>
+      <span class="foot-year-back">令和7年度</span>
+    </div>
+  </div>
+
+  <!-- 裏3 -->
+  <div class="card">
+    <div class="card-hdr navy">
+      <span class="card-hdr-icon">⛑</span>
+      <div>
+        <div class="card-hdr-title">応急処置・連絡の流れ</div>
+        <div class="card-hdr-sub">熱中症対応【裏面】/ First Aid &amp; Emergency Flow</div>
+      </div>
+    </div>
+    <div class="warn-banner">
+      <span class="warn-icon">⚠</span>
+      <span class="warn-text">迷ったら必ず119番！一人で判断しない</span>
+      <div class="warn-sub">When in doubt, call 119. Never decide alone.</div>
+    </div>
+    <div class="card-body-back">
+      <div class="aid-title">🩹 応急処置の手順 / First Aid Steps</div>
+      <ul class="steps">
+        <li><span class="step-num">①</span>涼しい場所（日陰・冷房）へ移動する</li>
+        <li><span class="step-num">②</span>衣服を緩め、首・脇の下・股を冷やす</li>
+        <li><span class="step-num">③</span>意識あり → 水分・経口補水液を飲ませる</li>
+        <li><span class="step-num">④</span>意識なし → 回復体位で救急待機</li>
+        <li><span class="step-num">⑤</span>絶対に一人にしない</li>
+      </ul>
+      <div class="org-section">
+        <div class="org-title">📋 連絡の流れ / Emergency Contact Flow</div>
+        <div class="org-row1">
+          <div class="o-box sos" style="font-size:11px;">発見者<br>・本人</div>
+          <span class="o-arr">→</span>
+          <div class="o-box mid" style="font-size:11px;">三枝 裕太<br><span style="font-size:8.5px;font-weight:600;color:#3949ab;">Saegusa</span></div>
+          <span class="o-arr">→</span>
+          <div class="o-box btm" style="font-size:10px;line-height:1.4;">他各員<br><span style="font-size:8.5px;font-weight:600;">柴田・山本<br>119・夜間</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot-back">
+      <span class="foot-hosp">西湘病院 📞 0465-35-5773</span>
+      <span class="foot-year-back">令和7年度</span>
+    </div>
+  </div>
+
+  <!-- 裏4 -->
+  <div class="card">
+    <div class="card-hdr navy">
+      <span class="card-hdr-icon">⛑</span>
+      <div>
+        <div class="card-hdr-title">応急処置・連絡の流れ</div>
+        <div class="card-hdr-sub">熱中症対応【裏面】/ First Aid &amp; Emergency Flow</div>
+      </div>
+    </div>
+    <div class="warn-banner">
+      <span class="warn-icon">⚠</span>
+      <span class="warn-text">迷ったら必ず119番！一人で判断しない</span>
+      <div class="warn-sub">When in doubt, call 119. Never decide alone.</div>
+    </div>
+    <div class="card-body-back">
+      <div class="aid-title">🩹 応急処置の手順 / First Aid Steps</div>
+      <ul class="steps">
+        <li><span class="step-num">①</span>涼しい場所（日陰・冷房）へ移動する</li>
+        <li><span class="step-num">②</span>衣服を緩め、首・脇の下・股を冷やす</li>
+        <li><span class="step-num">③</span>意識あり → 水分・経口補水液を飲ませる</li>
+        <li><span class="step-num">④</span>意識なし → 回復体位で救急待機</li>
+        <li><span class="step-num">⑤</span>絶対に一人にしない</li>
+      </ul>
+      <div class="org-section">
+        <div class="org-title">📋 連絡の流れ / Emergency Contact Flow</div>
+        <div class="org-row1">
+          <div class="o-box sos" style="font-size:11px;">発見者<br>・本人</div>
+          <span class="o-arr">→</span>
+          <div class="o-box mid" style="font-size:11px;">三枝 裕太<br><span style="font-size:8.5px;font-weight:600;color:#3949ab;">Saegusa</span></div>
+          <span class="o-arr">→</span>
+          <div class="o-box btm" style="font-size:10px;line-height:1.4;">他各員<br><span style="font-size:8.5px;font-weight:600;">柴田・山本<br>119・夜間</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot-back">
+      <span class="foot-hosp">西湘病院 📞 0465-35-5773</span>
+      <span class="foot-year-back">令和7年度</span>
+    </div>
+  </div>
+
+</div><!-- /sheet page2 -->
+
+<!-- QRコード生成 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+var url = 'https://katawakuya.github.io/checklist/heatstroke.html';
+['qr-front1','qr-front2','qr-front3','qr-front4'].forEach(function(id){
+  new QRCode(document.getElementById(id), {
+    text: url,
+    width: 48,
+    height: 48,
+    colorDark: '#000',
+    colorLight: '#fff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+});
+</script>
+</body>
+</html>

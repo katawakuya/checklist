@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>現場管理システム</title>
+<style>
+:root {
+  --bg:#0f172a; --bg2:#1e293b; --bg3:#2d3f56;
+  --accent:#60a5fa; --accent-dim:rgba(96,165,250,0.15);
+  --green:#34d399; --green-dim:rgba(52,211,153,0.15);
+  --yellow:#fbbf24; --yellow-dim:rgba(251,191,36,0.15);
+  --purple:#a78bfa; --purple-dim:rgba(167,139,250,0.15);
+  --red:#f87171; --red-dim:rgba(248,113,113,0.15);
+  --orange:#fb923c; --orange-dim:rgba(251,146,60,0.15);
+  --text:#e2e8f0; --text2:#94a3b8;
+  --border:rgba(255,255,255,0.09);
+  --radius:13px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  min-height:100vh; overscroll-behavior:none;
+}
+
+/* ─── HEADER ─── */
+.header{
+  background:linear-gradient(135deg,#1e3a8a 0%,#1e293b 100%);
+  padding:14px 16px 18px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.header-row{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto;}
+.app-title{display:flex;align-items:center;gap:10px;}
+.app-title .icon{font-size:26px;line-height:1;}
+.app-title h1{font-size:17px;font-weight:800;letter-spacing:0.3px;}
+.app-title .sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+#adminBadge{display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;}
+.btn-reload{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--text2);border-radius:8px;padding:7px 10px;font-size:14px;cursor:pointer;line-height:1;}
+.btn-reload:active{opacity:0.7;}
+.btn-auth{
+  background:var(--accent-dim);border:1px solid rgba(96,165,250,0.3);
+  color:var(--accent);border-radius:8px;padding:7px 14px;
+  font-size:13px;cursor:pointer;font-weight:700;white-space:nowrap;
+}
+
+/* ─── MAIN ─── */
+.main{max-width:760px;margin:0 auto;padding:16px;}
+
+/* ─── LOGIN SCREEN ─── */
+#loginArea{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:50px 20px;gap:16px;text-align:center;
+}
+#loginArea .big-icon{font-size:56px;}
+#loginArea h2{font-size:22px;font-weight:800;letter-spacing:0.3px;}
+#loginArea p{color:var(--text2);font-size:13px;line-height:1.6;}
+.login-form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;}
+.login-form input{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);border-radius:9px;padding:11px 14px;font-size:15px;
+  outline:none;
+}
+.login-form input:focus{border-color:var(--accent);}
+.login-form input::placeholder{color:var(--text2);}
+
+/* メインCTA: ゲストログイン（目立つ） */
+.btn-guest-main{
+  display:block;text-align:center;
+  background:var(--accent);color:#fff;
+  border-radius:10px;padding:15px;
+  font-size:17px;font-weight:800;
+  text-decoration:none;letter-spacing:0.5px;
+  box-shadow:0 4px 20px rgba(96,165,250,.35);
+  transition:opacity .15s;
+}
+.btn-guest-main:active{opacity:0.85;}
+
+/* 区切り */
+.or-divider{
+  display:flex;align-items:center;gap:8px;
+  color:rgba(255,255,255,.2);font-size:11px;margin:2px 0;
+}
+.or-divider::before,.or-divider::after{
+  content:'';flex:1;height:1px;background:rgba(255,255,255,.1);
+}
+
+/* 管理者ログインリンク（目立たない） */
+.btn-admin-link{
+  background:none;border:none;
+  color:rgba(255,255,255,.22);
+  font-size:12px;cursor:pointer;
+  text-decoration:underline;padding:4px 0;
+  font-family:inherit;
+}
+.btn-admin-link:hover{color:rgba(255,255,255,.4);}
+
+/* 管理者フォーム（展開） */
+#adminForm{
+  display:flex;flex-direction:column;gap:10px;
+  overflow:hidden;max-height:0;
+  transition:max-height .35s ease, opacity .3s ease;
+  opacity:0;
+}
+#adminForm.open{max-height:300px;opacity:1;}
+
+.btn-primary{
+  background:rgba(96,165,250,.25);color:var(--accent);
+  border:1px solid rgba(96,165,250,.35);
+  border-radius:9px;padding:11px;font-size:14px;font-weight:700;
+  cursor:pointer;letter-spacing:0.5px;
+}
+.btn-primary:active{opacity:0.85;}
+
+/* ─── KPI ROW ─── */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;margin-bottom:18px;}
+.kpi-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 10px;text-align:center;
+}
+.kpi-num{font-size:28px;font-weight:900;line-height:1;}
+.kpi-label{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.3;}
+
+/* ─── SITE BAR ─── */
+.sec-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;margin-top:18px;}
+.site-bar{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 14px;
+  display:flex;align-items:center;gap:10px;margin-bottom:18px;
+}
+.site-bar label{font-size:13px;color:var(--text2);white-space:nowrap;}
+.site-bar select{
+  flex:1;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:7px;padding:7px 10px;font-size:14px;
+  outline:none;
+}
+
+/* ─── APP GRID ─── */
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(min-width:520px){.app-grid{grid-template-columns:repeat(3,1fr);}}
+
+.app-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px 12px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  text-align:center;cursor:pointer;transition:border-color 0.18s,background 0.18s;
+  text-decoration:none;position:relative;user-select:none;
+}
+.app-card:active{transform:scale(0.96);}
+.app-card .card-icon{font-size:32px;line-height:1;}
+.app-card .card-name{font-size:14px;font-weight:800;color:var(--text);}
+.app-card .card-desc{font-size:11px;color:var(--text2);line-height:1.4;}
+.app-card .card-badge{
+  position:absolute;top:8px;right:8px;
+  font-size:10px;font-weight:800;padding:2px 6px;border-radius:10px;
+}
+.app-card.admin-only{display:none;}
+.app-card.admin-only.show{display:flex;}
+
+/* カラーバリアント */
+.card-blue  {border-color:rgba(96,165,250,0.2);}
+.card-blue:hover {border-color:var(--accent);background:rgba(96,165,250,0.07);}
+.card-green {border-color:rgba(52,211,153,0.2);}
+.card-green:hover{border-color:var(--green);background:rgba(52,211,153,0.07);}
+.card-yellow{border-color:rgba(251,191,36,0.2);}
+.card-yellow:hover{border-color:var(--yellow);background:rgba(251,191,36,0.07);}
+.card-purple{border-color:rgba(167,139,250,0.2);}
+.card-purple:hover{border-color:var(--purple);background:rgba(167,139,250,0.07);}
+.card-red   {border-color:rgba(248,113,113,0.2);}
+.card-red:hover {border-color:var(--red);background:rgba(248,113,113,0.07);}
+.card-orange{border-color:rgba(251,146,60,0.2);}
+.card-orange:hover{border-color:var(--orange);background:rgba(251,146,60,0.07);}
+.card-teal  {border-color:rgba(20,184,166,0.2);}
+.card-teal:hover{border-color:#14b8a6;background:rgba(20,184,166,0.07);}
+.card-emergency{
+  border-color:#ef5350;border-width:2px;
+  background:rgba(198,40,40,0.08);
+  grid-column:1/-1;
+}
+.card-emergency:hover{border-color:#c62828;background:rgba(198,40,40,0.15);}
+.card-emergency .card-icon{font-size:28px;}
+.card-emergency .card-name{color:#ef5350 !important;font-size:15px;}
+.card-emergency .card-inner{display:flex;align-items:center;gap:14px;}
+.card-emergency .card-texts{flex:1;}
+@keyframes pulse-border{0%,100%{border-color:#ef5350;}50%{border-color:#c62828;box-shadow:0 0 0 3px rgba(198,40,40,0.2);}}
+
+/* ─── QR MODAL ─── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+  z-index:200;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:18px;padding:24px;width:100%;max-width:400px;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-box h2{font-size:17px;font-weight:800;margin-bottom:16px;text-align:center;}
+.modal-close{
+  float:right;background:none;border:none;color:var(--text2);
+  font-size:22px;cursor:pointer;line-height:1;margin-top:-4px;
+}
+
+/* ─── FOOTER ─── */
+.footer{text-align:center;padding:24px 16px 40px;color:var(--text2);font-size:12px;}
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:#1e293b;border:1px solid rgba(255,255,255,0.12);
+  color:#e2e8f0;padding:10px 22px;border-radius:22px;
+  font-size:14px;transition:transform 0.28s;pointer-events:none;z-index:999;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <div class="app-title">
+      <div class="icon">🏗️</div>
+      <div>
+        <h1>現場管理システム</h1>
+        <div class="sub">関電工</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="adminBadge">管理者</span>
+      <button class="btn-reload" onclick="forceReload()" title="強制リロード">🔄</button>
+      <button class="btn-auth" id="btnAuth" onclick="toggleAuth()" style="display:none;">ログアウト</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ログイン画面 -->
+  <div id="loginArea">
+    <div class="big-icon">🏗️</div>
+    <h2>関電工 現場管理システム</h2>
+    <p>所属・氏名を設定してご利用ください</p>
+    <div class="login-form">
+      <!-- ① メインCTA: ゲストとして利用（大きく目立つ） -->
+      <a href="guest.html" class="btn-guest-main">ログイン →</a>
+
+      <!-- 区切り -->
+      <div class="or-divider">または</div>
+
+      <!-- ② 管理者ログイン（目立たない小さなリンク） -->
+      <button class="btn-admin-link" onclick="toggleAdminForm()">🔑 管理者ログイン</button>
+
+      <!-- 管理者フォーム（クリックで展開） -->
+      <div id="adminForm">
+        <input type="email" id="loginEmail" placeholder="メールアドレス">
+        <input type="password" id="loginPass" placeholder="パスワード"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <div id="loginError" style="display:none;background:rgba(248,113,113,0.15);
+             border:1px solid rgba(248,113,113,0.5);color:#fca5a5;
+             border-radius:8px;padding:10px 14px;font-size:13px;text-align:left;"></div>
+        <button class="btn-primary" id="btnLogin" onclick="doLogin()">管理者としてログイン</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- メインコンテンツ（ログイン後） -->
+  <div id="mainContent" style="display:none;">
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-num" id="kpiSites" style="color:var(--accent);">—</div>
+        <div class="kpi-label">現場数</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" id="kpiOrders" style="color:var(--green);">—</div>
+        <div class="kpi-label">今月の<br>発注記録</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" id="kpiChecks" style="color:var(--yellow);">—</div>
+        <div class="kpi-label">今月の<br>チェック記録</div>
+      </div>
+    </div>
+
+    <!-- 現場選択 -->
+    <div class="sec-label">📍 現場を選んでアプリを開く</div>
+    <div class="site-bar">
+      <label>現場</label>
+      <select id="siteSelect" onchange="saveSiteSel()">
+        <option value="">— 現場を選択 —</option>
+      </select>
+    </div>
+
+    <!-- アプリ一覧 -->
+    <div class="sec-label">🗂 アプリ一覧</div>
+    <div class="app-grid">
+
+      <a class="app-card card-emergency" href="heatstroke.html">
+        <div class="card-inner">
+          <div class="card-icon">🚑</div>
+          <div class="card-texts">
+            <div class="card-name">熱中症　緊急連絡</div>
+            <div class="card-desc">タップで即発信・応急処置・連絡組織図</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="app-card card-blue" onclick="return goApp('roadbed.html')">
+        <div class="card-icon">📐</div>
+        <div class="card-name">路盤マスタ</div>
+        <div class="card-desc">路盤構成・旗揚げ番号管理</div>
+      </a>
+
+      <a class="app-card card-green" onclick="return goApp('order.html')">
+        <div class="card-icon">🧮</div>
+        <div class="card-name">発注計算</div>
+        <div class="card-desc">材料発注量の計算・記録</div>
+      </a>
+
+      <a class="app-card card-yellow" onclick="return goApp('checklist.html')">
+        <div class="card-icon">✅</div>
+        <div class="card-name">チェックリスト</div>
+        <div class="card-desc">施工記録・写真添付</div>
+      </a>
+
+      <a class="app-card card-purple" onclick="return goApp('viewer.html')">
+        <div class="card-icon">📂</div>
+        <div class="card-name">図面ビューア</div>
+        <div class="card-desc">図面・写真の表示</div>
+      </a>
+
+      <a class="app-card card-teal" onclick="return goApp('zaimatsu.html')">
+        <div class="card-icon">📦</div>
+        <div class="card-name">資材管理</div>
+        <div class="card-desc">使用実績・入荷・発注・在庫</div>
+      </a>
+
+      <a class="app-card card-red" href="manage.html">
+        <div class="card-icon">📊</div>
+        <div class="card-name">集計</div>
+        <div class="card-desc">全現場の集計・CSV出力</div>
+      </a>
+
+      <a class="app-card card-orange admin-only" href="pdf-crop.html" target="_blank">
+        <div class="card-icon">✂️</div>
+        <div class="card-name">断面図切り出し</div>
+        <div class="card-desc">PDFから断面図を切り出す</div>
+      </a>
+
+    </div><!-- /app-grid -->
+
+    <!-- QRコード / ホームへ戻るボタン -->
+    <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a href="qr.html"
+        style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);
+               border-radius:9px;padding:10px 20px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block;">
+        📲 QRコード生成
+      </a>
+    </div>
+
+  </div><!-- /mainContent -->
+
+</div><!-- /main -->
+
+<div class="footer" id="footer" style="display:none;">
+  バージョン 1.0 | 現場管理システム
+</div>
+
+<!-- QRモーダル -->
+<div class="modal-overlay" id="qrModal" onclick="closeQrModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeQrModal()">×</button>
+    <h2>📲 QRコード</h2>
+    <div id="qrModalBody" style="text-align:center;color:var(--text2);font-size:14px;">
+      準備中...
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-top:16px;text-align:center;">
+      ※ GitHub Pages 上でのみ有効です
+    </p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- QR code generation is handled in qr.html -->
+
+<script>
+// ── Firebase 初期化 ──────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain:"alrit-kandenkou.firebaseapp.com",
+  projectId:"alrit-kandenkou",
+  storageBucket:"alrit-kandenkou.firebasestorage.app",
+  messagingSenderId:"640432772833",
+  appId:"1:640432772833:web:ab2aff11980621322809a0"
+});
+const _fbAuth = firebase.auth();
+const _fbDb   = firebase.firestore();
+const ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+
+let _isAdmin = false;
+let _currentUser = null;
+
+// ── 認証監視 ──────────────────────────────────────────
+_fbAuth.onAuthStateChanged(function(user) {
+  _currentUser = user;
+  if (user) {
+    _isAdmin = (user.email === ADMIN_EMAIL);
+    document.getElementById('btnAuth').textContent = 'ログアウト';
+    document.getElementById('btnAuth').style.display = '';
+    document.getElementById('loginArea').style.display = 'none';
+    document.getElementById('mainContent').style.display = '';
+    document.getElementById('footer').style.display = '';
+    document.getElementById('adminBadge').style.display = _isAdmin ? '' : 'none';
+    document.querySelectorAll('.admin-only').forEach(function(el) {
+      if (_isAdmin) el.classList.add('show'); else el.classList.remove('show');
+    });
+    loadData();
+  } else {
+    document.getElementById('btnAuth').style.display = 'none';
+    document.getElementById('loginArea').style.display = '';
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('footer').style.display = 'none';
+    document.getElementById('adminBadge').style.display = 'none';
+  }
+});
+
+function forceReload(){
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(function(){ location.reload(true); });
+  } else {
+    location.reload(true);
+  }
+}
+
+function toggleAuth() {
+  if (_currentUser) {
+    _fbAuth.signOut().then(function(){ showToast('ログアウトしました'); });
+  }
+}
+
+function toggleAdminForm() {
+  var form = document.getElementById('adminForm');
+  var isOpen = form.classList.toggle('open');
+  if (isOpen) {
+    setTimeout(function(){ document.getElementById('loginEmail').focus(); }, 350);
+  }
+}
+
+function doLogin() {
+  var email = document.getElementById('loginEmail').value.trim();
+  var pass  = document.getElementById('loginPass').value;
+  var errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !pass) {
+    errEl.textContent = '⚠️ メールアドレスとパスワードを入力してください';
+    errEl.style.display = '';
+    return;
+  }
+  var btn = document.getElementById('btnLogin');
+  btn.disabled = true; btn.textContent = '…';
+  _fbAuth.signInWithEmailAndPassword(email, pass)
+    .then(function(){
+      btn.disabled = false; btn.textContent = '管理者としてログイン';
+    })
+    .catch(function(e){
+      btn.disabled = false; btn.textContent = '管理者としてログイン';
+      var msg = e.code === 'auth/wrong-password'    ? 'パスワードが違います' :
+                e.code === 'auth/user-not-found'    ? 'このメールアドレスは登録されていません' :
+                e.code === 'auth/invalid-email'     ? 'メールアドレスの形式が正しくありません' :
+                e.code === 'auth/too-many-requests' ? 'ログイン試行が多すぎます。しばらく待ってください' :
+                (e.message || 'ログインに失敗しました');
+      errEl.textContent = '❌ ' + msg;
+      errEl.style.display = '';
+    });
+}
+
+// ── データ読み込み ──────────────────────────────────────
+function loadData() {
+  // キャッシュから即表示
+  var cached = localStorage.getItem('site_master');
+  if (cached) { var s = JSON.parse(cached); populateSites(s); document.getElementById('kpiSites').textContent = s.length; }
+
+  // Firestore: 現場マスタ
+  _fbDb.collection('masters').doc('site_master').get().then(function(doc) {
+    if (doc.exists && doc.data().data) {
+      var sites = doc.data().data;
+      localStorage.setItem('site_master', JSON.stringify(sites));
+      populateSites(sites);
+      document.getElementById('kpiSites').textContent = sites.length;
+    }
+  }).catch(function(){});
+
+  // 今月の発注記録
+  var ym = getYM();
+  _fbDb.collection('order_records').get().then(function(snap) {
+    var count = 0;
+    snap.forEach(function(d){ if ((d.data().date||'').startsWith(ym)) count++; });
+    document.getElementById('kpiOrders').textContent = count;
+  }).catch(function(){});
+
+  // 今月のチェック記録
+  _fbDb.collection('cl_records').get().then(function(snap) {
+    var count = 0;
+    snap.forEach(function(d){ if ((d.data().date||'').startsWith(ym)) count++; });
+    document.getElementById('kpiChecks').textContent = count;
+  }).catch(function(){});
+}
+
+function getYM() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ── 現場セレクタ ──────────────────────────────────────
+function populateSites(sites) {
+  var sel = document.getElementById('siteSelect');
+  var saved = localStorage.getItem('_launcher_site') || '';
+  sel.innerHTML = '<option value="">— 現場を選択 —</option>';
+  (sites||[]).forEach(function(s) {
+    var id   = s.id || s.siteId || s.name;
+    var name = s.name || s.siteName || id;
+    var o = document.createElement('option');
+    o.value = id; o.textContent = name;
+    sel.appendChild(o);
+  });
+  if (saved) sel.value = saved;
+}
+
+function saveSiteSel() {
+  var v = document.getElementById('siteSelect').value;
+  if (v) localStorage.setItem('_launcher_site', v);
+}
+
+// ── アプリ起動 ──────────────────────────────────────────
+// 現場が選ばれていれば localStorage に保存してから遷移
+// 各アプリが起動時に _launcher_site を参照して現場を自動選択できる
+function goApp(page) {
+  var siteId = document.getElementById('siteSelect').value;
+  if (siteId) localStorage.setItem('_launcher_site', siteId);
+  window.location.href = page;
+  return false;
+}
+
+// ── QRコードモーダル ────────────────────────────────────
+function openQrModal() {
+  var base = location.origin + location.pathname.replace('index.html','').replace(/\/$/, '');
+  if (location.protocol === 'file:') {
+    showToast('⚠️ QRはGitHub Pages上でのみ有効です');
+    return;
+  }
+  var apps = [
+    {name:'🏠 ホーム',    url: base + '/index.html'},
+    {name:'📐 路盤マスタ', url: base + '/roadbed.html'},
+    {name:'🧮 発注計算',  url: base + '/order.html'},
+    {name:'✅ チェックリスト', url: base + '/checklist.html'},
+    {name:'📂 図面ビューア',  url: base + '/viewer.html'},
+    {name:'📊 集計',      url: base + '/manage.html'},
+  ];
+  var siteId = document.getElementById('siteSelect').value;
+  if (siteId) {
+    // 現場パラメータ付き
+    apps = apps.map(function(a, i) {
+      if (i === 0) return a; // ホームはそのまま
+      return { name: a.name, url: a.url + '?site=' + encodeURIComponent(siteId) };
+    });
+  }
+
+  var body = document.getElementById('qrModalBody');
+  body.innerHTML = '';
+
+  apps.forEach(function(app) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:20px;';
+    var title = document.createElement('p');
+    title.textContent = app.name;
+    title.style.cssText = 'font-weight:700;margin-bottom:6px;color:var(--text);font-size:14px;';
+    var qrDiv = document.createElement('div');
+    qrDiv.style.cssText = 'display:inline-block;background:#fff;padding:8px;border-radius:8px;';
+    wrap.appendChild(title);
+    wrap.appendChild(qrDiv);
+    body.appendChild(wrap);
+    try {
+      new QRCode(qrDiv, { text: app.url, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });
+    } catch(e) {
+      qrDiv.textContent = app.url;
+    }
+    var urlP = document.createElement('p');
+        urlP.style.cssText = 'font-size:10px;color:var(--text2);word-break:break-all;margin-top:4px;';
+    urlP.textContent = app.url;
+    wrap.appendChild(urlP);
+  });
+
+  document.getElementById('qrModal').classList.add('show');
+}
+
+function closeQrModal(evt) {
+  if (!evt || evt.target.classList.contains('modal-overlay')) {
+    document.getElementById('qrModal').classList.remove('show');
+  }
+}
+
+// ── Toast ────────────────────────────────────────────
+function showToast(msg, ms) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.classList.remove('show'); }, ms||2500);
+}
+
+// ── PWA Service Worker 登録 ─────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      console.log('[SW] Registered:', reg.scope);
+    }).catch(function(e){ console.warn('[SW] Register failed:', e); });
+  });
+}
+</script>
+</body>
+</html>

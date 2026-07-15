@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>集計ダッシュボード</title>
+<style>
+:root{
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#f0efe9;--card:#ffffff;
+  --border:#d0cfc8;--border2:#e0dfd8;
+  --text:#1a1a1a;--text2:#555;--text3:#888;
+  --accent:#1d4ed8;--accent-dim:#dbeafe;--accent-dim2:#bfdbfe;
+  --green:#059669;--green-dim:#d1fae5;
+  --red:#dc2626;--red-dim:#fee2e2;
+  --yellow:#b45309;--yellow-dim:#fef3c7;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:17px;min-height:100vh;overscroll-behavior-y:none;}
+header{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 14px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;position:sticky;top:0;z-index:100;box-sizing:border-box;}
+header .logo{font-size:22px;}
+header .hd-top{display:flex;align-items:center;gap:8px;}
+header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+header h1{font-size:17px;font-weight:700;color:#fff;letter-spacing:.04em;}
+header p{font-size:12px;color:rgba(255,255,255,.7);}
+header .hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+.hd-col{display:flex;flex-direction:column;flex:1;}
+#adminBadge{display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.2);border-radius:4px;color:#fff;white-space:nowrap;}
+.hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:5px 12px;font-size:16px;cursor:pointer;}
+.hd-btn:hover{background:rgba(255,255,255,.25);}
+
+.tab-nav{display:flex;overflow-x:auto;scrollbar-width:none;background:#fff;border-bottom:2px solid var(--border);}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-btn{white-space:nowrap;padding:13px 16px;font-size:15px;border:none;background:none;color:var(--text3);cursor:pointer;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-weight:700;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-btn:hover{color:var(--text2);}
+
+.tab-pane{display:none;padding:12px 14px;}
+.tab-pane.active{display:block;}
+
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:flex-end;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.filter-group{display:flex;flex-direction:column;gap:3px;}
+.filter-group label{font-size:14px;color:var(--text2);font-weight:600;}
+.filter-group select,.filter-group input{background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:15px;}
+.filter-group select:focus,.filter-group input:focus{outline:none;border-color:var(--accent);}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:15px;cursor:pointer;font-weight:700;}
+.btn-primary{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;box-shadow:0 2px 4px rgba(29,78,216,.25);}
+.btn-ghost{background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);}
+.btn-ghost:hover{background:var(--border2);}
+
+.summary-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.summary-card h3{font-size:14px;color:var(--text3);margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.kpi-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:90px;flex:1;transition:background .15s,border-color .15s;}
+.kpi.clickable{cursor:pointer;}
+.kpi.clickable:hover{background:rgba(79,142,247,.1);border-color:var(--accent);}
+.kpi-val{font-size:26px;font-weight:700;color:var(--accent);}
+.kpi-lbl{font-size:14px;color:var(--text3);margin-top:2px;}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+table{width:100%;border-collapse:collapse;font-size:15px;background:#fff;}
+th{background:#f8f9fa;color:var(--text2);padding:9px 12px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;font-weight:700;font-size:14px;}
+td{padding:9px 12px;border-bottom:1px solid var(--border2);vertical-align:middle;color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f9f8f4;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+.badge-site{display:inline-block;padding:3px 8px;border-radius:4px;background:var(--accent-dim);color:var(--accent);font-size:13px;font-weight:700;}
+.badge-ok{background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.badge-warn{background:var(--yellow-dim);color:var(--yellow);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.badge-ng{background:var(--red-dim);color:var(--red);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;}
+.progress-bar{background:#e5e7eb;border-radius:10px;height:8px;overflow:hidden;min-width:70px;}
+.progress-fill{height:100%;border-radius:10px;transition:width .3s;}
+.empty{text-align:center;color:var(--text3);padding:40px;font-size:17px;}
+.loading{text-align:center;color:var(--text3);padding:40px;font-size:17px;}
+.spinner{display:inline-block;width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cross-table th:first-child{min-width:130px;}
+.cross-table td,.cross-table th{min-width:80px;}
+.cross-table .total-col{font-weight:700;background:var(--accent-dim)!important;color:var(--accent)!important;}
+.cross-table .total-row td{font-weight:700;background:var(--accent-dim);}
+
+/* 月次レポート */
+.report-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.report-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+.report-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;}
+.report-kpi .val{font-size:24px;font-weight:800;color:var(--accent);}
+.report-kpi .lbl{font-size:12px;color:var(--text3);margin-top:3px;}
+.report-section{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.report-section h3{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
+.report-month-sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.report-month-sel label{font-size:13px;color:var(--text2);font-weight:600;}
+.report-month-sel input{background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:15px;}
+
+/* 班別集計グラフ */
+.chart-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.chart-wrap h3{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.bar-chart{display:flex;flex-direction:column;gap:10px;}
+.bar-row{display:flex;align-items:center;gap:8px;}
+.bar-label{font-size:14px;color:var(--text);min-width:100px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.bar-track{flex:1;background:#f1f5f9;border-radius:6px;height:20px;overflow:hidden;position:relative;}
+.bar-fill{height:100%;border-radius:6px;transition:width .4s ease;display:flex;align-items:center;padding-left:6px;}
+.bar-fill span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;}
+.bar-val{font-size:14px;color:var(--text2);min-width:60px;text-align:right;font-weight:600;}
+.team-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+.team-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+.team-kpi .val{font-size:22px;font-weight:800;color:var(--accent);}
+.team-kpi .lbl{font-size:12px;color:var(--text3);margin-top:3px;}
+.guest-filter-banner{background:var(--accent-dim);border:1.5px solid var(--accent-dim2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:14px;color:var(--accent);font-weight:700;}
+
+/* 印刷スタイル */
+@media print{
+  header,.tab-nav,.filter-bar,.no-print,.modal-overlay{display:none!important;}
+  body{background:#fff!important;color:#000!important;font-size:12pt;}
+  .tab-pane{display:none!important;}
+  #pane-report{display:block!important;}
+  .report-section{box-shadow:none!important;border:1px solid #ccc!important;}
+  .report-kpi{background:#f5f5f5!important;}
+  .report-print-title{display:block!important;}
+  .tbl-wrap{overflow:visible!important;}
+  table{font-size:11pt;}
+  th,td{padding:6px 8px!important;}
+}
+.report-print-title{display:none;font-size:18pt;font-weight:800;text-align:center;margin-bottom:16px;color:#1e3a8a;}
+
+/* モーダル */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;width:340px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:16px;color:var(--text);}
+.modal-box input{width:100%;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:11px;font-size:16px;margin-bottom:10px;}
+.modal-box input:focus{outline:none;border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:10px;color:var(--text2);}
+</style>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+</head>
+<body>
+
+<header>
+  <div class="hd-top">
+    <div class="logo">📊</div>
+    <div>
+      <h1>集計ダッシュボード</h1>
+      <p>発注 &amp; チェックリスト管理</p>
+    </div>
+  
+    <span id="loginStatus" style="margin-left:auto;font-size:12px;color:var(--text3);padding:2px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;white-space:nowrap;"></span></div>
+  <div class="hd-btns">
+    <span id="adminBadge"></span>
+    <a href="index.html" class="hd-btn" style="text-decoration:none;" title="ホームへ戻る">🏠 ホーム</a>
+    <button class="hd-btn" onclick="onAuthBtnClick()" id="adminBtn" title="管理者ログイン">🔑</button>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('summary',this)">📈 発注サマリー</button>
+  <button class="tab-btn" onclick="switchTab('orders',this)">📋 発注明細</button>
+  <button class="tab-btn" onclick="switchTab('checks',this)">✅ チェック状況</button>
+  <button class="tab-btn no-print" onclick="switchTab('team',this)">🏢 班別集計</button>
+  <button class="tab-btn no-print" onclick="switchTab('report',this)">📄 月次レポート</button>
+</div>
+
+<!-- ===== 発注サマリー ===== -->
+<div class="tab-pane active" id="pane-summary">
+  <div class="kpi-row" id="kpiRow">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+  <div class="summary-card">
+    <h3>現場×月 発注数量クロス集計</h3>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>集計項目</label>
+        <select id="sumMetric" onchange="renderCrossTable()">
+          <option value="asTon密粒">AS 密粒 (t)</option>
+          <option value="asTon粗粒">AS 粗粒 (t)</option>
+          <option value="rmOrd">RM 路盤材 (m³)</option>
+          <option value="rcOrd">RC 再生砕石 (m³)</option>
+          <option value="rcRmSum">RC+RM 合計 (m³)</option>
+          <option value="isoilOrd">改良土 (m³)</option>
+          <option value="sandOrd">砂 (m³)</option>
+          <option value="sandSoilSum">砂+改良土 合計 (m³)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>年</label>
+        <select id="sumYear" onchange="renderCrossTable()"></select>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="crossTableWrap">
+      <div class="loading"><span class="spinner"></span>読み込み中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 発注明細 ===== -->
+<div class="tab-pane" id="pane-orders">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>現場</label>
+      <select id="fltOrderSite" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>型</label>
+      <select id="fltOrderType" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>担当者</label>
+      <select id="fltOrderAuthor" onchange="renderOrderTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>開始日</label>
+      <input type="date" id="fltOrderFrom" onchange="renderOrderTable()">
+    </div>
+    <div class="filter-group">
+      <label>終了日</label>
+      <input type="date" id="fltOrderTo" onchange="renderOrderTable()">
+    </div>
+    <div class="filter-group" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn btn-ghost" onclick="exportOrderCSV()">📤 CSV出力</button>
+    </div>
+  </div>
+  <div class="tbl-wrap" id="orderTableWrap">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+</div>
+
+<!-- ===== チェック状況 ===== -->
+<div class="tab-pane" id="pane-checks">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>現場</label>
+      <select id="fltCheckSite" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>型</label>
+      <select id="fltCheckType" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>記録者</label>
+      <select id="fltCheckRecorder" onchange="renderCheckTable()"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-group">
+      <label>開始日</label>
+      <input type="date" id="fltCheckFrom" onchange="renderCheckTable()">
+    </div>
+    <div class="filter-group">
+      <label>終了日</label>
+      <input type="date" id="fltCheckTo" onchange="renderCheckTable()">
+    </div>
+    <div class="filter-group" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn btn-ghost" onclick="exportCheckCSV()">📤 CSV出力</button>
+    </div>
+  </div>
+  <div class="tbl-wrap" id="checkTableWrap">
+    <div class="loading"><span class="spinner"></span>読み込み中…</div>
+  </div>
+</div>
+
+<!-- ===== 班別集計 ===== -->
+<div class="tab-pane" id="pane-team">
+  <div id="teamGuestBanner" class="guest-filter-banner" style="display:none;">
+    👷 ゲストモード: <span id="teamGuestName"></span> のデータを表示しています
+    &nbsp;—&nbsp; 管理者ログインで全班を確認できます
+  </div>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>集計項目（発注）</label>
+      <select id="teamMetric" onchange="renderTeamTab()">
+        <option value="asTon密粒">AS 密粒 (t)</option>
+        <option value="asTon粗粒">AS 粗粒 (t)</option>
+        <option value="rmOrd">RM 路盤材 (m³)</option>
+        <option value="rcOrd">RC 再生砕石 (m³)</option>
+        <option value="rcRmSum">RC+RM 合計 (m³)</option>
+        <option value="isoilOrd">改良土 (m³)</option>
+        <option value="sandOrd">砂 (m³)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>期間（年）</label>
+      <select id="teamYear" onchange="renderTeamTab()"></select>
+    </div>
+    <div class="filter-group">
+      <label>絞り込み（班）</label>
+      <select id="teamFilter" onchange="renderTeamTab()"><option value="">すべての班</option></select>
+    </div>
+  </div>
+  <div id="teamKpiRow" class="team-kpi-grid"></div>
+  <div class="chart-wrap">
+    <h3>📊 班別 発注量（棒グラフ）</h3>
+    <div class="bar-chart" id="teamBarChart"></div>
+  </div>
+  <div class="chart-wrap">
+    <h3>✅ 班別 チェックリスト 完了率</h3>
+    <div class="bar-chart" id="teamCheckChart"></div>
+  </div>
+  <div class="chart-wrap">
+    <h3>📋 班別 月次推移</h3>
+    <div class="tbl-wrap" id="teamMonthTable"></div>
+  </div>
+</div>
+
+<!-- ===== 月次レポート ===== -->
+<div class="tab-pane" id="pane-report">
+  <div class="report-print-title" id="reportPrintTitle">月次施工実績レポート</div>
+
+  <div class="report-header no-print">
+    <div class="report-month-sel">
+      <label>📅 対象月</label>
+      <input type="month" id="reportMonth" onchange="buildReport()">
+      <label>現場</label>
+      <select id="reportSite" onchange="buildReport()" style="border:1.5px solid var(--border);border-radius:6px;padding:6px 10px;font-size:15px;color:var(--text);">
+        <option value="">すべて</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="exportReportCSV()">📤 CSV出力</button>
+      <button class="btn btn-primary" onclick="printReport()">🖨️ 印刷 / PDF保存</button>
+    </div>
+  </div>
+
+  <div id="reportBody">
+    <div class="empty">対象月を選択してください</div>
+  </div>
+</div>
+
+<!-- 管理者ログインモーダル -->
+<div class="modal-overlay" id="fbModal">
+  <div class="modal-box">
+    <h3>🔑 管理者ログイン</h3>
+    <input id="fbEmail" type="email" autocomplete="email" placeholder="メールアドレス">
+    <input id="fbPass" type="password" autocomplete="current-password" placeholder="パスワード">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeFbModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="doFbLogin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+// ===== Firebase 初期化 =====
+var _fb = firebase.initializeApp({
+  apiKey: "AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain: "alrit-kandenkou.firebaseapp.com",
+  projectId: "alrit-kandenkou",
+  storageBucket: "alrit-kandenkou.firebasestorage.app",
+  messagingSenderId: "640432772833",
+  appId: "1:640432772833:web:ab2aff11980621322809a0"
+});
+var _fbDb = firebase.firestore();
+var _fbAuth = firebase.auth();
+var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com'; // スーパー管理者メール
+var _isAdmin = false;    // スーパー管理者フラグ
+var _isLoggedIn = false; // ログイン済みフラグ（一般ユーザー含む）
+
+// ===== データキャッシュ =====
+var _orderRecords = null;  // 全発注レコード
+var _checkRecords = null;  // 全チェックリストレコード
+
+// ===== Auth =====
+_fbAuth.onAuthStateChanged(function(user) {
+  _isLoggedIn = !!user;
+  _isAdmin = !!(user && user.email === ADMIN_EMAIL);
+  _updateLoginStatus();
+  var badge = document.getElementById('adminBadge');
+  var btn = document.getElementById('adminBtn');
+  if (_isAdmin) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '👑管理者';
+    btn.textContent = '🔓';
+    btn.title = 'ログアウト';
+  } else if (_isLoggedIn) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '🔐ログイン中';
+    btn.textContent = '🔓';
+    btn.title = 'ログアウト';
+  } else {
+    badge.style.display = 'none';
+    btn.textContent = '🔑';
+    btn.title = '管理者ログイン';
+    // ゲスト：班フィルターを自動適用
+    if (_guestCompany || _guestTeam) {
+      var guestKey = [_guestCompany,_guestTeam].filter(Boolean).join('/');
+      var tf = document.getElementById('teamFilter');
+      if (tf && guestKey) {
+        // 班フィルター選択肢構築後に設定（renderTeamTab内で処理）
+      }
+    }
+  }
+  if (_activeTab === 'team') renderTeamTab();
+});
+
+
+function _updateLoginStatus() {
+  var el=document.getElementById('loginStatus');
+  if(!el) return;
+  if(_isAdmin){
+    el.textContent='👑 スーパー管理者';
+    el.style.color='#93c5fd';
+    el.style.borderColor='rgba(79,142,247,.4)';
+    el.style.background='rgba(79,142,247,.1)';
+  } else if(_isLoggedIn){
+    el.textContent='🔐 ログイン中（閲覧のみ）';
+    el.style.color='#fbbf24';
+    el.style.borderColor='rgba(251,191,36,.4)';
+    el.style.background='rgba(251,191,36,.1)';
+  } else {
+    var mc=localStorage.getItem('myCompany')||'';
+    var mt=localStorage.getItem('myTeam')||'';
+    var mn=localStorage.getItem('myName')||'';
+    var parts=[];
+    if(mc) parts.push(mc);
+    if(mt) parts.push(mt);
+    if(mn) parts.push(mn);
+    if(parts.length>0){
+      el.textContent='🏢 '+parts.join(' / ');
+      el.style.color='#86efac';
+      el.style.borderColor='rgba(34,197,94,.3)';
+      el.style.background='rgba(34,197,94,.08)';
+    } else {
+      el.textContent='👤 ゲスト';
+      el.style.color='var(--text3)';
+      el.style.borderColor='rgba(255,255,255,.12)';
+      el.style.background='rgba(255,255,255,.04)';
+    }
+  }
+}
+function onAuthBtnClick() {
+  if (_isAdmin || _isLoggedIn) {
+    if (confirm('ログアウトしますか？')) _fbAuth.signOut();
+  } else {
+    document.getElementById('fbModal').classList.add('open');
+    setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
+  }
+}
+function closeFbModal() { document.getElementById('fbModal').classList.remove('open'); }
+function doFbLogin() {
+  var e = document.getElementById('fbEmail').value;
+  var p = document.getElementById('fbPass').value;
+  _fbAuth.signInWithEmailAndPassword(e, p)
+    .then(function(){ closeFbModal(); })
+    .catch(function(err){ alert('ログイン失敗: ' + err.message); });
+}
+document.getElementById('fbPass').addEventListener('keydown', function(ev){
+  if(ev.key==='Enter') doFbLogin();
+});
+
+// ===== ゲスト情報 =====
+var _guestCompany = localStorage.getItem('myCompany') || '';
+var _guestTeam    = localStorage.getItem('myTeam')    || '';
+var _guestName    = localStorage.getItem('myName')    || '';
+
+// ===== タブ切替 =====
+var _activeTab = 'summary';
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('pane-' + name).classList.add('active');
+  _activeTab = name;
+  if (name === 'summary' && _orderRecords !== null) renderSummaryTab();
+  if (name === 'orders' && _orderRecords !== null) renderOrderTable();
+  if (name === 'checks' && _checkRecords !== null) renderCheckTable();
+  if (name === 'team') renderTeamTab();
+  if (name === 'report') initReport();
+}
+
+// ===== データ読み込み =====
+function loadAll() {
+  loadOrders();
+  loadChecks();
+}
+
+function loadOrders() {
+  _fbDb.collection('order_records').get().then(function(snap) {
+    _orderRecords = [];
+    snap.forEach(function(doc) { _orderRecords.push(doc.data()); });
+    _orderRecords.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    populateOrderFilters();
+    renderSummaryTab();
+    if (_activeTab === 'orders') renderOrderTable();
+    if (_activeTab === 'team') renderTeamTab();
+    populateTeamFilters();
+  }).catch(function(e) {
+    document.getElementById('kpiRow').innerHTML = '<div class="empty">⚠️ 発注データ取得失敗: ' + e.message + '</div>';
+    document.getElementById('crossTableWrap').innerHTML = '';
+    document.getElementById('orderTableWrap').innerHTML = '';
+  });
+}
+
+function loadChecks() {
+  _fbDb.collection('cl_records').get().then(function(snap) {
+    _checkRecords = [];
+    snap.forEach(function(doc) { _checkRecords.push(doc.data()); });
+    _checkRecords.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    populateCheckFilters();
+    if (_activeTab === 'checks') renderCheckTable();
+    else renderCheckTable(); // バックグラウンドで描画
+    if (_activeTab === 'team') renderTeamTab();
+  }).catch(function(e) {
+    document.getElementById('checkTableWrap').innerHTML = '<div class="empty">⚠️ チェックデータ取得失敗: ' + e.message + '</div>';
+  });
+}
+
+// ===== フィルター選択肢の構築 =====
+function unique(arr) {
+  return arr.filter(function(v,i,a){ return v && a.indexOf(v) === i; }).sort();
+}
+function buildSelect(id, vals) {
+  var sel = document.getElementById(id);
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">すべて</option>';
+  vals.forEach(function(v){ sel.innerHTML += '<option value="'+esc(v)+'">'+esc(v)+'</option>'; });
+  if (cur) sel.value = cur;
+}
+function populateOrderFilters() {
+  buildSelect('fltOrderSite', unique(_orderRecords.map(function(r){ return r.site||''; })));
+  buildSelect('fltOrderType', unique(_orderRecords.map(function(r){ return r.typeLabel||r.typeKey||''; })));
+  buildSelect('fltOrderAuthor', unique(_orderRecords.map(function(r){ return r.author||''; })));
+  // 年セレクト
+  var years = unique(_orderRecords.map(function(r){ return (r.date||'').slice(0,4); })).reverse();
+  var sy = document.getElementById('sumYear');
+  var cy = sy.value;
+  sy.innerHTML = '<option value="">全年</option>';
+  years.forEach(function(y){ sy.innerHTML += '<option value="'+y+'">'+y+'年</option>'; });
+  if (!cy && years.length) sy.value = years[0];
+}
+function populateCheckFilters() {
+  buildSelect('fltCheckSite', unique(_checkRecords.map(function(r){ return r.siteName||''; })));
+  buildSelect('fltCheckType', unique(_checkRecords.map(function(r){ return r.typeName||r.typeKey||''; })));
+  buildSelect('fltCheckRecorder', unique(_checkRecords.map(function(r){ return r.recorder||''; })));
+}
+
+// ===== 班フィルター構築 =====
+function populateTeamFilters() {
+  // 年セレクト
+  var years = unique((_orderRecords||[]).map(function(r){ return (r.date||'').slice(0,4); })).reverse();
+  var sy = document.getElementById('teamYear');
+  if (!sy) return;
+  var cy = sy.value;
+  sy.innerHTML = '<option value="">全年</option>';
+  years.forEach(function(y){ sy.innerHTML += '<option value="'+y+'">'+y+'年</option>'; });
+  if (!cy && years.length) sy.value = years[0];
+  // 班フィルター（非管理者はグレーアウト）
+  var allTeams = getTeamKeys(_orderRecords||[], _checkRecords||[]);
+  var tf = document.getElementById('teamFilter');
+  var ctv = tf.value;
+  tf.innerHTML = '<option value="">すべての班</option>';
+  allTeams.forEach(function(t){ tf.innerHTML += '<option value="'+esc(t)+'">'+esc(t)+'</option>'; });
+  if (ctv) tf.value = ctv;
+}
+
+function getTeamKey(r) {
+  var parts = [];
+  if (r.company) parts.push(r.company);
+  if (r.team)    parts.push(r.team);
+  return parts.length ? parts.join('/') : '(未設定)';
+}
+
+function getTeamKeys(orders, checks) {
+  var keys = {};
+  orders.forEach(function(r){ keys[getTeamKey(r)] = true; });
+  checks.forEach(function(r){ keys[getTeamKey(r)] = true; });
+  return Object.keys(keys).sort();
+}
+
+// ===== 班別集計タブ =====
+function renderTeamTab() {
+  if (!_orderRecords && !_checkRecords) return;
+  var metric  = document.getElementById('teamMetric')?.value || 'asTon密粒';
+  var year    = document.getElementById('teamYear')?.value   || '';
+  var tf      = document.getElementById('teamFilter')?.value || '';
+
+  // ゲストフィルター（非管理者は自班のみ）
+  var guestKey = (_guestCompany||_guestTeam)
+    ? [_guestCompany,_guestTeam].filter(Boolean).join('/')
+    : '';
+
+  var banner = document.getElementById('teamGuestBanner');
+  var guestNameEl = document.getElementById('teamGuestName');
+  if (!_isAdmin && guestKey) {
+    banner.style.display = '';
+    var guestDisplay = [_guestCompany, _guestName ? '【'+_guestName+'】' : '', _guestTeam].filter(Boolean).join(' / ');
+    guestNameEl.textContent = guestDisplay || guestKey;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  var oRecs = (_orderRecords||[]).filter(function(r){
+    if (year && (r.date||'').slice(0,4) !== year) return false;
+    if (!_isAdmin && !_isLoggedIn && guestKey) {
+      return getTeamKey(r) === guestKey;
+    }
+    if (tf) return getTeamKey(r) === tf;
+    return true;
+  });
+  var cRecs = (_checkRecords||[]).filter(function(r){
+    if (year && (r.date||'').slice(0,4) !== year) return false;
+    if (!_isAdmin && !_isLoggedIn && guestKey) {
+      return getTeamKey(r) === guestKey;
+    }
+    if (tf) return getTeamKey(r) === tf;
+    return true;
+  });
+
+  populateTeamFilters();
+  renderTeamKpi(oRecs, cRecs, metric);
+  renderTeamBarChart(oRecs, metric);
+  renderTeamCheckChart(cRecs);
+  renderTeamMonthTable(oRecs, metric);
+}
+
+function renderTeamKpi(oRecs, cRecs, metric) {
+  var teams = {};
+  oRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={orders:0,val:0,checks:0,done:0,total:0}; teams[k].orders++; teams[k].val+=(r[metric]||0); });
+  cRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={orders:0,val:0,checks:0,done:0,total:0}; teams[k].checks++; teams[k].done+=(r.done||0); teams[k].total+=(r.total||0); });
+  var teamList = Object.keys(teams);
+  var el = document.getElementById('teamKpiRow');
+  if (!teamList.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  el.innerHTML = teamList.map(function(k){
+    var t=teams[k];
+    var pct=t.total>0?Math.round(t.done/t.total*100):0;
+    return '<div class="team-kpi">'
+      +'<div class="val" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;">'+esc(k)+'</div>'
+      +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+      +'<div><div class="val">'+t.orders+'</div><div class="lbl">発注件数</div></div>'
+      +'<div><div class="val" style="color:var(--green);">'+fmt(t.val)+'</div><div class="lbl">'+getMetricUnit(metric)+'</div></div>'
+      +'<div><div class="val" style="color:'+(pct>=80?'var(--green)':pct>=50?'#f59e0b':'var(--red)')+'">'+pct+'%</div><div class="lbl">CL完了率</div></div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function getMetricUnit(m) {
+  var map = {'asTon密粒':'AS密粒(t)','asTon粗粒':'AS粗粒(t)','rmOrd':'RM(m³)','rcOrd':'RC(m³)','rcRmSum':'RC+RM(m³)','isoilOrd':'改良土(m³)','sandOrd':'砂(m³)'};
+  return map[m] || m;
+}
+
+function renderTeamBarChart(oRecs, metric) {
+  var el = document.getElementById('teamBarChart');
+  var teams = {};
+  oRecs.forEach(function(r){ var k=getTeamKey(r); teams[k]=(teams[k]||0)+(r[metric]||0); });
+  var sorted = Object.keys(teams).map(function(k){ return {k:k, v:teams[k]}; }).sort(function(a,b){ return b.v-a.v; });
+  if (!sorted.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  var maxV = sorted[0].v || 1;
+  var colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+  el.innerHTML = sorted.map(function(d,i){
+    var pct = (d.v/maxV*100).toFixed(1);
+    var color = colors[i % colors.length];
+    return '<div class="bar-row">'
+      +'<div class="bar-label" title="'+esc(d.k)+'">'+esc(d.k)+'</div>'
+      +'<div class="bar-track">'
+        +'<div class="bar-fill" style="width:'+pct+'%;background:'+color+';">'
+          +'<span>'+fmt(d.v)+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="bar-val">'+fmt(d.v)+' '+getMetricUnit(metric).split('(')[1]?.replace(')','')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderTeamCheckChart(cRecs) {
+  var el = document.getElementById('teamCheckChart');
+  var teams = {};
+  cRecs.forEach(function(r){ var k=getTeamKey(r); if(!teams[k]) teams[k]={done:0,total:0,count:0}; teams[k].done+=(r.done||0); teams[k].total+=(r.total||0); teams[k].count++; });
+  var sorted = Object.keys(teams).map(function(k){ var t=teams[k]; var pct=t.total>0?Math.round(t.done/t.total*100):0; return {k:k,pct:pct,count:t.count}; }).sort(function(a,b){ return b.pct-a.pct; });
+  if (!sorted.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  el.innerHTML = sorted.map(function(d){
+    var color = d.pct>=80?'#10b981':d.pct>=50?'#f59e0b':'#ef4444';
+    return '<div class="bar-row">'
+      +'<div class="bar-label" title="'+esc(d.k)+'">'+esc(d.k)+'</div>'
+      +'<div class="bar-track">'
+        +'<div class="bar-fill" style="width:'+d.pct+'%;background:'+color+';">'
+          +'<span>'+d.pct+'%</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="bar-val" style="color:'+color+'">'+d.pct+'% ('+d.count+'件)</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderTeamMonthTable(oRecs, metric) {
+  var wrap = document.getElementById('teamMonthTable');
+  if (!oRecs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  var teams = unique(oRecs.map(function(r){ return getTeamKey(r); }));
+  var months = unique(oRecs.map(function(r){ return (r.date||'').slice(0,7); })).sort().reverse();
+  var data = {};
+  oRecs.forEach(function(r){
+    var m=(r.date||'').slice(0,7); var k=getTeamKey(r);
+    if(!m) return;
+    if(!data[m]) data[m]={};
+    data[m][k]=(data[m][k]||0)+(r[metric]||0);
+  });
+  var unit = getMetricUnit(metric);
+  var html = '<table><thead><tr><th>年月</th>';
+  teams.forEach(function(t){ html += '<th>'+esc(t)+'</th>'; });
+  html += '<th class="total-col" style="font-weight:700;background:var(--accent-dim);color:var(--accent);">合計</th></tr></thead><tbody>';
+  var colTotals={}, grand=0;
+  months.forEach(function(m){
+    html += '<tr><td>'+esc(m)+'</td>';
+    var rowT=0;
+    teams.forEach(function(t){
+      var v=(data[m]&&data[m][t])||0; rowT+=v; colTotals[t]=(colTotals[t]||0)+v;
+      html += '<td class="num">'+(v>0?fmt(v):'<span style="color:var(--text3)">—</span>')+'</td>';
+    });
+    grand+=rowT;
+    html += '<td class="num" style="font-weight:700;background:var(--accent-dim);color:var(--accent);">'+fmt(rowT)+'</td></tr>';
+  });
+  html += '<tr style="font-weight:800;background:var(--accent-dim);"><td>合計 ('+unit+')</td>';
+  teams.forEach(function(t){ html += '<td class="num">'+fmt(colTotals[t]||0)+'</td>'; });
+  html += '<td class="num" style="color:var(--accent);">'+fmt(grand)+'</td></tr>';
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ===== エスケープ =====
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n, d){ return (n||0).toFixed(d===undefined?2:d); }
+
+// ===== 発注サマリータブ =====
+function renderSummaryTab() {
+  if (!_orderRecords) return;
+  // フィルター適用: スーパー管理者orログイン→全社, ゲスト→自社のみ
+  var recs = (_isAdmin || _isLoggedIn) ? _orderRecords : _orderRecords.filter(guestCanSee);
+  var total = recs.length;
+  var siteArr = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
+  var sites = siteArr.length;
+  window._kpiSiteArr = siteArr; // ポップアップ用グローバル
+  var authors = unique(recs.map(function(r){ return r.author||''; })).filter(Boolean).length;
+  var totalRM = recs.reduce(function(s,r){ return s + (r.rmOrd||0); }, 0);
+  var totalAS = recs.reduce(function(s,r){ return s + (r.asTon密粒||0) + (r.asTon粗粒||0); }, 0);
+  // ラベル文脈表示
+  var ctx = _isAdmin
+    ? '<span style="font-size:12px;color:var(--text3);margin-left:4px;">全体</span>'
+    : _isLoggedIn
+      ? '<span style="font-size:12px;color:#fbbf24;margin-left:4px;">全社（閲覧）</span>'
+      : '<span style="font-size:12px;color:#86efac;margin-left:4px;">あなたのデータ</span>';
+  document.getElementById('kpiRow').innerHTML =
+    kpi(total + ' 件', '総発注記録' + ctx, "switchTab('orders', document.querySelector('.tab-btn:nth-child(2)'))") +
+    kpi(sites + ' 現場', '現場数' + ctx, "_showSitesPopup()") +
+    kpi(authors + ' 名', '担当者数' + ctx, '') +
+    kpi(fmt(totalAS) + ' t', 'AS合計' + ctx, '') +
+    kpi(fmt(totalRM) + ' m³', 'RM合計' + ctx, '');
+  renderCrossTable();
+}
+function kpi(v, l, onclick){
+  var cls = onclick ? ' clickable' : '';
+  var oc  = onclick ? ' onclick="'+onclick+'"' : '';
+  return '<div class="kpi'+cls+'"'+oc+'><div class="kpi-val">'+esc(v)+'</div><div class="kpi-lbl">'+l+'</div></div>';
+}
+
+// 現場一覧ポップアップ
+function _showSitesPopup() { showSitesPopup(window._kpiSiteArr || []); }
+function showSitesPopup(siteArr) {
+  var html = '<div class="sites-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:260px;max-width:420px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">'
+    + '<div style="font-weight:700;font-size:16px;margin-bottom:12px;color:var(--accent);">🏗 現場一覧（' + siteArr.length + '件）</div>';
+  siteArr.forEach(function(s){
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">📍 ' + esc(s) + '</div>';
+  });
+  html += '<div style="margin-top:14px;text-align:right;">'
+    + '<button onclick="document.querySelector(\'.sites-popup\').remove()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;">閉じる</button>'
+    + '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function renderCrossTable() {
+  if (!_orderRecords) return;
+  var wrap = document.getElementById('crossTableWrap');
+  var metric = document.getElementById('sumMetric').value;
+  var year = document.getElementById('sumYear').value;
+
+  // フィルター: スーパー管理者orログイン→全社, ゲスト→自社のみ
+  var baseRecs = (_isAdmin || _isLoggedIn) ? _orderRecords : _orderRecords.filter(guestCanSee);
+  var recs = year ? baseRecs.filter(function(r){ return (r.date||'').slice(0,4) === year; }) : baseRecs;
+
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">データがありません</div>'; return; }
+
+  // 現場リスト・月リスト
+  var siteList = unique(recs.map(function(r){ return r.site||'(未記入)'; }));
+  var monthSet = {};
+  recs.forEach(function(r){
+    var m = (r.date||'').slice(0,7);
+    if (m) monthSet[m] = true;
+  });
+  var monthList = Object.keys(monthSet).sort().reverse();
+
+  // クロス集計
+  var data = {}; // data[month][site] = value
+  recs.forEach(function(r){
+    var m = (r.date||'').slice(0,7); if(!m) return;
+    var s = r.site||'(未記入)';
+    if (!data[m]) data[m] = {};
+    data[m][s] = (data[m][s]||0) + (r[metric]||0);
+  });
+
+  var html = '<table class="cross-table"><thead><tr><th>年月</th>';
+  siteList.forEach(function(s){ html += '<th>'+esc(s)+'</th>'; });
+  html += '<th class="total-col">合計</th></tr></thead><tbody>';
+
+  // 合計行の計算
+  var colTotals = {};
+  var grandTotal = 0;
+
+  monthList.forEach(function(m){
+    html += '<tr><td>'+esc(m)+'</td>';
+    var rowTotal = 0;
+    siteList.forEach(function(s){
+      var v = (data[m] && data[m][s]) || 0;
+      rowTotal += v;
+      colTotals[s] = (colTotals[s]||0) + v;
+      html += '<td class="num">' + (v > 0 ? fmt(v) : '<span style="color:var(--text3)">—</span>') + '</td>';
+    });
+    grandTotal += rowTotal;
+    html += '<td class="num total-col">' + fmt(rowTotal) + '</td></tr>';
+  });
+
+  // 合計行
+  html += '<tr class="total-row"><td>合　計</td>';
+  siteList.forEach(function(s){ html += '<td class="num">' + fmt(colTotals[s]||0) + '</td>'; });
+  html += '<td class="num total-col">' + fmt(grandTotal) + '</td></tr>';
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ===== 発注明細テーブル =====
+// ===== ゲスト閲覧権限チェック =====
+// 会社名一致(必須) AND (氏名一致 OR 班名一致) → 閲覧可
+function guestCanSee(r) {
+  if (_isAdmin) return true;
+  var rCompany = r.company || '';
+  var rAuthor  = r.author  || r.recorder || '';
+  var rTeam    = r.team    || '';
+  // 会社名が設定されていて一致しない → 見れない
+  if (_guestCompany && rCompany !== _guestCompany) return false;
+  // 氏名・班名いずれも未設定 → 会社名だけで閲覧可（または全未設定なら全件非表示）
+  if (!_guestName && !_guestTeam) {
+    return !!_guestCompany; // 会社名だけ設定されていれば同社全件OK
+  }
+  // 氏名一致 OR 班名一致
+  var nameMatch = _guestName && rAuthor === _guestName;
+  var teamMatch = _guestTeam && rTeam   === _guestTeam;
+  return nameMatch || teamMatch;
+}
+
+function getFilteredOrders() {
+  if (!_orderRecords) return [];
+  var site = document.getElementById('fltOrderSite').value;
+  var type = document.getElementById('fltOrderType').value;
+  var author = document.getElementById('fltOrderAuthor').value;
+  var from = document.getElementById('fltOrderFrom').value;
+  var to = document.getElementById('fltOrderTo').value;
+  return _orderRecords.filter(function(r){
+    if (!guestCanSee(r)) return false;
+    if (site && (r.site||'') !== site) return false;
+    if (type && (r.typeLabel||r.typeKey||'') !== type) return false;
+    if (author && (r.author||'') !== author) return false;
+    if (from && (r.date||'') < from) return false;
+    if (to && (r.date||'') > to) return false;
+    return true;
+  });
+}
+
+function renderOrderTable() {
+  var wrap = document.getElementById('orderTableWrap');
+  if (!_orderRecords) { wrap.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中…</div>'; return; }
+  var recs = getFilteredOrders();
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
+
+  var html = '<table><thead><tr>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th><th>会社・班</th><th>モード</th>'
+    + '<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
+    + '<th class="num">RM(m³)</th><th class="num">RC(m³)</th><th class="num">RC+RM(m³)</th>'
+    + '<th class="num">改良土(m³)</th><th class="num">砂(m³)</th><th class="num">砂+改良(m³)</th>'
+    + '</tr></thead><tbody>';
+
+  recs.forEach(function(r){
+    var modeLabel = r.calcMode === 'hon' ? '<span style="color:var(--green);font-size:14px;">本復旧</span>'
+                 : r.calcMode === 'kari' ? '<span style="color:var(--yellow);font-size:14px;">仮復旧</span>'
+                 : '<span style="color:var(--text3);font-size:14px;">'+(r.calcMode||'')+'</span>';
+    var teamLabel = [r.company,r.team].filter(Boolean).join('/') || '—';
+    html += '<tr>'
+      + '<td>' + esc(r.date||'') + '</td>'
+      + '<td><span class="badge-site">' + esc(r.site||'—') + '</span></td>'
+      + '<td>' + esc(r.typeLabel||r.typeKey||'') + '</td>'
+      + '<td>' + esc(r.hata||'') + '</td>'
+      + '<td>' + esc(r.author||'') + '</td>'
+      + '<td style="font-size:13px;color:var(--text2);">' + esc(teamLabel) + '</td>'
+      + '<td>' + modeLabel + '</td>'
+      + '<td class="num">' + fmt(r.asTon密粒) + '</td>'
+      + '<td class="num">' + fmt(r.asTon粗粒) + '</td>'
+      + '<td class="num">' + fmt(r.rmOrd) + '</td>'
+      + '<td class="num">' + fmt(r.rcOrd) + '</td>'
+      + '<td class="num">' + fmt(r.rcRmSum) + '</td>'
+      + '<td class="num">' + fmt(r.isoilOrd) + '</td>'
+      + '<td class="num">' + fmt(r.sandOrd) + '</td>'
+      + '<td class="num">' + fmt(r.sandSoilSum) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="padding:8px 0;color:var(--text3);font-size:14px;">' + recs.length + ' 件表示</div>';
+  wrap.innerHTML = html;
+}
+
+function exportOrderCSV() {
+  var recs = getFilteredOrders();
+  if (!recs.length) { alert('データがありません'); return; }
+  var header = ['日付','現場','型','旗揚げ','担当','会社・班','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)'];
+  var rows = recs.map(function(r){
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,r.calcMode,
+      r.asTon密粒,r.asTon粗粒,r.rmOrd,r.rcOrd,r.rcRmSum,r.isoilOrd,r.sandOrd,r.sandSoilSum
+    ].map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
+  });
+  downloadCSV('order_records.csv', [header].concat(rows));
+}
+
+// ===== チェック状況テーブル =====
+function getFilteredChecks() {
+  if (!_checkRecords) return [];
+  var site = document.getElementById('fltCheckSite').value;
+  var type = document.getElementById('fltCheckType').value;
+  var rec = document.getElementById('fltCheckRecorder').value;
+  var from = document.getElementById('fltCheckFrom').value;
+  var to = document.getElementById('fltCheckTo').value;
+  return _checkRecords.filter(function(r){
+    if (!guestCanSee(r)) return false;
+    if (site && (r.siteName||'') !== site) return false;
+    if (type && (r.typeName||r.typeKey||'') !== type) return false;
+    if (rec && (r.recorder||'') !== rec) return false;
+    if (from && (r.date||'') < from) return false;
+    if (to && (r.date||'') > to) return false;
+    return true;
+  });
+}
+
+function renderCheckTable() {
+  var wrap = document.getElementById('checkTableWrap');
+  if (!_checkRecords) { wrap.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中…</div>'; return; }
+  var recs = getFilteredChecks();
+  if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
+
+  var html = '<table><thead><tr>'
+    + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>記録者</th><th>会社・班</th><th>管理番号</th>'
+    + '<th>完了率</th><th class="num">完了</th><th class="num">合計</th>'
+    + '</tr></thead><tbody>';
+
+  recs.forEach(function(r){
+    var done = r.done||0, total = r.total||0;
+    var pct = total > 0 ? Math.round(done/total*100) : 0;
+    var badgeCls = pct === 100 ? 'badge-ok' : pct >= 80 ? 'badge-warn' : 'badge-ng';
+    var teamLabel = [r.company,r.team].filter(Boolean).join('/') || '—';
+    html += '<tr>'
+      + '<td>' + esc(r.date||'') + '</td>'
+      + '<td><span class="badge-site">' + esc(r.siteName||'—') + '</span></td>'
+      + '<td>' + esc(r.typeName||r.typeKey||'') + '</td>'
+      + '<td>' + esc(r.hata||'') + '</td>'
+      + '<td>' + esc(r.recorder||'') + '</td>'
+      + '<td style="font-size:13px;color:var(--text2);">' + esc(teamLabel) + '</td>'
+      + '<td>' + esc(r.mgmt||'') + '</td>'
+      + '<td style="min-width:120px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;">'
+        + '<div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:'+pct+'%;background:'+(pct===100?'var(--green)':pct>=80?'var(--yellow)':'var(--red)')+'"></div></div>'
+        + '<span class="'+badgeCls+'" style="font-size:14px;padding:2px 5px;border-radius:4px;white-space:nowrap;">'+pct+'%</span>'
+        + '</div>'
+      + '</td>'
+      + '<td class="num">' + done + '</td>'
+      + '<td class="num">' + total + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="padding:8px 0;color:var(--text3);font-size:14px;">' + recs.length + ' 件表示</div>';
+  wrap.innerHTML = html;
+}
+
+function exportCheckCSV() {
+  var recs = getFilteredChecks();
+  if (!recs.length) { alert('データがありません'); return; }
+  var header = ['日付','現場','型','旗揚げ','記録者','会社・班','管理番号','完了数','合計数','完了率(%)'];
+  var rows = recs.map(function(r){
+    var done=r.done||0, total=r.total||0;
+    var pct = total>0 ? Math.round(done/total*100) : 0;
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.siteName,r.typeName||r.typeKey,r.hata,r.recorder,team,r.mgmt,done,total,pct]
+      .map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
+  });
+  downloadCSV('check_records.csv', [header].concat(rows));
+}
+
+// ===== CSV出力ユーティリティ =====
+function downloadCSV(filename, rows) {
+  var bom = '﻿';
+  var csv = bom + rows.map(function(r){ return r.join(','); }).join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+// ===== 月次レポート =====
+function initReport() {
+  var sel = document.getElementById('reportMonth');
+  if (!sel.value) {
+    var d = new Date();
+    sel.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+  var siteSel = document.getElementById('reportSite');
+  var prev = siteSel ? siteSel.value : '';
+  var sites = unique((_orderRecords||[]).map(function(r){return r.site||'';}).concat(
+                     (_checkRecords||[]).map(function(r){return r.siteName||'';})))
+              .filter(Boolean).sort();
+  if (siteSel) {
+    siteSel.innerHTML = '<option value="">すべて</option>';
+    sites.forEach(function(s){
+      var o=document.createElement('option'); o.value=s; o.textContent=s; siteSel.appendChild(o);
+    });
+    if (prev) siteSel.value = prev;
+  }
+  buildReport();
+}
+
+function buildReport() {
+  var ym = document.getElementById('reportMonth').value;
+  var site = document.getElementById('reportSite').value;
+  var body = document.getElementById('reportBody');
+  if (!ym) { body.innerHTML='<div class="empty">対象月を選択してください</div>'; return; }
+  var ymLabel = ym.replace('-','年')+'月';
+  var oRecs = (_orderRecords||[]).filter(function(r){
+    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site) && guestCanSee(r);
+  });
+  var cRecs = (_checkRecords||[]).filter(function(r){
+    return (r.date||'').startsWith(ym) && (!site||(r.siteName||'')===site) && guestCanSee(r);
+  });
+  var totalAS = oRecs.reduce(function(s,r){return s+(parseFloat(r.asTon密粒||0)+parseFloat(r.asTon粗粒||0));},0);
+  var totalRM = oRecs.reduce(function(s,r){return s+parseFloat(r.rmOrd||0);},0);
+  var totalRC = oRecs.reduce(function(s,r){return s+parseFloat(r.rcOrd||0);},0);
+  var oSites  = unique(oRecs.map(function(r){return r.site||'';})).filter(Boolean);
+  var clDone  = cRecs.reduce(function(s,r){return s+(parseInt(r.done||0));},0);
+  var clTotal = cRecs.reduce(function(s,r){return s+(parseInt(r.total||0));},0);
+  var clPct   = clTotal>0 ? Math.round(clDone/clTotal*100) : 0;
+  var bySite  = {};
+  oRecs.forEach(function(r){
+    var s=r.site||'(不明)';
+    if(!bySite[s]) bySite[s]={site:s,count:0,as:0,rm:0,rc:0};
+    bySite[s].count++; bySite[s].as+=parseFloat(r.asTon密粒||0)+parseFloat(r.asTon粗粒||0);
+    bySite[s].rm+=parseFloat(r.rmOrd||0); bySite[s].rc+=parseFloat(r.rcOrd||0);
+  });
+  var siteRows=Object.values(bySite).sort(function(a,b){return b.as-a.as;});
+  var titleEl=document.getElementById('reportPrintTitle');
+  if(titleEl) titleEl.textContent = ymLabel+' 月次施工実績レポート'+(site?' ／ '+site:'');
+  var html='<div class="report-kpi-grid">';
+  html+=kpiCard(oRecs.length+' 件','発注記録数','var(--accent)');
+  html+=kpiCard(oSites.length+' 現場','現場数','var(--accent)');
+  html+=kpiCard(fmt(totalAS)+' t','AS合計','var(--green)');
+  html+=kpiCard(fmt(totalRM)+' m³','RM合計','#f59e0b');
+  html+=kpiCard(fmt(totalRC)+' m³','RC合計','#8b5cf6');
+  html+=kpiCard(cRecs.length+' 件','チェック記録','var(--text2)');
+  html+=kpiCard(clPct+'%','チェック完了率',clPct>=80?'var(--green)':clPct>=50?'#f59e0b':'var(--red)');
+  html+='</div>';
+  if(siteRows.length){
+    html+='<div class="report-section"><h3>📍 現場別発注集計</h3>';
+    html+='<div class="tbl-wrap"><table><thead><tr><th>現場</th><th>件数</th>'
+      +'<th class="num">AS (t)</th><th class="num">RM (m³)</th><th class="num">RC (m³)</th>'
+      +'</tr></thead><tbody>';
+    siteRows.forEach(function(r){
+      html+='<tr><td><span class="badge-site">'+esc(r.site)+'</span></td>'
+        +'<td>'+r.count+'</td><td class="num">'+fmt(r.as)+'</td>'
+        +'<td class="num">'+fmt(r.rm)+'</td><td class="num">'+fmt(r.rc)+'</td></tr>';
+    });
+    html+='<tr style="font-weight:800;background:#f0f4ff;"><td>合計</td><td>'+oRecs.length+'</td>'
+      +'<td class="num">'+fmt(totalAS)+'</td><td class="num">'+fmt(totalRM)+'</td>'
+      +'<td class="num">'+fmt(totalRC)+'</td></tr>';
+    html+='</tbody></table></div></div>';
+  }
+  if(!oRecs.length && !cRecs.length) {
+    html='<div class="empty">'+ymLabel+'のデータはありません</div>';
+  }
+  body.innerHTML=html;
+}
+
+function kpiCard(val,lbl,color){
+  return '<div class="report-kpi"><div class="val" style="color:'+color+'">'+val+'</div><div class="lbl">'+lbl+'</div></div>';
+}
+function printReport() { window.print(); }
+function exportReportCSV() {
+  var ym = document.getElementById('reportMonth').value;
+  var site = document.getElementById('reportSite').value;
+  var oRecs = (_orderRecords||[]).filter(function(r){
+    return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site) && guestCanSee(r);
+  });
+  var header=['日付','現場','型','旗揚げ','担当','会社・班','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','改良土(m³)','砂(m³)'];
+  var rows=oRecs.map(function(r){
+    var team=[r.company,r.team].filter(Boolean).join('/');
+    return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,
+      r.asTon密粒||0,r.asTon粗粒||0,r.rmOrd||0,r.rcOrd||0,r.isoilOrd||0,r.sandOrd||0]
+      .map(function(v){var s=String(v||'');return s.includes(',')? '"'+s+'"':s;});
+  });
+  downloadCSV('report_'+ym+'.csv', [header].concat(rows));
+}
+
+// ===== 起動: Auth確定後にデータ読み込み =====
+var _loaded = false;
+_fbAuth.onAuthStateChanged(function() {
+  if (!_loaded) { _loaded = true; loadAll(); }
+});
+
+// =====================================================================
+// 赤バナー警告 + iPadプルダウンリフレッシュ防止 + トップへ戻るボタン
+// =====================================================================
+var _warnToast=null,_warnTimer=null;
+function _hideWarningBanner(){if(_warnToast)_warnToast.style.transform='translateY(-100%)';}
+function showWarningBanner(msg,focusId){
+  var el=focusId?document.getElementById(focusId):null;
+  if(!_warnToast){
+    _warnToast=document.createElement('div');
+    _warnToast.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;font-size:18px;font-weight:700;padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);transform:translateY(-100%);transition:transform 0.25s;cursor:pointer;';
+    document.body.appendChild(_warnToast);
+    _warnToast.addEventListener('click',function(){_hideWarningBanner();});
+  }
+  _warnToast._targetEl=el;
+  _warnToast.textContent=msg;
+  clearTimeout(_warnTimer);
+  _warnToast.style.transform='translateY(0)';
+  _warnTimer=setTimeout(_hideWarningBanner,5000);
+}
+(function(){
+  document.addEventListener('touchmove',function(e){
+    if(e.touches&&e.touches[0]&&e.touches[0].clientY>0&&document.documentElement.scrollTop===0)
+      e.preventDefault();
+  },{passive:false});
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.createElement('button');
+    b.innerHTML='▲'; b.title='ページ先頭へ';
+    b.style.cssText='position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#1d4ed8;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;';
+    document.body.appendChild(b);
+    b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+    window.addEventListener('scroll',function(){var s=(document.documentElement.scrollTop||document.body.scrollTop)>300;b.style.opacity=s?'1':'0';b.style.pointerEvents=s?'auto':'none';},{passive:true});
+  });
+})();
+
+</script>
+</body>
+</html>

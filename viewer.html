@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1d4ed8">
+<title>📐 図面ビューア</title>
+<style>
+:root{
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#f0efe9;
+  --border:#d0cfc8;--border2:#e0dfd8;
+  --text:#1a1a1a;--text2:#555;--text3:#888;
+  --accent:#1d4ed8;--accent-dim:#dbeafe;--accent-dim2:#bfdbfe;
+  --green:#059669;--green-dim:#d1fae5;
+  --radius:10px;--header-h:56px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:14px;min-height:100vh;overscroll-behavior-y:none;}
+
+/* ヘッダー */
+header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-bottom:1px solid #1e40af;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 14px;box-sizing:border-box;}
+header .logo{font-size:20px;}
+header .hd-top{display:flex;align-items:center;gap:8px;}
+header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+header h1{font-size:14px;font-weight:700;color:#fff;letter-spacing:.04em;}
+header .site-badge{font-size:12px;background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;border-radius:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+header .hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+#adminBadge{display:none;font-size:11px;padding:2px 8px;background:rgba(255,255,255,.2);border-radius:4px;color:#fff;white-space:nowrap;}
+.hd-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:4px 10px;font-size:13px;cursor:pointer;}
+
+/* フィルターバー */
+.filter-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.filter-bar label{font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;}
+.filter-bar select{background:#fff;color:var(--text);border:1.5px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:28px;}
+.filter-bar select:focus{outline:none;border-color:var(--accent);}
+.count-badge{font-size:11px;color:var(--text3);margin-left:auto;}
+
+/* カードグリッド */
+main{padding:12px 14px 80px;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.dwg-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:box-shadow .15s,border-color .15s;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.dwg-card:hover{border-color:var(--accent);box-shadow:0 3px 10px rgba(29,78,216,.12);}
+.dwg-card:active{transform:scale(.98);}
+.card-type{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-bottom:6px;}
+.type-断面図{background:#dbeafe;color:#1d4ed8;}
+.type-平面図{background:#d1fae5;color:#059669;}
+.type-縦断図{background:#fef3c7;color:#b45309;}
+.type-other{background:#f3f4f6;color:#6b7280;}
+.card-name{font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.4;}
+.card-rb{font-size:12px;color:var(--text3);margin-bottom:4px;}
+.card-memo{font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.5;}
+.card-meta{font-size:11px;color:var(--text3);display:flex;justify-content:space-between;}
+.card-thumb{width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:8px;border:1px solid var(--border2);}
+.card-icon{width:100%;height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:6px;margin-bottom:8px;border:1px solid var(--border2);font-size:32px;}
+
+/* ビューアモーダル */
+.viewer-overlay{display:none;position:fixed;inset:0;z-index:200;background:#000;flex-direction:column;}
+.viewer-overlay.open{display:flex;}
+.viewer-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);flex-shrink:0;}
+.viewer-title{flex:1;font-size:14px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.viewer-type{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.2);color:#fff;}
+.btn-close{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;font-size:13px;padding:5px 12px;cursor:pointer;}
+.btn-close:hover{background:rgba(255,255,255,.15);}
+.viewer-area{flex:1;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;}
+.viewer-area.zoomable{overflow:auto;align-items:flex-start;justify-content:flex-start;padding:12px;}
+.viewer-area iframe{width:100%;height:100%;border:none;}
+.viewer-area img{max-width:100%;max-height:100%;object-fit:contain;}
+.viewer-area.zoomable img{object-fit:unset;}
+.viewer-area embed{width:100%;height:100%;}
+/* ズームコントロール */
+#vwZoomCtrl{display:none;align-items:center;gap:6px;}
+#vwZoomCtrl button{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.65);color:#fff;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:17px;font-weight:700;line-height:1.2;}
+#vwZoomCtrl button:active{background:rgba(255,255,255,.35);}
+#vwZoomCtrl .vw-zoom-lv{font-size:14px;color:#fff;min-width:42px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
+.viewer-info{background:#111;padding:8px 14px;flex-shrink:0;display:flex;gap:16px;align-items:center;}
+.viewer-info .vi-memo{font-size:12px;color:#aaa;flex:1;}
+.btn-open-ext{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;font-size:12px;padding:5px 12px;cursor:pointer;white-space:nowrap;text-decoration:none;}
+.btn-open-ext:hover{background:rgba(255,255,255,.2);}
+
+/* 空・ローディング */
+.loading{text-align:center;color:var(--text3);padding:60px 20px;font-size:14px;}
+.spinner{display:inline-block;width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--text3);padding:60px 20px;}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-msg{font-size:14px;}
+
+/* モーダル（ログイン） */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.modal-box h3{font-size:15px;font-weight:700;margin-bottom:16px;}
+.modal-box input{width:100%;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:10px;font-size:13px;margin-bottom:10px;}
+.modal-box input:focus{outline:none;border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.btn-sm{padding:6px 14px;border-radius:6px;border:none;font-size:13px;cursor:pointer;font-weight:700;}
+.btn-primary{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;}
+.btn-ghost{background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);}
+
+/* 現場セレクト（URLパラメータなし時） */
+.site-select-bar{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:10px;}
+.site-select-bar label{font-size:13px;font-weight:700;color:var(--text2);white-space:nowrap;}
+.site-select-bar select{flex:1;background:#fff;color:var(--text);border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;}
+</style>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+</head>
+<body>
+
+<header>
+  <div class="hd-top">
+    <div class="logo">📐</div>
+    <div>
+      <h1>図面ビューア</h1>
+      <span class="site-badge" id="siteBadge" style="display:none;"></span>
+    </div>
+  
+    <span id="loginStatus" style="margin-left:auto;font-size:12px;color:var(--text3);padding:2px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;white-space:nowrap;"></span></div>
+  <div class="hd-btns">
+    <span id="adminBadge"></span>
+    <a href="index.html" class="hd-btn" style="text-decoration:none;" title="ホームへ戻る">🏠 ホーム</a>
+    <button class="hd-btn" onclick="onAuthBtnClick()" id="adminBtn" title="管理者ログイン">🔑</button>
+  </div>
+</header>
+
+<div id="siteSelectWrap" style="display:none;">
+  <div class="site-select-bar">
+    <label>📍 現場：</label>
+    <select id="siteSelTop" onchange="onSiteSelChange(this.value)">
+      <option value="">── 現場を選択 ──</option>
+    </select>
+  </div>
+</div>
+
+<div class="filter-bar" id="filterBar" style="display:none;">
+  <label>種別：</label>
+  <select id="filterType" onchange="renderCards()">
+    <option value="">すべて</option>
+    <option value="断面図">断面図</option>
+    <option value="平面図">平面図</option>
+    <option value="縦断図">縦断図</option>
+    <option value="その他">その他</option>
+  </select>
+  <label style="margin-left:8px;">路盤：</label>
+  <select id="filterRb" onchange="renderCards()">
+    <option value="">すべて</option>
+  </select>
+  <span class="count-badge" id="countBadge"></span>
+</div>
+
+<main id="mainArea">
+  <div class="loading" id="loadingMsg"><span class="spinner"></span>読み込み中…</div>
+</main>
+
+<!-- 図面ビューアオーバーレイ -->
+<div class="viewer-overlay" id="viewerOverlay">
+  <div class="viewer-header">
+    <span class="viewer-type" id="vType"></span>
+    <span class="viewer-title" id="vTitle"></span>
+    <div id="vwZoomCtrl">
+      <button onclick="_vwZoom(-0.25)" title="縮小">－</button>
+      <span class="vw-zoom-lv" id="vwZoomLv">100%</span>
+      <button onclick="_vwZoom(+0.25)" title="拡大">＋</button>
+      <button onclick="_vwZoomReset()" style="font-size:13px;padding:3px 8px;">Reset</button>
+    </div>
+    <a class="btn-open-ext" id="vOpenExt" href="#" target="_blank" style="display:none;">↗ 外部で開く</a>
+    <button class="btn-close" onclick="closeViewer()">✕ 閉じる</button>
+  </div>
+  <div class="viewer-area" id="viewerArea"></div>
+  <div class="viewer-info">
+    <span class="vi-memo" id="vMemo"></span>
+    <span style="font-size:11px;color:#888;" id="vMeta"></span>
+  </div>
+</div>
+
+<!-- ログインモーダル -->
+<div class="modal-overlay" id="fbModal">
+  <div class="modal-box">
+    <h3>🔑 ログイン</h3>
+    <input id="fbEmail" type="email" autocomplete="email" placeholder="メールアドレス">
+    <input id="fbPass" type="password" autocomplete="current-password" placeholder="パスワード">
+    <div class="modal-actions">
+      <button class="btn-sm btn-ghost" onclick="closeFbModal()">キャンセル</button>
+      <button class="btn-sm btn-primary" onclick="doFbLogin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+// ===== Firebase =====
+var _fb = firebase.initializeApp({
+  apiKey: "AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain: "alrit-kandenkou.firebaseapp.com",
+  projectId: "alrit-kandenkou",
+  storageBucket: "alrit-kandenkou.firebasestorage.app",
+  messagingSenderId: "640432772833",
+  appId: "1:640432772833:web:ab2aff11980621322809a0"
+});
+var _fbDb = firebase.firestore();
+var _fbAuth = firebase.auth();
+var _isAdmin = false;   // 管理者（書き込み権限あり）
+var _isViewer = false;  // ログイン済み閲覧者（管理者含む）
+
+// ===== 状態 =====
+var _paramSiteName = '';   // URLパラメータの現場名
+var _siteId = '';          // 解決済みのsiteId
+var _siteName = '';        // 解決済みの現場名
+var _allDrawings = [];     // この現場の全図面
+var _sites = [];           // 全現場リスト
+var _rbMasters = [];       // この現場の路盤マスタ（rbKey→名称変換用）
+
+// ===== URL解析 =====
+(function(){
+  var p = new URLSearchParams(location.search);
+  _paramSiteName = decodeURIComponent(p.get('site') || '');
+})();
+
+// ===== Auth =====
+// 管理者メールアドレスリスト（ここに追加すると管理者権限が付与される）
+var ADMIN_EMAILS = [];  // 例: ['admin@example.com']
+
+function updateAdminUI() {
+  var badge = document.getElementById('adminBadge');
+  var btn   = document.getElementById('adminBtn');
+  if (_isViewer) {
+    badge.style.display = 'inline-block';
+    badge.textContent = _isAdmin ? '👑 管理者' : '👤 閲覧中';
+    badge.style.background = _isAdmin ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.12)';
+    btn.textContent = '🔓';
+    btn.title = 'ログアウト';
+    // ログイン画面が出ていれば隠す
+    var lp = document.getElementById('loginRequired');
+    if (lp) lp.style.display = 'none';
+  } else {
+    badge.style.display = 'none';
+    btn.textContent = '🔑';
+    btn.title = 'ログイン';
+    // ※ ログイン画面はFirestoreエラー時のみ showLoginRequired() で表示
+  }
+}
+
+
+function _updateLoginStatus() {
+  var el=document.getElementById('loginStatus');
+  if(!el) return;
+  if(typeof _isAdmin !== 'undefined' && _isAdmin){
+    el.textContent='👑 管理者';
+    el.style.color='#93c5fd';
+    el.style.borderColor='rgba(79,142,247,.4)';
+    el.style.background='rgba(79,142,247,.1)';
+  } else {
+    var mc=localStorage.getItem('myCompany')||'';
+    var mt=localStorage.getItem('myTeam')||'';
+    var mn=localStorage.getItem('myName')||'';
+    var parts=[];
+    if(mc) parts.push(mc);
+    if(mt) parts.push(mt);
+    if(mn) parts.push(mn);
+    if(parts.length>0){
+      el.textContent='🏢 '+parts.join(' / ');
+      el.style.color='#86efac';
+      el.style.borderColor='rgba(34,197,94,.3)';
+      el.style.background='rgba(34,197,94,.08)';
+    } else {
+      el.textContent='👤 ゲスト';
+      el.style.color='var(--text3)';
+      el.style.borderColor='rgba(255,255,255,.12)';
+      el.style.background='rgba(255,255,255,.04)';
+    }
+  }
+}
+function onAuthBtnClick() {
+  if (_isViewer) {
+    if (confirm('ログアウトしますか？')) _fbAuth.signOut();
+  } else {
+    openLoginModal();
+  }
+}
+function openLoginModal() {
+  document.getElementById('fbModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('fbEmail').focus(); }, 100);
+}
+function showLoginRequired() {
+  var main = document.getElementById('mainArea');
+  // まだ loginRequired div がない場合のみ作成
+  if (!document.getElementById('loginRequired')) {
+    var div = document.createElement('div');
+    div.id = 'loginRequired';
+    div.style.cssText = 'text-align:center;padding:80px 20px;';
+    div.innerHTML =
+      '<div style="font-size:52px;margin-bottom:16px;">🔑</div>' +
+      '<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">ログインが必要です</div>' +
+      '<div style="font-size:14px;color:var(--text3);margin-bottom:24px;">図面を閲覧するにはログインしてください</div>' +
+      '<button onclick="openLoginModal()" style="background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer;">ログイン</button>';
+    main.innerHTML = '';
+    main.appendChild(div);
+  } else {
+    document.getElementById('loginRequired').style.display = '';
+  }
+  document.getElementById('loadingMsg') && (document.getElementById('loadingMsg').style.display = 'none');
+  document.getElementById('filterBar').style.display = 'none';
+}
+function closeFbModal() { document.getElementById('fbModal').classList.remove('open'); }
+function doFbLogin() {
+  _fbAuth.signInWithEmailAndPassword(
+    document.getElementById('fbEmail').value,
+    document.getElementById('fbPass').value
+  ).then(closeFbModal).catch(function(e){ alert('ログイン失敗: ' + e.message); });
+}
+document.getElementById('fbPass').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') doFbLogin();
+});
+
+// ===== 現場マスタ読み込み =====
+function loadSites() {
+  // localStorageから先に試みる
+  try {
+    var raw = localStorage.getItem('site_master');
+    if (raw) { _sites = JSON.parse(raw); }
+  } catch(e) { _sites = []; }
+
+  _fbDb.collection('masters').doc('site_master').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        _sites = doc.data().data;
+        localStorage.setItem('site_master', JSON.stringify(_sites));
+      }
+      afterSitesLoaded();
+    })
+    .catch(function() {
+      // エラー（権限なし含む）→ キャッシュで続行
+      afterSitesLoaded();
+    });
+}
+
+function afterSitesLoaded() {
+  if (_paramSiteName) {
+    // URLパラメータから現場を特定
+    var site = _sites.find(function(s){
+      return (s.name || s.siteName || '') === _paramSiteName;
+    });
+    if (site) {
+      _siteId = site.id || site.siteId || site.name;
+      _siteName = site.name || site.siteName || _siteId;
+    } else {
+      // nameで見つからなければidで試みる
+      _siteId = _paramSiteName;
+      _siteName = _paramSiteName;
+    }
+    updateSiteBadge();
+    loadDrawings();
+  } else {
+    // URLパラメータなし → 現場選択を表示
+    buildSiteSelect();
+    document.getElementById('siteSelectWrap').style.display = '';
+    document.getElementById('loadingMsg').style.display = 'none';
+  }
+}
+
+function updateSiteBadge() {
+  var b = document.getElementById('siteBadge');
+  b.textContent = '📍 ' + _siteName;
+  b.style.display = '';
+  document.title = '📐 図面ビューア ｜ ' + _siteName;
+}
+
+function buildSiteSelect() {
+  var sel = document.getElementById('siteSelTop');
+  _sites.forEach(function(s) {
+    var id = s.id || s.siteId || s.name;
+    var name = s.name || s.siteName || id;
+    sel.innerHTML += '<option value="' + esc(id) + '">' + esc(name) + '</option>';
+  });
+}
+
+function onSiteSelChange(siteId) {
+  if (!siteId) { _allDrawings = []; renderCards(); return; }
+  var site = _sites.find(function(s){ return (s.id||s.siteId||s.name) === siteId; });
+  _siteId = siteId;
+  _siteName = site ? (site.name || site.siteName || siteId) : siteId;
+  updateSiteBadge();
+  loadDrawings();
+}
+
+// ===== 図面読み込み =====
+function loadDrawings() {
+  document.getElementById('mainArea').innerHTML = '<div class="loading"><span class="spinner"></span>図面を読み込み中…</div>';
+
+  // 路盤マスタ（rbKey→名称変換用）
+  try {
+    var rbRaw = localStorage.getItem('roadbed_masters_' + _siteId) || localStorage.getItem('roadbed_masters');
+    _rbMasters = rbRaw ? JSON.parse(rbRaw) : [];
+  } catch(e) { _rbMasters = []; }
+
+  // localStorageキャッシュ
+  try {
+    var cached = localStorage.getItem('drawings_' + _siteId);
+    if (cached) { _allDrawings = JSON.parse(cached); }
+  } catch(e) { _allDrawings = []; }
+
+  _fbDb.collection('masters').doc('drawings').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().data) {
+        var all = doc.data().data;
+        if (all[_siteId]) {
+          _allDrawings = all[_siteId];
+          localStorage.setItem('drawings_' + _siteId, JSON.stringify(_allDrawings));
+        }
+      }
+      buildRbFilter();
+      renderCards();
+    })
+    .catch(function() {
+      // エラー（権限なし含む）→ キャッシュがあれば表示
+      buildRbFilter();
+      renderCards();
+    });
+}
+
+// ===== 路盤フィルター構築 =====
+function buildRbFilter() {
+  var sel = document.getElementById('filterRb');
+  sel.innerHTML = '<option value="">すべて</option>';
+  var seen = {};
+  _allDrawings.forEach(function(d) {
+    if (d.rbKey && !seen[d.rbKey]) {
+      seen[d.rbKey] = true;
+      var rb = _rbMasters.find(function(r){ return r.key === d.rbKey; });
+      var label = rb ? rb.label || rb.name || d.rbKey : d.rbKey;
+      sel.innerHTML += '<option value="' + esc(d.rbKey) + '">' + esc(label) + '</option>';
+    }
+  });
+}
+
+// ===== カード描画 =====
+function renderCards() {
+  document.getElementById('filterBar').style.display = _allDrawings.length ? '' : 'none';
+  document.getElementById('siteSelectWrap').style.display = _paramSiteName ? 'none' : '';
+
+  var typeF = document.getElementById('filterType').value;
+  var rbF   = document.getElementById('filterRb').value;
+
+  var list = _allDrawings.filter(function(d) {
+    if (typeF && d.type !== typeF) return false;
+    if (rbF && d.rbKey !== rbF) return false;
+    return true;
+  });
+
+  document.getElementById('countBadge').textContent = list.length + ' 件';
+
+  if (!list.length) {
+    var msg = _allDrawings.length ? 'フィルター条件に一致する図面がありません' : 'この現場に登録された図面はありません';
+    document.getElementById('mainArea').innerHTML =
+      '<div class="empty"><div class="empty-icon">📂</div><div class="empty-msg">' + esc(msg) + '</div></div>';
+    return;
+  }
+
+  var html = '<div class="card-grid">';
+  list.forEach(function(d, i) {
+    var typeCls = ['断面図','平面図','縦断図'].indexOf(d.type) >= 0 ? 'type-' + d.type : 'type-other';
+    var typeLabel = d.type || '図面';
+    var rb = d.rbKey ? _rbMasters.find(function(r){ return r.key === d.rbKey; }) : null;
+    var rbLabel = rb ? (rb.label || rb.name || d.rbKey) : (d.rbKey || '');
+
+    var thumbHtml = '';
+    if (d.fileData && d.fileType && d.fileType.startsWith('image/')) {
+      thumbHtml = '<img class="card-thumb" src="' + d.fileData + '" alt="' + esc(d.name) + '" loading="lazy">';
+    } else {
+      var icon = d.fileData ? '📄' : (d.url ? '🔗' : '📐');
+      thumbHtml = '<div class="card-icon">' + icon + '</div>';
+    }
+
+    html += '<div class="dwg-card" onclick="openViewer(' + i + ')">' +
+      thumbHtml +
+      '<span class="card-type ' + typeCls + '">' + esc(typeLabel) + '</span>' +
+      '<div class="card-name">' + esc(d.name || '（名称未設定）') + '</div>' +
+      (rbLabel ? '<div class="card-rb">🗺 ' + esc(rbLabel) + '</div>' : '') +
+      (d.memo ? '<div class="card-memo">' + esc(d.memo) + '</div>' : '') +
+      '<div class="card-meta"><span>' + esc(d.updatedAt || '') + '</span></div>' +
+    '</div>';
+  });
+  html += '</div>';
+  document.getElementById('mainArea').innerHTML = html;
+  // フィルター済みリストを保持
+  _filteredDrawings = list;
+}
+
+var _filteredDrawings = [];
+
+// ===== ビューア =====
+function openViewer(idx) {
+  var d = _filteredDrawings[idx];
+  if (!d) return;
+
+  document.getElementById('vTitle').textContent = d.name || '図面';
+  document.getElementById('vType').textContent = d.type || '図面';
+  document.getElementById('vMemo').textContent = d.memo || '';
+  document.getElementById('vMeta').textContent = d.updatedAt ? '更新: ' + d.updatedAt : '';
+
+  var area = document.getElementById('viewerArea');
+  area.innerHTML = '';
+  area.classList.remove('zoomable');
+
+  var extBtn  = document.getElementById('vOpenExt');
+  var zCtrl   = document.getElementById('vwZoomCtrl');
+  var zLbl    = document.getElementById('vwZoomLv');
+  _vwZoomLv   = 1.0;
+  _vwZoomBaseW = 0;
+  if (zCtrl) zCtrl.style.display = 'none';
+  if (zLbl)  zLbl.textContent = '100%';
+
+  // ズームボタンは常に表示
+  area.classList.add('zoomable');
+  if (zCtrl) zCtrl.style.display = 'flex';
+
+  if (d.fileData) {
+    if (d.fileType && d.fileType.startsWith('image/')) {
+      // 画像 → width ベースズーム
+      area.innerHTML = '<img src="' + d.fileData + '" alt="' + esc(d.name) + '" style="max-width:100%;max-height:100%;object-fit:contain;" id="vwImg">';
+      var img = area.querySelector('img');
+      if (img) img.onload = function() { _vwZoomBaseW = img.naturalWidth || img.offsetWidth || 600; };
+      extBtn.style.display = 'none';
+    } else {
+      // PDF等 → embed（ラッパー方式ズーム）
+      var _bwE = window.innerWidth, _bhE = Math.max(200, window.innerHeight - 120);
+      _vwZoomBaseW = _bwE; _vwZoomBaseH = _bhE;
+      area.innerHTML = '<div id="vwWrap" style="width:' + _bwE + 'px;height:' + _bhE + 'px;position:relative;flex-shrink:0;overflow:hidden;">' +
+        '<embed id="vwEmbed" src="' + d.fileData + '" type="' + (d.fileType||'application/pdf') + '" ' +
+        'style="position:absolute;top:0;left:0;width:' + _bwE + 'px;height:' + (_bhE + 100) + 'px;transform-origin:top left;"></embed></div>';
+      extBtn.style.display = 'none';
+    }
+  } else if (d.embedUrl || d.url) {
+    // Drive等iframe（ラッパー方式ズーム）
+    // iframe を +100px 縦に伸ばし、vwWrap が overflow:hidden でクリップ
+    // → Drive の「ページ目」バー（iframeの最下部に固定）が可視領域外に隠れる
+    var embedUrl = d.embedUrl || toDriveEmbedUrl(d.url);
+    var _bw = window.innerWidth, _bh = Math.max(200, window.innerHeight - 120);
+    _vwZoomBaseW = _bw; _vwZoomBaseH = _bh;
+    area.innerHTML = '<div id="vwWrap" style="width:' + _bw + 'px;height:' + _bh + 'px;position:relative;flex-shrink:0;overflow:hidden;">' +
+      '<iframe id="vwIframe" src="' + esc(embedUrl) + '" allowfullscreen ' +
+      'style="position:absolute;top:0;left:0;width:' + _bw + 'px;height:' + (_bh + 100) + 'px;transform-origin:top left;border:none;"></iframe></div>';
+    extBtn.href = d.url || embedUrl;
+    extBtn.style.display = '';
+  } else {
+    area.innerHTML = '<div style="color:#888;font-size:14px;padding:40px;text-align:center;">表示できるデータがありません</div>';
+    extBtn.style.display = 'none';
+  }
+
+  document.getElementById('viewerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeViewer() {
+  document.getElementById('viewerOverlay').classList.remove('open');
+  document.getElementById('viewerArea').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+// Escキーで閉じる
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeViewer(); });
+
+
+// ===== ズーム制御 =====
+_vwZoomLv   = 1.0;
+_vwZoomBaseW = 0;
+var _vwZoomBaseH = 0;
+
+function _vwZoom(delta) {
+  _vwZoomLv = Math.max(0.25, Math.min(8.0, _vwZoomLv + delta));
+  _applyZoom();
+}
+function _vwZoomReset() {
+  _vwZoomLv = 1.0;
+  _applyZoom();
+}
+function _applyZoom() {
+  var lbl = document.getElementById('vwZoomLv');
+  if (lbl) lbl.textContent = Math.round(_vwZoomLv * 100) + '%';
+
+  // 画像ズーム
+  var img = document.getElementById('vwImg');
+  if (img && _vwZoomBaseW) {
+    img.style.width = (_vwZoomBaseW * _vwZoomLv) + 'px';
+    img.style.maxWidth = 'none';
+    return;
+  }
+  // PDF embed / iframe ズーム（vwWrapラッパー方式）
+  var wrap = document.getElementById('vwWrap');
+  if (wrap) {
+    var inner = wrap.querySelector('embed,iframe');
+    if (inner) {
+      inner.style.transform = 'scale(' + _vwZoomLv + ')';
+      inner.style.transformOrigin = 'top left';
+      // ラッパーのサイズをズーム後の実サイズに合わせて拡張
+      if (_vwZoomBaseW) {
+        wrap.style.width  = (_vwZoomBaseW * _vwZoomLv) + 'px';
+      }
+      if (_vwZoomBaseH) {
+        wrap.style.height = (_vwZoomBaseH * _vwZoomLv) + 'px';
+      }
+    }
+  }
+}
+
+// ===== ユーティリティ =====
+function toDriveEmbedUrl(url) {
+  if (!url) return '';
+  var m = url.match(/\/file\/d\/([^/?\s]+)/);
+  if (m) return 'https://drive.google.com/file/d/' + m[1] + '/preview';
+  var m2 = url.match(/[?&]id=([^&\s]+)/);
+  if (m2) return 'https://drive.google.com/file/d/' + m2[1] + '/preview';
+  return url;
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===== 起動 =====
+var _fbReady = false;
+_fbAuth.onAuthStateChanged(function() {
+  if (!_fbReady) { _fbReady = true; loadSites(); }
+});
+
+// =====================================================================
+// 赤バナー警告 + iPadプルダウンリフレッシュ防止 + トップへ戻るボタン
+// =====================================================================
+var _warnToast = null, _warnTimer = null;
+function _hideWarningBanner() { if (_warnToast) _warnToast.style.transform = 'translateY(-100%)'; }
+function showWarningBanner(msg, focusId) {
+  var el = focusId ? document.getElementById(focusId) : null;
+  if (!_warnToast) {
+    _warnToast = document.createElement('div');
+    _warnToast.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;font-size:18px;font-weight:700;padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);transform:translateY(-100%);transition:transform 0.25s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;';
+    document.body.appendChild(_warnToast);
+    _warnToast.addEventListener('click', function() {
+      _hideWarningBanner();
+      if (_warnToast._targetEl) { _warnToast._targetEl.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ if(_warnToast._targetEl) _warnToast._targetEl.focus(); }, 350); }
+    });
+  }
+  _warnToast._targetEl = el || null;
+  _warnToast.innerHTML = '⚠️ ' + msg + (el ? '　<span style="text-decoration:underline;font-size:15px;">（ここをタップして移動）</span>' : '');
+  _warnToast.style.transform = 'translateY(0)';
+  clearTimeout(_warnTimer);
+  _warnTimer = setTimeout(_hideWarningBanner, 6000);
+}
+(function() {
+  var _sy = 0, _wd = false;
+  document.addEventListener('touchstart', function(e) { _sy = e.touches[0] ? e.touches[0].clientY : 0; _wd = false; }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    var y = e.touches[0] ? e.touches[0].clientY : 0;
+    var st = document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (st <= 0 && y > _sy + 8) {
+      e.preventDefault();
+      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
+    }
+  }, { passive: false });
+  document.addEventListener('DOMContentLoaded', function() {
+    var b = document.createElement('button');
+    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
+    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(b);
+    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
+    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
+  });
+})();
+
+</script>
+</body>
+</html>

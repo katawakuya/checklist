@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>資材管理アプリ</title>
+<style>
+:root{
+  --navy:#1F4E78; --lightblue:#D9E1F2; --yellow:#FFF3B0; --red:#FFC7CE; --green:#0F8A3D;
+  --border:#ccc; --text:#222; --text2:#555; --text3:#888;
+  --bg:#f4f6f8; --bg2:#fff; --shadow:0 1px 4px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;}
+body{font-family:"Meiryo UI","Yu Gothic",Arial,sans-serif;background:var(--bg);margin:0;color:var(--text);}
+
+/* ===== HEADER ===== */
+header{background:var(--navy);color:#fff;padding:10px 16px;}
+header .hd-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;}
+header .logo{font-size:28px;line-height:1;}
+header h1{font-size:17px;font-weight:700;color:#fff;margin:0;letter-spacing:.5px;}
+header p{font-size:11px;color:#cfe0f2;margin:1px 0 0;}
+.hd-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;
+  padding:5px 10px;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;white-space:nowrap;}
+.hd-btn:hover{background:rgba(255,255,255,.22);}
+#adminBadge{font-size:12px;padding:2px 8px;background:rgba(255,255,255,.15);border-radius:4px;color:#ffd54a;display:none;}
+#loginStatus{margin-left:auto;font-size:11px;color:#cfe0f2;padding:2px 8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;white-space:nowrap;}
+
+/* ===== NAV ===== */
+nav{display:flex;background:#123a5c;flex-wrap:wrap;}
+nav button{flex:1;min-width:100px;padding:11px 8px;background:none;border:none;color:#cfe0f2;font-size:13px;cursor:pointer;border-bottom:3px solid transparent;}
+nav button.active{color:#fff;border-bottom:3px solid #ffd54a;background:#0e2f4c;}
+nav button.admin-tab{opacity:.5;}
+nav button.admin-tab.unlocked{opacity:1;}
+
+/* ===== MAIN ===== */
+main{padding:16px;max-width:1400px;margin:0 auto;}
+.tab{display:none;}
+.tab.active{display:block;}
+
+/* ===== CARDS ===== */
+.card{background:var(--bg2);border-radius:6px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);}
+h2{font-size:15px;color:var(--navy);margin-top:0;border-left:4px solid var(--navy);padding-left:8px;}
+
+/* ===== TABLE ===== */
+.table-wrap{overflow-x:auto;}
+table{border-collapse:collapse;width:100%;font-size:13px;}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:center;white-space:nowrap;}
+th{background:var(--navy);color:#fff;font-weight:600;}
+tbody tr:nth-child(even){background:#fafbfc;}
+td.left{text-align:left;}
+
+/* ===== FORM ===== */
+input,select{padding:5px 6px;font-size:13px;border:1px solid #bbb;border-radius:4px;width:100%;}
+input[type=number]{text-align:right;}
+input:disabled,select:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px;}
+.form-grid label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px;}
+.line-items{margin-top:8px;}
+.line-item-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;}
+.line-item-row select{flex:2;min-width:120px;}
+.line-item-row input{flex:1;min-width:70px;max-width:100px;}
+
+/* ===== BUTTONS ===== */
+.btn{background:var(--navy);color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:13px;}
+.btn:hover{background:#163c5c;}
+.btn.secondary{background:#6c757d;}
+.btn.danger{background:#c0392b;}
+.btn.small{padding:4px 8px;font-size:12px;}
+.btn.warn{background:#e08e0b;}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+
+/* ===== BADGES / STATUS ===== */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;color:#fff;}
+.badge.ordered{background:#e08e0b;}
+.badge.received{background:#0f8a3d;}
+.badge.canceled{background:#999;}
+.status-ok{color:var(--green);font-weight:bold;}
+.status-warn{background:var(--red);font-weight:bold;}
+.yellow-cell{background:var(--yellow);}
+.muted{color:var(--text3);font-size:12px;margin-top:0;}
+.empty{color:#999;text-align:center;padding:16px;}
+
+/* ===== GUEST LOCK ===== */
+.guest-lock{display:none;}
+.guest-lock-msg{background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:12px 16px;color:#7a5c00;font-size:13px;margin-bottom:12px;}
+
+/* ===== SITE BAR ===== */
+.site-bar{background:#fff;border-bottom:1px solid #dde3ea;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.site-bar label{font-size:12px;color:var(--text2);white-space:nowrap;}
+.site-bar select{width:220px;font-size:13px;}
+
+/* ===== MODAL ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:10px;padding:24px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.2);}
+.modal-box h3{margin-top:0;font-size:16px;color:var(--navy);}
+.modal-box input{margin-bottom:10px;}
+.modal-box .btn{width:100%;margin-top:4px;}
+
+footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
+@media(max-width:700px){nav button{min-width:70px;font-size:11px;padding:9px 4px;}}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="hd-top">
+    <div class="logo">📦</div>
+    <div>
+      <h1>資材管理アプリ</h1>
+      <p>配管資材 使用実績・入荷・発注・在庫</p>
+    </div>
+    <span id="loginStatus" style="margin-left:auto;">未ログイン（ゲスト）</span>
+  </div>
+  <div class="hd-btns">
+    <span id="adminBadge">👑 スーパー管理者</span>
+    <button class="hd-btn" id="btnExportCsv">📊 CSV</button>
+    <button class="hd-btn" id="btnExportJson">💾 バックアップ</button>
+    <button class="hd-btn" id="btnImportJson">📂 復元</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+    <a href="index.html" class="hd-btn">🏠 ホーム</a>
+    <button class="hd-btn" id="btnLogin" onclick="openAuthModal()">🔑</button>
+  </div>
+</header>
+
+<!-- ===== SITE BAR ===== -->
+<div class="site-bar">
+  <label>現場：</label>
+  <select id="siteSelect" onchange="onSiteChange(this.value)">
+    <option value="">-- 現場を選択 --</option>
+  </select>
+  <span id="siteStatus" style="font-size:12px;color:var(--text3);"></span>
+</div>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <button data-tab="usage"     class="active">① 使用実績</button>
+  <button data-tab="dashboard" class="admin-tab">② 在庫ダッシュボード</button>
+  <button data-tab="receiving" class="admin-tab">③ 入荷管理</button>
+  <button data-tab="order"     class="admin-tab">④ 発注管理</button>
+  <button data-tab="master"    class="admin-tab">⑤ 資材マスタ</button>
+</nav>
+
+<main>
+
+  <!-- ① 使用実績 (全員編集可) -->
+  <div class="tab active" id="tab-usage">
+    <div class="card">
+      <h2>使用実績の入力（日報）</h2>
+      <div class="form-grid">
+        <div><label>現場名</label><input type="text" id="u_sitename" placeholder="例）小田原市扇町計画"></div>
+        <div><label>日付</label><input type="date" id="u_date"></div>
+        <div><label>人員</label><input type="number" id="u_crew" min="0"></div>
+        <div><label>施工箇所（旗揚げ）</label><input type="text" id="u_location" placeholder="例）44〜46"></div>
+        <div><label>復旧延長 L×W</label><input type="text" id="u_restore" placeholder="例）9.5×1.5"></div>
+        <div><label>配管延長(m)</label><input type="number" step="0.01" id="u_pipelength"></div>
+        <div><label>管台使用箇所数</label><input type="number" id="u_standcount"></div>
+      </div>
+      <div class="line-items" id="u_lineItems"></div>
+      <div class="toolbar" style="margin-top:8px;">
+        <button class="btn small secondary" id="btnAddLine">＋ 使用管材の行を追加</button>
+        <button class="btn" id="btnSaveUsage">💾 使用実績を保存</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>使用実績 一覧</h2>
+      <div class="table-wrap">
+        <table id="usageTable">
+          <thead><tr><th>現場名</th><th>日付</th><th>人員</th><th>施工箇所</th><th>復旧延長</th><th>配管延長</th><th>管台数</th><th>使用管材</th><th>削除</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 在庫ダッシュボード (ゲスト閲覧のみ) -->
+  <div class="tab" id="tab-dashboard">
+    <div class="card">
+      <h2>在庫ダッシュボード（管径別・自動計算）</h2>
+      <p class="muted" id="dashboardNote">期首在庫・発注点は黄色セルを直接編集できます（管理者のみ）。使用数・入荷数・残数・未入荷発注数は自動計算です。</p>
+      <div class="table-wrap">
+        <table id="dashboardTable">
+          <thead>
+            <tr>
+              <th>管径</th><th>種別</th><th>単位</th>
+              <th>期首在庫</th><th>入荷合計</th><th>使用合計</th><th>残数</th>
+              <th>発注点</th><th>状態</th><th>未入荷<br>発注数</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 入荷管理 (管理者のみ編集) -->
+  <div class="tab" id="tab-receiving">
+    <div class="guest-lock-msg" id="receivingLockMsg" style="display:none;">🔒 入荷管理の編集は管理者のみ操作できます。</div>
+    <div class="card" id="receivingFormCard">
+      <h2>入荷登録</h2>
+      <div class="form-grid">
+        <div><label>入荷日</label><input type="date" id="r_date"></div>
+        <div><label>管材</label><select id="r_material"></select></div>
+        <div><label>数量</label><input type="number" id="r_qty" min="0"></div>
+        <div><label>備考</label><input type="text" id="r_note" placeholder="発注番号・納入業者など"></div>
+      </div>
+      <button class="btn" id="btnSaveReceiving">入荷を登録</button>
+    </div>
+    <div class="card">
+      <h2>入荷履歴</h2>
+      <div class="table-wrap">
+        <table id="receivingTable">
+          <thead><tr><th>入荷日</th><th>管径</th><th>種別</th><th>数量</th><th>備考</th><th id="recvDelHeader">削除</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 発注管理 (管理者のみ編集) -->
+  <div class="tab" id="tab-order">
+    <div class="guest-lock-msg" id="orderLockMsg" style="display:none;">🔒 発注管理の編集は管理者のみ操作できます。</div>
+    <div class="card" id="orderFormCard">
+      <h2>発注登録</h2>
+      <div class="form-grid">
+        <div><label>発注日</label><input type="date" id="o_date"></div>
+        <div><label>管材</label><select id="o_material"></select></div>
+        <div><label>数量</label><input type="number" id="o_qty" min="0"></div>
+        <div><label>納期予定</label><input type="date" id="o_expected"></div>
+        <div><label>備考</label><input type="text" id="o_note" placeholder="発注先など"></div>
+      </div>
+      <button class="btn" id="btnSaveOrder">発注を登録</button>
+    </div>
+    <div class="card">
+      <h2>発注履歴</h2>
+      <div class="table-wrap">
+        <table id="orderTable">
+          <thead><tr><th>発注日</th><th>管径</th><th>種別</th><th>数量</th><th>納期予定</th><th>状態</th><th>備考</th><th id="ordDelHeader">操作</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 資材マスタ (管理者のみ) -->
+  <div class="tab" id="tab-master">
+    <div class="guest-lock-msg" id="masterLockMsg" style="display:none;">🔒 資材マスタの編集は管理者のみ操作できます。</div>
+    <div class="card" id="masterFormCard">
+      <h2>資材マスタ（管径・種別の追加）</h2>
+      <p class="muted">新しい管径や種別を追加すると、全タブに自動反映されます。</p>
+      <div class="form-grid">
+        <div><label>管径（例：φ400）</label><input type="text" id="m_diameter"></div>
+        <div><label>種別</label>
+          <select id="m_type"><option value="直管">直管</option><option value="曲がり">曲がり</option><option value="その他">その他</option></select>
+        </div>
+        <div><label>単位</label><input type="text" id="m_unit" value="本"></div>
+      </div>
+      <button class="btn" id="btnAddMaterial">資材を追加</button>
+    </div>
+    <div class="card">
+      <h2>登録済み資材一覧</h2>
+      <div class="table-wrap">
+        <table id="masterTable">
+          <thead><tr><th>管径</th><th>種別</th><th>単位</th><th id="mstDelHeader">削除</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>資材管理アプリ　データはFirestoreに保存されます（現場別）。バックアップはJSON書き出しをご利用ください。</footer>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box">
+    <h3>🔑 管理者ログイン</h3>
+    <label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">メールアドレス</label>
+    <input type="email" id="authEmail" placeholder="メールアドレス" autocomplete="username">
+    <label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">パスワード</label>
+    <input type="password" id="authPass" placeholder="パスワード" autocomplete="current-password">
+    <div id="authError" style="color:#c0392b;font-size:12px;min-height:18px;margin-bottom:6px;"></div>
+    <button class="btn" onclick="doLogin()" style="margin-bottom:6px;">ログイン</button>
+    <button class="btn secondary" onclick="doLogout()" style="margin-bottom:6px;">ログアウト</button>
+    <button class="btn secondary" onclick="closeAuthModal()">キャンセル</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// =====================================================================
+// Firebase 設定
+// =====================================================================
+const FIREBASE_CONFIG = {
+  apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain:"alrit-kandenkou.firebaseapp.com",
+  projectId:"alrit-kandenkou",
+  storageBucket:"alrit-kandenkou.firebasestorage.app",
+  messagingSenderId:"640432772833",
+  appId:"1:640432772833:web:ab2aff11980621322809a0"
+};
+const ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+var _fbDb = null, _fbAuth = null, _fbUser = null;
+var _isAdmin = false, _isLoggedIn = false;
+
+firebase.initializeApp(FIREBASE_CONFIG);
+_fbDb   = firebase.firestore();
+_fbAuth = firebase.auth();
+
+_fbAuth.onAuthStateChanged(function(user){
+  _fbUser    = user;
+  _isLoggedIn = !!user;
+  _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
+  updateAuthUI();
+  applyAccessControl();
+  if (_currentSiteId) loadAllFromFirestore(_currentSiteId);
+});
+
+// =====================================================================
+// Auth UI
+// =====================================================================
+function updateAuthUI(){
+  var badge  = document.getElementById('adminBadge');
+  var status = document.getElementById('loginStatus');
+  var btnLogin = document.getElementById('btnLogin');
+  if (_isAdmin){
+    badge.style.display = '';
+    badge.textContent = '👑 スーパー管理者';
+    status.textContent = _fbUser.email;
+    btnLogin.textContent = '🔑 ログアウト';
+  } else if (_isLoggedIn){
+    badge.style.display = '';
+    badge.textContent = '🔓 管理者';
+    badge.style.color = '#cfe0f2';
+    status.textContent = _fbUser.email;
+    btnLogin.textContent = '🔑 ログアウト';
+  } else {
+    badge.style.display = 'none';
+    status.textContent = '未ログイン（ゲスト）';
+    btnLogin.textContent = '🔑 ログイン';
+  }
+}
+function openAuthModal(){
+  if (_isLoggedIn){ doLogout(); return; }
+  document.getElementById('authModal').classList.add('open');
+  document.getElementById('authError').textContent='';
+}
+function closeAuthModal(){ document.getElementById('authModal').classList.remove('open'); }
+function doLogin(){
+  var email = document.getElementById('authEmail').value.trim();
+  var pass  = document.getElementById('authPass').value;
+  _fbAuth.signInWithEmailAndPassword(email, pass)
+    .then(function(){ closeAuthModal(); })
+    .catch(function(e){
+      var msg = e.code==='auth/wrong-password'?'パスワードが違います':
+                e.code==='auth/user-not-found'?'このメールアドレスは登録されていません':
+                e.code==='auth/invalid-email'?'メールアドレスの形式が正しくありません':
+                '認証エラー: '+e.message;
+      document.getElementById('authError').textContent = msg;
+    });
+}
+function doLogout(){
+  _fbAuth.signOut().then(function(){
+    document.getElementById('authEmail').value='';
+    document.getElementById('authPass').value='';
+  });
+}
+document.getElementById('authPass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+// =====================================================================
+// データ構造（メモリ内）
+// =====================================================================
+var _currentSiteId = localStorage.getItem('_launcher_site') || '';
+var _currentSiteName = '';
+
+function defaultData(){
+  var diamOrder = ['φ350','φ300','φ250','φ200','φ150','φ130','φ100','φ75','φ50'];
+  var materials = [];
+  var id = 1;
+  diamOrder.forEach(function(d){
+    materials.push({id:id++, diameter:d, type:'直管',  unit:'本'});
+    materials.push({id:id++, diameter:d, type:'曲がり', unit:'本'});
+    materials.push({id:id++, diameter:d, type:'管台',   unit:'個'});
+  });
+  return {
+    nextId:{material:id, usage:1, receiving:1, order:1},
+    materials: materials,
+    initialStock:{},
+    reorderPoint:{},
+    usageEntries:[],
+    receivingEntries:[],
+    orderEntries:[]
+  };
+}
+
+var _data = defaultData();
+
+function materialLabel(m){ return m.diameter + ' ' + m.type; }
+function getMaterial(id){ return _data.materials.find(function(m){ return m.id===id; }); }
+
+// =====================================================================
+// Firestore CRUD
+// =====================================================================
+function fsConfigRef(siteId){
+  return _fbDb.collection('zaimatsu_config').doc(siteId||'_default');
+}
+
+function loadAllFromFirestore(siteId){
+  if (!siteId || !_fbDb) return;
+  document.getElementById('siteStatus').textContent = '読み込み中…';
+  // config (materials, initialStock, reorderPoint, nextId)
+  fsConfigRef(siteId).get().then(function(doc){
+    if (doc.exists){
+      var d = doc.data();
+      _data.materials    = d.materials    || defaultData().materials;
+      _data.initialStock = d.initialStock || {};
+      _data.reorderPoint = d.reorderPoint || {};
+      _data.nextId       = d.nextId       || defaultData().nextId;
+    }
+    // usage entries
+    return _fbDb.collection('zaimatsu_usage').where('siteId','==',siteId).orderBy('date','desc').get();
+  }).then(function(snap){
+    _data.usageEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
+    return _fbDb.collection('zaimatsu_receiving').where('siteId','==',siteId).orderBy('date','desc').get();
+  }).then(function(snap){
+    _data.receivingEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
+    return _fbDb.collection('zaimatsu_orders').where('siteId','==',siteId).orderBy('date','desc').get();
+  }).then(function(snap){
+    _data.orderEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
+    document.getElementById('siteStatus').textContent = '✅ 読み込み完了';
+    setTimeout(function(){ document.getElementById('siteStatus').textContent=''; },2000);
+    renderAll();
+  }).catch(function(e){
+    console.error('[FS] load error', e);
+    document.getElementById('siteStatus').textContent = '⚠ 読み込みエラー: '+e.message;
+    renderAll(); // エラー時も表示を更新
+  });
+}
+
+function saveConfig(){
+  if (!_currentSiteId || !_fbDb) return;
+  return fsConfigRef(_currentSiteId).set({
+    materials:    _data.materials,
+    initialStock: _data.initialStock,
+    reorderPoint: _data.reorderPoint,
+    nextId:       _data.nextId,
+    updatedAt:    new Date().toISOString()
+  });
+}
+
+function addUsageEntry(entry){
+  if (!_currentSiteId || !_fbDb) { _data.usageEntries.push(entry); renderAll(); return Promise.resolve(); }
+  entry.siteId = _currentSiteId;
+  entry.createdAt = new Date().toISOString();
+  return _fbDb.collection('zaimatsu_usage').add(entry).then(function(ref){
+    entry._fid = ref.id;
+    _data.usageEntries.unshift(entry);
+    renderAll();
+  }).catch(function(e){
+    console.warn('[ZM] usage add error', e);
+    // Firestore保存失敗時はローカルに保持して表示（ページリロードで消える）
+    _data.usageEntries.unshift(entry);
+    renderAll();
+    alert('⚠ Firestore保存に失敗しました（権限エラー）。\nFirestoreセキュリティルールの更新が必要です。\n\n入力内容はこのページを閉じると消えます。');
+  });
+}
+function deleteUsageEntry(fid, localId){
+  if (fid && _fbDb){
+    return _fbDb.collection('zaimatsu_usage').doc(fid).delete().then(function(){
+      _data.usageEntries = _data.usageEntries.filter(function(e){ return e._fid!==fid; });
+      renderAll();
+    });
+  }
+  _data.usageEntries = _data.usageEntries.filter(function(e){ return e.id!==localId; });
+  renderAll(); return Promise.resolve();
+}
+
+function addReceivingEntry(entry){
+  if (!_currentSiteId || !_fbDb) { _data.receivingEntries.push(entry); renderAll(); return Promise.resolve(); }
+  entry.siteId = _currentSiteId;
+  entry.createdAt = new Date().toISOString();
+  return _fbDb.collection('zaimatsu_receiving').add(entry).then(function(ref){
+    entry._fid = ref.id;
+    _data.receivingEntries.unshift(entry);
+    renderAll();
+  });
+}
+function deleteReceivingEntry(fid, localId){
+  if (fid && _fbDb){
+    return _fbDb.collection('zaimatsu_receiving').doc(fid).delete().then(function(){
+      _data.receivingEntries = _data.receivingEntries.filter(function(e){ return e._fid!==fid; });
+      renderAll();
+    });
+  }
+  _data.receivingEntries = _data.receivingEntries.filter(function(e){ return e.id!==localId; });
+  renderAll(); return Promise.resolve();
+}
+
+function addOrderEntry(entry){
+  if (!_currentSiteId || !_fbDb) { _data.orderEntries.push(entry); renderAll(); return Promise.resolve(); }
+  entry.siteId = _currentSiteId;
+  entry.createdAt = new Date().toISOString();
+  return _fbDb.collection('zaimatsu_orders').add(entry).then(function(ref){
+    entry._fid = ref.id;
+    _data.orderEntries.unshift(entry);
+    renderAll();
+  });
+}
+function deleteOrderEntry(fid, localId){
+  if (fid && _fbDb){
+    return _fbDb.collection('zaimatsu_orders').doc(fid).delete().then(function(){
+      _data.orderEntries = _data.orderEntries.filter(function(e){ return e._fid!==fid; });
+      renderAll();
+    });
+  }
+  _data.orderEntries = _data.orderEntries.filter(function(e){ return e.id!==localId; });
+  renderAll(); return Promise.resolve();
+}
+function updateOrderStatus(fid, localId, status){
+  var o = _data.orderEntries.find(function(e){ return fid ? e._fid===fid : e.id===localId; });
+  if (!o) return;
+  o.status = status;
+  if (fid && _fbDb) _fbDb.collection('zaimatsu_orders').doc(fid).update({status:status});
+  renderAll();
+}
+
+// =====================================================================
+// 現場ロード
+// =====================================================================
+function onSiteChange(siteId){
+  _currentSiteId = siteId;
+  localStorage.setItem('_launcher_site', siteId);
+  _data = defaultData();
+  if (siteId) loadAllFromFirestore(siteId);
+  else renderAll();
+}
+
+function loadSiteList(){
+  if (!_fbDb) return;
+  // 他アプリ（roadbed.html等）と同じく masters/site_master を参照
+  // sites コレクション直接取得はFirestoreルール上ゲストに拒否されるため
+  _fbDb.collection('masters').doc('site_master').get().then(function(doc){
+    var sites = (doc.exists && doc.data().data) ? doc.data().data : [];
+    var sel = document.getElementById('siteSelect');
+    var cur = _currentSiteId;
+    sel.innerHTML = '<option value="">-- 現場を選択 --</option>';
+    sites.forEach(function(s){
+      var id   = s.id || s.siteId || s.name || '';
+      var name = s.name || s.siteName || id;
+      var opt  = document.createElement('option');
+      opt.value = id;
+      opt.textContent = name;
+      if (id === cur){ opt.selected = true; _currentSiteName = name; }
+      sel.appendChild(opt);
+    });
+    if (cur) loadAllFromFirestore(cur);
+  }).catch(function(e){
+    console.warn('[ZM] site_master load error', e);
+    if (_currentSiteId) loadAllFromFirestore(_currentSiteId);
+  });
+}
+
+// =====================================================================
+// アクセス制御
+// =====================================================================
+function applyAccessControl(){
+  // ② 在庫ダッシュボード: ゲストは期首在庫・発注点を編集不可
+  // → renderDashboard 内で input の disabled を制御
+
+  // nav タブのロック表示
+  document.querySelectorAll('nav button.admin-tab').forEach(function(btn){
+    if (_isLoggedIn) btn.classList.add('unlocked');
+    else btn.classList.remove('unlocked');
+  });
+
+  // ③ 入荷管理
+  var rLock = document.getElementById('receivingLockMsg');
+  var rForm = document.getElementById('receivingFormCard');
+  if (_isLoggedIn){ rLock.style.display='none'; rForm.style.display=''; }
+  else { rLock.style.display=''; rForm.style.display='none'; }
+  document.getElementById('recvDelHeader').style.display = _isLoggedIn ? '' : 'none';
+
+  // ④ 発注管理
+  var oLock = document.getElementById('orderLockMsg');
+  var oForm = document.getElementById('orderFormCard');
+  if (_isLoggedIn){ oLock.style.display='none'; oForm.style.display=''; }
+  else { oLock.style.display=''; oForm.style.display='none'; }
+  document.getElementById('ordDelHeader').style.display = _isLoggedIn ? '' : 'none';
+
+  // ⑤ 資材マスタ
+  var mLock = document.getElementById('masterLockMsg');
+  var mForm = document.getElementById('masterFormCard');
+  if (_isLoggedIn){ mLock.style.display='none'; mForm.style.display=''; }
+  else { mLock.style.display=''; mForm.style.display='none'; }
+  document.getElementById('mstDelHeader').style.display = _isLoggedIn ? '' : 'none';
+
+  // ダッシュボードの注記
+  document.getElementById('dashboardNote').textContent = _isLoggedIn
+    ? '期首在庫・発注点は黄色セルを直接編集できます。使用数・入荷数・残数・未入荷発注数は自動計算です。'
+    : '閲覧のみ（管理者ログインで編集可）。使用数・入荷数・残数・未入荷発注数は自動計算です。';
+
+  renderAll();
+}
+
+// =====================================================================
+// Tab switching
+// =====================================================================
+document.querySelectorAll('nav button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('nav button').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    renderAll();
+  });
+});
+
+// =====================================================================
+// ② 在庫ダッシュボード
+// =====================================================================
+function computeInventory(){
+  return _data.materials.map(function(m){
+    var used = _data.usageEntries.reduce(function(sum,e){
+      return sum + e.items.filter(function(i){ return i.materialId===m.id; })
+                          .reduce(function(s,i){ return s+Number(i.qty||0); }, 0);
+    }, 0);
+    var received = _data.receivingEntries.filter(function(r){ return r.materialId===m.id; })
+                       .reduce(function(s,r){ return s+Number(r.qty||0); }, 0);
+    var initial  = Number(_data.initialStock[m.id]||0);
+    var remain   = initial + received - used;
+    var reorder  = Number(_data.reorderPoint[m.id]||0);
+    var pendingOrder = _data.orderEntries.filter(function(o){ return o.materialId===m.id && o.status==='発注済み'; })
+                           .reduce(function(s,o){ return s+Number(o.qty||0); }, 0);
+    return {material:m, used:used, received:received, initial:initial, remain:remain, reorder:reorder, pendingOrder:pendingOrder};
+  });
+}
+
+function renderDashboard(){
+  var tbody = document.querySelector('#dashboardTable tbody');
+  tbody.innerHTML = '';
+  computeInventory().forEach(function(row){
+    var tr = document.createElement('tr');
+    var status = row.remain <= row.reorder ? '要発注' : 'OK';
+    var editableInitial = _isLoggedIn
+      ? `<input type="number" data-role="initial" data-id="${row.material.id}" value="${row.initial}">`
+      : row.initial;
+    var editableReorder = _isLoggedIn
+      ? `<input type="number" data-role="reorder" data-id="${row.material.id}" value="${row.reorder}">`
+      : row.reorder;
+    tr.innerHTML = `
+      <td class="left" style="font-weight:bold;">${row.material.diameter}</td>
+      <td>${row.material.type}</td>
+      <td>${row.material.unit}</td>
+      <td class="yellow-cell">${editableInitial}</td>
+      <td>${row.received}</td>
+      <td>${row.used}</td>
+      <td style="font-weight:bold;">${row.remain}</td>
+      <td class="yellow-cell">${editableReorder}</td>
+      <td class="${status==='要発注'?'status-warn':'status-ok'}">${status}</td>
+      <td>${row.pendingOrder}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('input[data-role="initial"]').forEach(function(inp){
+    inp.addEventListener('change', function(e){
+      _data.initialStock[e.target.dataset.id] = Number(e.target.value||0);
+      saveConfig().then(function(){ renderDashboard(); });
+    });
+  });
+  tbody.querySelectorAll('input[data-role="reorder"]').forEach(function(inp){
+    inp.addEventListener('change', function(e){
+      _data.reorderPoint[e.target.dataset.id] = Number(e.target.value||0);
+      saveConfig().then(function(){ renderDashboard(); });
+    });
+  });
+}
+
+// =====================================================================
+// ① 使用実績
+// =====================================================================
+function materialOptionsHtml(selectedId){
+  return _data.materials.map(function(m){
+    return `<option value="${m.id}" ${String(m.id)===String(selectedId)?'selected':''}>${materialLabel(m)}</option>`;
+  }).join('');
+}
+
+function addLineItemRow(materialId, qty){
+  var wrap = document.getElementById('u_lineItems');
+  var row = document.createElement('div');
+  row.className = 'line-item-row';
+  row.innerHTML = `
+    <select class="li-material">${materialOptionsHtml(materialId)}</select>
+    <input type="number" class="li-qty" placeholder="本数" value="${qty||''}" min="0">
+    <button class="btn danger small li-remove" type="button">削除</button>
+  `;
+  row.querySelector('.li-remove').addEventListener('click', function(){ row.remove(); });
+  wrap.appendChild(row);
+}
+
+document.getElementById('btnAddLine').addEventListener('click', function(){ addLineItemRow(); });
+
+document.getElementById('btnSaveUsage').addEventListener('click', function(){
+  var date = document.getElementById('u_date').value;
+  if (!date){ alert('日付を入力してください'); return; }
+  var items = [];
+  document.querySelectorAll('#u_lineItems .line-item-row').forEach(function(row){
+    var materialId = Number(row.querySelector('.li-material').value);
+    var qty = Number(row.querySelector('.li-qty').value||0);
+    if (qty>0) items.push({materialId:materialId, qty:qty});
+  });
+  var entry = {
+    id: _data.nextId.usage++,
+    date: date,
+    siteName: document.getElementById('u_sitename').value,
+    crew: document.getElementById('u_crew').value,
+    location: document.getElementById('u_location').value,
+    restore: document.getElementById('u_restore').value,
+    pipeLength: document.getElementById('u_pipelength').value,
+    standCount: document.getElementById('u_standcount').value,
+    items: items,
+    author: _fbUser ? _fbUser.email : 'ゲスト'
+  };
+  addUsageEntry(entry).then(function(){
+    if (_currentSiteId) saveConfig();
+    ['u_sitename','u_date','u_crew','u_location','u_restore','u_pipelength','u_standcount'].forEach(function(id){
+      document.getElementById(id).value='';
+    });
+    document.getElementById('u_lineItems').innerHTML='';
+    addLineItemRow();
+  });
+});
+
+function renderUsageTable(){
+  var tbody = document.querySelector('#usageTable tbody');
+  tbody.innerHTML = '';
+  if (_data.usageEntries.length===0){
+    tbody.innerHTML='<tr><td colspan="9" class="empty">まだ使用実績がありません</td></tr>'; return;
+  }
+  var sorted = _data.usageEntries.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+  sorted.forEach(function(e){
+    var itemsText = e.items.map(function(i){
+      var m = getMaterial(i.materialId);
+      return m ? m.diameter+m.type+':'+i.qty : '';
+    }).join(' / ');
+    var tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="left">${e.siteName||''}</td><td>${e.date}</td><td>${e.crew||''}</td>
+      <td>${e.location||''}</td><td>${e.restore||''}</td><td>${e.pipeLength||''}</td>
+      <td>${e.standCount||''}</td>
+      <td class="left">${itemsText||'-'}</td>
+      <td><button class="btn danger small" data-fid="${e._fid||''}" data-id="${e.id||''}">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-fid],[data-id]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (!confirm('この使用実績を削除しますか？')) return;
+      deleteUsageEntry(btn.dataset.fid||null, Number(btn.dataset.id)||null);
+    });
+  });
+}
+
+// =====================================================================
+// ③ 入荷管理
+// =====================================================================
+function renderReceivingSelect(){
+  document.getElementById('r_material').innerHTML = materialOptionsHtml();
+}
+
+document.getElementById('btnSaveReceiving').addEventListener('click', function(){
+  if (!_isLoggedIn){ alert('入荷登録は管理者のみ操作できます。'); return; }
+  var date = document.getElementById('r_date').value;
+  var materialId = Number(document.getElementById('r_material').value);
+  var qty = Number(document.getElementById('r_qty').value||0);
+  if (!date || !qty){ alert('入荷日と数量を入力してください'); return; }
+  var entry = {id:_data.nextId.receiving++, date:date, materialId:materialId, qty:qty,
+               note:document.getElementById('r_note').value};
+  addReceivingEntry(entry).then(function(){
+    if (_currentSiteId) saveConfig();
+    document.getElementById('r_date').value='';
+    document.getElementById('r_qty').value='';
+    document.getElementById('r_note').value='';
+  });
+});
+
+function renderReceivingTable(){
+  var tbody = document.querySelector('#receivingTable tbody');
+  tbody.innerHTML = '';
+  if (_data.receivingEntries.length===0){
+    tbody.innerHTML='<tr><td colspan="6" class="empty">入荷履歴はありません</td></tr>'; return;
+  }
+  var sorted = _data.receivingEntries.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+  sorted.forEach(function(r){
+    var m = getMaterial(r.materialId) || {diameter:'-',type:'-'};
+    var tr = document.createElement('tr');
+    var delCell = _isLoggedIn
+      ? `<td><button class="btn danger small" data-fid="${r._fid||''}" data-id="${r.id||''}">✕</button></td>`
+      : '<td style="display:none;"></td>';
+    tr.innerHTML = `<td>${r.date}</td><td>${m.diameter}</td><td>${m.type}</td><td>${r.qty}</td><td>${r.note||''}</td>${delCell}`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('button[data-fid],button[data-id]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (!confirm('この入荷記録を削除しますか？')) return;
+      deleteReceivingEntry(btn.dataset.fid||null, Number(btn.dataset.id)||null);
+    });
+  });
+}
+
+// =====================================================================
+// ④ 発注管理
+// =====================================================================
+function renderOrderSelect(){
+  document.getElementById('o_material').innerHTML = materialOptionsHtml();
+}
+
+document.getElementById('btnSaveOrder').addEventListener('click', function(){
+  if (!_isLoggedIn){ alert('発注登録は管理者のみ操作できます。'); return; }
+  var date = document.getElementById('o_date').value;
+  var materialId = Number(document.getElementById('o_material').value);
+  var qty = Number(document.getElementById('o_qty').value||0);
+  if (!date || !qty){ alert('発注日と数量を入力してください'); return; }
+  var entry = {id:_data.nextId.order++, date:date, materialId:materialId, qty:qty,
+               expected:document.getElementById('o_expected').value,
+               note:document.getElementById('o_note').value, status:'発注済み'};
+  addOrderEntry(entry).then(function(){
+    if (_currentSiteId) saveConfig();
+    document.getElementById('o_date').value='';
+    document.getElementById('o_qty').value='';
+    document.getElementById('o_expected').value='';
+    document.getElementById('o_note').value='';
+  });
+});
+
+function renderOrderTable(){
+  var tbody = document.querySelector('#orderTable tbody');
+  tbody.innerHTML = '';
+  if (_data.orderEntries.length===0){
+    tbody.innerHTML='<tr><td colspan="8" class="empty">発注履歴はありません</td></tr>'; return;
+  }
+  var sorted = _data.orderEntries.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+  sorted.forEach(function(o){
+    var m = getMaterial(o.materialId) || {diameter:'-',type:'-'};
+    var bc = o.status==='発注済み'?'ordered':(o.status==='入荷済み'?'received':'canceled');
+    var tr = document.createElement('tr');
+    var ops = '';
+    if (_isLoggedIn){
+      if (o.status==='発注済み') ops += `<button class="btn small warn" data-recv-fid="${o._fid||''}" data-recv-id="${o.id||''}">入荷登録</button> `;
+      ops += `<button class="btn danger small" data-fid="${o._fid||''}" data-id="${o.id||''}">✕</button>`;
+    }
+    var opsCell = _isLoggedIn ? `<td>${ops}</td>` : '<td style="display:none;"></td>';
+    tr.innerHTML = `
+      <td>${o.date}</td><td>${m.diameter}</td><td>${m.type}</td><td>${o.qty}</td>
+      <td>${o.expected||''}</td>
+      <td><span class="badge ${bc}">${o.status}</span></td>
+      <td>${o.note||''}</td>
+      ${opsCell}
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('button[data-recv-fid],button[data-recv-id]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var fid = btn.dataset.recvFid||null;
+      var lid = Number(btn.dataset.recvId)||null;
+      var o = _data.orderEntries.find(function(x){ return fid ? x._fid===fid : x.id===lid; });
+      if (!o) return;
+      var rEntry = {id:_data.nextId.receiving++, date:new Date().toISOString().slice(0,10),
+                    materialId:o.materialId, qty:o.qty, note:'発注分入荷（自動登録）'};
+      addReceivingEntry(rEntry);
+      updateOrderStatus(fid, lid, '入荷済み');
+      if (_currentSiteId) saveConfig();
+    });
+  });
+  tbody.querySelectorAll('button[data-fid]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (!confirm('この発注記録を削除しますか？')) return;
+      deleteOrderEntry(btn.dataset.fid||null, Number(btn.dataset.id)||null);
+    });
+  });
+}
+
+// =====================================================================
+// ⑤ 資材マスタ
+// =====================================================================
+document.getElementById('btnAddMaterial').addEventListener('click', function(){
+  if (!_isLoggedIn){ alert('資材マスタの編集は管理者のみ操作できます。'); return; }
+  var diameter = document.getElementById('m_diameter').value.trim();
+  var type = document.getElementById('m_type').value;
+  var unit = document.getElementById('m_unit').value.trim() || '本';
+  if (!diameter){ alert('管径を入力してください'); return; }
+  _data.materials.push({id:_data.nextId.material++, diameter:diameter, type:type, unit:unit});
+  saveConfig();
+  document.getElementById('m_diameter').value='';
+  renderAll();
+});
+
+function renderMasterTable(){
+  var tbody = document.querySelector('#masterTable tbody');
+  tbody.innerHTML = '';
+  _data.materials.forEach(function(m){
+    var tr = document.createElement('tr');
+    var delCell = _isLoggedIn
+      ? `<td><button class="btn danger small" data-del="${m.id}">✕</button></td>`
+      : '<td style="display:none;"></td>';
+    tr.innerHTML = `<td>${m.diameter}</td><td>${m.type}</td><td>${m.unit}</td>${delCell}`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-del]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = Number(btn.dataset.del);
+      var inUse = _data.usageEntries.some(function(e){ return e.items.some(function(i){ return i.materialId===id; }); })
+               || _data.receivingEntries.some(function(r){ return r.materialId===id; })
+               || _data.orderEntries.some(function(o){ return o.materialId===id; });
+      if (inUse){ alert('この資材は使用実績・入荷・発注のいずれかで使用中のため削除できません。'); return; }
+      if (!confirm('この資材を削除しますか？')) return;
+      _data.materials = _data.materials.filter(function(m){ return m.id!==id; });
+      saveConfig(); renderAll();
+    });
+  });
+}
+
+// =====================================================================
+// CSV / JSON エクスポート
+// =====================================================================
+function csvEscape(v){
+  if (v===undefined||v===null) v='';
+  v=String(v);
+  if (/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+document.getElementById('btnExportCsv').addEventListener('click', function(){
+  var lines = [];
+  lines.push('■在庫ダッシュボード');
+  lines.push(['管径','種別','単位','期首在庫','入荷合計','使用合計','残数','発注点','状態','未入荷発注数'].join(','));
+  computeInventory().forEach(function(row){
+    var status = row.remain<=row.reorder?'要発注':'OK';
+    lines.push([row.material.diameter,row.material.type,row.material.unit,row.initial,row.received,row.used,row.remain,row.reorder,status,row.pendingOrder].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■使用実績');
+  lines.push(['現場名','日付','人員','施工箇所','復旧延長','配管延長','管台数','使用管材'].join(','));
+  _data.usageEntries.forEach(function(e){
+    var itemsText = e.items.map(function(i){ var m=getMaterial(i.materialId); return m?m.diameter+m.type+':'+i.qty:''; }).join(' / ');
+    lines.push([e.siteName,e.date,e.crew,e.location,e.restore,e.pipeLength,e.standCount,itemsText].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■入荷履歴');
+  lines.push(['入荷日','管径','種別','数量','備考'].join(','));
+  _data.receivingEntries.forEach(function(r){
+    var m=getMaterial(r.materialId)||{diameter:'-',type:'-'};
+    lines.push([r.date,m.diameter,m.type,r.qty,r.note].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■発注履歴');
+  lines.push(['発注日','管径','種別','数量','納期予定','状態','備考'].join(','));
+  _data.orderEntries.forEach(function(o){
+    var m=getMaterial(o.materialId)||{diameter:'-',type:'-'};
+    lines.push([o.date,m.diameter,m.type,o.qty,o.expected,o.status,o.note].map(csvEscape).join(','));
+  });
+  var csv = '﻿'+lines.join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='資材管理表_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+});
+
+document.getElementById('btnExportJson').addEventListener('click', function(){
+  var blob=new Blob([JSON.stringify(_data,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='資材管理データ_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+});
+
+document.getElementById('btnImportJson').addEventListener('click', function(){
+  if (!_isLoggedIn){ alert('復元は管理者のみ操作できます。'); return; }
+  document.getElementById('fileImport').click();
+});
+document.getElementById('fileImport').addEventListener('change', function(e){
+  var file=e.target.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var imported=JSON.parse(ev.target.result);
+      if(!confirm('現在のデータを上書きして復元します。よろしいですか？')) return;
+      _data=imported; saveConfig(); renderAll();
+    }catch(err){ alert('ファイルの読み込みに失敗しました: '+err.message); }
+  };
+  reader.readAsText(file);
+});
+
+// =====================================================================
+// renderAll
+// =====================================================================
+function refreshLineItemSelects(){
+  document.querySelectorAll('#u_lineItems .li-material').forEach(function(sel){
+    var cur=sel.value; sel.innerHTML=materialOptionsHtml(cur);
+  });
+}
+
+function renderAll(){
+  renderDashboard();
+  renderUsageTable();
+  renderReceivingSelect();
+  renderReceivingTable();
+  renderOrderSelect();
+  renderOrderTable();
+  renderMasterTable();
+  refreshLineItemSelects();
+}
+
+// =====================================================================
+// 初期化
+// =====================================================================
+addLineItemRow();
+loadSiteList();
+renderAll();
+</script>
+</body>
+</html>

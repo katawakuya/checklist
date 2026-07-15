@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>断面図切り出しツール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
+    --accent: #4f8ef7; --green: #22c55e; --red: #ef4444; --orange: #f97316;
+    --yellow: #eab308; --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Noto Sans JP', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+  header { background: linear-gradient(135deg, #1a1d27 0%, #151829 100%); border-bottom: 1px solid var(--border); padding: 8px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; position: sticky; top: 0; z-index: 200; box-sizing: border-box; }
+  header .hd-top { display: flex; align-items: center; gap: 8px; }
+  header .hd-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .logo { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  header h1 { font-size: 14px; font-weight: 700; }
+  header p  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .hd-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: #e2e8f0; border-radius: 6px; padding: 3px 9px; font-size: 13px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .app { display: flex; height: calc(100vh - 68px); overflow: hidden; }
+  .panel-left { width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+  .panel-left-header { padding: 10px 12px; font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .thumb-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .thumb-item { border: 2px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; background: var(--surface2); position: relative; }
+  .thumb-item:hover { border-color: var(--text3); }
+  .thumb-item.active { border-color: var(--accent); }
+  .thumb-item canvas { width: 100%; display: block; }
+  .thumb-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); font-size: 10px; color: var(--text2); text-align: center; padding: 2px; font-family: var(--mono); }
+  .panel-center { flex: 1; overflow: auto; position: relative; background: #0a0c12; padding: 20px; }
+  .canvas-wrap { position: relative; display: block; width: fit-content; margin: 0 auto; cursor: crosshair; user-select: none; }
+  #viewCanvas { display: block; border: 1px solid var(--border); border-radius: 4px; }
+  #selOverlay { position: absolute; pointer-events: none; border: 2px solid var(--accent); background: rgba(79,142,247,0.12); display: none; border-radius: 2px; }
+  .drop-zone { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px; pointer-events: none; }
+  .drop-zone.visible { pointer-events: all; }
+  .drop-icon { font-size: 64px; line-height: 1; }
+  .drop-text { font-size: 16px; font-weight: 700; color: var(--text2); }
+  .drop-sub  { font-size: 12px; color: var(--text3); text-align: center; }
+  .drop-btn  { background: var(--accent); color: white; font-weight: 700; font-size: 14px; padding: 11px 24px; border: none; border-radius: 8px; cursor: pointer; font-family: var(--sans); pointer-events: all; transition: background 0.15s; }
+  .drop-btn:hover { background: #3b78e0; }
+  .panel-right { width: 280px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-right-header { padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+  .crop-count { background: var(--accent); color: white; font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+  .crop-form { padding: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface2); }
+  .crop-form .label { font-size: 11px; color: var(--text3); margin-bottom: 5px; font-weight: 600; }
+  .crop-form input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; color: var(--text); padding: 8px 10px; font-size: 15px; font-family: var(--mono); font-weight: 700; margin-bottom: 8px; }
+  .crop-form input:focus { outline: none; border-color: var(--accent); }
+  .crop-form input.glow { border-color: var(--yellow); background: rgba(234,179,8,0.07); }
+  .crop-form .hint { font-size: 10px; color: var(--text3); margin-bottom: 8px; }
+  .btn { padding: 9px 16px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; font-family: var(--sans); transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #3b78e0; }
+  .btn-primary:disabled { background: var(--surface2); color: var(--text3); cursor: default; }
+  .btn-green { background: var(--green); color: #0a0a0a; }
+  .btn-green:hover { background: #16a34a; }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .crop-form .actions { display: flex; gap: 6px; }
+  .crop-list { overflow-y: auto; flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .crop-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; gap: 0; flex-direction: column; }
+  .crop-card img { width: 100%; height: 90px; object-fit: contain; background: #1a1a2e; display: block; border-bottom: 1px solid var(--border); }
+  .crop-info { padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+  .crop-no { font-family: var(--mono); font-size: 15px; font-weight: 900; color: var(--accent); flex: 1; }
+  .crop-actions { display: flex; gap: 4px; }
+  .zoom-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 40px; padding: 6px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100; opacity: 0; transition: opacity 0.2s; }
+  .zoom-bar.show { opacity: 1; }
+  .zoom-btn { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1; }
+  .zoom-btn:hover { background: var(--surface2); color: var(--text); }
+  .zoom-label { font-family: var(--mono); font-size: 12px; color: var(--text3); min-width: 44px; text-align: center; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .empty-crops { text-align: center; padding: 30px 16px; color: var(--text3); font-size: 12px; line-height: 1.8; }
+  .empty-crops .big { font-size: 36px; margin-bottom: 8px; }
+  .status-bar { background: var(--surface2); border-top: 1px solid var(--border); padding: 6px 14px; font-size: 11px; color: var(--text3); display: flex; gap: 16px; flex-shrink: 0; }
+  .status-bar span { display: flex; align-items: center; gap: 4px; }
+  .status-bar b { color: var(--text2); }
+  .download-all-wrap { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; display: flex; gap: 6px; flex-direction: column; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .pulsing { animation: pulse 1.2s infinite; }
+</style>
+</head>
+<body>
+<header>
+  <div class="hd-top">
+    <div class="logo">✂️</div>
+    <div>
+      <h1>断面図切り出しツール</h1>
+      <p>PDFを開いて範囲選択 → JPGとして旗揚げ番号付きで保存</p>
+    </div>
+  </div>
+  <div class="hd-btns">
+    <span id="pageInfo" style="font-size:12px;color:var(--text3);font-family:var(--mono);">―</span>
+    <label class="hd-btn" style="cursor:pointer;">📂 PDFを開く<input type="file" id="pdfInput" accept=".pdf" style="display:none"></label>
+    <a href="roadbed.html" class="hd-btn" title="路盤・旗揚げマスタ">🗺 路盤マスタ</a>
+    <a href="index.html" class="hd-btn">🏠 ホーム</a>
+  </div>
+</header>
+
+<div class="app">
+  <div class="panel-left">
+    <div class="panel-left-header">ページ一覧</div>
+    <div class="thumb-list" id="thumbList">
+      <div style="padding:20px 12px;text-align:center;color:var(--text3);font-size:11px;line-height:1.8;">PDFを開くと<br>ページ一覧が<br>表示されます</div>
+    </div>
+  </div>
+
+  <div class="panel-center" id="panelCenter">
+    <div class="canvas-wrap" id="canvasWrap" style="display:none;">
+      <canvas id="viewCanvas"></canvas>
+      <div id="selOverlay"></div>
+    </div>
+    <div class="drop-zone visible" id="dropZone">
+      <div class="drop-icon">📄</div>
+      <div class="drop-text">PDFをここにドロップ</div>
+      <div class="drop-sub">または右上の「PDFを開く」ボタンから選択<br><br>
+        <strong style="color:var(--text2);">使い方</strong><br>① PDFを読み込む<br>② 断面図の範囲をドラッグで選択<br>③ 旗揚げ番号を入力して「切り取り保存」<br>④ 全部揃ったら「すべてDL」</div>
+      <label class="drop-btn">📂 PDFを開く<input type="file" id="pdfInput2" accept=".pdf" style="display:none"></label>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="panel-right-header">切り出し済み<span class="crop-count" id="cropCount">0</span></div>
+    <div class="crop-form">
+      <div class="label">旗揚げ番号</div>
+      <input type="text" id="hataInput" placeholder="例: 35 / NO.1" class="glow" maxlength="10">
+      <div class="hint">範囲を選択後、番号を入力して「切り取り保存」</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="cropBtn" onclick="cropAndSave()" disabled style="flex:1;">✂️ 切り取り保存</button>
+        <button class="btn btn-ghost" onclick="clearSelection()" title="選択解除">✕</button>
+      </div>
+    </div>
+    <div class="crop-list" id="cropList">
+      <div class="empty-crops"><div class="big">🖼</div>まだ切り出しがありません<br>断面図の範囲を<br>ドラッグで選択してください</div>
+    </div>
+    <div class="download-all-wrap">
+      <button class="btn btn-green" onclick="downloadAll()" id="dlAllBtn" disabled>💾 すべてJPGでダウンロード</button>
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="clearAll()">🗑 リセット</button>
+    </div>
+    <div class="status-bar">
+      <span>切り出し: <b id="stCrops">0</b> 枚</span>
+      <span>解像度: <b id="stDpi">—</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="zoom-bar" id="zoomBar">
+  <button class="zoom-btn" onclick="zoom(-0.25)">−</button>
+  <span class="zoom-label" id="zoomLabel">100%</span>
+  <button class="zoom-btn" onclick="zoom(+0.25)">＋</button>
+  <button class="zoom-btn" onclick="fitPage()" title="ページにフィット">⊡</button>
+</div>
+
+<canvas id="cropCanvas" style="display:none;"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// =====================================================================
+// PDF.js worker
+// file:// から importScripts() は Chrome がブロックするため
+// workerスクリプト本体をfetchしてBlobに埋め込む方式で回避
+// =====================================================================
+var WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var _workerReady = fetch(WORKER_URL)
+  .then(function(r) { return r.text(); })
+  .then(function(text) {
+    var blob = new Blob([text], { type: 'application/javascript' });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+  })
+  .catch(function() {
+    // フォールバック: GitHub Pages など https:// 環境では直接指定
+    pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+  });
+
+let pdfDoc = null, currentPage = 1, totalPages = 0, currentScale = 1.5, pageRenders = {}, crops = [];
+let isDragging = false, selStart = null, selEnd = null, hasSelection = false;
+
+const viewCanvas = document.getElementById('viewCanvas');
+const ctx = viewCanvas.getContext('2d');
+const selOverlay = document.getElementById('selOverlay');
+const canvasWrap = document.getElementById('canvasWrap');
+const cropBtn = document.getElementById('cropBtn');
+
+function setupFileInput(id) {
+  document.getElementById(id).addEventListener('change', e => { const f = e.target.files[0]; if (f) loadPDF(f); });
+}
+setupFileInput('pdfInput');
+setupFileInput('pdfInput2');
+
+const panelCenter = document.getElementById('panelCenter');
+panelCenter.addEventListener('dragover', e => e.preventDefault());
+panelCenter.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type === 'application/pdf') loadPDF(f); });
+
+async function loadPDF(file) {
+  await _workerReady; // Worker初期化を待つ
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      pdfDoc = await pdfjsLib.getDocument({ data: ev.target.result }).promise;
+      totalPages = pdfDoc.numPages;
+      document.getElementById('pageInfo').textContent = `${totalPages}ページ`;
+      document.getElementById('dropZone').classList.remove('visible');
+      document.getElementById('dropZone').style.display = 'none';
+      canvasWrap.style.display = 'inline-block';
+      document.getElementById('zoomBar').classList.add('show');
+      pageRenders = {};
+      buildThumbs();
+      renderPage(1);
+    } catch(e) { alert('PDFの読み込みに失敗しました: ' + e.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function buildThumbs() {
+  const list = document.getElementById('thumbList');
+  list.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const item = document.createElement('div');
+    item.className = 'thumb-item' + (i === 1 ? ' active' : '');
+    item.dataset.page = i;
+    item.innerHTML = `<canvas></canvas><div class="thumb-label">P${i}</div>`;
+    item.addEventListener('click', () => { renderPage(i); setActiveThumb(i); });
+    list.appendChild(item);
+    const page = await pdfDoc.getPage(i);
+    const vp = page.getViewport({ scale: 0.2 });
+    const tc = item.querySelector('canvas');
+    tc.width = vp.width; tc.height = vp.height;
+    await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+  }
+}
+
+function setActiveThumb(p) {
+  document.querySelectorAll('.thumb-item').forEach(el => el.classList.toggle('active', +el.dataset.page === p));
+  const el = document.querySelector(`.thumb-item[data-page="${p}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function renderPage(pageNum) {
+  currentPage = pageNum;
+  clearSelection();
+  document.getElementById('pageInfo').textContent = `${pageNum} / ${totalPages}ページ`;
+  const page = await pdfDoc.getPage(pageNum);
+  const vp = page.getViewport({ scale: currentScale });
+  viewCanvas.width = vp.width; viewCanvas.height = vp.height;
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  document.getElementById('stDpi').textContent = `×${currentScale.toFixed(2)}`;
+}
+
+function zoom(delta) {
+  currentScale = Math.max(0.5, Math.min(5.0, currentScale + delta));
+  document.getElementById('zoomLabel').textContent = Math.round(currentScale * 100) + '%';
+  renderPage(currentPage);
+}
+function fitPage() {
+  const panelW = panelCenter.clientWidth - 40;
+  if (!viewCanvas.width) return;
+  const ratio = panelW / (viewCanvas.width / currentScale);
+  currentScale = Math.max(0.5, Math.min(3.0, currentScale * ratio));
+  document.getElementById('zoomLabel').textContent = Math.round(currentScale * 100) + '%';
+  renderPage(currentPage);
+}
+
+canvasWrap.addEventListener('mousedown', e => {
+  if (!pdfDoc) return;
+  isDragging = true; hasSelection = false; cropBtn.disabled = true;
+  const r = viewCanvas.getBoundingClientRect();
+  selStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+  selEnd = { ...selStart }; selOverlay.style.display = 'block'; updateSelBox();
+});
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const r = viewCanvas.getBoundingClientRect();
+  selEnd = { x: Math.max(0, Math.min(viewCanvas.width, e.clientX - r.left)), y: Math.max(0, Math.min(viewCanvas.height, e.clientY - r.top)) };
+  updateSelBox();
+});
+window.addEventListener('mouseup', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  const w = Math.abs(selEnd.x - selStart.x), h = Math.abs(selEnd.y - selStart.y);
+  if (w > 10 && h > 10) { hasSelection = true; cropBtn.disabled = false; document.getElementById('hataInput').focus(); }
+  else clearSelection();
+});
+canvasWrap.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0], r = viewCanvas.getBoundingClientRect();
+  isDragging = true; hasSelection = false; cropBtn.disabled = true;
+  selStart = { x: t.clientX - r.left, y: t.clientY - r.top };
+  selEnd = { ...selStart }; selOverlay.style.display = 'block';
+}, { passive: false });
+window.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const t = e.touches[0], r = viewCanvas.getBoundingClientRect();
+  selEnd = { x: Math.max(0, Math.min(viewCanvas.width, t.clientX - r.left)), y: Math.max(0, Math.min(viewCanvas.height, t.clientY - r.top)) };
+  updateSelBox();
+});
+window.addEventListener('touchend', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  const w = Math.abs(selEnd.x - selStart.x), h = Math.abs(selEnd.y - selStart.y);
+  if (w > 10 && h > 10) { hasSelection = true; cropBtn.disabled = false; document.getElementById('hataInput').focus(); }
+  else clearSelection();
+});
+
+function updateSelBox() {
+  const x1 = Math.min(selStart.x, selEnd.x), y1 = Math.min(selStart.y, selEnd.y);
+  const w = Math.abs(selEnd.x - selStart.x), h = Math.abs(selEnd.y - selStart.y);
+  selOverlay.style.cssText = `left:${x1}px;top:${y1}px;width:${w}px;height:${h}px;display:block;`;
+}
+function clearSelection() {
+  hasSelection = false; isDragging = false;
+  selOverlay.style.display = 'none'; cropBtn.disabled = true;
+}
+
+function cropAndSave() {
+  if (!hasSelection) return;
+  const hata = document.getElementById('hataInput').value.trim();
+  if (!hata) {
+    document.getElementById('hataInput').focus();
+    document.getElementById('hataInput').style.outline = '2px solid var(--red)';
+    setTimeout(() => document.getElementById('hataInput').style.outline='', 1000); return;
+  }
+  const x1 = Math.round(Math.min(selStart.x, selEnd.x)), y1 = Math.round(Math.min(selStart.y, selEnd.y));
+  const w = Math.round(Math.abs(selEnd.x - selStart.x)), h = Math.round(Math.abs(selEnd.y - selStart.y));
+  const cc = document.getElementById('cropCanvas');
+  cc.width = w; cc.height = h;
+  cc.getContext('2d').drawImage(viewCanvas, x1, y1, w, h, 0, 0, w, h);
+  const dataUrl = cc.toDataURL('image/jpeg', 0.95);
+  crops = crops.filter(c => String(c.hata) !== String(hata));
+  crops.push({ hata: String(hata), dataUrl, page: currentPage, w, h });
+  crops.sort((a, b) => +a.hata - +b.hata);
+  clearSelection();
+  // 末尾の数字を抽出して+1（例: 35→36, HH-1→HH-2, NO.3→NO.4）
+  var m = hata.match(/^(.*?)(\d+)$/);
+  if (m) {
+    document.getElementById('hataInput').value = m[1] + String(+m[2] + 1);
+  }
+  renderCropList();
+}
+// 旗揚げ番号：Enterで保存。文字・数字どちらも入力可。数字のみなら保存後に+1
+document.getElementById('hataInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && hasSelection) cropAndSave();
+});
+
+function renderCropList() {
+  const el = document.getElementById('cropList');
+  document.getElementById('cropCount').textContent = crops.length;
+  document.getElementById('stCrops').textContent = crops.length;
+  document.getElementById('dlAllBtn').disabled = crops.length === 0;
+  if (!crops.length) { el.innerHTML = `<div class="empty-crops"><div class="big">🖼</div>まだ切り出しがありません<br>断面図の範囲を<br>ドラッグで選択してください</div>`; return; }
+  el.innerHTML = crops.map(c => `<div class="crop-card"><img src="${c.dataUrl}" alt="№${c.hata}" onclick="previewCrop('${c.hata}')"><div class="crop-info"><span class="crop-no">№${c.hata}</span><div class="crop-actions"><button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="downloadOne('${c.hata}')">💾</button><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;border-radius:6px;" onclick="deleteCrop('${c.hata}')">✕</button></div></div></div>`).join('');
+}
+function deleteCrop(hata) { crops = crops.filter(c => String(c.hata) !== String(hata)); renderCropList(); }
+function clearAll() { if (crops.length && !confirm('切り出し済みの画像をすべてリセットしますか？')) return; crops = []; renderCropList(); }
+
+function downloadOne(hata) {
+  const c = crops.find(x => String(x.hata) === String(hata));
+  if (!c) return;
+  const a = document.createElement('a'); a.href = c.dataUrl; a.download = `${c.hata}.jpg`; a.click();
+}
+
+async function downloadAll() {
+  if (!crops.length) return;
+  const dlBtn = document.getElementById('dlAllBtn');
+  dlBtn.disabled = true; dlBtn.textContent = '⏳ ZIPを作成中…'; dlBtn.classList.add('pulsing');
+  try {
+    const zip = new JSZip();
+    crops.forEach(c => zip.file(`${c.hata}.jpg`, c.dataUrl.split(',')[1], { base64: true }));
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `断面図_${crops.length}枚.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch(e) { alert('ZIPの作成に失敗しました: ' + e.message); }
+  finally { dlBtn.disabled = false; dlBtn.textContent = '💾 すべてJPGでダウンロード'; dlBtn.classList.remove('pulsing'); }
+}
+
+function previewCrop(hata) {
+  const c = crops.find(x => String(x.hata) === String(hata));
+  if (!c) return;
+  const w = window.open('', '_blank', 'width=800,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>№${c.hata}</title><style>body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${c.dataUrl}" alt="№${c.hata}"></body></html>`);
+  w.document.close();
+}
+
+document.getElementById('zoomLabel').textContent = Math.round(currentScale * 100) + '%';
+</script>
+</body>
+</html>
