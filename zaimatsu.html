@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>資材管理アプリ</title>
+<script>
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <style>
 :root{
   --navy:#1F4E78; --lightblue:#D9E1F2; --yellow:#FFF3B0; --red:#FFC7CE; --green:#0F8A3D;
@@ -122,7 +135,7 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
     <input type="file" id="fileImport" accept=".json" style="display:none">
     <a href="index.html" class="hd-btn">🏠 ホーム</a>
     <button class="hd-btn" id="btnLogin" onclick="openAuthModal()">🔑</button>
-      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 
@@ -290,19 +303,7 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-function forceReload(){
-  var go=function(){
-    var url=location.href.split('?')[0]+'?v='+Date.now();
-    location.replace(url);
-  };
-  if('caches' in window){
-    caches.keys().then(function(ns){
-      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(go).catch(go);
-  } else { go(); }
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>

@@ -4,14 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
-<style>html{overscroll-behavior-y:none;}</style>
-<meta name="theme-color" content="#0f1117">
-<title>現場資材発注計算書 v4.5</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+<script>
 function forceReload(){
   var go=function(){
     var url=location.href.split('?')[0]+'?v='+Date.now();
@@ -24,6 +17,14 @@ function forceReload(){
   } else { go(); }
 }
 </script>
+<style>html{overscroll-behavior-y:none;}</style>
+<meta name="theme-color" content="#0f1117">
+<title>現場資材発注計算書 v4.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
@@ -519,7 +520,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
     <div class="save-badge" id="saveBadge">💾 保存済み</div>
-      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 

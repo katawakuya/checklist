@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>集計ダッシュボード</title>
+<script>
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <style>
 :root{
   --bg:#f5f4f0;--bg2:#ffffff;--bg3:#f0efe9;--card:#ffffff;
@@ -153,7 +166,7 @@ tr:hover td{background:#f9f8f4;}
     <span id="adminBadge"></span>
     <a href="index.html" class="hd-btn" style="text-decoration:none;" title="ホームへ戻る">🏠 ホーム</a>
     <button class="hd-btn" onclick="onAuthBtnClick()" id="adminBtn" title="管理者ログイン">🔑</button>
-      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 
@@ -344,19 +357,7 @@ tr:hover td{background:#f9f8f4;}
 </div>
 
 <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-function forceReload(){
-  var go=function(){
-    var url=location.href.split('?')[0]+'?v='+Date.now();
-    location.replace(url);
-  };
-  if('caches' in window){
-    caches.keys().then(function(ns){
-      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(go).catch(go);
-  } else { go(); }
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 

@@ -10,6 +10,19 @@
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>📷 写真撮影チェックリスト v16</title>
+<script>
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <style>
 :root {
   --bg: #f5f4f0; --bg2: #ffffff; --bg3: #f0efe9;
@@ -173,19 +186,7 @@ main{padding:10px 14px 90px;}
 .diagram-noimg{text-align:center;color:var(--text3);font-size:16px;padding:16px;background:#f9fafb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;}
 .btn-close-diag{background:none;border:1px solid rgba(255,255,255,.4);color:rgba(255,255,255,.9);border-radius:4px;font-size:14px;padding:2px 8px;cursor:pointer;}
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-function forceReload(){
-  var go=function(){
-    var url=location.href.split('?')[0]+'?v='+Date.now();
-    location.replace(url);
-  };
-  if('caches' in window){
-    caches.keys().then(function(ns){
-      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(go).catch(go);
-  } else { go(); }
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <!-- eruda: モバイルデバッグコンソール（タップで開閉） -->
@@ -213,7 +214,7 @@ function forceReload(){
     <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
-      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 

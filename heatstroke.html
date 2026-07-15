@@ -10,6 +10,19 @@
 <link rel="apple-touch-icon" href="heatstroke-icon-192.png">
 <link rel="icon" type="image/png" href="heatstroke-icon-192.png">
 <title>🌡 熱中症緊急連絡</title>
+<script>
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:rgba(0,0,0,0.1);}
 html,body{height:100%;background:#f0f0f0;color:#222;}
@@ -118,7 +131,7 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
       <h1>🌡 熱中症　緊急連絡</h1>
       <p class="site">小田原市富士フィルム地下埋設管敷設工事<br>現場：小田原市扇町2-33-11他</p>
     </div>
-    <button onclick="forceReload()" style="flex-shrink:0;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 11px;font-size:15px;cursor:pointer;margin-top:2px;" title="強制リロード">🔄</button>
+    <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 <div class="url-bar">🔗 katawakuya.github.io/checklist/heatstroke.html</div>
@@ -273,17 +286,6 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
 </div>
 
 <script>
-function forceReload(){
-  var go=function(){
-    var url=location.href.split('?')[0]+'?v='+Date.now();
-    location.replace(url);
-  };
-  if('caches' in window){
-    caches.keys().then(function(ns){
-      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(go).catch(go);
-  } else { go(); }
-}
 </script>
 
 <footer>

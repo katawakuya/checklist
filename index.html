@@ -9,6 +9,19 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>現場管理システム</title>
+<script>
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <style>
 :root {
   --bg:#0f172a; --bg2:#1e293b; --bg3:#2d3f56;
@@ -237,7 +250,7 @@ body{
     </div>
     <div class="header-right">
       <span id="adminBadge">管理者</span>
-      <button class="btn-reload" onclick="forceReload()" title="強制リロード">🔄</button>
+      <button class="btn-reload" onclick="forceReload()" title="最新版に更新（キャッシュ消去）">🔄 更新</button>
       <button class="btn-auth" id="btnAuth" onclick="toggleAuth()" style="display:none;">ログアウト</button>
     </div>
   </div>
@@ -439,18 +452,6 @@ _fbAuth.onAuthStateChanged(function(user) {
     document.getElementById('adminBadge').style.display = 'none';
   }
 });
-
-function forceReload(){
-  var go=function(){
-    var url=location.href.split('?')[0]+'?v='+Date.now();
-    location.replace(url);
-  };
-  if('caches' in window){
-    caches.keys().then(function(ns){
-      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(go).catch(go);
-  } else { go(); }
-}
 
 function toggleAuth() {
   if (_currentUser) {
