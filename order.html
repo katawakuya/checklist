@@ -1856,6 +1856,7 @@ function autoRegisterDefaultRoadbeds() {
       });
       if (_localChanged) localStorage.setItem('roadbed_masters', JSON.stringify(_globalMasters));
       try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
+      try { if(typeof updateHpHataDatalist==='function') updateHpHataDatalist(); } catch(e) {}
       console.log('[autoReg] per-site format detected — Firestore not touched, localStorage updated');
       return;
     }
@@ -3071,7 +3072,6 @@ function renderChips(containerId, result, typeKey) {
   const show粗粒 = (t.asT粗粒||0) > 0;
   const rmS = _resolveRmSize(t);
   const rcS = _resolveRcSize(t);
-  const _isOdawara = siteName && siteName.includes('小田原');
   // AS層名を asLayers から取得（なければ旧ラベル）
   const _asl = (t.asLayers && t.asLayers.filter(a=>!a.memo&&(a.t||0)>0)) || [];
   const surfName = _asl.filter(a=>a.role==='surface').map(a=>getAsLayerName(a)).join('・') || '密粒度AS';
@@ -6827,6 +6827,7 @@ function setTodayDate(id) {
 
 function buildDynamicTypeHTML(siteId, siteName, t) {
   const tid = `dyntype_${t.key}`;
+  const _isOdawara = siteName && siteName.includes('小田原');
   const rmS = _resolveRmSize(t);
   const rcS = _resolveRcSize(t);
   // asLayers から表示用文字列を組み立て（新構造・旧互換両対応）
