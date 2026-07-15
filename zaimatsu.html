@@ -122,6 +122,7 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
     <input type="file" id="fileImport" accept=".json" style="display:none">
     <a href="index.html" class="hd-btn">🏠 ホーム</a>
     <button class="hd-btn" id="btnLogin" onclick="openAuthModal()">🔑</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
   </div>
 </header>
 
@@ -289,7 +290,19 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
@@ -413,6 +426,25 @@ function fsConfigRef(siteId){
 function loadAllFromFirestore(siteId){
   if (!siteId || !_fbDb) return;
   document.getElementById('siteStatus').textContent = '読み込み中…';
+
+  // 新形式(siteId=ID) + 旧形式(siteId=現場名) を両方取得してマージ
+  function _getCol(col){
+    var queries = [_fbDb.collection(col).where('siteId','==',siteId).orderBy('date','desc').get()];
+    if (_currentSiteName && _currentSiteName !== siteId){
+      queries.push(_fbDb.collection(col).where('siteId','==',_currentSiteName).orderBy('date','desc').get());
+    }
+    return Promise.all(queries).then(function(snaps){
+      var seen = new Set(); var merged = [];
+      snaps.forEach(function(snap){
+        snap.docs.forEach(function(d){
+          if (!seen.has(d.id)){ seen.add(d.id); merged.push(Object.assign({_fid:d.id},d.data())); }
+        });
+      });
+      merged.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+      return merged;
+    });
+  }
+
   // config (materials, initialStock, reorderPoint, nextId)
   fsConfigRef(siteId).get().then(function(doc){
     if (doc.exists){
@@ -422,23 +454,22 @@ function loadAllFromFirestore(siteId){
       _data.reorderPoint = d.reorderPoint || {};
       _data.nextId       = d.nextId       || defaultData().nextId;
     }
-    // usage entries
-    return _fbDb.collection('zaimatsu_usage').where('siteId','==',siteId).orderBy('date','desc').get();
-  }).then(function(snap){
-    _data.usageEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
-    return _fbDb.collection('zaimatsu_receiving').where('siteId','==',siteId).orderBy('date','desc').get();
-  }).then(function(snap){
-    _data.receivingEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
-    return _fbDb.collection('zaimatsu_orders').where('siteId','==',siteId).orderBy('date','desc').get();
-  }).then(function(snap){
-    _data.orderEntries = snap.docs.map(function(d){ return Object.assign({_fid:d.id},d.data()); });
+    return Promise.all([
+      _getCol('zaimatsu_usage'),
+      _getCol('zaimatsu_receiving'),
+      _getCol('zaimatsu_orders')
+    ]);
+  }).then(function(results){
+    _data.usageEntries     = results[0];
+    _data.receivingEntries = results[1];
+    _data.orderEntries     = results[2];
     document.getElementById('siteStatus').textContent = '✅ 読み込み完了';
     setTimeout(function(){ document.getElementById('siteStatus').textContent=''; },2000);
     renderAll();
   }).catch(function(e){
     console.error('[FS] load error', e);
     document.getElementById('siteStatus').textContent = '⚠ 読み込みエラー: '+e.message;
-    renderAll(); // エラー時も表示を更新
+    renderAll();
   });
 }
 
@@ -535,6 +566,9 @@ function updateOrderStatus(fid, localId, status){
 function onSiteChange(siteId){
   _currentSiteId = siteId;
   localStorage.setItem('_launcher_site', siteId);
+  // 現場名を更新（旧形式 siteId=名前 のレコードも検索できるよう）
+  var sel = document.getElementById('siteSelect');
+  _currentSiteName = (sel && sel.selectedIndex >= 0) ? (sel.options[sel.selectedIndex]?.textContent || '') : '';
   _data = defaultData();
   if (siteId) loadAllFromFirestore(siteId);
   else renderAll();

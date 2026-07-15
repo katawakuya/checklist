@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>資材管理アプリ</title>
+<style>
+  :root{
+    --navy:#1F4E78; --lightblue:#D9E1F2; --yellow:#FFF3B0; --red:#FFC7CE; --green:#0F8A3D;
+    --border:#ccc; --text:#222;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:"Meiryo UI","Yu Gothic",Arial,sans-serif;background:#f4f6f8;margin:0;color:var(--text);}
+  header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  header h1{font-size:18px;margin:0;}
+  header .actions button{margin-left:6px;}
+  nav{display:flex;background:#123a5c;flex-wrap:wrap;}
+  nav button{flex:1;min-width:120px;padding:12px 8px;background:none;border:none;color:#cfe0f2;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;}
+  nav button.active{color:#fff;border-bottom:3px solid #ffd54a;background:#0e2f4c;}
+  main{padding:16px;max-width:1400px;margin:0 auto;}
+  .tab{display:none;}
+  .tab.active{display:block;}
+  .card{background:#fff;border-radius:6px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  h2{font-size:16px;color:var(--navy);margin-top:0;border-left:4px solid var(--navy);padding-left:8px;}
+  table{border-collapse:collapse;width:100%;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:6px 8px;text-align:center;}
+  th{background:var(--navy);color:#fff;font-weight:600;}
+  tbody tr:nth-child(even){background:#fafbfc;}
+  input,select{padding:5px 6px;font-size:13px;border:1px solid #bbb;border-radius:4px;width:100%;}
+  input[type=number]{text-align:right;}
+  .btn{background:var(--navy);color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:13px;}
+  .btn:hover{background:#163c5c;}
+  .btn.secondary{background:#6c757d;}
+  .btn.danger{background:#c0392b;}
+  .btn.small{padding:4px 8px;font-size:12px;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;}
+  .form-grid label{display:block;font-size:12px;color:#555;margin-bottom:3px;}
+  .line-items{margin-top:8px;}
+  .line-item-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .line-item-row select, .line-item-row input{flex:1;}
+  .status-ok{color:var(--green);font-weight:bold;}
+  .status-warn{background:var(--red);font-weight:bold;}
+  .yellow-cell{background:var(--yellow);}
+  .muted{color:#888;font-size:12px;}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;color:#fff;}
+  .badge.ordered{background:#e08e0b;}
+  .badge.received{background:#0f8a3d;}
+  .badge.canceled{background:#999;}
+  footer{text-align:center;color:#888;font-size:11px;padding:20px;}
+  .empty{color:#999;text-align:center;padding:16px;}
+  @media (max-width:700px){ nav button{min-width:90px;font-size:12px;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>資材管理アプリ（配管資材 使用実績・入荷・発注・在庫）</h1>
+  <div class="actions">
+    <button class="btn secondary" id="btnExportCsv">CSV書き出し</button>
+    <button class="btn secondary" id="btnExportJson">データバックアップ(JSON)</button>
+    <button class="btn secondary" id="btnImportJson">復元(JSON)</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+  </div>
+</header>
+<nav>
+  <button data-tab="dashboard" class="active">① 在庫ダッシュボード</button>
+  <button data-tab="usage">② 使用実績入力</button>
+  <button data-tab="receiving">③ 入荷管理</button>
+  <button data-tab="order">④ 発注管理</button>
+  <button data-tab="master">⑤ 資材マスタ設定</button>
+</nav>
+<main>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="tab active" id="tab-dashboard">
+    <div class="card">
+      <h2>在庫ダッシュボード（管径別・自動計算）</h2>
+      <p class="muted">期首在庫・発注点は黄色セルを直接編集できます。使用数・入荷数・残数・未入荷発注数は自動計算です。</p>
+      <table id="dashboardTable">
+        <thead>
+          <tr>
+            <th>管径</th><th>種別</th><th>単位</th>
+            <th>期首在庫</th><th>入荷合計</th><th>使用合計</th><th>残数</th>
+            <th>発注点</th><th>状態</th><th>未入荷<br>発注数</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ USAGE ============ -->
+  <div class="tab" id="tab-usage">
+    <div class="card">
+      <h2>使用実績の入力（日報）</h2>
+      <div class="form-grid">
+        <div><label>現場名</label><input type="text" id="u_sitename" placeholder="例）小田原市扇町計画"></div>
+        <div><label>日付</label><input type="date" id="u_date"></div>
+        <div><label>人員</label><input type="number" id="u_crew" min="0"></div>
+        <div><label>施工箇所（旗揚げ）</label><input type="text" id="u_location" placeholder="例）44～46"></div>
+        <div><label>復旧延長 L×W</label><input type="text" id="u_restore" placeholder="例）9.5×1.5"></div>
+        <div><label>配管延長(m)</label><input type="number" step="0.01" id="u_pipelength"></div>
+        <div><label>管台使用箇所数</label><input type="number" id="u_standcount"></div>
+      </div>
+      <div class="line-items" id="u_lineItems"></div>
+      <button class="btn small secondary" id="btnAddLine">＋ 使用管材の行を追加</button>
+      <div style="margin-top:12px;">
+        <button class="btn" id="btnSaveUsage">この日の使用実績を保存</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>使用実績 一覧</h2>
+      <div style="overflow-x:auto;">
+        <table id="usageTable">
+          <thead><tr><th>現場名</th><th>日付</th><th>人員</th><th>施工箇所</th><th>復旧延長</th><th>配管延長</th><th>管台数</th><th>使用管材</th><th>削除</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RECEIVING ============ -->
+  <div class="tab" id="tab-receiving">
+    <div class="card">
+      <h2>入荷登録</h2>
+      <div class="form-grid">
+        <div><label>入荷日</label><input type="date" id="r_date"></div>
+        <div><label>管材</label><select id="r_material"></select></div>
+        <div><label>数量</label><input type="number" id="r_qty" min="0"></div>
+        <div><label>備考</label><input type="text" id="r_note" placeholder="発注番号・納入業者など"></div>
+      </div>
+      <button class="btn" id="btnSaveReceiving">入荷を登録</button>
+    </div>
+    <div class="card">
+      <h2>入荷履歴</h2>
+      <table id="receivingTable">
+        <thead><tr><th>入荷日</th><th>管径</th><th>種別</th><th>数量</th><th>備考</th><th>削除</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ ORDER ============ -->
+  <div class="tab" id="tab-order">
+    <div class="card">
+      <h2>発注登録</h2>
+      <div class="form-grid">
+        <div><label>発注日</label><input type="date" id="o_date"></div>
+        <div><label>管材</label><select id="o_material"></select></div>
+        <div><label>数量</label><input type="number" id="o_qty" min="0"></div>
+        <div><label>納期予定</label><input type="date" id="o_expected"></div>
+        <div><label>備考</label><input type="text" id="o_note" placeholder="発注先など"></div>
+      </div>
+      <button class="btn" id="btnSaveOrder">発注を登録</button>
+    </div>
+    <div class="card">
+      <h2>発注履歴</h2>
+      <table id="orderTable">
+        <thead><tr><th>発注日</th><th>管径</th><th>種別</th><th>数量</th><th>納期予定</th><th>状態</th><th>備考</th><th>操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ MASTER ============ -->
+  <div class="tab" id="tab-master">
+    <div class="card">
+      <h2>資材マスタ（管径・種別の追加/削除）</h2>
+      <p class="muted">新しい管径や種別を追加すると、ダッシュボード・使用実績・入荷・発注の全てに自動反映されます。</p>
+      <div class="form-grid">
+        <div><label>管径（例：φ400）</label><input type="text" id="m_diameter"></div>
+        <div><label>種別</label>
+          <select id="m_type"><option value="直管">直管</option><option value="曲がり">曲がり</option><option value="その他">その他</option></select>
+        </div>
+        <div><label>単位</label><input type="text" id="m_unit" value="本"></div>
+      </div>
+      <button class="btn" id="btnAddMaterial">資材を追加</button>
+    </div>
+    <div class="card">
+      <h2>登録済み資材一覧</h2>
+      <table id="masterTable">
+        <thead><tr><th>管径</th><th>種別</th><th>単位</th><th>削除</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+<footer>資材管理アプリ　※ このファイルはブラウザのlocalStorageにデータを保存します。同じPC・同じブラウザで再度開くとデータは保持されますが、他のPCとは共有されません。バックアップはJSON書き出しをご利用ください。</footer>
+
+<script>
+const STORAGE_KEY = 'zaimatsu_app_v1';
+
+function defaultData(){
+  const diamOrder = ['φ350','φ300','φ250','φ200','φ150','φ130','φ100','φ75','φ50'];
+  const materials = [];
+  let id = 1;
+  diamOrder.forEach(d=>{
+    materials.push({id:id++, diameter:d, type:'直管', unit:'本'});
+    materials.push({id:id++, diameter:d, type:'曲がり', unit:'本'});
+  });
+  return {
+    nextId:{material:id, usage:1, receiving:1, order:1},
+    materials,
+    initialStock:{},   // materialId -> qty
+    reorderPoint:{},   // materialId -> qty
+    usageEntries:[],
+    receivingEntries:[],
+    orderEntries:[]
+  };
+}
+
+let data = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.error(e); }
+  return defaultData();
+}
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function materialLabel(m){ return m.diameter + ' ' + m.type; }
+function getMaterial(id){ return data.materials.find(m=>m.id===id); }
+
+// ---------- Tab switching ----------
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    renderAll();
+  });
+});
+
+// ---------- Dashboard ----------
+function computeInventory(){
+  return data.materials.map(m=>{
+    const used = data.usageEntries.reduce((sum,e)=> sum + e.items.filter(i=>i.materialId===m.id).reduce((s,i)=>s+Number(i.qty||0),0), 0);
+    const received = data.receivingEntries.filter(r=>r.materialId===m.id).reduce((s,r)=>s+Number(r.qty||0),0);
+    const initial = Number(data.initialStock[m.id]||0);
+    const remain = initial + received - used;
+    const reorder = Number(data.reorderPoint[m.id]||0);
+    const pendingOrder = data.orderEntries.filter(o=>o.materialId===m.id && o.status==='発注済み').reduce((s,o)=>s+Number(o.qty||0),0);
+    return {material:m, used, received, initial, remain, reorder, pendingOrder};
+  });
+}
+
+function renderDashboard(){
+  const tbody = document.querySelector('#dashboardTable tbody');
+  tbody.innerHTML = '';
+  computeInventory().forEach(row=>{
+    const tr = document.createElement('tr');
+    const status = row.remain <= row.reorder ? '要発注' : 'OK';
+    tr.innerHTML = `
+      <td style="text-align:left;font-weight:bold;">${row.material.diameter}</td>
+      <td>${row.material.type}</td>
+      <td>${row.material.unit}</td>
+      <td class="yellow-cell"><input type="number" data-role="initial" data-id="${row.material.id}" value="${row.initial}"></td>
+      <td>${row.received}</td>
+      <td>${row.used}</td>
+      <td style="font-weight:bold;">${row.remain}</td>
+      <td class="yellow-cell"><input type="number" data-role="reorder" data-id="${row.material.id}" value="${row.reorder}"></td>
+      <td class="${status==='要発注'?'status-warn':'status-ok'}">${status}</td>
+      <td>${row.pendingOrder}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('input[data-role="initial"]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      data.initialStock[e.target.dataset.id] = Number(e.target.value||0);
+      save(); renderDashboard();
+    });
+  });
+  tbody.querySelectorAll('input[data-role="reorder"]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      data.reorderPoint[e.target.dataset.id] = Number(e.target.value||0);
+      save(); renderDashboard();
+    });
+  });
+}
+
+// ---------- Usage tab ----------
+function materialOptionsHtml(selectedId){
+  return data.materials.map(m=>`<option value="${m.id}" ${String(m.id)===String(selectedId)?'selected':''}>${materialLabel(m)}</option>`).join('');
+}
+
+function addLineItemRow(materialId, qty){
+  const wrap = document.getElementById('u_lineItems');
+  const row = document.createElement('div');
+  row.className = 'line-item-row';
+  row.innerHTML = `
+    <select class="li-material">${materialOptionsHtml(materialId)}</select>
+    <input type="number" class="li-qty" placeholder="本数" value="${qty||''}" min="0" style="max-width:100px;">
+    <button class="btn danger small li-remove" type="button">削除</button>
+  `;
+  row.querySelector('.li-remove').addEventListener('click', ()=> row.remove());
+  wrap.appendChild(row);
+}
+
+document.getElementById('btnAddLine').addEventListener('click', ()=> addLineItemRow());
+
+document.getElementById('btnSaveUsage').addEventListener('click', ()=>{
+  const date = document.getElementById('u_date').value;
+  if(!date){ alert('日付を入力してください'); return; }
+  const items = [];
+  document.querySelectorAll('#u_lineItems .line-item-row').forEach(row=>{
+    const materialId = Number(row.querySelector('.li-material').value);
+    const qty = Number(row.querySelector('.li-qty').value||0);
+    if(qty>0) items.push({materialId, qty});
+  });
+  const entry = {
+    id: data.nextId.usage++,
+    date,
+    siteName: document.getElementById('u_sitename').value,
+    crew: document.getElementById('u_crew').value,
+    location: document.getElementById('u_location').value,
+    restore: document.getElementById('u_restore').value,
+    pipeLength: document.getElementById('u_pipelength').value,
+    standCount: document.getElementById('u_standcount').value,
+    items
+  };
+  data.usageEntries.push(entry);
+  save();
+  ['u_sitename','u_date','u_crew','u_location','u_restore','u_pipelength','u_standcount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('u_lineItems').innerHTML = '';
+  renderAll();
+});
+
+function renderUsageTable(){
+  const tbody = document.querySelector('#usageTable tbody');
+  tbody.innerHTML = '';
+  if(data.usageEntries.length===0){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">まだ使用実績がありません</td></tr>';
+    return;
+  }
+  [...data.usageEntries].sort((a,b)=>a.date<b.date?1:-1).forEach(e=>{
+    const itemsText = e.items.map(i=>{
+      const m = getMaterial(i.materialId);
+      return m ? `${m.diameter}${m.type}:${i.qty}` : '';
+    }).join(' / ');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${e.siteName||''}</td><td>${e.date}</td><td>${e.crew||''}</td><td>${e.location||''}</td>
+      <td>${e.restore||''}</td><td>${e.pipeLength||''}</td><td>${e.standCount||''}</td>
+      <td style="text-align:left;">${itemsText||'-'}</td>
+      <td><button class="btn danger small" data-del="${e.id}">削除</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm('この使用実績を削除しますか？')) return;
+      data.usageEntries = data.usageEntries.filter(e=>e.id!==Number(btn.dataset.del));
+      save(); renderAll();
+    });
+  });
+}
+
+// ---------- Receiving tab ----------
+function renderReceivingSelect(){
+  document.getElementById('r_material').innerHTML = materialOptionsHtml();
+}
+document.getElementById('btnSaveReceiving').addEventListener('click', ()=>{
+  const date = document.getElementById('r_date').value;
+  const materialId = Number(document.getElementById('r_material').value);
+  const qty = Number(document.getElementById('r_qty').value||0);
+  if(!date || !qty){ alert('入荷日と数量を入力してください'); return; }
+  data.receivingEntries.push({id:data.nextId.receiving++, date, materialId, qty, note:document.getElementById('r_note').value});
+  save();
+  document.getElementById('r_date').value='';
+  document.getElementById('r_qty').value='';
+  document.getElementById('r_note').value='';
+  renderAll();
+});
+function renderReceivingTable(){
+  const tbody = document.querySelector('#receivingTable tbody');
+  tbody.innerHTML = '';
+  if(data.receivingEntries.length===0){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">入荷履歴はありません</td></tr>';
+    return;
+  }
+  [...data.receivingEntries].sort((a,b)=>a.date<b.date?1:-1).forEach(r=>{
+    const m = getMaterial(r.materialId) || {diameter:'-',type:'-'};
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date}</td><td>${m.diameter}</td><td>${m.type}</td><td>${r.qty}</td><td>${r.note||''}</td>
+      <td><button class="btn danger small" data-del="${r.id}">削除</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm('この入荷記録を削除しますか？')) return;
+      data.receivingEntries = data.receivingEntries.filter(r=>r.id!==Number(btn.dataset.del));
+      save(); renderAll();
+    });
+  });
+}
+
+// ---------- Order tab ----------
+function renderOrderSelect(){
+  document.getElementById('o_material').innerHTML = materialOptionsHtml();
+}
+document.getElementById('btnSaveOrder').addEventListener('click', ()=>{
+  const date = document.getElementById('o_date').value;
+  const materialId = Number(document.getElementById('o_material').value);
+  const qty = Number(document.getElementById('o_qty').value||0);
+  if(!date || !qty){ alert('発注日と数量を入力してください'); return; }
+  data.orderEntries.push({
+    id:data.nextId.order++, date, materialId, qty,
+    expected:document.getElementById('o_expected').value,
+    note:document.getElementById('o_note').value,
+    status:'発注済み'
+  });
+  save();
+  document.getElementById('o_date').value='';
+  document.getElementById('o_qty').value='';
+  document.getElementById('o_expected').value='';
+  document.getElementById('o_note').value='';
+  renderAll();
+});
+function renderOrderTable(){
+  const tbody = document.querySelector('#orderTable tbody');
+  tbody.innerHTML = '';
+  if(data.orderEntries.length===0){
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">発注履歴はありません</td></tr>';
+    return;
+  }
+  [...data.orderEntries].sort((a,b)=>a.date<b.date?1:-1).forEach(o=>{
+    const m = getMaterial(o.materialId) || {diameter:'-',type:'-'};
+    const badgeClass = o.status==='発注済み'?'ordered':(o.status==='入荷済み'?'received':'canceled');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${o.date}</td><td>${m.diameter}</td><td>${m.type}</td><td>${o.qty}</td>
+      <td>${o.expected||''}</td>
+      <td><span class="badge ${badgeClass}">${o.status}</span></td>
+      <td>${o.note||''}</td>
+      <td>
+        ${o.status==='発注済み' ? `<button class="btn small" data-recv="${o.id}">入荷登録</button>` : ''}
+        <button class="btn danger small" data-del="${o.id}">削除</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-recv]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const o = data.orderEntries.find(x=>x.id===Number(btn.dataset.recv));
+      if(!o) return;
+      data.receivingEntries.push({id:data.nextId.receiving++, date:new Date().toISOString().slice(0,10), materialId:o.materialId, qty:o.qty, note:'発注分入荷（自動登録）'});
+      o.status = '入荷済み';
+      save(); renderAll();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm('この発注記録を削除しますか？')) return;
+      data.orderEntries = data.orderEntries.filter(o=>o.id!==Number(btn.dataset.del));
+      save(); renderAll();
+    });
+  });
+}
+
+// ---------- Master tab ----------
+document.getElementById('btnAddMaterial').addEventListener('click', ()=>{
+  const diameter = document.getElementById('m_diameter').value.trim();
+  const type = document.getElementById('m_type').value;
+  const unit = document.getElementById('m_unit').value.trim() || '本';
+  if(!diameter){ alert('管径を入力してください'); return; }
+  data.materials.push({id:data.nextId.material++, diameter, type, unit});
+  save();
+  document.getElementById('m_diameter').value='';
+  renderAll();
+});
+function renderMasterTable(){
+  const tbody = document.querySelector('#masterTable tbody');
+  tbody.innerHTML = '';
+  data.materials.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${m.diameter}</td><td>${m.type}</td><td>${m.unit}</td>
+      <td><button class="btn danger small" data-del="${m.id}">削除</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = Number(btn.dataset.del);
+      const inUse = data.usageEntries.some(e=>e.items.some(i=>i.materialId===id))
+        || data.receivingEntries.some(r=>r.materialId===id)
+        || data.orderEntries.some(o=>o.materialId===id);
+      if(inUse){ alert('この資材は使用実績・入荷・発注のいずれかで使用中のため削除できません。'); return; }
+      if(!confirm('この資材を削除しますか？')) return;
+      data.materials = data.materials.filter(m=>m.id!==id);
+      save(); renderAll();
+    });
+  });
+}
+
+// ---------- Export / Import ----------
+document.getElementById('btnExportJson').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '資材管理データ_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+});
+document.getElementById('btnImportJson').addEventListener('click', ()=> document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const imported = JSON.parse(ev.target.result);
+      if(!confirm('現在のデータを上書きして復元します。よろしいですか？')) return;
+      data = imported;
+      save(); renderAll();
+    }catch(err){ alert('ファイルの読み込みに失敗しました: '+err.message); }
+  };
+  reader.readAsText(file);
+});
+
+function csvEscape(v){
+  if(v===undefined||v===null) v='';
+  v = String(v);
+  if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+  let lines = [];
+  lines.push('■在庫ダッシュボード');
+  lines.push(['管径','種別','単位','期首在庫','入荷合計','使用合計','残数','発注点','状態','未入荷発注数'].join(','));
+  computeInventory().forEach(row=>{
+    const status = row.remain<=row.reorder ? '要発注' : 'OK';
+    lines.push([row.material.diameter,row.material.type,row.material.unit,row.initial,row.received,row.used,row.remain,row.reorder,status,row.pendingOrder].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■使用実績');
+  lines.push(['現場名','日付','人員','施工箇所','復旧延長','配管延長','管台数','使用管材'].join(','));
+  data.usageEntries.forEach(e=>{
+    const itemsText = e.items.map(i=>{ const m=getMaterial(i.materialId); return m?`${m.diameter}${m.type}:${i.qty}`:''; }).join(' / ');
+    lines.push([e.siteName,e.date,e.crew,e.location,e.restore,e.pipeLength,e.standCount,itemsText].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■入荷履歴');
+  lines.push(['入荷日','管径','種別','数量','備考'].join(','));
+  data.receivingEntries.forEach(r=>{
+    const m=getMaterial(r.materialId)||{diameter:'-',type:'-'};
+    lines.push([r.date,m.diameter,m.type,r.qty,r.note].map(csvEscape).join(','));
+  });
+  lines.push('');
+  lines.push('■発注履歴');
+  lines.push(['発注日','管径','種別','数量','納期予定','状態','備考'].join(','));
+  data.orderEntries.forEach(o=>{
+    const m=getMaterial(o.materialId)||{diameter:'-',type:'-'};
+    lines.push([o.date,m.diameter,m.type,o.qty,o.expected,o.status,o.note].map(csvEscape).join(','));
+  });
+  const csv = '﻿' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '資材管理表_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+});
+
+function refreshLineItemSelects(){
+  document.querySelectorAll('#u_lineItems .li-material').forEach(sel=>{
+    const cur = sel.value;
+    sel.innerHTML = materialOptionsHtml(cur);
+  });
+}
+
+function renderAll(){
+  renderDashboard();
+  renderUsageTable();
+  renderReceivingSelect();
+  renderReceivingTable();
+  renderOrderSelect();
+  renderOrderTable();
+  renderMasterTable();
+  refreshLineItemSelects();
+}
+addLineItemRow();
+renderAll();
+</script>
+</body>
+</html>

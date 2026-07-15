@@ -123,6 +123,7 @@ main{padding:12px 14px 80px;}
     <span id="adminBadge"></span>
     <a href="index.html" class="hd-btn" style="text-decoration:none;" title="ホームへ戻る">🏠 ホーム</a>
     <button class="hd-btn" onclick="onAuthBtnClick()" id="adminBtn" title="管理者ログイン">🔑</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
   </div>
 </header>
 
@@ -189,7 +190,19 @@ main{padding:12px 14px 80px;}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>

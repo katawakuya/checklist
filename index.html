@@ -441,13 +441,15 @@ _fbAuth.onAuthStateChanged(function(user) {
 });
 
 function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
   if('caches' in window){
     caches.keys().then(function(ns){
       return Promise.all(ns.map(function(n){ return caches.delete(n); }));
-    }).then(function(){ location.reload(true); });
-  } else {
-    location.reload(true);
-  }
+    }).then(go).catch(go);
+  } else { go(); }
 }
 
 function toggleAuth() {

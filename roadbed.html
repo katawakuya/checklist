@@ -139,6 +139,7 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
     <a href="pdf-crop.html" target="_blank" class="hd-btn" title="断面図切り出しツール">✂️ 断面図</a>
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button class="hd-btn" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
   </div>
 </header>
 
@@ -449,6 +450,7 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
 
         <input type="hidden" id="h-editKey">
         <button class="btn-save" onclick="saveHata()">💾 旗揚げマスタを登録</button>
+        <button class="btn-save" id="btnSaveAsNew" onclick="saveHataAsNew()" style="display:none;background:rgba(34,197,94,0.15);border-color:var(--green);color:var(--green);">📋 別番号で新規登録</button>
         <button class="btn-cancel" id="btnCancelHata" onclick="clearHataForm()">キャンセル</button>
       </div>
 
@@ -556,7 +558,19 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -572,7 +586,7 @@ const FIREBASE_CONFIG={
 };
 const ADMIN_EMAIL='sato.k.katawakuya@gmail.com';
 
-let _fbDb=null,_fbAuth=null,_isAdmin=false,_isLoggedIn=false;
+let _fbDb=null,_fbAuth=null,_isAdmin=false,_isLoggedIn=false,_currentUser=null;
 let _selectedSiteId='';
 let _kariAsRows=[],_honAsRows=[];
 let _kariRbRows=[],_honRbRows=[];
@@ -751,6 +765,7 @@ function initFirebase(){
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbDb=firebase.firestore(); _fbAuth=firebase.auth();
     _fbAuth.onAuthStateChanged(u=>{
+    _currentUser=u||null;
     _isLoggedIn=!!u;
     _isAdmin=!!(u&&u.email===ADMIN_EMAIL);
     updateAdminUI();
@@ -2022,6 +2037,13 @@ function saveHata(){
   _auditLog('hata_save',action+' No.'+rec.num+(rec.name?' 「'+rec.name+'」':'')+' ['+id+']');
 }
 
+// 編集中の旗揚げをベースに、別番号で新規登録する
+function saveHataAsNew(){
+  // editKeyをクリアして新規扱いにしてから登録
+  document.getElementById('h-editKey').value='';
+  saveHata();
+}
+
 function clearHataForm(){
   ['h-hata','h-name','h-dp','h-dph','h-dp1','h-dp2','h-dph1','h-dph2','h-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const kt=document.getElementById('h-pipetype');if(kt)kt.value='';
@@ -2029,6 +2051,7 @@ function clearHataForm(){
   clearHataImg();
   const sel=document.getElementById('existingHataSel');if(sel)sel.value='';
   document.getElementById('btnCancelHata').style.display='none';
+  const btnNew=document.getElementById('btnSaveAsNew');if(btnNew)btnNew.style.display='none';
 }
 
 function loadExistingHata(key){
@@ -2060,6 +2083,8 @@ function loadExistingHata(key){
 function editHata(key){
   const sel=document.getElementById('existingHataSel');if(sel)sel.value=key;
   loadExistingHata(key);
+  // 編集モード：「別番号で新規登録」ボタンを表示
+  const btnNew=document.getElementById('btnSaveAsNew');if(btnNew)btnNew.style.display='';
   document.getElementById('modeHata').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -2745,16 +2770,4 @@ function showWarningBanner(msg, focusId) {
       if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
     }
   }, { passive: false });
-  document.addEventListener('DOMContentLoaded', function() {
-    var b = document.createElement('button');
-    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
-    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
-    document.body.appendChild(b);
-    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
-    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
-  });
-})();
-
-</script>
-</body>
-</html>
+  document.addEventListener('DOMCo
