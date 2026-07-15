@@ -11,7 +11,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+function forceReload(){
+  var go=function(){
+    var url=location.href.split('?')[0]+'?v='+Date.now();
+    location.replace(url);
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
@@ -507,6 +519,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
     <div class="save-badge" id="saveBadge">💾 保存済み</div>
+      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:16px;">🔄</button>
   </div>
 </header>
 
@@ -9861,12 +9874,4 @@ function saveHonpukyuRecord() {
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
     <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
-    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
-      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:r
