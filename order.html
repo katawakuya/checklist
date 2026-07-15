@@ -2643,6 +2643,31 @@ function getNum(id) { return parseFloat(document.getElementById(id)?.value) || 0
 //   ※ 床付け <= totalH のときは両方ゼロ
 // _dynUseIsoil[typeKey]=true のとき hasImprovedSoil を上書きで有効化（環状2号ルール等）
 const _dynUseIsoil = {};
+// 小田原判定ヘルパー（管上300 2列使用の計算切替に使用）
+function isOdawaraSite(typeKey) {
+  var siteIdEl = document.getElementById(typeKey + '-siteid');
+  if (siteIdEl && siteIdEl.value) {
+    var site = (typeof getSites==='function') ? getSites().find(function(s){return s.id===siteIdEl.value;}) : null;
+    if (site && site.name.includes('小田原')) return true;
+  }
+  var siteEl = document.getElementById(typeKey + '-site');
+  if (siteEl && siteEl.value && siteEl.value.includes('小田原')) return true;
+  return false;
+}
+// 改良土ルール 材料名（プルダウン選択）
+const _dynIsoilLabel = {};
+function getIsoilLabel(tid) { return _dynIsoilLabel[tid] || '改良土'; }
+function updateIsoilLabel(tid) {
+  var sel  = document.getElementById(tid + '-isoil-sel');
+  var free = document.getElementById(tid + '-isoil-free');
+  var disp = document.getElementById(tid + '-isoil-label-disp');
+  if (!sel) return;
+  if (free) free.style.display = sel.value === '__free__' ? 'inline-block' : 'none';
+  var label = sel.value === '__free__' ? (free && free.value ? free.value : '改良土') : sel.value;
+  _dynIsoilLabel[tid] = label;
+  if (disp) disp.textContent = label;
+  if (typeof _typeUpdateFns !== 'undefined' && typeof _typeUpdateFns[tid] === 'function') _typeUpdateFns[tid]();
+}
 function splitExcess(dp, dph, typeKey) {
   const t = TYPES[typeKey];
   const useIsoil = (t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey];
@@ -2650,7 +2675,7 @@ function splitExcess(dp, dph, typeKey) {
   const floor  = dp + dph;
   const excess = Math.max(0, floor - t.totalH);
   if (excess <= 0) return { excessSandH: 0, soilH: 0 };
-  const excessSandH = dph + 0.1;
+  const excessSandH = dph + 0.1;  // 砂は管上100mm固定
   const soilH       = Math.max(0, excess - excessSandH);
   return { excessSandH, soilH };
 }
@@ -3046,6 +3071,7 @@ function renderChips(containerId, result, typeKey) {
   const show粗粒 = (t.asT粗粒||0) > 0;
   const rmS = _resolveRmSize(t);
   const rcS = _resolveRcSize(t);
+  const _isOdawara = siteName && siteName.includes('小田原');
   // AS層名を asLayers から取得（なければ旧ラベル）
   const _asl = (t.asLayers && t.asLayers.filter(a=>!a.memo&&(a.t||0)>0)) || [];
   const surfName = _asl.filter(a=>a.role==='surface').map(a=>getAsLayerName(a)).join('・') || '密粒度AS';
@@ -3131,7 +3157,7 @@ function renderChips(containerId, result, typeKey) {
   }
   if (showRM && _honFrbChip.length === 0) html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
   if (_isHonFreeChip) html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:var(--orange);padding:4px 2px 2px;margin-top:2px;">再生砂・改良土</div>';
-  if (t.hasImprovedSoil) html += chip('改良土', fmt(result.isoilOrd), 'm³');
+  if (t.hasImprovedSoil) html += chip(getIsoilLabel(typeKey), fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
   html += chip('改良土+再生砂', fmt(result.sandSoilSum), 'm³');
   // ── 掘削影響範囲AS再舗装（per-pattern表示）──
@@ -3341,7 +3367,7 @@ function renderTotal(typeKey) {
   if ((t.rmH||0) > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', true);
   // hon フリーモード: 再生砂・改良土 セクションヘッダーを挿入
   if (_isHonFree && totalWL > 0) html += sep('再生砂・改良土', 'rgba(249,115,22,0.5)');
-  if (t.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³');
+  if (t.hasImprovedSoil) html += add(getIsoilLabel(tid), s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
   html += add('改良土+再生砂', s.sandSoilSum, 'm³');
 
@@ -6877,16 +6903,31 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   ` : ''}
 
   <!-- 改良土ルールトグル（管上100mm以上を改良土とするオプション） -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 12px;
-    background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25);border-radius:7px;">
-    <input type="checkbox" id="${tid}-isoil-toggle"
-      ${t.hasImprovedSoil ? 'checked disabled title="このタイプは常時有効"' : ''}
-      onchange="toggleDynIsoil('${tid}',this.checked,TYPES['${tid}'])"
-      style="width:16px;height:16px;cursor:${t.hasImprovedSoil?'default':'pointer'};accent-color:#eab308;flex-shrink:0;">
-    <label for="${tid}-isoil-toggle" style="font-size:16px;font-weight:700;color:rgba(234,179,8,0.95);cursor:${t.hasImprovedSoil?'default':'pointer'};line-height:1.4;">
-      🔁 改良土ルール：管上100mm→路盤変更点＝改良土／それ以下＝再生砂
-      ${t.hasImprovedSoil ? '<span style="font-weight:400;color:var(--text3);font-size:14px;">（常時有効）</span>' : ''}
-    </label>
+  <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding:14px 16px;
+    background:rgba(234,179,8,0.13);border:2.5px solid rgba(234,179,8,0.65);border-radius:11px;
+    box-shadow:0 0 0 4px rgba(234,179,8,0.07);">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:220px;">
+      <input type="checkbox" id="${tid}-isoil-toggle"
+        ${t.hasImprovedSoil ? 'checked disabled title="このタイプは常時有効"' : ''}
+        onchange="toggleDynIsoil('${tid}',this.checked,TYPES['${tid}'])"
+        style="width:22px;height:22px;cursor:${t.hasImprovedSoil?'default':'pointer'};accent-color:#eab308;flex-shrink:0;">
+      <label for="${tid}-isoil-toggle" style="font-size:19px;font-weight:800;color:rgba(234,179,8,1);cursor:${t.hasImprovedSoil?'default':'pointer'};line-height:1.4;letter-spacing:0.3px;">
+        🔁 改良土ルール：管上100mm→路盤変更点＝<span id="${tid}-isoil-label-disp">改良土</span>／それ以下＝再生砂（小田原は砂）
+        ${t.hasImprovedSoil ? '<span style="font-weight:400;color:var(--text3);font-size:14px;">（常時有効）</span>' : ''}
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+      <span style="font-size:13px;color:var(--text3);white-space:nowrap;">材料名：</span>
+      <select id="${tid}-isoil-sel" onchange="updateIsoilLabel('${tid}')"
+        style="background:var(--surface2);border:1px solid rgba(234,179,8,0.45);border-radius:6px;color:var(--text);padding:5px 8px;font-size:15px;cursor:pointer;">
+        <option value="改良土">改良土</option>
+        <option value="再生砂RC-10">再生砂RC-10</option>
+        <option value="__free__">フリー入力</option>
+      </select>
+      <input type="text" id="${tid}-isoil-free" placeholder="材料名"
+        style="display:none;background:var(--surface2);border:1px solid rgba(234,179,8,0.45);border-radius:6px;color:var(--text);padding:5px 8px;font-size:15px;width:110px;"
+        oninput="updateIsoilLabel('${tid}')">
+    </div>
   </div>
 
   <!-- 路盤クイック参照バナー（スクロール不要で確認できる固定バー） -->
@@ -7161,6 +7202,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:10px;">
       ${t.hasImprovedSoil ? `<div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;min-width:200px;">
         <div style="font-size:13px;font-weight:700;color:rgba(234,179,8,0.9);letter-spacing:0.5px;margin-bottom:6px;">🔁 埋戻し構成切替え点　管上100（水締め）</div>
+        ${_isOdawara ? '<div style="font-size:12px;color:rgba(234,179,8,0.75);margin-bottom:4px;">※ 小田原: 管上300mm に埋設シート2列使用</div>' : ''}
         <div style="font-size:14px;color:var(--text3);margin-bottom:4px;">H = GL−（ = DP − 0.1）</div>
         <div id="${t.key}-dyn-cutoff" style="font-family:var(--mono);font-size:20px;font-weight:700;color:rgba(234,179,8,1);">GL − ― m</div>
       </div>` : ''}
@@ -7447,7 +7489,7 @@ function updateDynCutoff(tid, typeConf) {
   const cutoffEl = document.getElementById(`${typeConf.key}-dyn-cutoff`);
   const pipesheetEl = document.getElementById(`${typeConf.key}-dyn-pipesheet`);
   if (!isNaN(dp) && dp > 0) {
-    if (cutoffEl) cutoffEl.textContent = `GL − ${(dp - 0.1).toFixed(3)} m（改良土↑ / 再生砂↓）`;
+    if (cutoffEl) cutoffEl.textContent = `GL − ${(dp - 0.1).toFixed(3)} m（${getIsoilLabel(tid)}↑ / 再生砂↓）`;
     if (pipesheetEl) {
       const rawPipe = dp - pipeCoeff;
       // checklist同様のルール: 配管シートが路盤構成内に入る場合は路盤最下端まで深くする
