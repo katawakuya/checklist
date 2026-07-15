@@ -2674,7 +2674,10 @@ function splitExcess(dp, dph, typeKey) {
   const useIsoil = (t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey];
   if (!t || !useIsoil) return { excessSandH: 0, soilH: 0 };
   const floor  = dp + dph;
-  const excess = Math.max(0, floor - t.totalH);
+  // 改良土ルールの路盤変更点は仮復旧 kariTotalH を基準とする
+  // 本復旧モードでは t.totalH が honTotalH に書き換わるため kariTotalH を優先参照
+  const _refH = (t.kariTotalH != null && t.kariTotalH > 0) ? t.kariTotalH : t.totalH;
+  const excess = Math.max(0, floor - _refH);
   if (excess <= 0) return { excessSandH: 0, soilH: 0 };
   const excessSandH = dph + 0.1;  // 砂は管上100mm固定
   const soilH       = Math.max(0, excess - excessSandH);
@@ -3159,7 +3162,8 @@ function renderChips(containerId, result, typeKey) {
   if (_isHonFreeChip) html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:var(--orange);padding:4px 2px 2px;margin-top:2px;">再生砂・改良土</div>';
   if (t.hasImprovedSoil) html += chip(getIsoilLabel(typeKey), fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
-  html += chip('改良土+再生砂', fmt(result.sandSoilSum), 'm³');
+  { const _isoilLbl = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey]) ? getIsoilLabel(typeKey) : '改良土';
+    html += chip(_isoilLbl + '＋再生砂', fmt(result.sandSoilSum), 'm³'); }
   // ── 掘削影響範囲AS再舗装（per-pattern表示）──
   {
     const _asPrefix = containerId.replace('-result', '');
@@ -3369,7 +3373,8 @@ function renderTotal(typeKey) {
   if (_isHonFree && totalWL > 0) html += sep('再生砂・改良土', 'rgba(249,115,22,0.5)');
   if (t.hasImprovedSoil) html += add(getIsoilLabel(tid), s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
-  html += add('改良土+再生砂', s.sandSoilSum, 'm³');
+  { const _isoilLbl2 = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
+    html += add(_isoilLbl2 + '＋再生砂', s.sandSoilSum, 'm³'); }
 
   // ── 路盤廃材 ──
   if (totalWL > 0) {
@@ -7689,9 +7694,10 @@ function renderDynTotal(tid, typeConf) {
     html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
   }
   if (_effRmH > 0 && _honFrbDisp.length === 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
-  if (_effT2.hasImprovedSoil) html += add('改良土', s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
-  html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
-  html += add('改良土+再生砂', s.sandSoilSum, 'm³', 'var(--orange)');
+  { const _isoilLbl3 = ((_effT2 && _effT2.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
+    if (_effT2.hasImprovedSoil) html += add(_isoilLbl3, s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
+    html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
+    html += add(_isoilLbl3 + '＋再生砂', s.sandSoilSum, 'm³', 'var(--orange)'); }
 
   if (totalWL > 0 || genWL > 0) {
     // 仮復旧廃材（kariHaibanWL>0）と現況廃材（genWL>0）を個別に表示
