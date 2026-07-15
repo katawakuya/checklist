@@ -520,7 +520,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
     <div class="save-badge" id="saveBadge">💾 保存済み</div>
-      <button onclick="forceReload()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
+      <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
 
@@ -1949,6 +1949,7 @@ function fbSyncMasters(callback) {
     fbSyncHataMasters(function() {
       try { loadSites(); } catch(e) {}
       try { if(typeof populateSiteDropdowns==='function') populateSiteDropdowns(); } catch(e) {}
+      try { if(typeof updateHpHataDatalist==='function') updateHpHataDatalist(); } catch(e) {}
       try { if(typeof renderSiteList==='function') renderSiteList(); } catch(e) {}
       try { if(typeof syncMasterSiteDropdown==='function') syncMasterSiteDropdown(); } catch(e) {}
       try { if(typeof syncRmFormSiteSel==='function') syncRmFormSiteSel(); } catch(e) {}
@@ -9503,15 +9504,18 @@ function updateHpHataDatalist() {
   if (!datalist) return;
   var siteEl = document.getElementById('hp-site');
   var siteName = siteEl ? siteEl.value : '';
-  var siteId = '';
+  var seen = {}, allHata = [], arrs = [];
   if (siteName) {
-    var site = getSites().find(function(s){ return s.name === siteName; });
-    if (site) siteId = site.id;
+    // 現場選択あり → その現場 + グローバル
+    var _matchSite = getSites().find(function(s){ return s.name === siteName; });
+    if (_matchSite) arrs.push(getMaster(_matchSite.id));
+    arrs.push(getMaster(''));
+  } else {
+    // 現場未選択 → 全現場 + グローバル（全旗揚げを表示）
+    getSites().forEach(function(s){ arrs.push(getMaster(s.id)); });
+    arrs.push(getMaster(''));
   }
-  var siteArr   = siteId ? getMaster(siteId) : [];
-  var globalArr = getMaster('');
-  var seen = {}, allHata = [];
-  [].concat(siteArr, globalArr).forEach(function(r) {
+  [].concat.apply([], arrs).forEach(function(r) {
     var h = String(r.hata || r.num || '');
     if (h && !seen[h]) { seen[h] = true; allHata.push(h); }
   });
