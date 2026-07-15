@@ -1644,17 +1644,18 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
     <!-- 入力フォーム -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="field" style="grid-column:1/-1">
+        <label>現場名</label>
+        <select id="hp-site" class="highlight" onchange="updateHpHataDatalist()"><option value="">― 現場を選択 ―</option></select>
+      </div>
       <div class="field">
         <label>施工日</label>
         <input type="date" id="hp-date" class="highlight">
       </div>
       <div class="field">
         <label>旗揚げ番号</label>
-        <input type="text" id="hp-hata" list="hata-datalist" class="highlight" placeholder="例: 1, 1-1" onchange="viewDiagramFromTab('hp')">
-      </div>
-      <div class="field" style="grid-column:1/-1">
-        <label>現場名</label>
-        <select id="hp-site" class="highlight"><option value="">― 現場を選択 ―</option></select>
+        <input type="text" id="hp-hata" list="hp-hata-datalist" class="highlight" placeholder="例: 1, 1-1" onchange="viewDiagramFromTab('hp')">
+        <datalist id="hp-hata-datalist"></datalist>
       </div>
       <div class="field">
         <label>作業記録者（氏名）</label>
@@ -4589,7 +4590,7 @@ try { updateSiteBadge();   } catch(e) {}
 try { renderMasterList();  } catch(e) {}
 try { renderSiteList();    } catch(e) {}
 try { renderPresetList();  } catch(e) {}
-try { populateSiteDropdowns(); } catch(e) {}
+try { populateSiteDropdowns(); updateHpHataDatalist(); } catch(e) {}
 try { updateHistSiteFilter();  } catch(e) {}
 try { syncMasterSiteDropdown();} catch(e) {}
 try { initPresetSystem();  } catch(e) {}
@@ -9425,6 +9426,32 @@ function onSiteChange(typeKey) {
   try { if(typeof importFromRoadbedMasters==='function') importFromRoadbedMasters(true); } catch(e) {}
   // 現場切り替えで旗揚げマスタを現場ごとに持つ準備（今後の拡張用）
   // 現時点では選択値をそのまま使用
+}
+
+// 本復旧タブ: 現場選択に連動して旗揚げ番号候補を更新
+function updateHpHataDatalist() {
+  var datalist = document.getElementById('hp-hata-datalist');
+  if (!datalist) return;
+  var siteEl = document.getElementById('hp-site');
+  var siteName = siteEl ? siteEl.value : '';
+  var siteId = '';
+  if (siteName) {
+    var site = getSites().find(function(s){ return s.name === siteName; });
+    if (site) siteId = site.id;
+  }
+  var siteArr   = siteId ? getMaster(siteId) : [];
+  var globalArr = getMaster('');
+  var seen = {}, allHata = [];
+  [].concat(siteArr, globalArr).forEach(function(r) {
+    var h = String(r.hata || r.num || '');
+    if (h && !seen[h]) { seen[h] = true; allHata.push(h); }
+  });
+  allHata.sort(function(a, b) {
+    var na = parseFloat(a), nb = parseFloat(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b, 'ja');
+  });
+  datalist.innerHTML = allHata.map(function(h){ return '<option value="' + h + '">'; }).join('');
 }
 
 function updateHistSiteFilter() {
