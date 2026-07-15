@@ -8016,7 +8016,7 @@ function editMaster(hata) {
   document.getElementById('m-hata').value   = entry.hata;
   document.getElementById('m-name').value   = entry.name || '';
   document.getElementById('m-dp').value     = entry.dp   || '';
-  document.getElementById('m-dph').value    = entry.dph  || '';
+  document.getElementById('m-dph').value    = entry.kanH ?? entry.dph  ?? '';
   document.getElementById('m-dp1').value    = entry.dp_start != null ? entry.dp_start : (entry.dp1 ?? '');
   document.getElementById('m-dp2').value    = entry.dp_end   != null ? entry.dp_end   : (entry.dp2 ?? '');
   document.getElementById('m-dph1').value   = entry.dph1 != null ? entry.dph1 : '';
@@ -8143,7 +8143,7 @@ function renderMasterCards(arr) {
       </div>
       <div style="display:flex;gap:12px;font-size:14px;font-family:var(--mono);color:var(--text3);margin-bottom:2px;">
         <span>DP: <b style="color:var(--text)">${r.dp}</b></span>
-        <span>DP下配管H: <b style="color:var(--text)">${r.dph}</b></span>
+        <span>DP下配管H: <b style="color:var(--text)">${r.kanH??r.dph??''}</b></span>
         ${r.pipetype?`<span>${r.pipetype}</span>`:''}
       </div>
       ${(r.dp_start??r.dp1)!=null?`<div style="font-size:14px;color:var(--text3);font-family:var(--mono);">勾配: DP ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}</div>`:''}
@@ -8312,7 +8312,7 @@ function printMasterList() {
     w.document.write(`<div class="info">
       <div class="hata">№${r.hata}</div>
       ${r.name?`<div class="name">${r.name}</div>`:''}
-      <div class="vals">DP: ${r.dp}m　管下H: ${r.dph}m</div>
+      <div class="vals">DP: ${r.dp}m　管下H: ${r.kanH??r.dph??'—'}m</div>
       ${(r.dp_start??r.dp1)!=null?`<div class="vals">勾配: ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}m</div>`:''}
       ${r.pipetype?`<div class="vals">${r.pipetype}</div>`:''}
       ${r.note?`<div class="note">${r.note}</div>`:''}
@@ -8523,7 +8523,7 @@ function showDiagram(hata) {
       <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);">${v}</div>
     </div>` : '';
     valHTML += chip('DP（通常）', entry.dp);
-    valHTML += chip('管下H（通常）', entry.dph);
+    valHTML += chip('管下H（通常）', entry.kanH ?? entry.dph);
     if (entry.dp1 != null) valHTML += chip('DP 始点（勾配）', entry.dp1);
     if (entry.dp2 != null) valHTML += chip('DP 終点（勾配）', entry.dp2);
     if (entry.dph1 != null) valHTML += chip('管下H 始（勾配）', entry.dph1);
@@ -8998,7 +8998,7 @@ function showDiagram(hata, typeKey) {
   // 値の優先順位: 手動マスタ > Excelデータ
   const dp   = manual?.dp   ?? excel?.dp   ?? null;
   const dpE  = manual?.dp_end ?? excel?.dp_end ?? null;
-  const dph  = manual?.dph  ?? null;
+  const dph  = manual?.kanH ?? manual?.dph  ?? null;  // kanH(roadbed新形式) → dph(旧形式) の順で参照
   const dph1 = manual?.dph1 ?? null;
   const dph2 = manual?.dph2 ?? null;
   const note = manual?.note ?? '';
