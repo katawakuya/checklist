@@ -1646,7 +1646,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
       <div class="field" style="grid-column:1/-1">
         <label>現場名</label>
-        <select id="hp-site" class="highlight" onchange="updateHpHataDatalist()"><option value="">― 現場を選択 ―</option></select>
+        <select id="hp-site" class="highlight" onchange="localStorage.setItem('hp_last_site',this.value);updateHpHataDatalist()"><option value="">― 現場を選択 ―</option></select>
       </div>
       <div class="field">
         <label>施工日</label>
@@ -3915,8 +3915,10 @@ function sendToZaimatsu() {
 
   document.getElementById('zm-error').textContent = '登録中…';
   _fbDb.collection('zaimatsu_usage').add(entry).then(function(){
+    var _h = _zmRecord ? _zmRecord.hata : '';
+    var _d = _zmRecord ? _zmRecord.date : '';
     closeZaimatsuModal();
-    alert('✅ 資材管理に登録しました\n旗揚げ '+_zmRecord.hata+' / '+_zmRecord.date);
+    alert('✅ 資材管理に登録しました\n旗揚げ '+_h+' / '+_d);
   }).catch(function(e){
     document.getElementById('zm-error').textContent = '登録エラー: '+e.message;
     console.error('[ZM] send error', e);
@@ -6853,7 +6855,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   if (_kariRcMm > 0) _noticeParts.push(`<span style="color:#86efac;">${_rcLabel} ${buildLayerCompactStr(t.kariRC_layers, t.rcH)}</span>`);
   const _noticeTitle = _rbDiff ? '仮復旧・路盤先行 構成（固定値）' : '路盤構成';
   const totalH = Math.round((t.totalH||0) * 1000);
-  const pipeCoeff = PIPE_COEFF_DEFAULT[normalizePipeKey(t.key)] ?? ((t.rmH||0) > 0 ? 0.3 : 0.2);
+  const pipeCoeff = PIPE_COEFF_DEFAULT[normalizePipeKey(t.key)] ?? (_isOdawara || (t.rmH||0) > 0 ? 0.3 : 0.2);
   const ex = t.extraMaterials || [];
   const tp = t.teppan || { use: false, pending: false, memo: '' };
   // コンクリート層: フリーモード設定からコンクリート層合計厚さ（m）を取得
@@ -9456,10 +9458,14 @@ function renderSiteList() {
 function populateSiteDropdowns() {
   const sites = getSites();
   const types = ['85','40','30','20','14','hp'];
+  // hp-site は localStorage から復元（専用キー）
+  const _hpSavedSite = localStorage.getItem('hp_last_site') || '';
   types.forEach(t => {
     const sel = document.getElementById(`${t}-site`);
     if (!sel) return;
-    const cur = sel.value;
+    var cur = sel.value;
+    // hp-site: localStorageから復元
+    if (t === 'hp' && !cur && _hpSavedSite) cur = _hpSavedSite;
     sel.innerHTML = '<option value="">― 現場を選択 ―</option>' +
       sites.map(s => `<option value="${s.name}" data-id="${s.id}"${s.name===cur?' selected':''}>${s.name}</option>`).join('');
   });

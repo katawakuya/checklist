@@ -3949,6 +3949,11 @@ function recalcGL(){
     if(embSameAsF40){
       html += '<br>※埋設シート敷設（' + fmtGL(f40) + '）と中間転圧（路盤構成変更）が同じGL値。下の「中間転圧」と合わせて同じタイミングで2種類撮影すること。';
     }
+    // 小田原現場: 管上300mm × 2列使用の注釈を追加
+    var _odSite = _siteId ? (_sites||[]).find(function(s){ return s.id===_siteId; }) : null;
+    if (_odSite && _odSite.name && _odSite.name.includes('小田原')) {
+      html += '<br><span style="color:#f97316;font-weight:700;">※ 小田原: 管上300mm に埋設シート2列使用</span>';
+    }
     el.innerHTML = html;
   });
 
