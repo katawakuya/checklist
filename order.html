@@ -1871,6 +1871,7 @@ function autoRegisterDefaultRoadbeds() {
       if (_localChanged) localStorage.setItem('roadbed_masters', JSON.stringify(_globalMasters));
       try { Object.values(_typeUpdateFns).forEach(function(fn){ fn(); }); } catch(e) {}
       try { if(typeof updateHpHataDatalist==='function') updateHpHataDatalist(); } catch(e) {}
+      try { if(typeof updateDynHataDatalist==='function') updateDynHataDatalist(); } catch(e) {}
       console.log('[autoReg] per-site format detected — Firestore not touched, localStorage updated');
       return;
     }
@@ -1950,6 +1951,7 @@ function fbSyncMasters(callback) {
       try { loadSites(); } catch(e) {}
       try { if(typeof populateSiteDropdowns==='function') populateSiteDropdowns(); } catch(e) {}
       try { if(typeof updateHpHataDatalist==='function') updateHpHataDatalist(); } catch(e) {}
+      try { if(typeof updateDynHataDatalist==='function') updateDynHataDatalist(); } catch(e) {}
       try { if(typeof renderSiteList==='function') renderSiteList(); } catch(e) {}
       try { if(typeof syncMasterSiteDropdown==='function') syncMasterSiteDropdown(); } catch(e) {}
       try { if(typeof syncRmFormSiteSel==='function') syncRmFormSiteSel(); } catch(e) {}
@@ -6838,6 +6840,28 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
           if (_el) _el.checked = true;
         }
       } catch(e) {}
+      // 旗揚げ番号 datalist を埋める
+      (function(_sid, _tid){
+        var dl = document.getElementById(_tid + '-hata-datalist');
+        if (!dl) return;
+        var siteArr  = (typeof getMaster === 'function') ? getMaster(_sid) : [];
+        var globalArr= (typeof getMaster === 'function') ? getMaster('')   : [];
+        // 現場が未設定のときは全現場マスタを使う
+        if (!siteArr.length && typeof getSites === 'function') {
+          getSites().forEach(function(s){ siteArr = siteArr.concat(getMaster(s.id)); });
+        }
+        var seen = {}, allHata = [];
+        [].concat(siteArr, globalArr).forEach(function(r) {
+          var h = String(r.hata || r.num || '');
+          if (h && !seen[h]) { seen[h] = true; allHata.push(h); }
+        });
+        allHata.sort(function(a, b) {
+          var na = parseFloat(a), nb = parseFloat(b);
+          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+          return a.localeCompare(b, 'ja');
+        });
+        dl.innerHTML = allHata.map(function(h){ return '<option value="' + h + '">'; }).join('');
+      })(siteId, tabId);
     }, 0);
   });
 }
@@ -6893,7 +6917,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     </div>
     <div class="input-grid">
       <div class="field" style="grid-column:1/-1"><label>作業日付</label><input type="date" id="${tid}-date" class="highlight" style="width:100%"></div>
-      <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="number" id="${tid}-hata" placeholder="例: 35" class="highlight" style="width:100%"></div>
+      <div class="field" style="grid-column:1/-1"><label>旗揚げ番号</label><input type="text" id="${tid}-hata" list="${tid}-hata-datalist" placeholder="例: 1, 1-1" class="highlight" style="width:100%" inputmode="numeric"><datalist id="${tid}-hata-datalist"></datalist></div>
       <input type="hidden" id="${tid}-siteid" value="${siteId}">
       <div class="field"><label>作業記録者</label><input type="text" id="${tid}-author" placeholder="氏名"></div>
       <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-ghost" style="width:100%;font-size:16px;" onclick="viewDiagramFromDynTab('${tid}','${t.key}')">📐 図面を見る</button></div>
@@ -9525,6 +9549,32 @@ function updateHpHataDatalist() {
     return a.localeCompare(b, 'ja');
   });
   datalist.innerHTML = allHata.map(function(h){ return '<option value="' + h + '">'; }).join('');
+}
+
+// 計算シート（動的タブ）の旗揚げ datalist を再充填
+function updateDynHataDatalist() {
+  document.querySelectorAll('[id$="-hata-datalist"]').forEach(function(dl) {
+    if (dl.id === 'hp-hata-datalist') return; // 本復旧タブは updateHpHataDatalist で処理
+    var tabId = dl.id.replace(/-hata-datalist$/, '');
+    var hiddenEl = document.getElementById(tabId + '-siteid');
+    var sid = hiddenEl ? hiddenEl.value : '';
+    var siteArr   = (typeof getMaster === 'function') ? getMaster(sid) : [];
+    var globalArr = (typeof getMaster === 'function') ? getMaster('')  : [];
+    if (!siteArr.length && typeof getSites === 'function') {
+      getSites().forEach(function(s){ siteArr = siteArr.concat(getMaster(s.id)); });
+    }
+    var seen = {}, allHata = [];
+    [].concat(siteArr, globalArr).forEach(function(r) {
+      var h = String(r.hata || r.num || '');
+      if (h && !seen[h]) { seen[h] = true; allHata.push(h); }
+    });
+    allHata.sort(function(a, b) {
+      var na = parseFloat(a), nb = parseFloat(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, 'ja');
+    });
+    dl.innerHTML = allHata.map(function(h){ return '<option value="' + h + '">'; }).join('');
+  });
 }
 
 function updateHistSiteFilter() {
