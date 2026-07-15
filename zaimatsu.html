@@ -778,10 +778,21 @@ function renderUsageTable(){
   }
   var sorted = _data.usageEntries.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
   sorted.forEach(function(e){
-    var itemsText = e.items.map(function(i){
-      var m = getMaterial(i.materialId);
-      return m ? m.diameter+m.type+':'+i.qty : '';
-    }).join(' / ');
+    var itemsText = (e.items||[]).map(function(i){
+      if (i.materialId) {
+        // zaimatsu 直接入力: materialId で管理
+        var m = getMaterial(i.materialId);
+        return m ? m.diameter+m.type+':'+i.qty+'本' : '';
+      }
+      if (i.diameter) {
+        // order.html からの登録: diameter+type を直接持つ
+        var label = (i.diameter||'')+(i.type==='直管'?'直管':i.type||'');
+        if (i.lengthM && i.spanCount) label += ' L='+i.lengthM+'m×'+i.spanCount+'スパン';
+        if (i.qty) label += ' '+i.qty+'本';
+        return label;
+      }
+      return '';
+    }).filter(Boolean).join(' / ');
     var tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="left">${e.siteName||''}</td><td>${e.date}</td><td>${e.crew||''}</td>

@@ -3914,7 +3914,10 @@ function sendToZaimatsu() {
   // items: 資材管理アプリの materialId ではなく diameter+type で記録
   var allItems = pipeItems.concat(standItems).map(function(i){
     return { diameter:i.diameter, type:i.type, qty:i.qty,
-             lengthM:i.lengthM||0, isScrap:!!i.isScrap };
+             lengthM:  i.lenPerSpan || i.lengthM || 0,  // スパン1本の長さ(m)
+             spanCount:i.spanCount  || 0,                // スパン数
+             useScrap: !!i.useScrap,
+             isScrap:  !!i.isScrap };
   });
 
   var siteSel = document.getElementById(_zmRecord.typeKey+'-site');
