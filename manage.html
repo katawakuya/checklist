@@ -135,6 +135,24 @@ tr:hover td{background:#f9f8f4;}
 }
 .report-print-title{display:none;font-size:18pt;font-weight:800;text-align:center;margin-bottom:16px;color:#1e3a8a;}
 
+/* スーパー管理者専用要素（デフォルト非表示） */
+.sa-only{display:none;}
+
+/* 全クリア確認バー */
+#clearBar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fff;padding:14px 16px 18px;box-shadow:0 -4px 20px rgba(0,0,0,.45);font-size:15px;gap:10px;flex-wrap:wrap;align-items:center;}
+#clearBar.open{display:flex;}
+#clearBar .cb-msg{flex:1;font-weight:700;line-height:1.4;}
+#clearBar .cb-msg small{display:block;font-weight:400;font-size:13px;opacity:.8;margin-top:3px;}
+#clearBar .cb-btn{padding:8px 20px;border-radius:6px;border:none;cursor:pointer;font-size:15px;font-weight:700;white-space:nowrap;}
+#clearBar .cb-exec{background:#ef4444;color:#fff;}
+#clearBar .cb-exec:hover{background:#b91c1c;}
+#clearBar .cb-cancel{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);}
+#clearBar .cb-cancel:hover{background:rgba(255,255,255,.28);}
+
+/* 全クリアボタン本体 */
+.btn-danger-ghost{background:rgba(220,38,38,.12);border:1.5px solid #dc2626;color:#dc2626;border-radius:6px;padding:7px 14px;font-size:15px;cursor:pointer;font-weight:700;}
+.btn-danger-ghost:hover{background:rgba(220,38,38,.22);}
+
 /* モーダル */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
@@ -237,6 +255,10 @@ tr:hover td{background:#f9f8f4;}
       <label>&nbsp;</label>
       <button class="btn btn-ghost" onclick="exportOrderCSV()">📤 CSV出力</button>
     </div>
+    <div class="filter-group sa-only" id="saOrderClearGroup" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn-danger-ghost" id="btnDeleteSelected" onclick="showDeleteSelectedBar()">🗑️ 選択記録を削除</button>
+    </div>
   </div>
   <div class="tbl-wrap" id="orderTableWrap">
     <div class="loading"><span class="spinner"></span>読み込み中…</div>
@@ -269,6 +291,10 @@ tr:hover td{background:#f9f8f4;}
     <div class="filter-group" style="justify-content:flex-end;">
       <label>&nbsp;</label>
       <button class="btn btn-ghost" onclick="exportCheckCSV()">📤 CSV出力</button>
+    </div>
+    <div class="filter-group sa-only" id="saCheckClearGroup" style="justify-content:flex-end;">
+      <label>&nbsp;</label>
+      <button class="btn-danger-ghost" onclick="showClearBar('cl_records','⚠️ 全チェック記録を削除','cl_recordsコレクション（全現場・全期間）を完全に削除します。元に戻せません。')">🗑️ 全チェック記録クリア</button>
     </div>
   </div>
   <div class="tbl-wrap" id="checkTableWrap">
@@ -343,6 +369,16 @@ tr:hover td{background:#f9f8f4;}
   </div>
 </div>
 
+<!-- 全クリア確認バー -->
+<div id="clearBar">
+  <div class="cb-msg">
+    <span id="clearBarTitle"></span>
+    <small id="clearBarDesc"></small>
+  </div>
+  <button class="cb-btn cb-cancel" onclick="hideClearBar()">キャンセル</button>
+  <button class="cb-btn cb-exec" onclick="execClear()">🗑️ 削除実行</button>
+</div>
+
 <!-- 管理者ログインモーダル -->
 <div class="modal-overlay" id="fbModal">
   <div class="modal-box">
@@ -411,6 +447,11 @@ _fbAuth.onAuthStateChanged(function(user) {
       }
     }
   }
+  // スーパー管理者専用ボタンの表示切替
+  document.querySelectorAll('.sa-only').forEach(function(el) {
+    el.style.setProperty('display', _isAdmin ? 'block' : 'none', 'important');
+  });
+  if (!_isAdmin) hideClearBar();
   if (_activeTab === 'team') renderTeamTab();
 });
 
@@ -498,7 +539,7 @@ function loadAll() {
 function loadOrders() {
   _fbDb.collection('order_records').get().then(function(snap) {
     _orderRecords = [];
-    snap.forEach(function(doc) { _orderRecords.push(doc.data()); });
+    snap.forEach(function(doc) { var r=doc.data(); r._docId=doc.id; _orderRecords.push(r); });
     _orderRecords.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
     populateOrderFilters();
     renderSummaryTab();
@@ -892,6 +933,7 @@ function renderOrderTable() {
   if (!recs.length) { wrap.innerHTML = '<div class="empty">📭 データがありません</div>'; return; }
 
   var html = '<table><thead><tr>'
+    + '<th style="width:32px;"><input type="checkbox" id="chkAllOrders" title="全選択" onchange="toggleAllOrderChecks(this)"></th>'
     + '<th>日付</th><th>現場</th><th>型</th><th>旗揚げ</th><th>担当</th><th>会社・班</th><th>モード</th>'
     + '<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
     + '<th class="num">RM(m³)</th><th class="num">RC(m³)</th><th class="num">RC+RM(m³)</th>'
@@ -904,6 +946,7 @@ function renderOrderTable() {
                  : '<span style="color:var(--text3);font-size:14px;">'+(r.calcMode||'')+'</span>';
     var teamLabel = [r.company,r.team].filter(Boolean).join('/') || '—';
     html += '<tr>'
+      + '<td style="text-align:center;"><input type="checkbox" class="order-row-chk" data-docid="'+esc(r._docId||'')+'"></td>'
       + '<td>' + esc(r.date||'') + '</td>'
       + '<td><span class="badge-site">' + esc(r.site||'—') + '</span></td>'
       + '<td>' + esc(r.typeLabel||r.typeKey||'') + '</td>'
@@ -1121,6 +1164,82 @@ function exportReportCSV() {
       .map(function(v){var s=String(v||'');return s.includes(',')? '"'+s+'"':s;});
   });
   downloadCSV('report_'+ym+'.csv', [header].concat(rows));
+}
+
+// ===== 全クリア機能（スーパー管理者専用） =====
+var _clearTarget = null; // 削除対象コレクション名
+
+// 発注明細: チェックボックス操作
+function toggleAllOrderChecks(cb) {
+  document.querySelectorAll('.order-row-chk').forEach(function(c){ c.checked = cb.checked; });
+}
+function getCheckedOrderDocIds() {
+  var ids = [];
+  document.querySelectorAll('.order-row-chk:checked').forEach(function(c){
+    if (c.dataset.docid) ids.push(c.dataset.docid);
+  });
+  return ids;
+}
+function showDeleteSelectedBar() {
+  if (!_isAdmin) return;
+  var ids = getCheckedOrderDocIds();
+  if (!ids.length) { showWarningBanner('削除する記録にチェックを入れてください'); return; }
+  showClearBar('order_selected',
+    '⚠️ ' + ids.length + ' 件の発注記録を削除',
+    '選択した ' + ids.length + ' 件を完全に削除します。元に戻せません。');
+}
+
+function showClearBar(colName, title, desc) {
+  if (!_isAdmin) return;
+  _clearTarget = colName;
+  document.getElementById('clearBarTitle').textContent = title;
+  document.getElementById('clearBarDesc').textContent = desc;
+  document.getElementById('clearBar').classList.add('open');
+  setTimeout(function(){ document.getElementById('clearBar').scrollIntoView({behavior:'smooth',block:'end'}); }, 50);
+}
+
+function hideClearBar() {
+  _clearTarget = null;
+  document.getElementById('clearBar').classList.remove('open');
+}
+
+// Firestoreコレクション全ドキュメント削除（450件ずつバッチ）
+function deleteAllDocs(colName) {
+  return _fbDb.collection(colName).get().then(function(snap) {
+    if (snap.empty) return;
+    var arr = [];
+    snap.forEach(function(d){ arr.push(d.ref); });
+    var chunks = [];
+    for (var i=0; i<arr.length; i+=450) chunks.push(arr.slice(i,i+450));
+    return chunks.reduce(function(p, chunk){
+      return p.then(function(){
+        var b = _fbDb.batch();
+        chunk.forEach(function(ref){ b.delete(ref); });
+        return b.commit();
+      });
+    }, Promise.resolve());
+  });
+}
+
+function execClear() {
+  if (!_isAdmin || !_clearTarget) return;
+  var col = _clearTarget;
+  var execBtn = document.querySelector('#clearBar .cb-exec');
+  execBtn.disabled = true;
+  execBtn.textContent = '削除中…';
+  deleteAllDocs(col).then(function() {
+    hideClearBar();
+    execBtn.disabled = false;
+    execBtn.textContent = '\U0001f5d1️ 削除実行';
+    _orderRecords = null;
+    _checkRecords = null;
+    loadAll();
+    showWarningBanner('✅ ' + col + ' を全件削除しました');
+  }).catch(function(err) {
+    execBtn.disabled = false;
+    execBtn.textContent = '\U0001f5d1️ 削除実行';
+    alert('削除に失敗しました: ' + err.message);
+  });
 }
 
 // ===== 起動: Auth確定後にデータ読み込み =====

@@ -113,6 +113,21 @@ input:disabled,select:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;
 
 footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
 @media(max-width:700px){nav button{min-width:70px;font-size:11px;padding:9px 4px;}}
+
+/* スーパー管理者専用要素 */
+.sa-only{display:none;}
+
+/* 全クリア確認バー */
+#zaiClearBar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fff;padding:14px 16px 18px;box-shadow:0 -4px 20px rgba(0,0,0,.45);font-size:14px;gap:10px;flex-wrap:wrap;align-items:center;}
+#zaiClearBar.open{display:flex;}
+#zaiClearBar .cb-msg{flex:1;font-weight:700;line-height:1.5;}
+#zaiClearBar .cb-msg small{display:block;font-weight:400;font-size:12px;opacity:.8;margin-top:3px;}
+#zaiClearBar .cb-btn{padding:7px 18px;border-radius:4px;border:none;cursor:pointer;font-size:14px;font-weight:700;white-space:nowrap;}
+#zaiClearBar .cb-exec{background:#ef4444;color:#fff;}
+#zaiClearBar .cb-exec:hover{background:#b91c1c;}
+#zaiClearBar .cb-cancel{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);}
+.btn.danger-ghost{background:rgba(220,38,38,.12);border:1.5px solid #dc2626;color:#dc2626;}
+.btn.danger-ghost:hover{background:rgba(220,38,38,.22);}
 </style>
 </head>
 <body>
@@ -135,6 +150,7 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
     <input type="file" id="fileImport" accept=".json" style="display:none">
     <a href="index.html" class="hd-btn">🏠 ホーム</a>
     <button class="hd-btn" id="btnLogin" onclick="openAuthModal()">🔑</button>
+    <button class="hd-btn sa-only" id="btnZaiClear" onclick="showZaiClearBar()" style="background:rgba(220,38,38,.25);border-color:rgba(220,38,38,.6);" title="現場の実績データを全クリア（スーパー管理者）">🗑️ 全クリア</button>
       <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
@@ -288,6 +304,16 @@ footer{text-align:center;color:var(--text3);font-size:11px;padding:20px;}
 
 <footer>資材管理アプリ　データはFirestoreに保存されます（現場別）。バックアップはJSON書き出しをご利用ください。</footer>
 
+<!-- 全クリア確認バー（スーパー管理者専用） -->
+<div id="zaiClearBar">
+  <div class="cb-msg">
+    <span id="zaiClearBarTitle"></span>
+    <small id="zaiClearBarDesc"></small>
+  </div>
+  <button class="cb-btn cb-cancel" onclick="hideZaiClearBar()">キャンセル</button>
+  <button class="cb-btn cb-exec" id="zaiClearExecBtn" onclick="execZaiClear()">🗑️ 削除実行</button>
+</div>
+
 <!-- ===== AUTH MODAL ===== -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-box">
@@ -358,6 +384,11 @@ function updateAuthUI(){
     status.textContent = '未ログイン（ゲスト）';
     btnLogin.textContent = '🔑 ログイン';
   }
+  // スーパー管理者専用ボタンの表示切替
+  document.querySelectorAll('.sa-only').forEach(function(el){
+    el.style.setProperty('display', _isAdmin ? 'block' : 'none', 'important');
+  });
+  if (!_isAdmin) hideZaiClearBar();
 }
 function openAuthModal(){
   if (_isLoggedIn){ doLogout(); return; }
@@ -1011,7 +1042,7 @@ document.getElementById('btnExportCsv').addEventListener('click', function(){
   var csv = '﻿'+lines.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='資材管理表_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+.toISOString().slice(0,10)+'.csv'; a.click();
 });
 
 document.getElementById('btnExportJson').addEventListener('click', function(){
@@ -1036,6 +1067,68 @@ document.getElementById('fileImport').addEventListener('change', function(e){
   };
   reader.readAsText(file);
 });
+
+// =====================================================================
+// 全クリア機能（スーパー管理者・現場別）
+// =====================================================================
+function showZaiClearBar(){
+  if (!_isAdmin) return;
+  if (!_currentSiteId){ alert('現場を選択してください。'); return; }
+  var siteName = _currentSiteName || _currentSiteId;
+  document.getElementById('zaiClearBarTitle').textContent = '⚠️ 現場「' + siteName + '」の実績データを全削除';
+  document.getElementById('zaiClearBarDesc').textContent =
+    '使用実績・入荷実績・発注実績を完全に削除します（資材マスタ・設定は残ります）。元に戻せません。';
+  document.getElementById('zaiClearBar').classList.add('open');
+}
+
+function hideZaiClearBar(){
+  var bar = document.getElementById('zaiClearBar');
+  if (bar) bar.classList.remove('open');
+}
+
+function deleteCollectionBySite(colName, siteId){
+  return _fbDb.collection(colName).where('siteId','==',siteId).get().then(function(snap){
+    if (snap.empty) return;
+    var refs = [];
+    snap.forEach(function(d){ refs.push(d.ref); });
+    var chunks = [];
+    for (var i=0; i<refs.length; i+=450) chunks.push(refs.slice(i,i+450));
+    return chunks.reduce(function(p, chunk){
+      return p.then(function(){
+        var b = _fbDb.batch();
+        chunk.forEach(function(ref){ b.delete(ref); });
+        return b.commit();
+      });
+    }, Promise.resolve());
+  });
+}
+
+function execZaiClear(){
+  if (!_isAdmin || !_currentSiteId) return;
+  var siteId = _currentSiteId;
+  var siteName = _currentSiteName || siteId;
+  var execBtn = document.getElementById('zaiClearExecBtn');
+  execBtn.disabled = true;
+  execBtn.textContent = '削除中…';
+  Promise.all([
+    deleteCollectionBySite('zaimatsu_usage', siteId),
+    deleteCollectionBySite('zaimatsu_receiving', siteId),
+    deleteCollectionBySite('zaimatsu_orders', siteId)
+  ]).then(function(){
+    hideZaiClearBar();
+    execBtn.disabled = false;
+    execBtn.textContent = '🗑️ 削除実行';
+    _data.usageEntries     = [];
+    _data.receivingEntries = [];
+    _data.orderEntries     = [];
+    renderAll();
+    alert('✅ 現場「' + siteName + '」の実績データを全件削除しました。');
+  }).catch(function(err){
+    execBtn.disabled = false;
+    execBtn.textContent = '🗑️ 削除実行';
+    alert('削除に失敗しました: ' + err.message);
+  });
+}
 
 // =====================================================================
 // renderAll
