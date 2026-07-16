@@ -6387,7 +6387,12 @@ function updateRbLabels(tid, typeConf) {
   const asDesc = _asLayers.map(function(a){ return getAsLayerName(a)+' t='+a.t+'mm'; }).join(' ／ ');
   const _noticeParts = [asDesc];
   if (_kariRmMm > 0) _noticeParts.push('<span style="color:#7dd3fc;">'+_rmLabel+' '+buildLayerCompactStr(t.kariRM_layers, t.rmH)+'</span>');
-  if (_kariRcMm > 0) _noticeParts.push('<span style="color:#86efac;">'+_rcLabel+' '+buildLayerCompactStr(t.kariRC_layers, t.rcH)+'</span>');
+  // cat='free' 路盤層チェック（再生クラッシャラン等）
+  var _nfRows = (t.kariRbLayers||[]).filter(function(r){return r.cat==='free'&&(r.t||0)>0&&(r.name||'').indexOf('鉄板')<0;});
+  var _nfRcMm = _nfRows.reduce(function(s,r){return s+(r.t||0);},0);
+  var _nfRcFromFree = _kariRcMm > 0 && _nfRcMm >= _kariRcMm - 1;
+  if (_kariRcMm > 0 && !_nfRcFromFree) _noticeParts.push('<span style="color:#86efac;">'+_rcLabel+' '+buildLayerCompactStr(t.kariRC_layers, t.rcH)+'</span>');
+  _nfRows.forEach(function(r){ _noticeParts.push('<span style="color:#86efac;">'+(r.name||'路盤材')+' '+r.t+'mm</span>'); });
   // 仮復旧モードの場合のみ notice を更新（本復旧モードは switchDynMode が管理する）
   if (!(typeof _dynCalcModes !== 'undefined' && _dynCalcModes[tid] === 'hon')) {
     const noticeEl = document.getElementById(tid+'-notice');
