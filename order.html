@@ -7032,7 +7032,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         <span style="font-size:14px;font-family:var(--mono);color:var(--text2);">
           AS:${((_asLayers||[]).reduce((s,a)=>s+(a.t||0),0))}mm
           ${_kariRmMm>0?' '+(_rmIsCustom?_rmLabel:'RM-'+rmS)+' '+buildLayerCompactStr(t.kariRM_layers,t.rmH):''}
-          ${_kariRcMm>0?' RC-'+rcS+' '+buildLayerCompactStr(t.kariRC_layers,t.rcH):''}
+          ${(function(){var _kfR=(t.kariRbLayers||[]).filter(function(r){return r.cat==='free'&&(r.t||0)>0&&(r.name||'').indexOf('鉄板')<0;});var _kfT=_kfR.reduce(function(s,r){return s+(r.t||0);},0);if(_kariRcMm>0&&_kfT>=_kariRcMm-1)return _kfR.map(function(r){return ' '+(r.name||'路盤材')+' '+r.t+'mm';}).join('');return _kariRcMm>0?' RC-'+rcS+' '+buildLayerCompactStr(t.kariRC_layers,t.rcH):'';})()}
           <span style="color:#a78bfa;font-weight:700;">＝${totalH}mm</span>
         </span>
       </div>
@@ -7059,13 +7059,16 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
           var pts=[];
           if((t.genkyoAsH||0)>0) pts.push('AS:'+Math.round((t.genkyoAsH||0)*1000)+'mm');
           if((t.genkyoRM||0)>0) pts.push('RM:'+Math.round((t.genkyoRM||0)*1000)+'mm');
-          if((t.genkyoRC||0)>0) pts.push('RC:'+Math.round((t.genkyoRC||0)*1000)+'mm');
-          if((t.genkyoCnRC||0)>0) pts.push('<span style=\'color:#fb923c;\'>CN間路盤:'+Math.round((t.genkyoCnRC||0)*1000)+'mm</span>');
-          if((t.genkyoCnH||0)>0) pts.push('CN:'+Math.round((t.genkyoCnH||0)*1000)+'mm');
-          // 通常モードのフリー路盤層（既設路盤・鉄板等）: honFreeRbRows または honRbLayers.cat=free から
+          // 通常モードのフリー路盤層を先に取得して genkyoRC の二重表示を防ぐ
           var _frb = ((t.honFreeRbRows||[]).length>0)
             ? t.honFreeRbRows
             : (t.honRbLayers||[]).filter(function(r){return r.cat==='free'||r.subcat==='subfree';});
+          var _frbFreeT = _frb.filter(function(r){return r.cat==='free'&&(r.t||0)>0;}).reduce(function(s,r){return s+(r.t||0);},0);
+          var _grcMm = Math.round((t.genkyoRC||0)*1000);
+          // free層が genkyoRC 全体をカバーしない場合のみ汎用 RC: を表示
+          if(_grcMm>0 && _frbFreeT < _grcMm-1) pts.push('RC:'+_grcMm+'mm');
+          if((t.genkyoCnRC||0)>0) pts.push('<span style=\'color:#fb923c;\'>CN間路盤:'+Math.round((t.genkyoCnRC||0)*1000)+'mm</span>');
+          if((t.genkyoCnH||0)>0) pts.push('CN:'+Math.round((t.genkyoCnH||0)*1000)+'mm');
           _frb.filter(function(r){return (r.t||0)>0;}).forEach(function(r){
             pts.push((r.name||'路盤材')+':'+r.t+'mm');
           });
