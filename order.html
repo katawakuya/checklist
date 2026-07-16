@@ -6902,6 +6902,8 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   const _honRmMm  = Math.round((t.genkyoRM||0)*1000);
   const _honRcMm  = Math.round((t.genkyoRC||0)*1000);
   const _rbDiff   = _kariRmMm !== _honRmMm || _kariRcMm !== _honRcMm;
+  // 路盤マスタからインポートした型は常にトグルを表示（組成が同じでも切替可能にする）
+  const _showToggle = kariHonDiffers(t) || !!t._fromRbMaster;
   const _rcLabel  = getRcLabel(rcS, _resolveLayersStr(t, 'kariRcLayers'));
   const _rmLabel  = getRmLabel(rmS, _resolveLayersStr(t, 'kariRmLayers'));
   const _rmIsCustom = !_isStdLayers(_resolveLayersStr(t, 'kariRmLayers'));
@@ -6939,11 +6941,11 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   <div class="notice" id="${tid}-notice">
     📐 <strong>${_noticeTitle} H=${totalH}mm</strong>：
     ${_noticeParts.join(' ／ ')}
-    ${kariHonDiffers(t) ? `<span style="display:inline-block;margin-left:8px;background:rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;">⚠️ 現況路盤は異なる</span>` : ''}
+    ${_showToggle ? `<span style="display:inline-block;margin-left:8px;background:rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;">⚠️ 現況路盤は異なる</span>` : ''}
   </div>
 
-  <!-- 仮復旧/本復旧 発注量計算モード切替（kariHonDiffers が true の型のみ表示） -->
-  ${kariHonDiffers(t) ? `
+  <!-- 仮復旧/本復旧 発注量計算モード切替 -->
+  ${_showToggle ? `
   <div class="calc-mode-toggle" id="${tid}-mode-toggle">
     <button id="${tid}-mode-btn-kari" class="mode-btn kari-active"
       onclick="switchDynMode('${tid}','kari')">
@@ -7006,7 +7008,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
           <span style="color:#a78bfa;font-weight:700;">＝${totalH}mm</span>
         </span>
       </div>
-      ${kariHonDiffers(t) ? `
+      ${_showToggle ? `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-size:14px;font-weight:700;color:#a78bfa;">🏗 現況・本復旧</span>
         <span style="font-size:14px;font-family:var(--mono);color:var(--text2);">
@@ -7154,13 +7156,13 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
 
   <!-- 路盤構成表示 -->
   <div class="card" id="${tid}-roadbed-card">
-    ${kariHonDiffers(t) ? `
+    ${_showToggle ? `
     <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:9px 14px;margin-bottom:12px;font-size:16px;font-weight:700;color:var(--red);">
       ⚠️ 仮復旧（路盤先行）と現況・本復旧で路盤構成が異なります。「現況廃材」入力は現況路盤構成を参照してください。
     </div>` : ''}
     <!-- 仮復旧 -->
     <div style="font-size:14px;font-weight:700;color:${_rbDiff?'var(--orange)':' #a78bfa'};letter-spacing:0.5px;margin-bottom:8px;">${_rbDiff?'🔧 仮復旧（路盤先行）構成':'🏗 路盤構成'}　H=${totalH}mm</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:16px;font-family:var(--mono);margin-bottom:${kariHonDiffers(t)?'12':'0'}px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:16px;font-family:var(--mono);margin-bottom:${_showToggle?'12':'0'}px;">
       ${(()=>{
         const _tack  = _asCoats.find(c=>c.role==='tack');
         const _prime = _asCoats.find(c=>c.role==='prime');
@@ -7196,8 +7198,8 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         <div style="color:#a78bfa;font-weight:700;">H = ${totalH}mm</div>
       </div>
     </div>
-    <!-- 現況・本復旧（差異あり型のみ表示） -->
-    ${kariHonDiffers(t) ? `
+    <!-- 現況・本復旧（差異あり型、またはマスタインポート型で表示） -->
+    ${_showToggle ? `
     <div style="border-top:2px solid rgba(124,58,237,0.4);padding-top:12px;margin-top:12px;">
       <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px;letter-spacing:0.5px;">🏗 現況・本復旧 路盤構成　H=${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)))*1000)}mm</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:16px;font-family:var(--mono);">
@@ -7497,9 +7499,17 @@ function switchDynMode(tid, mode) {
         ...(_effCnRcMm>0?['<span style="color:#fb923c;">CN間路盤 '+_effCnRcSubcat+' '+_effCnRcMm+'mm（別途発注）</span>']:[]),
         ..._honFrbNotice,
       ];
+      // 仮復旧と本復旧の構成が実際に異なる場合のみバッジを表示
+      var _tbakRM = t._kariBackup ? Math.round((t._kariBackup.rmH||0)*1000) : 0;
+      var _tbakRC = t._kariBackup ? Math.round((t._kariBackup.rcH||0)*1000) : 0;
+      var _tbakAS = t._kariBackup ? ((t._kariBackup.asT密粒||0)+(t._kariBackup.asT粗粒||0)) : 0;
+      var _thonRM = Math.round((t.genkyoRM||0)*1000);
+      var _thonRC = Math.round((t.genkyoRC||0)*1000);
+      var _thonAS = Math.round((t.genkyoAsH||0)*1000);
+      var _trulyDiffers = _tbakRM!==_thonRM||_tbakRC!==_thonRC||_tbakAS!==_thonAS||(t.genkyoCnH||0)>0||(t.genkyoCnRC||0)>0;
       noticeEl.innerHTML = '📐 <strong>現況・本復旧 路盤構成 H=' + effTH + 'mm</strong>：'
         + _honNoticeParts.join(' ／ ')
-        + ' <span style="display:inline-block;margin-left:8px;background:rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;">⚠️ 仮復旧路盤は異なる</span>';
+        + (_trulyDiffers ? ' <span style="display:inline-block;margin-left:8px;background:rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:700;padding:1px 7px;border-radius:4px;">⚠️ 仮復旧路盤は異なる</span>' : '');
       noticeEl.style.cssText = 'background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.4);border-radius:8px;padding:10px 14px;font-size:17px;color:#a78bfa;margin-bottom:12px;';
     } else {
       const _rmLbl = getRmLabel(rmS, _resolveLayersStr(eff, 'kariRmLayers'));
