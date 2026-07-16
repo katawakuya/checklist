@@ -3177,7 +3177,7 @@ function renderChips(containerId, result, typeKey) {
   }
   if (showRM && _honFrbChip.length === 0) html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
   if (_isHonFreeChip) html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:var(--orange);padding:4px 2px 2px;margin-top:2px;">再生砂・改良土</div>';
-  if (t.hasImprovedSoil) html += chip(getIsoilLabel(typeKey), fmt(result.isoilOrd), 'm³');
+  if (t.hasImprovedSoil || !!_dynUseIsoil[typeKey]) html += chip(getIsoilLabel(typeKey), fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
   { const _isoilLbl = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey]) ? getIsoilLabel(typeKey) : '改良土';
     html += chip(_isoilLbl + '＋再生砂', fmt(result.sandSoilSum), 'm³'); }
@@ -3388,7 +3388,7 @@ function renderTotal(typeKey) {
   if ((t.rmH||0) > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', true);
   // hon フリーモード: 再生砂・改良土 セクションヘッダーを挿入
   if (_isHonFree && totalWL > 0) html += sep('再生砂・改良土', 'rgba(249,115,22,0.5)');
-  if (t.hasImprovedSoil) html += add(getIsoilLabel(tid), s.isoilOrd, 'm³');
+  if (t.hasImprovedSoil || !!_dynUseIsoil[tid]) html += add(getIsoilLabel(tid), s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
   { const _isoilLbl2 = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
     html += add(_isoilLbl2 + '＋再生砂', s.sandSoilSum, 'm³'); }
@@ -6548,15 +6548,20 @@ function _rbMasterToTypeObj(m) {
     ? _kariFreeRowsArr.reduce(function(s,r){ return s + (r.t||0); }, 0) / 1000
     : 0;
   var _kariTotalH = (m.kariTotalH || 0) || _kariTotalHFromFree || _computedHonTotalH;
+  // その他フリー路盤層（cat='free'）を kariRcH に算入（鉄板を除く）
+  // roadbed.html で「路盤 再生クラッシャラン」等が cat='free' で登録されている場合に対応
+  var _kariFreeRcH = (m.kariRbLayers||[]).filter(function(r){
+    return r.cat==='free' && (r.t||0)>0 && (r.name||'').indexOf('鉄板')<0;
+  }).reduce(function(s,r){ return s+(r.t||0)/1000; }, 0);
   console.log('[rbMaster] key='+m.key+' kariFreeMode='+m.kariFreeMode+' _effectivelyFreeMode='+_effectivelyFreeMode
     +' kariFreeRows.len='+_kariFreeRowsArr.length+' _kariAsArr.len='+_kariAsArr.length
-    +' _kariRmH='+_kariRmH+' _kariTotalH='+_kariTotalH);
+    +' _kariRmH='+_kariRmH+' _kariTotalH='+_kariTotalH+' _kariFreeRcH='+_kariFreeRcH);
   return {
     key:        'type_import_' + m.key,
     label:      m.label || m.key,
     color:      m.color || '#7c3aed',
     rmH:        _kariRmH,
-    rcH:        m.kariRcH  || 0,
+    rcH:        (m.kariRcH  || 0) + _kariFreeRcH,
     rmSize:     (function(){ var sz=_sizeFromRbLayers(m.kariRbLayers, true); return sz||m.kariRmSize||40; })(),
     rcSize:     (function(){ var sz=_sizeFromRbLayers(m.kariRbLayers, false); return sz||m.kariRcSize||40; })(),
     asT密粒:    sumAS(_kariAsArr, ['surface']),
@@ -6567,7 +6572,7 @@ function _rbMasterToTypeObj(m) {
     // 明示値があればそれを使い、なければ kariTotalH >= 0.4 で車道判定（85型・40型相当）
     hasImprovedSoil: m.hasImprovedSoil != null ? !!m.hasImprovedSoil : (_kariTotalH >= 0.4),
     kariRmH:    _kariRmH,
-    kariRcH:    m.kariRcH  || 0,
+    kariRcH:    (m.kariRcH  || 0) + _kariFreeRcH,
     kariTotalH: _kariTotalH,
     honRmH:     m.honRmH   || 0,
     honRcH:     m.honRcH   || 0,
@@ -6637,7 +6642,12 @@ function _rbMasterToTypeObj(m) {
           return false;
         }).reduce(function(s,r){return s+(r.t||0);},0)/1000;
       }
-      return m.honRcH || 0;
+      // 非フリーモード: cat='free'（その他フリー路盤材）を RC として算入（鉄板を除く）
+      // roadbed.html で「路盤 再生クラッシャラン」等が cat='free' で登録されている場合に対応
+      var _honFreeRcH = (m.honRbLayers||[]).filter(function(r){
+        return r.cat==='free' && (r.t||0)>0 && (r.name||'').indexOf('鉄板')<0;
+      }).reduce(function(s,r){ return s+(r.t||0)/1000; }, 0);
+      return (m.honRcH || 0) + _honFreeRcH;
     })(),
     genkyoCnH: (function(){
       if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
@@ -7378,7 +7388,12 @@ function toggleDynIsoil(tid, checked, typeConf) {
     _im[tid] = checked;
     localStorage.setItem('order_dyn_isoil', JSON.stringify(_im));
   } catch(e) {}
-  renderDynTotal(tid, typeConf || TYPES[tid]);
+  // 全パターンチップも再描画（改良土ルール変更を即反映）
+  if (typeof _typeUpdateFns[tid] === 'function') {
+    _typeUpdateFns[tid]();
+  } else {
+    renderDynTotal(tid, typeConf || TYPES[tid]);
+  }
 }
 
 // =====================================================================
@@ -7416,7 +7431,8 @@ function switchDynMode(tid, mode) {
           ? _sumHonAsRole(t.honAsLayers, ['base', 'other'])
           : Math.max(0, Math.round((t.genkyoAsH || 0) * 1000) - honSurfaceT));
     // honFreeRbRows（鉄板・既設路盤等）も totalH に含める
-    const _honFrbH  = (t.honFreeRbRows||[]).reduce((s,r)=>(r.t||0)>0?s+(r.t||0)/1000:s, 0);
+    // ただし cat='free' 層は genkyoRC に算入済みのため二重計上を防ぐ
+    const _honFrbH  = (t.honFreeRbRows||[]).filter(r=>(r.cat||'')!=='free').reduce((s,r)=>(r.t||0)>0?s+(r.t||0)/1000:s, 0);
     const honTotalH = (t.genkyoAsH || 0) + (t.genkyoRM || 0) + (t.genkyoRC || 0) + (t.genkyoCnRC || 0) + (t.genkyoCnH || 0) + _honFrbH;
     t.asT密粒 = honSurfaceT;
     t.asT粗粒 = honBaseT;
@@ -7631,7 +7647,8 @@ function renderDynTotal(tid, typeConf) {
   const kariCnWasteVol = _kariCnH * kariHaibanWL;           // m³ 仮復旧コンクリート廃材
   const kariCnWasteT   = kariCnWasteVol * CONCRETE_DENSITY;  // t
   // honFreeRbRows（既設路盤等、鉄板除く）廃材量
-  const _honFrbWasteRows = (typeConf.honFreeRbRows||[]).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板');
+  // cat='free' 層は genkyoRC に算入済みのため廃材二重計上を防ぐ
+  const _honFrbWasteRows = (typeConf.honFreeRbRows||[]).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板' && (r.cat||'') !== 'free');
   const _dynModeNow   = _dynCalcModes[tid] || 'kari';
   // 現況廃材面積の自動決定：
   //   genWL入力あり → そのまま genWL を使用（従来通り）
@@ -7756,7 +7773,7 @@ function renderDynTotal(tid, typeConf) {
   }
   if (_effRmH > 0 && _honFrbDisp.length === 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
   { const _isoilLbl3 = ((_effT2 && _effT2.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
-    if (_effT2.hasImprovedSoil) html += add(_isoilLbl3, s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
+    if (_effT2.hasImprovedSoil || !!_dynUseIsoil[tid]) html += add(_isoilLbl3, s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
     html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
     html += add(_isoilLbl3 + '＋再生砂', s.sandSoilSum, 'm³', 'var(--orange)'); }
 
