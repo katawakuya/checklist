@@ -1041,8 +1041,7 @@ document.getElementById('btnExportCsv').addEventListener('click', function(){
   });
   var csv = '﻿'+lines.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-.toISOString().slice(0,10)+'.csv'; a.click();
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='資材管理表_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 });
 
 document.getElementById('btnExportJson').addEventListener('click', function(){
