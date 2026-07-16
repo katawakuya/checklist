@@ -7166,7 +7166,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
 
   <!-- 路盤構成表示 -->
   <div class="card" id="${tid}-roadbed-card">
-    ${_showToggle ? `
+    ${_rbDiff ? `
     <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:9px 14px;margin-bottom:12px;font-size:16px;font-weight:700;color:var(--red);">
       ⚠️ 仮復旧（路盤先行）と現況・本復旧で路盤構成が異なります。「現況廃材」入力は現況路盤構成を参照してください。
     </div>` : ''}
@@ -7248,8 +7248,13 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
             }).filter(Boolean).join('');
           } else {
             // フォールバック（honFreeRows なし）
+            // cat='free' 層が genkyoRC を全て賄う場合は汎用 RC-40 カードを省略
+            // （下の _frbArr セクションで正しい名称を表示する）
+            var _honFrbRcMm = (t.honFreeRbRows||[]).filter(function(r){return r.cat==='free'&&(r.t||0)>0;}).reduce(function(s,r){return s+(r.t||0);}, 0);
+            var _genkyoRCMm  = Math.round((t.genkyoRC||0)*1000);
+            var _rcFromFree  = _honFrbRcMm >= _genkyoRCMm - 1 && _genkyoRCMm > 0;
             if ((t.genkyoRM||0)>0) _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">上層路盤 RM-'+rmS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRM_layers,t.genkyoRM)+'</div></div>';
-            if ((t.genkyoRC||0)>0) _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 RC-'+rcS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
+            if ((t.genkyoRC||0)>0 && !_rcFromFree) _out += '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤 RC-'+rcS+'</div><div style="color:var(--green);font-weight:700;">'+buildLayerStr(t.honRC_layers,t.genkyoRC)+'</div></div>';
             if ((t.genkyoCnH||0)>0) _out += '<div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">コンクリート層</div><div style="color:#f97316;font-weight:700;">t = '+Math.round((t.genkyoCnH||0)*1000)+'mm</div></div>';
             if ((t.genkyoCnRC||0)>0) _out += '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.5);border-radius:8px;padding:10px 14px;"><div style="color:var(--text2);font-size:14px;margin-bottom:4px;">CN間路盤材 '+(t.genkyoCnRCSubcat||'RC-40')+'</div><div style="color:#fb923c;font-weight:700;">'+Math.round((t.genkyoCnRC||0)*1000)+'mm</div><div style="color:var(--text3);font-size:13px;margin-top:3px;">★ 別途発注</div></div>';
           }
@@ -7265,7 +7270,7 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         })()}
         <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;">
           <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">路盤合計H（現況）</div>
-          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)+((t.honFreeRbRows||[]).reduce(function(s,r){return s+(r.t||0)/1000;},0))))*1000)}mm</div>
+          <div style="color:#a78bfa;font-weight:700;">H = ${Math.round(((t.genkyoTotalH||0)||((t.genkyoAsH||0)+(t.genkyoRM||0)+(t.genkyoRC||0)+(t.genkyoCnRC||0)+(t.genkyoCnH||0)+((t.honFreeRbRows||[]).filter(function(r){return (r.cat||'')!=='free';}).reduce(function(s,r){return s+(r.t||0)/1000;},0))))*1000)}mm</div>
         </div>
       </div>
     </div>` : ''}
