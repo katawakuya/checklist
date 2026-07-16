@@ -6293,15 +6293,22 @@ function genRbRmCardsHTML(t, rmS, rcS) {
   const _rcLabel  = getRcLabel(_rcS, _rcLayersStr);
   const _rmIsCustom = !_isStdLayers(_rmLayersStr);
   const _rcIsCustom = !_isStdLayers(_rcLayersStr);
+  // cat='free' 路盤層チェック: kariRbLayers から（鉄板除く）
+  var _kariFreeRows = (_bk.kariRbLayers || t.kariRbLayers || []).filter(function(r){
+    return r.cat==='free' && (r.t||0)>0 && (r.name||'').indexOf('鉄板')<0;
+  });
+  var _kariFreeRcMm = _kariFreeRows.reduce(function(s,r){return s+(r.t||0);}, 0);
+  // free層が rcH を全て賄う場合は汎用 RC-XX カードを省略（下でカスタム名称を表示）
+  var _rcFromFreeKari = _kariRcMm > 0 && _kariFreeRcMm >= _kariRcMm - 1;
   return (
     ((t.rmH||0) > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">上層路盤工 RM-${_rmS}</div>
       <div style="color:var(--green);font-weight:700;">${_rmIsCustom ? 't = 0mm' : buildLayerStr(_bk.kariRM_layers || t.kariRM_layers, _rmH)}</div>
     </div>` : '') +
-    `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
+    (!_rcFromFreeKari && _kariRcMm > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">下層路盤工 RC-${_rcS}</div>
       <div style="color:var(--green);font-weight:700;">${_rcIsCustom ? 't = 0mm' : buildLayerStr(_bk.kariRC_layers || t.kariRC_layers, _rcH)}</div>
-    </div>` +
+    </div>` : '') +
     (_rmIsCustom && _kariRmMm > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">その他路盤構成（${_rmLabel}）</div>
       <div style="color:var(--green);font-weight:700;">t = ${_kariRmMm}mm</div>
@@ -6309,7 +6316,13 @@ function genRbRmCardsHTML(t, rmS, rcS) {
     (_rcIsCustom && _kariRcMm > 0 ? `<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">
       <div style="color:var(--text2);font-size:14px;margin-bottom:4px;">その他路盤構成（${_rcLabel}）</div>
       <div style="color:var(--green);font-weight:700;">t = ${_kariRcMm}mm</div>
-    </div>` : '')
+    </div>` : '') +
+    // cat='free' 路盤層をカスタム名称で表示（再生クラッシャラン等）
+    _kariFreeRows.map(function(r){
+      return '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;">'
+        +'<div style="color:var(--text2);font-size:14px;margin-bottom:4px;">'+(r.name||'路盤材')+'</div>'
+        +'<div style="color:var(--green);font-weight:700;">t = '+r.t+'mm</div></div>';
+    }).join('')
   );
 }
 
