@@ -6867,6 +6867,15 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       })(siteId, tabId);
     }, 0);
   });
+
+  // タブ生成完了後、図面ダイアログが開いていたら適用ボタンを再描画
+  // （Firestore読み込み前に開かれた場合のタイミングバグ対策）
+  setTimeout(function() {
+    if (_currentDiagType &&
+        document.getElementById('diagramOverlay')?.style.display !== 'none') {
+      try { renderDiagTypeUI(_currentDiagType); } catch(e) {}
+    }
+  }, 50);
 }
 
 function setTodayDate(id) {
@@ -8734,13 +8743,15 @@ function renderDiagTypeUI(typeKey) {
     const targetId = `${applyTypeKey}${p.id}-DP`;
     const targetExists = !!document.getElementById(targetId) ||
                          !!document.getElementById(`${applyTypeKey}${p.id}-DP1`);
-    const dimStyle = targetExists ? '' : 'opacity:0.4;cursor:not-allowed;';
-    const clickFn  = targetExists
-      ? `applyMasterValues('${applyTypeKey}','${p.id}')`
-      : `alert('このパターンは現在の計算タブにありません')`;
+    if (!targetExists) continue; // タブ未生成のパターンはスキップ
     html += `<button class="btn btn-primary"
-      style="font-size:16px;padding:9px 14px;justify-content:flex-start;${dimStyle}"
-      onclick="${clickFn}">▶ ${p.label}に適用</button>`;
+      style="font-size:16px;padding:9px 14px;justify-content:flex-start;"
+      onclick="applyMasterValues('${applyTypeKey}','${p.id}')">▶ ${p.label}に適用</button>`;
+  }
+  if (!html) {
+    // タブがまだ生成されていない場合（Firestore読み込み中など）
+    html = '<div style="color:var(--text3);font-size:12px;padding:4px 2px;line-height:1.6;">'
+         + '計算シートで現場を選択すると<br>DPをパターンに適用できます</div>';
   }
   document.getElementById('diag-applyBtns').innerHTML = html;
 }
