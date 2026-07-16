@@ -2771,4 +2771,16 @@ function showWarningBanner(msg, focusId) {
       if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
     }
   }, { passive: false });
-  document.addEventListener('DOMCo
+  document.addEventListener('DOMContentLoaded', function() {
+    var b = document.createElement('button');
+    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
+    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(b);
+    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
+    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
+  });
+})();
+
+</script>
+</body>
+</html>
