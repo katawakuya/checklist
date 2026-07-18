@@ -1525,8 +1525,8 @@ var _CK_RB_LABEL_OVERRIDES = {
 
 // 最低限の路盤マスタデフォルト（Firestoreに未登録の場合のフォールバック）
 var _CK_RB_DEFAULTS = [
-  { key:'rm_odawara_no5',    kariRmLayers:'既設路盤', kariRmH:0.3,  kariRcH:0,    kariTotalH:0.5 },
-  { key:'rm_odawara_no1to4', kariRmLayers:'t=250mm',  kariRmH:0.25, kariRcH:0.15, kariTotalH:0.5 },
+  { key:'rm_odawara_no5',    kariRmLayers:'既設路盤', kariRmH:0.3,  kariRcH:0,    kariTotalH:0.5, ckType:'85' },
+  { key:'rm_odawara_no1to4', kariRmLayers:'t=250mm',  kariRmH:0.25, kariRcH:0.15, kariTotalH:0.5, ckType:'85' },
 ];
 
 /**
@@ -2650,7 +2650,9 @@ function buildTypeSelect(siteId){
       var _rbMastersPri = _rbRawPri ? JSON.parse(_rbRawPri) : null;
       if(_rbMastersPri && _rbMastersPri.length){
         types = _rbMastersPri.map(function(m){
-          return { key: m.key||m.label, name: m.label||m.key };
+          // ckType: 保存値 → キーにodawaraを含む場合は'85' → フォールバック
+          var inferredCk = m.ckType || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '');
+          return { key: m.key||m.label, name: m.label||m.key, ckType: inferredCk };
         });
       }
     }catch(e){}
@@ -2697,7 +2699,8 @@ function buildTypeSelect(siteId){
       }
       if(_rbMasters && _rbMasters.length){
         types = _rbMasters.map(function(m){
-          return { key: m.key||m.label, name: m.label||m.key };
+          var inferredCk = m.ckType || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '');
+          return { key: m.key||m.label, name: m.label||m.key, ckType: inferredCk };
         });
       }
     }catch(e){}
@@ -2713,8 +2716,8 @@ function buildTypeSelect(siteId){
   }
   types.forEach(function(t){
     var o = document.createElement('option');
-    // TYPE_CHECKLISTSの対応キーを推定
-    var ck = resolveTypeKey(t.key||t.name);
+    // TYPE_CHECKLISTSの対応キー: 明示的ckType → resolveTypeKey推定
+    var ck = t.ckType || resolveTypeKey(t.key||t.name);
     // value: 「ckKey|presetOrigKey|labelName」の3パート構成
     // → getPresetTypeDataでpresetOrigKeyを使ってプリセット型を正確に取得
     var origKey = t.key || t.name || '';
@@ -2752,11 +2755,16 @@ function onTypeChange(silent){
   // 型変更時に旗揚げ番号を維持するため、変更前の値を退避
   var _savedHataVal = !silent ? ($v('hataInput') || '').trim() : '';
   if(!silent){ _checks={}; _naItems={}; _subChecks={}; restoreState(); }
-  // 小田原型自動検出：型キー/型名に「odawara」「小田原」が含まれる場合は自動ON
+  // 小田原型自動検出：型キー/型名/現場名に「odawara」「小田原」が含まれる場合は自動ON
   (function(){
     var selEl = document.getElementById('selType');
     var optText = (selEl && selEl.options[selEl.selectedIndex]) ? (selEl.options[selEl.selectedIndex].textContent || '') : '';
-    var isOdawara = val.toLowerCase().indexOf('odawara') >= 0 || _typeKey.toLowerCase().indexOf('odawara') >= 0 || optText.indexOf('小田原') >= 0;
+    var siteObj = _sites.find(function(s){ return s.id === _siteId; });
+    var siteName = siteObj ? (siteObj.name || '') : '';
+    var isOdawara = val.toLowerCase().indexOf('odawara') >= 0
+                 || _typeKey.toLowerCase().indexOf('odawara') >= 0
+                 || optText.indexOf('小田原') >= 0
+                 || siteName.indexOf('小田原') >= 0;
     _showOdawara = isOdawara;
     var odaChk = document.getElementById('chkOdawaraGlobal');
     if(odaChk) odaChk.checked = _showOdawara;

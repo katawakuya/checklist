@@ -253,6 +253,17 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
             <input type="color" id="rbColor" value="#4f8ef7" style="height:38px;padding:2px 4px;">
           </div>
         </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>チェックリスト型（写真管理項目の種別）</label>
+          <select id="rbCkType" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:15px;">
+            <option value="">自動判定（構成名から推定）</option>
+            <option value="85">車道部 85型</option>
+            <option value="40">車道 40型</option>
+            <option value="30">歩道切下 30型</option>
+            <option value="20">歩道 20型</option>
+            <option value="14">歩道 14型</option>
+          </select>
+        </div>
 
         <div class="tab-bar">
           <button id="tabKari" class="active" onclick="switchTab('kari')">仮復旧</button>
@@ -1070,6 +1081,7 @@ function saveConfig(){
   const label=document.getElementById('rbLabel').value.trim();
   if(!label){showToast('⚠️ 構成名を入力してください');return;}
   const color=document.getElementById('rbColor').value;
+  const ckType=document.getElementById('rbCkType').value;
   const editKey=document.getElementById('editKey').value;
 
   const asFilter=arr=>arr.filter(a=>a.preset||a.custom||a.t>0).map(a=>({name:a.preset==='その他（自由入力）'?a.custom:a.preset,t:+a.t}));
@@ -1088,7 +1100,7 @@ function saveConfig(){
   const honRbT =_honFreeMode?0:_honRbRows.reduce((s,r)=>s+rbRowTotal(r),0);
 
   const entry={
-    key:editKey||('rb_'+Date.now()),label,color,
+    key:editKey||('rb_'+Date.now()),label,color,ckType:ckType||undefined,
     kariAsLayers:asFilter(_kariAsRows),kariRbLayers:rbToLayers(_kariRbRows),
     kariRmSize:firstSize(_kariRbRows,isRmCat),kariRmH:sumCat(_kariRbRows,isRmCat)/1000,kariRmLayers:layerStr(_kariRbRows,isRmCat),
     kariRcSize:firstSize(_kariRbRows,isRcCat),kariRcH:sumCat(_kariRbRows,isRcCat)/1000,kariRcLayers:layerStr(_kariRbRows,isRcCat),
@@ -1132,6 +1144,7 @@ function _loadConfigToForm(r){
   document.getElementById('editKey').value=r.key;
   document.getElementById('rbLabel').value=r.label||'';
   document.getElementById('rbColor').value=r.color||'#4f8ef7';
+  document.getElementById('rbCkType').value=r.ckType||'';
   _kariFreeMode=!!r.kariFreeMode;
   _honFreeMode =!!r.honFreeMode;
   _kariFreeRows=_kariFreeMode?(r.kariFreeRows||[]).map(x=>({type:x.type||'surface',subcat:x.subcat||'',preset:x.preset||'',name:x.name||'',t:x.t||0})):[];
