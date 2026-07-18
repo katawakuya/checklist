@@ -590,9 +590,10 @@ function saveSiteSel() {
 function updateGreeting() {
   var now   = new Date();
   var h     = now.getHours();
-  var greet = h < 10 ? 'おはようございます ☀️'
-            : h < 17 ? 'お疲れ様です 👷'
-            : 'お疲れ様でした 🌙';
+  var greet = (h >= 22 || h < 5)  ? '夜勤お疲れ様です 🌙'
+            : h < 10               ? 'おはようございます ☀️'
+            : h < 17               ? 'お疲れ様です 👷'
+            :                        'お疲れ様でした 🌆';
   var wdays = ['日','月','火','水','木','金','土'];
   var date  = now.getFullYear() + '年'
             + (now.getMonth()+1) + '月'

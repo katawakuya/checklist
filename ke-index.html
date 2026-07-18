@@ -210,6 +210,12 @@ body{
       <div class="card-desc">連絡先の確認・編集</div>
     </a>
 
+    <a class="app-card card-orange" href="ke-qr.html">
+      <div class="card-icon">📲</div>
+      <div class="card-name">QRコード生成</div>
+      <div class="card-desc">各画面のQRを作成</div>
+    </a>
+
     <div class="app-card card-gray" style="cursor:default;">
       <div class="badge-soon">近日公開</div>
       <div class="card-icon">📋</div>
@@ -260,7 +266,9 @@ function forceReload(){
 (function(){
   var now  = new Date();
   var h    = now.getHours();
-  var greet= h < 10 ? 'おはようございます' : h < 17 ? 'お疲れ様です' : 'お疲れ様でした';
+  var greet = h < 10 ? 'おはようございます ☀️'
+            : h < 17 ? 'お疲れ様です 👷'
+            :           'お疲れ様でした 🌆';
   var wdays = ['日','月','火','水','木','金','土'];
   var date  = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日（'+wdays[now.getDay()]+'）';
   document.getElementById('greetMsg').textContent  = greet;

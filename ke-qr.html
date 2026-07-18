@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>QRコード生成 - 型枠事業</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#1a0a0a;
+  --bg2:#2c1010;
+  --bg3:#3d1515;
+  --red:#ef5350;
+  --red2:#c62828;
+  --red3:#7f0000;
+  --orange:#ff7043;
+  --orange-dim:rgba(255,112,67,0.15);
+  --red-dim:rgba(239,83,80,0.12);
+  --text:#f5e6e6;
+  --text2:#c49898;
+  --border:rgba(255,255,255,0.08);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;
+  min-height:100vh;
+}
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,#7f0000 0%,#c62828 60%,#d84315 100%);
+  padding:14px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 3px 12px rgba(127,0,0,.5);
+  position:sticky;top:0;z-index:100;
+}
+.header-left h1{font-size:16px;font-weight:800;color:#fff;}
+.header-left .sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;}
+.btn-back{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:8px;padding:7px 14px;
+  font-size:13px;cursor:pointer;font-weight:700;text-decoration:none;
+  white-space:nowrap;
+}
+.btn-back:active{background:rgba(255,255,255,.22);}
+
+/* ── MAIN ── */
+.main{max-width:960px;margin:0 auto;padding:18px 14px 40px;}
+
+/* ── CONTROLS ── */
+.controls{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;
+  margin-bottom:18px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;
+}
+.ctrl-group{display:flex;flex-direction:column;gap:5px;}
+.ctrl-group label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;}
+select,input[type="url"]{
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;
+  outline:none;min-width:220px;
+}
+select:focus,input[type="url"]:focus{border-color:var(--red);}
+.btn{
+  padding:9px 16px;border-radius:8px;border:none;
+  font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.btn-gen{background:var(--red2);color:#fff;}
+.btn-gen:active{background:var(--red3);}
+.btn-print{
+  background:rgba(255,112,67,.15);border:1px solid rgba(255,112,67,.35);
+  color:var(--orange);
+}
+.btn-print:active{background:rgba(255,112,67,.25);}
+
+/* ── APP TOGGLE ── */
+.app-selector{
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;
+}
+.app-selector-label{
+  font-size:11px;color:var(--text2);font-weight:700;
+  display:flex;align-items:center;white-space:nowrap;
+}
+.app-toggle{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);border-radius:8px;padding:6px 14px;
+  font-size:13px;cursor:pointer;user-select:none;
+  transition:all 0.15s;
+}
+.app-toggle.on{
+  background:var(--red-dim);border-color:var(--red);color:var(--red);font-weight:700;
+}
+
+/* ── QR GRID ── */
+.qr-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:16px;
+}
+.qr-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  text-align:center;
+}
+.qr-card .site-name{
+  font-size:13px;font-weight:800;color:var(--red);
+  word-break:break-all;
+}
+.qr-card .app-label{
+  font-size:11px;color:var(--text2);
+  background:var(--bg3);padding:2px 8px;border-radius:10px;
+}
+.qr-wrap{background:#fff;padding:8px;border-radius:8px;display:inline-block;}
+.qr-url{font-size:10px;color:var(--text2);word-break:break-all;max-width:180px;line-height:1.4;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px;color:var(--text2);line-height:1.8;}
+.empty .e-icon{font-size:40px;margin-bottom:10px;}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#2c1010;border:1px solid rgba(239,83,80,.3);
+  color:var(--text);padding:10px 22px;border-radius:22px;
+  font-size:13px;transition:transform 0.28s;pointer-events:none;z-index:999;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── PRINT ── */
+@media print{
+  body{background:#fff !important;color:#000 !important;}
+  .header,.controls,.app-selector,.no-print{display:none !important;}
+  .main{padding:0;}
+  .qr-card{
+    background:#fff !important;border:1px solid #ccc !important;color:#000 !important;
+    break-inside:avoid;
+  }
+  .site-name{color:#7f0000 !important;}
+  .app-label{color:#666 !important;background:#f0f0f0 !important;}
+  .qr-url{color:#666 !important;}
+  .qr-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>📲 QRコード生成</h1>
+    <div class="sub">型枠事業　各画面のQRコードを作成</div>
+  </div>
+  <a href="ke-index.html" class="btn-back no-print">🏠 ホームへ</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- コントロール -->
+  <div class="controls no-print">
+    <div class="ctrl-group">
+      <label>ベースURL</label>
+      <input type="url" id="baseUrl" placeholder="https://xxx.github.io/checklist">
+    </div>
+    <div class="ctrl-group">
+      <label>現場絞り込み</label>
+      <select id="siteFilter" onchange="generate()">
+        <option value="">すべての現場</option>
+      </select>
+    </div>
+    <button class="btn btn-gen" onclick="generate()">🔄 生成</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+  </div>
+
+  <!-- アプリ選択トグル -->
+  <div class="app-selector no-print" id="appSelector">
+    <span class="app-selector-label">表示するアプリ：</span>
+  </div>
+
+  <!-- QR グリッド -->
+  <div id="qrGrid" class="qr-grid"></div>
+  <div id="qrEmpty" class="empty" style="display:none;">
+    <div class="e-icon">📲</div>
+    ベースURLを入力して「生成」ボタンを押してください<br>
+    <small>例: https://katawakuya.github.io/checklist</small>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── アプリ定義 ─────────────────────────────────────────
+var APPS = [
+  { key: 'ke-home',     name: '🏠 ホーム',         file: 'ke-index.html',    siteParam: false },
+  { key: 'ke-launcher', name: '📞 緊急連絡ランチャー', file: 'ke-launcher.html', siteParam: true  },
+];
+var _enabledApps = new Set(APPS.map(function(a){ return a.key; }));
+var _sites = [];
+
+// ── 初期化 ────────────────────────────────────────────
+window.addEventListener('load', function(){
+  // ベースURL自動設定
+  if (location.protocol !== 'file:') {
+    document.getElementById('baseUrl').value =
+      location.origin + location.pathname.replace(/\/[^/]*$/, '');
+  }
+
+  // ke_sites を読み込む
+  loadKeSites();
+
+  // アプリ選択ボタン構築
+  buildAppSelector();
+
+  // 初期生成
+  generate();
+});
+
+// ── ke_sites 読み込み ─────────────────────────────────
+function loadKeSites(){
+  try {
+    var raw = localStorage.getItem('ke_sites');
+    if (raw) {
+      _sites = JSON.parse(raw);
+    }
+
+    // 旧形式 ke_config からの移行
+    if (!_sites || !_sites.length) {
+      var oldRaw = localStorage.getItem('ke_config');
+      if (oldRaw) {
+        var old = JSON.parse(oldRaw);
+        var label = old.siteName || '既存現場';
+        _sites = [{ id: 'default', label: label, sections: old.sections || [] }];
+      }
+    }
+  } catch(e) {}
+  _sites = _sites || [];
+
+  // 現場セレクタを更新
+  var sel = document.getElementById('siteFilter');
+  sel.innerHTML = '<option value="">すべての現場</option>';
+  _sites.forEach(function(s) {
+    var o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.label || s.id;
+    sel.appendChild(o);
+  });
+}
+
+// ── アプリ選択ボタン ──────────────────────────────────
+function buildAppSelector(){
+  var div = document.getElementById('appSelector');
+  APPS.forEach(function(app) {
+    var btn = document.createElement('button');
+    btn.className = 'app-toggle on';
+    btn.textContent = app.name;
+    btn.dataset.key = app.key;
+    btn.onclick = function(){
+      if (_enabledApps.has(app.key)) {
+        _enabledApps.delete(app.key);
+        btn.classList.remove('on');
+      } else {
+        _enabledApps.add(app.key);
+        btn.classList.add('on');
+      }
+      generate();
+    };
+    div.appendChild(btn);
+  });
+}
+
+// ── QR 生成 ──────────────────────────────────────────
+function generate(){
+  var base = (document.getElementById('baseUrl').value || '').replace(/\/$/, '');
+  var siteFilter = document.getElementById('siteFilter').value;
+  var grid = document.getElementById('qrGrid');
+  var empty = document.getElementById('qrEmpty');
+  grid.innerHTML = '';
+
+  if (!base) {
+    empty.style.display = '';
+    grid.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.style.display = '';
+
+  // 対象現場
+  var sites = siteFilter
+    ? _sites.filter(function(s){ return s.id === siteFilter; })
+    : _sites;
+
+  // 有効アプリ
+  var apps = APPS.filter(function(a){ return _enabledApps.has(a.key); });
+
+  // 現場不要アプリ（siteParam:false）
+  var noSiteApps = apps.filter(function(a){ return !a.siteParam; });
+  if (!siteFilter) {
+    noSiteApps.forEach(function(app) {
+      addQrCard(grid, '共通', app.name, base + '/' + app.file);
+    });
+  }
+
+  // 現場×アプリ
+  if (sites.length) {
+    sites.forEach(function(s) {
+      var siteName = s.label || s.id;
+      apps.forEach(function(app) {
+        if (!app.siteParam) return;
+        var url = base + '/' + app.file + '?site=' + encodeURIComponent(s.id);
+        addQrCard(grid, siteName, app.name, url);
+      });
+    });
+  } else {
+    // 現場データがない場合でも siteParam:true アプリをサンプル表示
+    var siteApps = apps.filter(function(a){ return a.siteParam; });
+    if (siteApps.length) {
+      siteApps.forEach(function(app) {
+        var url = base + '/' + app.file;
+        addQrCard(grid, '（現場未設定）', app.name, url);
+      });
+    }
+  }
+
+  if (!grid.children.length) {
+    empty.style.display = '';
+    grid.style.display = 'none';
+  }
+}
+
+function addQrCard(container, siteName, appName, url){
+  var card = document.createElement('div');
+  card.className = 'qr-card';
+
+  var siteEl = document.createElement('div');
+  siteEl.className = 'site-name';
+  siteEl.textContent = siteName;
+
+  var appEl = document.createElement('div');
+  appEl.className = 'app-label';
+  appEl.textContent = appName;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'qr-wrap';
+
+  var urlEl = document.createElement('div');
+  urlEl.className = 'qr-url';
+  urlEl.textContent = url;
+
+  card.appendChild(siteEl);
+  card.appendChild(appEl);
+  card.appendChild(wrap);
+  card.appendChild(urlEl);
+  container.appendChild(card);
+
+  try {
+    new QRCode(wrap, {
+      text: url,
+      width: 160, height: 160,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    wrap.textContent = url;
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+</script>
+</body>
+</html>
