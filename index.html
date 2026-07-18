@@ -319,17 +319,30 @@ body{
     <div class="sec-label">🗂 アプリ一覧</div>
     <div class="app-grid">
 
-      <a class="app-card card-emergency" href="heatstroke.html">
+      <!-- 現場別 熱中症緊急連絡（案A: アクティブ現場を自動表示） -->
+      <a class="app-card card-emergency" id="hsCard" onclick="openHsCard();return false;" href="heatstroke.html">
         <div class="card-inner">
           <div class="card-icon">🚑</div>
           <div class="card-texts">
             <div class="card-name">熱中症　緊急連絡</div>
-            <div class="card-desc">タップで即発信・応急処置・連絡組織図</div>
+            <div class="card-desc" id="hsCardDesc">タップで即発信・応急処置・連絡組織図</div>
           </div>
         </div>
       </a>
 
-      <a class="app-card card-emergency" href="heatstroke-settings.html" style="opacity:.85;">
+      <!-- 型枠事業　緊急連絡ランチャー（誰でも利用可） -->
+      <a class="app-card card-emergency" href="ke-launcher.html">
+        <div class="card-inner">
+          <div class="card-icon">🔧</div>
+          <div class="card-texts">
+            <div class="card-name">型枠事業　緊急連絡</div>
+            <div class="card-desc">社内・業者・病院・行政への緊急連絡</div>
+          </div>
+        </div>
+      </a>
+
+      <!-- 緊急連絡設定（スーパー管理者専用） -->
+      <a class="app-card card-emergency admin-only" onclick="openHsSettings();return false;" href="heatstroke-settings.html" style="opacity:.85;">
         <div class="card-inner">
           <div class="card-icon">🛠</div>
           <div class="card-texts">
@@ -453,6 +466,7 @@ _fbAuth.onAuthStateChanged(function(user) {
     document.querySelectorAll('.admin-only').forEach(function(el) {
       if (_isAdmin) el.classList.add('show'); else el.classList.remove('show');
     });
+    updateHsCard();
     loadData();
   } else {
     document.getElementById('btnAuth').style.display = 'none';
@@ -560,6 +574,31 @@ function populateSites(sites) {
 function saveSiteSel() {
   var v = document.getElementById('siteSelect').value;
   if (v) localStorage.setItem('_launcher_site', v);
+}
+
+// ── 緊急連絡カード（案A: hs_active を読んでアクティブ現場を表示） ──────
+function updateHsCard() {
+  try {
+    var sites    = JSON.parse(localStorage.getItem('hs_sites') || '[]');
+    var activeId = localStorage.getItem('hs_active');
+    var found    = activeId ? sites.find(function(s){ return s.id === activeId; }) : null;
+    if (!found && sites.length) found = sites[0];
+    var descEl = document.getElementById('hsCardDesc');
+    if (found && descEl) {
+      var label = found.label || found.siteName || '現場';
+      descEl.textContent = '🏗 ' + label + ' の緊急連絡先';
+    }
+  } catch(e) {}
+}
+
+function openHsCard() {
+  var activeId = localStorage.getItem('hs_active') || '';
+  var url = 'heatstroke.html?v=' + Date.now() + (activeId ? '&site=' + encodeURIComponent(activeId) : '');
+  location.href = url;
+}
+
+function openHsSettings() {
+  location.href = 'heatstroke-settings.html?v=' + Date.now();
 }
 
 // ── アプリ起動 ──────────────────────────────────────────

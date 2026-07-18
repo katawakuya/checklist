@@ -4,73 +4,131 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a237e">
-<title>🛠 熱中症カード　設定</title>
+<title>🛠 緊急連絡　設定</title>
+<!-- Firebase（スーパー管理者ゲート用） -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+#gateScreen{
+  position:fixed;inset:0;background:#f0f2f5;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;gap:14px;
+}
+#gateScreen .gate-icon{font-size:56px;}
+#gateScreen h2{font-size:20px;font-weight:800;color:#1a237e;}
+#gateScreen p{font-size:13px;color:#555;line-height:1.75;max-width:320px;}
+.gate-btn{
+  display:inline-block;background:#1a237e;color:#fff;padding:12px 28px;
+  border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-top:6px;
+}
+.gate-note{font-size:11px;color:#bbb !important;margin-top:4px !important;}
+</style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:#f5f5f5;color:#222;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;padding-bottom:40px;}
+html,body{height:100%;background:#f0f2f5;color:#222;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;padding-bottom:90px;}
 
-header{background:#1a237e;color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.3);}
-header h1{font-size:17px;font-weight:700;}
-header .sub{font-size:11px;opacity:.8;margin-top:3px;}
+header{background:#1a237e;color:#fff;padding:12px 16px 10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+header h1{font-size:16px;font-weight:700;}
+header .sub{font-size:11px;opacity:.75;margin-top:2px;}
 
-.container{max-width:600px;margin:0 auto;padding:14px 14px;}
+/* ─── 現場セレクター ─── */
+.site-bar{background:#283593;padding:10px 12px;display:flex;align-items:center;gap:8px;position:sticky;top:54px;z-index:90;border-bottom:1px solid #1a237e;}
+.site-select{flex:1;padding:8px 10px;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:14px;font-weight:700;font-family:inherit;appearance:none;cursor:pointer;}
+.site-select option{color:#222;background:#fff;font-weight:600;}
+.btn-icon{padding:7px 10px;border:1.5px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:700;}
+.btn-icon:active{background:rgba(255,255,255,.25);}
+.btn-icon.danger{border-color:rgba(244,67,54,.5);color:#ef9a9a;}
 
-.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.09);}
-.card-title{font-size:12px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee;}
+/* ─── フォームカード ─── */
+.container{max-width:600px;margin:0 auto;padding:12px 14px;}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.card-title{font-size:11px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #eee;}
 
-.field{margin-bottom:10px;}
-.field label{display:block;font-size:12px;color:#555;font-weight:600;margin-bottom:4px;}
-.field input,.field textarea,.field select{
-  width:100%;padding:9px 10px;border:1.5px solid #ddd;border-radius:8px;
-  font-size:14px;font-family:inherit;background:#fff;color:#222;
-  transition:border-color .15s;
+.field{margin-bottom:9px;}
+.field label{display:block;font-size:12px;color:#555;font-weight:600;margin-bottom:3px;}
+.field input,.field textarea{
+  width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;
+  font-size:14px;font-family:inherit;background:#fff;color:#222;transition:border-color .15s;
 }
-.field input:focus,.field textarea:focus{border-color:#1a237e;outline:none;}
-.field textarea{resize:vertical;min-height:56px;line-height:1.5;}
+.field input:focus,.field textarea:focus{border-color:#3949ab;outline:none;}
+.field textarea{resize:vertical;min-height:50px;line-height:1.5;}
 
-.contact-block{border:1.5px solid #e8eaf6;border-radius:10px;padding:12px;margin-bottom:10px;background:#fafafa;position:relative;}
-.contact-block .block-num{font-size:11px;font-weight:700;color:#9fa8da;margin-bottom:8px;}
-.contact-block .btn-remove{position:absolute;top:10px;right:10px;background:none;border:none;color:#ef9a9a;font-size:18px;cursor:pointer;line-height:1;padding:2px 4px;}
-.contact-block .btn-remove:active{color:#c62828;}
-
+.contact-block{border:1.5px solid #e8eaf6;border-radius:10px;padding:11px;margin-bottom:9px;background:#fafafe;position:relative;}
+.block-num{font-size:11px;font-weight:700;color:#9fa8da;margin-bottom:8px;}
+.btn-remove{position:absolute;top:9px;right:9px;background:none;border:none;color:#ef9a9a;font-size:17px;cursor:pointer;padding:2px 5px;line-height:1;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-.btn-add{width:100%;padding:9px;border:2px dashed #9fa8da;border-radius:8px;background:none;color:#3949ab;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;}
+.btn-add{width:100%;padding:8px;border:2px dashed #9fa8da;border-radius:8px;background:none;color:#3949ab;font-size:13px;font-weight:700;cursor:pointer;margin-top:2px;}
 .btn-add:active{background:#e8eaf6;}
 
-.preset-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid #b71c1c;border-radius:7px;background:none;color:#b71c1c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px;}
-.preset-btn:active{background:#ffebee;}
+/* ─── 保存バー ─── */
+.save-bar{position:fixed;bottom:0;left:0;right:0;padding:10px 12px 14px;background:#fff;border-top:1.5px solid #e0e0e0;z-index:200;}
+.save-row{display:flex;gap:7px;max-width:600px;margin:0 auto;}
+.btn-save{flex:1;padding:11px 4px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.3;}
+.btn-save.primary{background:#1a237e;color:#fff;}
+.btn-save.primary:active{background:#0d47a1;}
+.btn-save.secondary{background:#e8eaf6;color:#3949ab;}
+.btn-save.secondary:active{background:#c5cae9;}
+.btn-save.copy{background:#f3e5f5;color:#6a1b9a;}
+.btn-save.copy:active{background:#ce93d8;}
+.btn-save.open{background:#b71c1c;color:#fff;}
+.btn-save.open:active{background:#7f0000;}
 
-.save-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e0e0e0;display:flex;gap:10px;z-index:200;}
-.btn-save{flex:1;padding:13px;background:#1a237e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
-.btn-save:active{background:#0d47a1;}
-.btn-open{padding:13px 16px;background:#b71c1c;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
-.btn-open:active{background:#7f0000;}
-
-.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a237e;color:#fff;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;}
+/* ─── Toast ─── */
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a237e;color:#fff;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;}
 
-.section-toggle{display:flex;align-items:center;gap:6px;padding:8px 0 4px;cursor:pointer;user-select:none;}
-.section-toggle .arrow{font-size:12px;transition:transform .2s;color:#9fa8da;}
-.section-toggle.open .arrow{transform:rotate(90deg);}
+/* ─── モーダル ─── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:20px;max-width:320px;width:90%;text-align:center;}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:8px;}
+.modal p{font-size:13px;color:#555;margin-bottom:16px;line-height:1.6;}
+.modal-btns{display:flex;gap:8px;}
+.modal-btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
+.modal-btn.cancel{background:#f5f5f5;color:#555;}
+.modal-btn.ok{background:#b71c1c;color:#fff;}
+.modal-btn.ok:active{background:#7f0000;}
+
+/* ─── プリセット ─── */
+.preset-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #9fa8da;border-radius:7px;background:none;color:#3949ab;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px;}
+.preset-btn:active{background:#e8eaf6;}
 </style>
 </head>
 <body>
 
+<!-- スーパー管理者ゲート（Firebase Auth 確認後に消える） -->
+<div id="gateScreen">
+  <div class="gate-icon" id="gateIcon">⌛</div>
+  <h2 id="gateTitle">認証を確認中...</h2>
+  <p id="gateMsg">しばらくお待ちください</p>
+</div>
+
+<!-- メインコンテンツ（管理者確認後に表示） -->
+<div id="appContent" style="display:none;">
+
 <header>
-  <h1>🛠 熱中症カード　設定</h1>
-  <div class="sub">入力内容は端末に保存され、緊急連絡アプリに反映されます</div>
+  <h1>🛠 緊急連絡カード　設定</h1>
+  <div class="sub">現場ごとに情報を登録・切替できます</div>
 </header>
+
+<!-- 現場セレクター -->
+<div class="site-bar">
+  <select id="siteSelect" class="site-select" onchange="onSiteChange()"></select>
+  <button class="btn-icon" onclick="newSite()" title="新規現場">＋ 新規</button>
+  <button class="btn-icon danger" onclick="confirmDelete()" title="この現場を削除">🗑</button>
+</div>
 
 <div class="container">
 
-  <!-- プリセット -->
+  <!-- プリセット読込 -->
   <button class="preset-btn" onclick="loadPreset()">📋 小田原現場　デフォルト値を読込</button>
 
   <!-- 現場情報 -->
   <div class="card">
     <div class="card-title">🏗 現場情報</div>
+    <div class="field"><label>現場ラベル（一覧に表示する名前）</label><input id="siteLabel" type="text" placeholder="例：小田原扇町現場"></div>
     <div class="field"><label>工事名</label><input id="siteName" type="text" placeholder="例：〇〇地下埋設管敷設工事"></div>
     <div class="field"><label>現場住所（ヘッダー表示）</label><input id="siteAddr" type="text" placeholder="例：現場：〇〇市〇〇2-33-11他"></div>
     <div class="field"><label>フッター注記（年度・施工者など）</label><textarea id="footerText" rows="2" placeholder="例：令和7年度　株式会社型枠屋"></textarea></div>
@@ -103,24 +161,77 @@ header .sub{font-size:11px;opacity:.8;margin-top:3px;}
 
 <!-- 保存バー -->
 <div class="save-bar">
-  <button class="btn-save" onclick="saveConfig()">💾 保存する</button>
-  <a class="btn-open" href="heatstroke.html">🌡 カードを開く</a>
+  <div class="save-row">
+    <button class="btn-save primary" onclick="saveOverwrite()">💾<br>上書き保存</button>
+    <button class="btn-save secondary" onclick="saveAsNew()">➕<br>別現場として保存</button>
+    <button class="btn-save copy" onclick="duplicateSite()">📋<br>流用（コピー）</button>
+    <button class="btn-save open" onclick="openCard()">🌡<br>カード表示</button>
+  </div>
 </div>
 
-<div id="toast" class="toast">保存しました ✓</div>
+<!-- 削除確認モーダル -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <h3>現場を削除しますか？</h3>
+    <p id="deleteModalMsg">この現場の設定を削除します。<br>この操作は元に戻せません。</p>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-btn ok" onclick="deleteSite()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+</div><!-- /appContent -->
 
 <script>
-var PHONE_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg>';
+// ─── Firebase スーパー管理者ゲート ──────────────────────
+(function(){
+  var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+  try{
+    firebase.initializeApp({
+      apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+      authDomain:"alrit-kandenkou.firebaseapp.com",
+      projectId:"alrit-kandenkou",
+      storageBucket:"alrit-kandenkou.firebasestorage.app",
+      messagingSenderId:"640432772833",
+      appId:"1:640432772833:web:ab2aff11980621322809a0"
+    });
+  }catch(e){ /* already initialized */ }
+  firebase.auth().onAuthStateChanged(function(user){
+    if(user && user.email === ADMIN_EMAIL){
+      document.getElementById('gateScreen').style.display = 'none';
+      document.getElementById('appContent').style.display = '';
+    } else {
+      var g = document.getElementById('gateScreen');
+      document.getElementById('gateIcon').textContent = '🔒';
+      document.getElementById('gateTitle').textContent = 'アクセス制限';
+      document.getElementById('gateMsg').innerHTML =
+        '緊急連絡カードの設定は<br><strong>スーパー管理者のみ</strong>変更できます。<br><br>'+
+        '現場管理システムに管理者としてログインしてから'+
+        'このページをお開きください。'+
+        '<br><br><a class="gate-btn" href="index.html">🏗 現場管理システムへ</a>'+
+        '<p class="gate-note">管理者メール: '+ADMIN_EMAIL+'</p>';
+      g.style.display = 'flex';
+      document.getElementById('appContent').style.display = 'none';
+    }
+  });
+})();
+</script>
 
-var DEFAULT_CONFIG = {
+<script>
+// ─── デフォルト値 ───────────────────────────────
+var DEFAULT_SITE = {
+  label: '小田原扇町現場',
   siteName: '小田原市富士フィルム地下埋設管敷設工事',
   siteAddr: '現場：小田原市扇町2-33-11他',
   footerText: '小田原市富士フィルム地下埋設管敷設工事\n令和7年度　株式会社型枠屋',
   contacts: [
-    {role:'現場責任者',       name:'三枝　裕太',    romaji:'Saegusa Yuta',       tel:'09092901004'},
-    {role:'安全衛生管理者',   name:'柴田　興平',    romaji:'Shibata Kohei',      tel:'08057047075'},
-    {role:'元請担当（昼間）', name:'山本　克貴',    romaji:'Yamamoto Katsuki',   tel:'08054000259'},
-    {role:'元請　夜間・休日緊急', name:'夜間緊急連絡先', romaji:'',             tel:'09048124651'},
+    {role:'現場責任者',           name:'三枝　裕太',    romaji:'Saegusa Yuta',       tel:'09092901004'},
+    {role:'安全衛生管理者',       name:'柴田　興平',    romaji:'Shibata Kohei',      tel:'08057047075'},
+    {role:'元請担当（昼間）',     name:'山本　克貴',    romaji:'Yamamoto Katsuki',   tel:'08054000259'},
+    {role:'元請　夜間・休日緊急', name:'夜間緊急連絡先',romaji:'',                   tel:'09048124651'}
   ],
   hospital: {
     name: '小田原市民病院',
@@ -129,98 +240,112 @@ var DEFAULT_CONFIG = {
     map:  '神奈川県小田原市久野46+小田原市民病院'
   },
   subContacts: [
-    {role:'（1次）株式会社型枠屋',            name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654'},
-    {role:'（2次）クラフトマンシップ・パートナーズ', name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519'},
+    {role:'（1次）株式会社型枠屋',               name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654'},
+    {role:'（2次）クラフトマンシップ・パートナーズ',name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519'}
   ]
 };
 
-// ── 連絡先ブロック生成 ──
-var _contactCount = 0;
-var _subContactCount = 0;
+// ─── データ管理 ──────────────────────────────────
+var _sites = [];
+var _activeId = null;
+var _cCount = 0, _sCount = 0;
 
-function addContact(data){
-  _contactCount++;
-  var idx = _contactCount;
-  var d = data || {};
-  var wrap = document.getElementById('contactsWrap');
-  var div = document.createElement('div');
-  div.className = 'contact-block';
-  div.dataset.idx = idx;
-  div.innerHTML =
-    '<div class="block-num">担当者 '+idx+'</div>'+
-    '<button class="btn-remove" onclick="removeBlock(this)" title="削除">✕</button>'+
-    '<div class="field"><label>役割・役職</label><input type="text" name="c_role" placeholder="例：現場責任者" value="'+(d.role||'')+'"></div>'+
-    '<div class="row2">'+
-      '<div class="field"><label>氏名</label><input type="text" name="c_name" placeholder="例：山田　太郎" value="'+(d.name||'')+'"></div>'+
-      '<div class="field"><label>ローマ字（任意）</label><input type="text" name="c_romaji" placeholder="Yamada Taro" value="'+(d.romaji||'')+'"></div>'+
-    '</div>'+
-    '<div class="field"><label>電話番号（ハイフンなし）</label><input type="tel" name="c_tel" placeholder="例：09012345678" value="'+(d.tel||'')+'"></div>';
-  wrap.appendChild(div);
+function loadData(){
+  try{ _sites = JSON.parse(localStorage.getItem('hs_sites')||'[]'); }catch(e){ _sites=[]; }
+  _activeId = localStorage.getItem('hs_active');
+
+  // 旧 hs_config を移行
+  if(!_sites.length){
+    var old = localStorage.getItem('hs_config');
+    if(old){
+      try{
+        var o = JSON.parse(old);
+        o.id = genId();
+        o.label = o.label || o.siteName || '現場1';
+        _sites = [o];
+        _activeId = o.id;
+        saveSites();
+      }catch(e){}
+    }
+  }
+  // デフォルト初期化
+  if(!_sites.length){
+    var def = JSON.parse(JSON.stringify(DEFAULT_SITE));
+    def.id = genId();
+    _sites = [def];
+    _activeId = def.id;
+    saveSites();
+  }
+  if(!_activeId || !_sites.find(function(s){return s.id===_activeId;})){
+    _activeId = _sites[0].id;
+  }
 }
 
-function addSubContact(data){
-  _subContactCount++;
-  var idx = _subContactCount;
-  var d = data || {};
-  var wrap = document.getElementById('subContactsWrap');
-  var div = document.createElement('div');
-  div.className = 'contact-block';
-  div.dataset.subIdx = idx;
-  div.innerHTML =
-    '<div class="block-num">業者 '+idx+'</div>'+
-    '<button class="btn-remove" onclick="removeBlock(this)" title="削除">✕</button>'+
-    '<div class="field"><label>会社名・役割</label><input type="text" name="s_role" placeholder="例：（1次）株式会社〇〇" value="'+(d.role||'')+'"></div>'+
-    '<div class="row2">'+
-      '<div class="field"><label>氏名</label><input type="text" name="s_name" placeholder="例：鈴木　一郎" value="'+(d.name||'')+'"></div>'+
-      '<div class="field"><label>ローマ字（任意）</label><input type="text" name="s_romaji" placeholder="Suzuki Ichiro" value="'+(d.romaji||'')+'"></div>'+
-    '</div>'+
-    '<div class="field"><label>電話番号（ハイフンなし）</label><input type="tel" name="s_tel" placeholder="例：09012345678" value="'+(d.tel||'')+'"></div>';
-  wrap.appendChild(div);
+function saveSites(){
+  localStorage.setItem('hs_sites', JSON.stringify(_sites));
+  localStorage.setItem('hs_active', _activeId||'');
 }
 
-function removeBlock(btn){
-  btn.closest('.contact-block').remove();
+function genId(){
+  return 'site_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
 }
 
-// ── プリセット読込 ──
-function loadPreset(){
-  if(!confirm('現在の入力をデフォルト値で上書きしますか？')) return;
-  applyConfig(DEFAULT_CONFIG);
+function currentSite(){
+  return _sites.find(function(s){return s.id===_activeId;}) || _sites[0];
 }
 
-// ── 設定を画面に反映 ──
-function applyConfig(cfg){
+// ─── セレクター ─────────────────────────────────
+function buildSelector(){
+  var sel = document.getElementById('siteSelect');
+  sel.innerHTML = '';
+  _sites.forEach(function(s){
+    var o = document.createElement('option');
+    o.value = s.id;
+    var isActive = (s.id === _activeId);
+    o.textContent = (s.label || s.siteName || '現場') + (isActive ? ' ✦' : '');
+    o.selected = isActive;
+    sel.appendChild(o);
+  });
+}
+
+function onSiteChange(){
+  var sel = document.getElementById('siteSelect');
+  _activeId = sel.value;
+  applyToForm(currentSite());
+}
+
+// ─── フォーム操作 ────────────────────────────────
+function applyToForm(cfg){
+  cfg = cfg || {};
+  document.getElementById('siteLabel').value  = cfg.label     || '';
   document.getElementById('siteName').value   = cfg.siteName  || '';
   document.getElementById('siteAddr').value   = cfg.siteAddr  || '';
   document.getElementById('footerText').value = cfg.footerText|| '';
-  document.getElementById('hospName').value   = (cfg.hospital||{}).name|| '';
-  document.getElementById('hospAddr').value   = (cfg.hospital||{}).addr|| '';
-  document.getElementById('hospTel').value    = (cfg.hospital||{}).tel || '';
-  document.getElementById('hospMap').value    = (cfg.hospital||{}).map || '';
-
-  // 担当者リセット
-  document.getElementById('contactsWrap').innerHTML=''; _contactCount=0;
+  document.getElementById('hospName').value   = (cfg.hospital||{}).name || '';
+  document.getElementById('hospAddr').value   = (cfg.hospital||{}).addr || '';
+  document.getElementById('hospTel').value    = (cfg.hospital||{}).tel  || '';
+  document.getElementById('hospMap').value    = (cfg.hospital||{}).map  || '';
+  document.getElementById('contactsWrap').innerHTML = ''; _cCount = 0;
   (cfg.contacts||[]).forEach(function(c){ addContact(c); });
-
-  // 協力業者リセット
-  document.getElementById('subContactsWrap').innerHTML=''; _subContactCount=0;
+  document.getElementById('subContactsWrap').innerHTML = ''; _sCount = 0;
   (cfg.subContacts||[]).forEach(function(c){ addSubContact(c); });
 }
 
-// ── 画面から設定を収集 ──
-function collectConfig(){
+function collectForm(){
   var cfg = {
-    siteName:    document.getElementById('siteName').value.trim(),
-    siteAddr:    document.getElementById('siteAddr').value.trim(),
-    footerText:  document.getElementById('footerText').value.trim(),
-    hospital: {
+    id:         _activeId || genId(),
+    label:      document.getElementById('siteLabel').value.trim(),
+    siteName:   document.getElementById('siteName').value.trim(),
+    siteAddr:   document.getElementById('siteAddr').value.trim(),
+    footerText: document.getElementById('footerText').value.trim(),
+    hospital:{
       name: document.getElementById('hospName').value.trim(),
       addr: document.getElementById('hospAddr').value.trim(),
       tel:  document.getElementById('hospTel').value.replace(/[^0-9]/g,''),
       map:  document.getElementById('hospMap').value.trim()
     },
-    contacts: [],
-    subContacts: []
+    contacts:[],
+    subContacts:[]
   };
   document.querySelectorAll('#contactsWrap .contact-block').forEach(function(b){
     cfg.contacts.push({
@@ -241,13 +366,132 @@ function collectConfig(){
   return cfg;
 }
 
-// ── 保存 ──
-function saveConfig(){
-  var cfg = collectConfig();
-  localStorage.setItem('hs_config', JSON.stringify(cfg));
-  showToast('保存しました ✓');
+// ─── 担当者ブロック ──────────────────────────────
+function addContact(d){
+  _cCount++; d = d || {};
+  var div = document.createElement('div');
+  div.className = 'contact-block';
+  div.innerHTML =
+    '<div class="block-num">担当者 '+_cCount+'</div>'+
+    '<button class="btn-remove" onclick="this.closest(\'.contact-block\').remove()" title="削除">✕</button>'+
+    '<div class="field"><label>役割・役職</label>'+
+      '<input type="text" name="c_role" placeholder="例：現場責任者" value="'+(d.role||'')+'"></div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>氏名</label>'+
+        '<input type="text" name="c_name" placeholder="例：山田　太郎" value="'+(d.name||'')+'"></div>'+
+      '<div class="field"><label>ローマ字（任意）</label>'+
+        '<input type="text" name="c_romaji" placeholder="Yamada Taro" value="'+(d.romaji||'')+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>電話番号（ハイフンなし）</label>'+
+      '<input type="tel" name="c_tel" placeholder="例：09012345678" value="'+(d.tel||'')+'"></div>';
+  document.getElementById('contactsWrap').appendChild(div);
 }
 
+function addSubContact(d){
+  _sCount++; d = d || {};
+  var div = document.createElement('div');
+  div.className = 'contact-block';
+  div.innerHTML =
+    '<div class="block-num">業者 '+_sCount+'</div>'+
+    '<button class="btn-remove" onclick="this.closest(\'.contact-block\').remove()" title="削除">✕</button>'+
+    '<div class="field"><label>会社名・役割</label>'+
+      '<input type="text" name="s_role" placeholder="例：（1次）株式会社〇〇" value="'+(d.role||'')+'"></div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>氏名</label>'+
+        '<input type="text" name="s_name" placeholder="例：鈴木　一郎" value="'+(d.name||'')+'"></div>'+
+      '<div class="field"><label>ローマ字（任意）</label>'+
+        '<input type="text" name="s_romaji" placeholder="Suzuki Ichiro" value="'+(d.romaji||'')+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>電話番号（ハイフンなし）</label>'+
+      '<input type="tel" name="s_tel" placeholder="例：09012345678" value="'+(d.tel||'')+'"></div>';
+  document.getElementById('subContactsWrap').appendChild(div);
+}
+
+// ─── 保存系 ─────────────────────────────────────
+function saveOverwrite(){
+  var cfg = collectForm();
+  cfg.id = _activeId || genId();
+  var idx = _sites.findIndex(function(s){return s.id===cfg.id;});
+  if(idx>=0) _sites[idx] = cfg; else _sites.push(cfg);
+  _activeId = cfg.id;
+  saveSites();
+  buildSelector();
+  showToast('💾 上書き保存しました');
+}
+
+function saveAsNew(){
+  var cfg = collectForm();
+  cfg.id = genId();
+  if(!cfg.label) cfg.label = cfg.siteName || '新規現場';
+  _sites.push(cfg);
+  _activeId = cfg.id;
+  saveSites();
+  buildSelector();
+  showToast('➕ 別現場として保存しました');
+}
+
+function duplicateSite(){
+  var cfg = JSON.parse(JSON.stringify(collectForm()));
+  cfg.id = genId();
+  cfg.label = (cfg.label || cfg.siteName || '現場') + '　（コピー）';
+  _sites.push(cfg);
+  _activeId = cfg.id;
+  applyToForm(cfg);
+  saveSites();
+  buildSelector();
+  showToast('📋 流用コピーを作成しました');
+}
+
+function openCard(){
+  saveOverwrite();
+  setTimeout(function(){
+    location.href = 'heatstroke.html?v='+Date.now()+'&site='+(_activeId||'');
+  }, 300);
+}
+
+// ─── 削除 ───────────────────────────────────────
+function confirmDelete(){
+  if(_sites.length<=1){ showToast('最後の現場は削除できません'); return; }
+  var s = currentSite();
+  document.getElementById('deleteModalMsg').textContent =
+    '「'+(s.label||s.siteName||'この現場')+'」を削除します。\nこの操作は元に戻せません。';
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeModal(){ document.getElementById('deleteModal').classList.remove('open'); }
+function deleteSite(){
+  closeModal();
+  _sites = _sites.filter(function(s){return s.id!==_activeId;});
+  _activeId = _sites[0] ? _sites[0].id : null;
+  saveSites();
+  buildSelector();
+  applyToForm(currentSite());
+  showToast('🗑 削除しました');
+}
+
+// ─── 新規 ────────────────────────────────────────
+function newSite(){
+  var blank = {
+    id: genId(), label: '新規現場',
+    siteName:'', siteAddr:'', footerText:'',
+    contacts:[], hospital:{name:'',addr:'',tel:'',map:''}, subContacts:[]
+  };
+  _sites.push(blank);
+  _activeId = blank.id;
+  saveSites();
+  buildSelector();
+  applyToForm(blank);
+  document.getElementById('siteLabel').focus();
+}
+
+// ─── プリセット ──────────────────────────────────
+function loadPreset(){
+  if(!confirm('現在の入力をデフォルト値で上書きしますか？')) return;
+  var def = JSON.parse(JSON.stringify(DEFAULT_SITE));
+  def.id = _activeId || genId();
+  applyToForm(def);
+}
+
+// ─── Toast ──────────────────────────────────────
 function showToast(msg){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -255,14 +499,11 @@ function showToast(msg){
   setTimeout(function(){ t.classList.remove('show'); }, 2200);
 }
 
-// ── 初期化 ──
+// ─── 初期化 ─────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function(){
-  var saved = localStorage.getItem('hs_config');
-  if(saved){
-    try{ applyConfig(JSON.parse(saved)); return; }catch(e){}
-  }
-  // 初回：デフォルトを表示
-  applyConfig(DEFAULT_CONFIG);
+  loadData();
+  buildSelector();
+  applyToForm(currentSite());
 });
 </script>
 </body>

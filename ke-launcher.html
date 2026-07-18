@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#b71c1c">
+<title>🔧 型枠事業　緊急連絡</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;background:#f5f5f5;color:#222;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;}
+
+/* ─── HEADER ─── */
+header{
+  background:linear-gradient(135deg,#b71c1c 0%,#7f0000 100%);
+  color:#fff;padding:12px 14px 10px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(183,28,28,.4);
+}
+.hd-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.hd-left h1{font-size:15px;font-weight:800;letter-spacing:.2px;}
+.hd-left .sub{font-size:11px;opacity:.8;margin-top:1px;}
+.hd-right{display:flex;gap:7px;flex-shrink:0;}
+.btn-hd{
+  padding:6px 12px;border:1.5px solid rgba(255,255,255,.35);
+  border-radius:8px;background:rgba(255,255,255,.1);
+  color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.btn-hd:active{background:rgba(255,255,255,.25);}
+.btn-hd.edit-on{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.7);}
+.btn-home{text-decoration:none;display:inline-flex;align-items:center;}
+
+/* ─── CONTAINER ─── */
+.container{max-width:640px;margin:0 auto;padding:12px 12px 80px;}
+
+/* ─── SECTION ─── */
+.section{margin-bottom:14px;}
+.sec-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;padding:0 2px;
+}
+.sec-title{font-size:13px;font-weight:800;color:#555;letter-spacing:.05em;}
+.btn-sec-add{
+  background:none;border:1.5px dashed #bbb;color:#888;
+  border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;
+}
+.btn-sec-add:active{background:#eee;}
+
+/* ─── CONTACT CARD ─── */
+.contact-card{
+  background:#fff;border-radius:11px;padding:12px 14px;
+  margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);
+  position:relative;
+}
+.contact-card.emergency-card{
+  border-left:4px solid #ef5350;
+}
+/* view mode */
+.view-mode .c-role{font-size:11px;color:#888;font-weight:600;margin-bottom:2px;}
+.view-mode .c-name{font-size:15px;font-weight:800;color:#1a1a1a;line-height:1.3;}
+.view-mode .c-romaji{font-size:11px;color:#aaa;margin-top:1px;}
+.view-mode .c-addr{font-size:12px;color:#666;margin-top:4px;line-height:1.4;}
+.btn-call{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;margin-top:10px;padding:11px 0;
+  background:#b71c1c;color:#fff;border:none;border-radius:9px;
+  font-size:15px;font-weight:800;cursor:pointer;text-decoration:none;
+  letter-spacing:.3px;
+}
+.btn-call:active{background:#7f0000;}
+.btn-call.green{background:#2e7d32;}
+.btn-call.green:active{background:#1b5e20;}
+.btn-call.blue{background:#1565c0;}
+.btn-call.blue:active{background:#0d47a1;}
+.btn-call-small{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;background:#f3e5e5;color:#b71c1c;
+  border:1.5px solid rgba(183,28,28,.2);border-radius:7px;
+  font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;
+  margin-top:8px;
+}
+.btn-call-small:active{background:#ffcdd2;}
+.btn-map{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;background:#e8f5e9;color:#2e7d32;
+  border:1.5px solid rgba(46,125,50,.2);border-radius:7px;
+  font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;
+  margin-top:8px;margin-left:6px;
+}
+.btn-map:active{background:#c8e6c9;}
+.btn-row{display:flex;flex-wrap:wrap;gap:0;}
+
+/* edit mode card */
+.edit-mode .c-field{margin-bottom:6px;}
+.edit-mode .c-field label{display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:2px;}
+.edit-mode .c-field input,.edit-mode .c-field textarea{
+  width:100%;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;
+  font-size:13px;font-family:inherit;background:#fff;color:#222;
+}
+.edit-mode .c-field input:focus,.edit-mode .c-field textarea:focus{border-color:#b71c1c;outline:none;}
+.edit-mode .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.btn-del-card{
+  position:absolute;top:9px;right:9px;background:none;border:none;
+  color:#ef9a9a;font-size:17px;cursor:pointer;padding:2px 5px;line-height:1;
+}
+
+/* ─── EDIT SECTION TITLE ─── */
+.edit-mode .sec-title-input{
+  flex:1;padding:5px 8px;border:1.5px solid #ddd;border-radius:7px;
+  font-size:13px;font-weight:700;font-family:inherit;background:#fff;color:#222;
+  margin-right:8px;
+}
+.edit-mode .sec-title-input:focus{border-color:#b71c1c;outline:none;}
+
+/* ─── SAVE BAR ─── */
+.save-bar{
+  position:fixed;bottom:0;left:0;right:0;padding:10px 12px 14px;
+  background:#fff;border-top:1.5px solid #e0e0e0;z-index:200;
+  display:none;
+}
+.save-bar.show{display:block;}
+.btn-save-main{
+  display:block;width:100%;max-width:640px;margin:0 auto;
+  padding:13px;background:#b71c1c;color:#fff;border:none;
+  border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;
+}
+.btn-save-main:active{background:#7f0000;}
+
+/* ─── TOAST ─── */
+.toast{
+  position:fixed;top:70px;left:50%;transform:translateX(-50%);
+  background:#1a237e;color:#fff;padding:9px 20px;border-radius:20px;
+  font-size:13px;font-weight:700;z-index:999;opacity:0;
+  transition:opacity .25s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1;}
+
+/* ─── UPDATED AT ─── */
+.updated-at{font-size:11px;color:#aaa;text-align:right;padding:4px 14px 12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-row">
+    <div class="hd-left">
+      <h1 id="hdTitle">🔧 型枠事業　緊急連絡</h1>
+      <div class="sub" id="hdSub">株式会社型枠屋</div>
+    </div>
+    <div class="hd-right">
+      <button class="btn-hd" id="btnEdit" onclick="toggleEdit()">✏️ 編集</button>
+      <a class="btn-hd btn-home" href="index.html">🏠</a>
+    </div>
+  </div>
+</header>
+
+<div class="container" id="container"></div>
+<div class="updated-at" id="updatedAt"></div>
+
+<div class="save-bar" id="saveBar">
+  <button class="btn-save-main" onclick="saveData()">💾 保存する</button>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ─── デフォルトデータ ───────────────────────────────────
+var DEFAULT_CONFIG = {
+  companyName: '株式会社型枠屋',
+  subtitle:    '型枠事業部　緊急連絡先',
+  updatedAt:   '',
+  sections: [
+    {
+      id:'internal', icon:'📞', title:'社内緊急連絡',
+      style:'red',
+      contacts:[
+        {role:'代表取締役',    name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654', addr:''},
+        {role:'現場責任者',    name:'三枝　裕太',  romaji:'Saegusa Yuta',       tel:'09092901004', addr:''},
+        {role:'安全衛生管理者',name:'柴田　興平',  romaji:'Shibata Kohei',      tel:'08057047075', addr:''}
+      ]
+    },
+    {
+      id:'partner', icon:'🤝', title:'協力業者',
+      style:'blue',
+      contacts:[
+        {role:'クラフトマンシップ・パートナーズ',name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519', addr:''},
+        {role:'元請担当（昼間）',               name:'山本　克貴', romaji:'Yamamoto Katsuki',  tel:'08054000259', addr:''}
+      ]
+    },
+    {
+      id:'medical', icon:'🏥', title:'医療機関',
+      style:'green',
+      contacts:[
+        {role:'小田原市民病院', name:'', romaji:'', tel:'0465343175',
+         addr:'〒250-8558　神奈川県小田原市久野46',
+         map:'神奈川県小田原市久野46+小田原市民病院'}
+      ]
+    },
+    {
+      id:'emergency', icon:'🚒', title:'行政・緊急機関',
+      style:'red',
+      contacts:[
+        {role:'消防（119番）', name:'', romaji:'', tel:'119', addr:''},
+        {role:'警察（110番）', name:'', romaji:'', tel:'110', addr:''},
+        {role:'救急・消防',    name:'', romaji:'', tel:'119', addr:''}
+      ]
+    }
+  ]
+};
+
+// ─── 状態管理 ────────────────────────────────────────
+var _cfg = null;
+var _editMode = false;
+
+function loadData(){
+  try{
+    var raw = localStorage.getItem('ke_config');
+    _cfg = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }catch(e){
+    _cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }
+  if(!_cfg.sections) _cfg.sections = DEFAULT_CONFIG.sections;
+}
+
+function saveData(){
+  _cfg = collectFromDOM();
+  _cfg.updatedAt = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
+  localStorage.setItem('ke_config', JSON.stringify(_cfg));
+  exitEditMode();
+  render();
+  showToast('💾 保存しました');
+}
+
+// ─── DOM収集（編集モード → データ） ─────────────────────
+function collectFromDOM(){
+  var cfg = JSON.parse(JSON.stringify(_cfg));
+  cfg.companyName = document.getElementById('hdTitle').textContent.replace('🔧 ','').trim();
+  cfg.subtitle     = document.getElementById('hdSub').textContent.trim();
+
+  cfg.sections = [];
+  document.querySelectorAll('.js-section').forEach(function(secEl){
+    var titleInput = secEl.querySelector('.js-sec-title');
+    var sec = {
+      id:       secEl.dataset.secId || ('s'+Date.now()),
+      icon:     secEl.dataset.secIcon || '',
+      title:    titleInput ? titleInput.value : secEl.querySelector('.sec-title').textContent.replace(/^[^\s]+\s/,''),
+      style:    secEl.dataset.secStyle || 'red',
+      contacts: []
+    };
+    secEl.querySelectorAll('.js-contact').forEach(function(cEl){
+      sec.contacts.push({
+        role:   (cEl.querySelector('[name=c_role]')   ||{}).value||'',
+        name:   (cEl.querySelector('[name=c_name]')   ||{}).value||'',
+        romaji: (cEl.querySelector('[name=c_romaji]') ||{}).value||'',
+        tel:    ((cEl.querySelector('[name=c_tel]')   ||{}).value||'').replace(/[^0-9]/g,''),
+        addr:   (cEl.querySelector('[name=c_addr]')   ||{}).value||'',
+        map:    (cEl.querySelector('[name=c_map]')    ||{}).value||''
+      });
+    });
+    cfg.sections.push(sec);
+  });
+  return cfg;
+}
+
+// ─── 編集モード切替 ──────────────────────────────────────
+function toggleEdit(){
+  if(_editMode){ exitEditMode(); render(); }
+  else{ enterEditMode(); }
+}
+function enterEditMode(){
+  _editMode = true;
+  document.getElementById('btnEdit').textContent = '✕ キャンセル';
+  document.getElementById('btnEdit').classList.add('edit-on');
+  document.getElementById('saveBar').classList.add('show');
+  renderEditMode();
+}
+function exitEditMode(){
+  _editMode = false;
+  document.getElementById('btnEdit').textContent = '✏️ 編集';
+  document.getElementById('btnEdit').classList.remove('edit-on');
+  document.getElementById('saveBar').classList.remove('show');
+}
+
+// ─── ビューモード描画 ─────────────────────────────────────
+function render(){
+  var cont = document.getElementById('container');
+  var html = '';
+
+  (_cfg.sections||[]).forEach(function(sec, si){
+    html += '<div class="section js-section" data-sec-id="'+esc(sec.id)+'" data-sec-icon="'+esc(sec.icon)+'" data-sec-style="'+esc(sec.style||'red')+'">';
+    html += '<div class="sec-header"><span class="sec-title">'+esc(sec.icon)+' '+esc(sec.title)+'</span></div>';
+
+    (sec.contacts||[]).forEach(function(c, ci){
+      var btnCls = sec.style==='green' ? 'green' : sec.style==='blue' ? 'blue' : '';
+      html += '<div class="contact-card emergency-card">';
+      html += '<div class="view-mode">';
+      if(c.role) html += '<div class="c-role">'+esc(c.role)+'</div>';
+      if(c.name) html += '<div class="c-name">'+esc(c.name)+'</div>';
+      if(c.romaji) html += '<div class="c-romaji">'+esc(c.romaji)+'</div>';
+      if(c.addr) html += '<div class="c-addr">📍 '+esc(c.addr)+'</div>';
+      if(c.tel){
+        html += '<a class="btn-call '+btnCls+'" href="tel:'+esc(c.tel)+'">📞 '+formatTel(c.tel)+'</a>';
+      }
+      if(c.map){
+        html += '<div class="btn-row">';
+        if(c.tel && c.name==='') {/* already shown above */}
+        html += '<a class="btn-map" href="https://maps.google.com/maps?q='+encodeURIComponent(c.map)+'" target="_blank">🗺 地図で開く</a>';
+        html += '</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>'; // .section
+  });
+
+  cont.innerHTML = html;
+
+  // 更新日
+  var ua = document.getElementById('updatedAt');
+  ua.textContent = _cfg.updatedAt ? '最終更新: '+_cfg.updatedAt : '';
+  // ヘッダー更新
+  document.getElementById('hdTitle').textContent = '🔧 '+(_cfg.companyName||'型枠事業　緊急連絡');
+  document.getElementById('hdSub').textContent   = _cfg.subtitle||'';
+}
+
+// ─── 編集モード描画 ──────────────────────────────────────
+function renderEditMode(){
+  var cont = document.getElementById('container');
+  var html = '';
+
+  // 会社名編集
+  html += '<div class="card" style="background:#fff;border-radius:11px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);">';
+  html += '<div style="font-size:11px;color:#888;font-weight:700;margin-bottom:8px;">🏢 基本情報</div>';
+  html += '<div style="margin-bottom:7px;"><label style="display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:2px;">会社名</label>';
+  html += '<input style="width:100%;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;" id="hdTitle" value="'+esc(_cfg.companyName||'')+'"></div>';
+  html += '<div><label style="display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:2px;">サブタイトル</label>';
+  html += '<input style="width:100%;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;" id="hdSub" value="'+esc(_cfg.subtitle||'')+'"></div>';
+  html += '</div>';
+
+  (_cfg.sections||[]).forEach(function(sec, si){
+    html += '<div class="section edit-mode js-section" data-sec-id="'+esc(sec.id)+'" data-sec-icon="'+esc(sec.icon)+'" data-sec-style="'+esc(sec.style||'red')+'">';
+    html += '<div class="sec-header">';
+    html += '<span style="font-size:16px;margin-right:4px;">'+esc(sec.icon)+'</span>';
+    html += '<input class="sec-title-input js-sec-title" type="text" value="'+esc(sec.title)+'">';
+    html += '<button class="btn-sec-add" onclick="addContact('+si+')">＋ 追加</button>';
+    html += '</div>';
+
+    (sec.contacts||[]).forEach(function(c, ci){
+      html += '<div class="contact-card js-contact" style="position:relative;">';
+      html += '<button class="btn-del-card" onclick="this.closest(\'.js-contact\').remove()" title="削除">✕</button>';
+      html += '<div class="c-field"><label>役割・機関名</label><input type="text" name="c_role" value="'+esc(c.role||'')+'"></div>';
+      html += '<div class="row2"><div class="c-field"><label>氏名</label><input type="text" name="c_name" value="'+esc(c.name||'')+'"></div>';
+      html += '<div class="c-field"><label>ローマ字（任意）</label><input type="text" name="c_romaji" value="'+esc(c.romaji||'')+'"></div></div>';
+      html += '<div class="c-field"><label>電話番号（ハイフンなし）</label><input type="tel" name="c_tel" value="'+esc(c.tel||'')+'"></div>';
+      html += '<div class="c-field"><label>住所（任意）</label><input type="text" name="c_addr" value="'+esc(c.addr||'')+'"></div>';
+      html += '<div class="c-field"><label>地図検索キーワード（任意）</label><input type="text" name="c_map" value="'+esc(c.map||'')+'"></div>';
+      html += '</div>';
+    });
+
+    html += '</div>'; // .section
+  });
+
+  // ヘッダーのinputを書き換え
+  cont.innerHTML = html;
+}
+
+// ─── 連絡先追加（編集モード） ────────────────────────────
+function addContact(sectionIndex){
+  var sections = document.querySelectorAll('.js-section');
+  if(!sections[sectionIndex]) return;
+  var div = document.createElement('div');
+  div.className = 'contact-card js-contact';
+  div.style.position = 'relative';
+  div.innerHTML =
+    '<button class="btn-del-card" onclick="this.closest(\'.js-contact\').remove()" title="削除">✕</button>'+
+    '<div class="c-field"><label>役割・機関名</label><input type="text" name="c_role" value=""></div>'+
+    '<div class="row2"><div class="c-field"><label>氏名</label><input type="text" name="c_name" value=""></div>'+
+    '<div class="c-field"><label>ローマ字（任意）</label><input type="text" name="c_romaji" value=""></div></div>'+
+    '<div class="c-field"><label>電話番号（ハイフンなし）</label><input type="tel" name="c_tel" value=""></div>'+
+    '<div class="c-field"><label>住所（任意）</label><input type="text" name="c_addr" value=""></div>'+
+    '<div class="c-field"><label>地図検索キーワード（任意）</label><input type="text" name="c_map" value=""></div>';
+  sections[sectionIndex].appendChild(div);
+}
+
+// ─── ユーティリティ ──────────────────────────────────────
+function formatTel(t){
+  t = String(t).replace(/[^0-9]/g,'');
+  if(t.length===11) return t.slice(0,3)+'-'+t.slice(3,7)+'-'+t.slice(7);
+  if(t.length===10) return t.slice(0,3)+'-'+t.slice(3,6)+'-'+t.slice(6);
+  return t;
+}
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2000);
+}
+
+// ─── 初期化 ──────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',function(){
+  loadData();
+  render();
+});
+</script>
+</body>
+</html>

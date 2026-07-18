@@ -132,7 +132,7 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
       <p class="site" id="dynSite">小田原市富士フィルム地下埋設管敷設工事<br>現場：小田原市扇町2-33-11他</p>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
-      <a href="heatstroke-settings.html" style="font-size:13px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:7px;padding:5px 10px;text-decoration:none;font-weight:700;">⚙ 設定</a>
+      <a onclick="location.href='heatstroke-settings.html?v='+Date.now()" style="font-size:13px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:7px;padding:5px 10px;text-decoration:none;font-weight:700;cursor:pointer;">⚙ 設定</a>
       <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
     </div>
   </div>
@@ -314,9 +314,23 @@ function renderDynamic(cfg){
 }
 
 window.addEventListener('DOMContentLoaded', function(){
-  var saved = localStorage.getItem('hs_config');
   var cfg = DEFAULT_CONFIG;
-  if(saved){ try{ cfg = JSON.parse(saved); }catch(e){} }
+  // 1) URL param ?site=ID で現場指定
+  var urlParam = new URLSearchParams(location.search).get('site');
+  // 2) 新形式: hs_sites + hs_active
+  try{
+    var sites = JSON.parse(localStorage.getItem('hs_sites')||'[]');
+    var activeId = urlParam || localStorage.getItem('hs_active');
+    if(sites.length){
+      var found = activeId ? sites.find(function(s){return s.id===activeId;}) : null;
+      if(found) cfg = found;
+      else if(sites.length) cfg = sites[0];
+    } else {
+      // 3) 旧形式: hs_config フォールバック
+      var old = localStorage.getItem('hs_config');
+      if(old) cfg = JSON.parse(old);
+    }
+  }catch(e){}
   renderDynamic(cfg);
 });
 </script>
