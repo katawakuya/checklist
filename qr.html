@@ -37,6 +37,13 @@ body{
   color:var(--accent);border-radius:8px;padding:7px 14px;
   font-size:13px;cursor:pointer;font-weight:700;text-decoration:none;
 }
+.btn-reload{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.8);border-radius:8px;padding:7px 12px;
+  font-size:13px;cursor:pointer;font-weight:700;white-space:nowrap;
+}
+.btn-reload:active{background:rgba(255,255,255,.16);}
+.header-right{display:flex;align-items:center;gap:8px;}
 
 /* ── CONTROLS ── */
 .controls{
@@ -146,7 +153,10 @@ select:focus,input:focus{border-color:var(--accent);}
     <h1>📲 QRコード生成</h1>
     <div class="sub">現場 × アプリのQRコードを一括作成</div>
   </div>
-  <a href="index.html" class="btn-back no-print">← ホームへ</a>
+  <div class="header-right no-print">
+    <button class="btn-reload" onclick="forceReload()">🔄 更新</button>
+    <a href="index.html" class="btn-back">← ホームへ</a>
+  </div>
 </div>
 
 <!-- LOGIN -->
@@ -200,6 +210,18 @@ select:focus,input:focus{border-color:var(--accent);}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// ── 強制リロード ─────────────────────────────────────
+function forceReload(){
+  var go=function(){
+    location.replace(location.href.split('?')[0]+'?v='+Date.now());
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+
 // ── Firebase ──────────────────────────────────────────
 firebase.initializeApp({
   apiKey:"AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
