@@ -180,6 +180,9 @@ main{padding:10px 14px 90px;}
 
 /* 図面インライン展開 */
 .hata-diagram{display:none;margin-top:-4px;margin-bottom:10px;width:100%;border-radius:0 0 8px 8px;overflow:hidden;}
+.diag-img-row{display:flex;gap:0;}
+.diag-img-row > .diag-img-panel{flex:1;min-width:0;overflow:auto;}
+.diag-img-panel + .diag-img-panel{border-left:2px solid #bfdbfe;}
 .hata-diagram.show{display:block;}
 .diagram-head{display:flex;align-items:center;gap:8px;justify-content:space-between;background:#1e3a8a;border-radius:8px 8px 0 0;padding:8px 12px;}
 #ckDiagZoomCtrl{align-items:center;gap:6px;}
@@ -2981,7 +2984,10 @@ function renderMain(){
         '<button class="btn-close-diag" onclick="closeDiagram()">✕ 閉じる</button>' +
       '</div>' +
       '<div class="diagram-vals" id="diagVals"></div>' +
-      '<div id="diagImgWrap" style="overflow:auto;"></div>' +
+      '<div class="diag-img-row">' +
+        '<div id="diagImgWrap" class="diag-img-panel"></div>' +
+        '<div id="diagImgWrap2" class="diag-img-panel" style="display:none;"></div>' +
+      '</div>' +
     '</div>';
 
   if(ck){
@@ -4474,14 +4480,19 @@ function _ckDiagZoom(delta){
   var img = document.querySelector('#diagImgWrap img');
   if(!img) return;
   if(!_ckDiagBaseW) _ckDiagBaseW = img.naturalWidth||img.offsetWidth||600;
-  img.style.width = Math.round(_ckDiagBaseW*_ckDiagZoomLv)+'px';
-  img.style.maxWidth = 'none';
+  var w = Math.round(_ckDiagBaseW*_ckDiagZoomLv)+'px';
+  img.style.width = w; img.style.maxWidth = 'none';
+  // ②も同倍率でズーム
+  var img2 = document.querySelector('#diagImgWrap2 img');
+  if(img2){ img2.style.width=w; img2.style.maxWidth='none'; }
   var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent=Math.round(_ckDiagZoomLv*100)+'%';
 }
 function _ckDiagZoomReset(){
   _ckDiagZoomLv=1.0; _ckDiagBaseW=0;
   var img=document.querySelector('#diagImgWrap img');
   if(img){img.style.width='100%';img.style.maxWidth='';}
+  var img2=document.querySelector('#diagImgWrap2 img');
+  if(img2){img2.style.width='100%';img2.style.maxWidth='';}
   var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent='100%';
 }
 // ================================
@@ -4509,23 +4520,42 @@ function showDiagram(e, hasImg){
     if(e.note) v += '<span style="font-size:13px;color:#555;padding:3px 4px">'+e.note+'</span>';
     vals.innerHTML = v;
   }
-  // 画像（imgData=order.html形式 / img=roadbed.html形式 両対応）
-  var imgSrc = e.imgData || e.img || '';
-  var wrap = document.getElementById('diagImgWrap');
+  // 画像①（imgData=order.html形式 / img=roadbed.html形式 両対応）
+  var imgSrc  = e.imgData || e.img  || '';
+  var imgSrc2 = e.img2 || '';
+  var wrap  = document.getElementById('diagImgWrap');
+  var wrap2 = document.getElementById('diagImgWrap2');
   _ckDiagZoomLv=1.0; _ckDiagBaseW=0;
+
+  function _renderImgPanel(el, src, idSuffix){
+    if(!el) return;
+    if(src && src.startsWith('data:image')){
+      el.innerHTML = '<img class="diagram-img" id="ckDiagImg'+idSuffix+'" src="'+src+'" alt="図面" style="width:100%;">';
+      var _imgEl = el.querySelector('img');
+      if(_imgEl && !idSuffix) _imgEl.onload=function(){_ckDiagBaseW=_imgEl.naturalWidth||_imgEl.offsetWidth||600;};
+    } else if(src && src.startsWith('data:application/pdf')){
+      el.innerHTML = '<div class="diagram-noimg">📄 PDF図面</div>';
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
   if(wrap){
+    _renderImgPanel(wrap, imgSrc, '');
     if(imgSrc && imgSrc.startsWith('data:image')){
-      wrap.innerHTML = '<img class="diagram-img" id="ckDiagImg" src="'+imgSrc+'" alt="図面" style="width:100%;">';
-      var _imgEl = wrap.querySelector('img');
-      if(_imgEl) _imgEl.onload=function(){_ckDiagBaseW=_imgEl.naturalWidth||_imgEl.offsetWidth||600;};
       if(zCtrl){ zCtrl.style.display='flex'; }
       var lbl=document.getElementById('ckDiagZoomLv'); if(lbl) lbl.textContent='100%';
-    } else if(imgSrc && imgSrc.startsWith('data:application/pdf')){
-      wrap.innerHTML = '<div class="diagram-noimg">📄 PDF図面が登録されています</div>';
-      if(zCtrl) zCtrl.style.display='none';
     } else {
-      wrap.innerHTML = '<div class="diagram-noimg">画像なし</div>';
       if(zCtrl) zCtrl.style.display='none';
+    }
+  }
+  if(wrap2){
+    if(imgSrc2 && imgSrc2.startsWith('data:image')){
+      _renderImgPanel(wrap2, imgSrc2, '2');
+      wrap2.style.display='';
+    } else {
+      wrap2.innerHTML='';
+      wrap2.style.display='none';
     }
   }
   diag.className = 'hata-diagram show';

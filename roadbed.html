@@ -440,10 +440,11 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
           <textarea id="h-note" placeholder="特記事項など（任意）" style="width:100%;min-height:52px;"></textarea>
         </div>
 
-        <!-- 図面画像添付 -->
+        <!-- 図面画像添付（①②） -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="field">
           <label style="display:flex;align-items:center;gap:8px;">
-            図面画像（任意）
+            図面画像①（任意）
             <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;font-size:12px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:5px;padding:2px 8px;text-decoration:none;white-space:nowrap;">✂️ PDFから切り出す</a>
           </label>
           <div id="h-imgLabel" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
@@ -459,6 +460,26 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
             <div style="font-size:14px;color:var(--text3);margin-top:4px;" id="h-imgName"></div>
             <button onclick="clearHataImg()" style="font-size:14px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px;">✕ 削除</button>
           </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;">
+            図面画像②（任意）
+            <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;font-size:12px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:5px;padding:2px 8px;text-decoration:none;white-space:nowrap;">✂️ PDFから切り出す</a>
+          </label>
+          <div id="h-imgLabel2" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
+            onclick="document.getElementById('h-imgFile2').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+            ondragleave="this.style.borderColor='var(--border)'"
+            ondrop="handleHataImgDrop2(event)">
+            📷 タップ or ドラッグ&ドロップ
+          </div>
+          <input type="file" id="h-imgFile2" accept="image/*,.pdf" style="display:none" onchange="handleHataImgSelect2(this)">
+          <div id="h-imgPreview2" style="display:none;margin-top:8px;">
+            <img id="h-previewImg2" style="max-width:100%;border-radius:6px;max-height:120px;object-fit:contain;">
+            <div style="font-size:14px;color:var(--text3);margin-top:4px;" id="h-imgName2"></div>
+            <button onclick="clearHataImg2()" style="font-size:14px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px;">✕ 削除</button>
+          </div>
+        </div>
         </div>
 
         <input type="hidden" id="h-editKey">
@@ -1876,7 +1897,7 @@ function fbSaveAllHata(id,list){
   var totalBytes=JSON.stringify(safeList).length;
   if(totalBytes>800*1024){
     console.warn('[FB hata] 合計サイズ'+Math.round(totalBytes/1024)+'KB > 800KB → img を除外してFirestore保存');
-    safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;return s;});
+    safeList=safeList.map(function(r){var s=Object.assign({},r);delete s.img;delete s.imgData;delete s.img2;return s;});
   }
   // 現場別ドキュメントに保存（checklist.html の fbSyncHataMasterForSite が読む形式）
   try{
@@ -1917,12 +1938,12 @@ function loadHataFromFb(id){
             if(r.name)           loc.name=r.name;
             if(r.note)           loc.note=r.note;
             if(r.kanType)        loc.kanType=r.kanType;
-            // img はFirestoreに保存されないため、ローカルの値を優先して保持
-            // Firestoreに img がある（旧データ）場合のみローカルに取り込む
+            // img/img2 はFirestoreに保存されないため、ローカルの値を優先して保持
             if(!loc.img&&!loc.imgData&&(r.img||r.imgData)){
               if(r.img)     loc.img=r.img;
               if(r.imgData) loc.imgData=r.imgData;
             }
+            if(!loc.img2&&r.img2) loc.img2=r.img2;
           } else {
             merged[k]=r;
           }
@@ -1955,7 +1976,8 @@ function loadHataForSite(id){
 
 // 旗揚げ画像を幅500px・JPEG60%に圧縮してプレビューにセット
 // → 1枚あたり15〜25KB程度になりFirestore(1MBドキュメント上限)に安全に保存できる
-function _compressAndSetHataImg(dataUrl, fileName){
+function _compressAndSetHataImg(dataUrl, fileName, sfx){
+  sfx=sfx||'';
   var img=new Image();
   img.onload=function(){
     var MAX=500;
@@ -1967,17 +1989,23 @@ function _compressAndSetHataImg(dataUrl, fileName){
     ctx.drawImage(img,0,0,w,h);
     var compressed=cv.toDataURL('image/jpeg',0.60);
     var kb=Math.round(compressed.length*0.75/1024);
-    document.getElementById('h-previewImg').src=compressed;
-    document.getElementById('h-imgName').textContent=(fileName||'画像')+'（圧縮後 '+kb+'KB）';
-    document.getElementById('h-imgPreview').style.display='';
-    document.getElementById('h-imgLabel').style.display='none';
+    document.getElementById('h-previewImg'+sfx).src=compressed;
+    document.getElementById('h-imgName'+sfx).textContent=(fileName||'画像')+'（圧縮後 '+kb+'KB）';
+    document.getElementById('h-imgPreview'+sfx).style.display='';
+    document.getElementById('h-imgLabel'+sfx).style.display='none';
   };
   img.src=dataUrl;
 }
 function handleHataImgSelect(input){
   const file=input.files[0];if(!file)return;
   const fr=new FileReader();
-  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name);
+  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name,'');
+  fr.readAsDataURL(file);
+}
+function handleHataImgSelect2(input){
+  const file=input.files[0];if(!file)return;
+  const fr=new FileReader();
+  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name,'2');
   fr.readAsDataURL(file);
 }
 
@@ -1988,12 +2016,25 @@ function handleHataImgDrop(ev){
   document.getElementById('h-imgFile').files=ev.dataTransfer.files;
   handleHataImgSelect(document.getElementById('h-imgFile'));
 }
+function handleHataImgDrop2(ev){
+  ev.preventDefault();
+  ev.currentTarget.style.borderColor='var(--border)';
+  const file=ev.dataTransfer.files[0];if(!file)return;
+  document.getElementById('h-imgFile2').files=ev.dataTransfer.files;
+  handleHataImgSelect2(document.getElementById('h-imgFile2'));
+}
 
 function clearHataImg(){
   document.getElementById('h-previewImg').src='';
   document.getElementById('h-imgPreview').style.display='none';
   document.getElementById('h-imgLabel').style.display='';
   document.getElementById('h-imgFile').value='';
+}
+function clearHataImg2(){
+  document.getElementById('h-previewImg2').src='';
+  document.getElementById('h-imgPreview2').style.display='none';
+  document.getElementById('h-imgLabel2').style.display='';
+  document.getElementById('h-imgFile2').value='';
 }
 
 function saveHata(){
@@ -2023,6 +2064,7 @@ function saveHata(){
     kanType:document.getElementById('h-pipetype').value,
     note:document.getElementById('h-note').value,
     img:imgSrc&&imgSrc!==location.href?imgSrc:'',
+    img2:(function(){var s=document.getElementById('h-previewImg2').src||'';return s&&s!==location.href?s:'';}()),
   };
   const id=_selectedSiteId;
   let list=getLocalHata(id);
@@ -2050,6 +2092,7 @@ function clearHataForm(){
   const kt=document.getElementById('h-pipetype');if(kt)kt.value='';
   document.getElementById('h-editKey').value='';
   clearHataImg();
+  clearHataImg2();
   const sel=document.getElementById('existingHataSel');if(sel)sel.value='';
   document.getElementById('btnCancelHata').style.display='none';
   const btnNew=document.getElementById('btnSaveAsNew');if(btnNew)btnNew.style.display='none';
@@ -2076,8 +2119,14 @@ function loadExistingHata(key){
     document.getElementById('h-previewImg').src=r.img;
     document.getElementById('h-imgPreview').style.display='';
     document.getElementById('h-imgLabel').style.display='none';
-    document.getElementById('h-imgName').textContent='（保存済み画像）';
+    document.getElementById('h-imgName').textContent='（保存済み画像①）';
   }else clearHataImg();
+  if(r.img2){
+    document.getElementById('h-previewImg2').src=r.img2;
+    document.getElementById('h-imgPreview2').style.display='';
+    document.getElementById('h-imgLabel2').style.display='none';
+    document.getElementById('h-imgName2').textContent='（保存済み画像②）';
+  }else clearHataImg2();
   document.getElementById('btnCancelHata').style.display='';
 }
 
