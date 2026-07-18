@@ -2642,6 +2642,8 @@ function buildTypeSelect(siteId){
   // v20のデータ構造: sites[].presetId → road_presets[].types[].{key,label}
   // または sites[].types (旧形式)
   var types = null;
+  // 現場名から小田原仕様を自動検出（Firestoreマスタのkeyがrb_xxxxx形式で型番を含まない場合のフォールバック）
+  var _siteNameForCk = site ? (site.name || '') : '';
 
   // 0) roadbed_masters_{siteId} を最優先（明示的に登録済みのデータが最新）
   if(!types && siteId){
@@ -2650,8 +2652,10 @@ function buildTypeSelect(siteId){
       var _rbMastersPri = _rbRawPri ? JSON.parse(_rbRawPri) : null;
       if(_rbMastersPri && _rbMastersPri.length){
         types = _rbMastersPri.map(function(m){
-          // ckType: 保存値 → キーにodawaraを含む場合は'85' → フォールバック
-          var inferredCk = m.ckType || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '');
+          // ckType: 保存値 → キーにodawaraを含む場合は'85' → 現場名に小田原を含む場合は'85' → フォールバック
+          var inferredCk = m.ckType
+            || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '')
+            || (_siteNameForCk.indexOf('小田原') >= 0 ? '85' : '');
           return { key: m.key||m.label, name: m.label||m.key, ckType: inferredCk };
         });
       }
@@ -2699,7 +2703,9 @@ function buildTypeSelect(siteId){
       }
       if(_rbMasters && _rbMasters.length){
         types = _rbMasters.map(function(m){
-          var inferredCk = m.ckType || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '');
+          var inferredCk = m.ckType
+            || ((m.key||'').toLowerCase().indexOf('odawara')>=0 ? '85' : '')
+            || (_siteNameForCk.indexOf('小田原') >= 0 ? '85' : '');
           return { key: m.key||m.label, name: m.label||m.key, ckType: inferredCk };
         });
       }
@@ -2727,7 +2733,20 @@ function buildTypeSelect(siteId){
   });
 
   var lastType = localStorage.getItem('cl_last_type_'+siteId);
-  if(lastType){ sel.value = lastType; }
+  if(lastType){
+    sel.value = lastType;
+    // ckKeyが変わった場合（例: "40|rb_xxx|NO5" → "85|rb_xxx|NO5"）: ラベル名で再マッチ
+    if(!sel.value && lastType.indexOf('|') >= 0){
+      var _lastName = lastType.split('|').pop();
+      for(var oi=0; oi<sel.options.length; oi++){
+        var _ov = sel.options[oi].value;
+        if(_ov && _ov.split('|').pop() === _lastName){
+          sel.value = _ov;
+          break;
+        }
+      }
+    }
+  }
   onTypeChange(true);
 }
 
@@ -4925,16 +4944,4 @@ function showWarningBanner(msg, focusId) {
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
     <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
-    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
-    <input id="teamModalTeam" type="text" placeholder="例: ㅧ1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
-    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
-      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid 
