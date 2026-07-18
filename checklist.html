@@ -1323,6 +1323,34 @@ function _ckRbMasterToTypeObj(m){
       .filter(function(r){ return (r.type||'') === 'upper_rb'; })
       .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
   }
+  // フリーモード判定にかかわらず kariFreeRows/kariRbLayers の RM 行からフォールバック
+  // （kariFreeMode 未設定かつ kariAsLayers が空でない場合でも kariRmH が 0 のケースに対応）
+  if (_ckKariRmH === 0 && _ckKariFreeRows.length > 0) {
+    var _fbRmH = _ckKariFreeRows
+      .filter(function(r){ return r.type === 'upper_rb'; })
+      .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+    if (_fbRmH > 0) _ckKariRmH = _fbRmH;
+  }
+  if (_ckKariRmH === 0 && Array.isArray(m.kariRbLayers) && m.kariRbLayers.length > 0) {
+    var _fbRmH2 = m.kariRbLayers
+      .filter(function(r){ return _ckIsRmCat(r.subcat||r.cat||r.type||''); })
+      .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+    if (_fbRmH2 > 0) _ckKariRmH = _fbRmH2;
+  }
+  // rcH も同様に kariFreeRows(lower_rb) / kariRbLayers RC行 からフォールバック
+  var _ckKariRcH = (m.kariRcH || 0);
+  if (_ckKariRcH === 0 && _ckKariFreeRows.length > 0) {
+    var _fbRcH = _ckKariFreeRows
+      .filter(function(r){ return r.type === 'lower_rb'; })
+      .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+    if (_fbRcH > 0) _ckKariRcH = _fbRcH;
+  }
+  if (_ckKariRcH === 0 && Array.isArray(m.kariRbLayers) && m.kariRbLayers.length > 0) {
+    var _fbRcH2 = m.kariRbLayers
+      .filter(function(r){ return _ckIsRcCat(r.subcat||r.cat||r.type||''); })
+      .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
+    if (_fbRcH2 > 0) _ckKariRcH = _fbRcH2;
+  }
   // hon側フリー路盤層（鉄板等、cat='free' または subcat='subfree'）の合計H (m)
   var _ckGenkyoFreeH = !m.honFreeMode ? (m.honRbLayers||[]).filter(function(r){
     return r.cat==='free' || r.subcat==='subfree';
@@ -1349,7 +1377,7 @@ function _ckRbMasterToTypeObj(m){
     label:      m.label || m.key,
     color:      m.color || '#7c3aed',
     rmH:        _ckKariRmH,
-    rcH:        m.kariRcH  || 0,
+    rcH:        _ckKariRcH,
     rmSize: (function(){
       var row=(m.kariRbLayers||[]).find(function(r){return _ckIsRmCat(r.subcat||'')||_ckIsRmCat(r.type||'');});
       if(row&&row.subcat){var mm=String(row.subcat).match(/\d+/);if(mm)return parseInt(mm[0]);}
@@ -2196,7 +2224,17 @@ function buildChecklistFromPreset(presetType){
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
   // TYPE_CHECKLISTSのベースをディープコピーして値を上書き
-  var baseKey = resolveBaseKey(presetType.key);
+  // type_import_* キー（Firestoreマスタ由来）は resolveBaseKey が常に'40'を返す。
+  // グローバル _typeKey（buildTypeSelect が設定した 85/40 等）を優先することで
+  // 小田原仕様の 85型ベースが正しく使われる。
+  var baseKey = (function(){
+    var k = resolveBaseKey(presetType.key);
+    if (k === '40' && _typeKey && TYPE_CHECKLISTS[_typeKey]
+        && String(presetType.key||'').indexOf('type_import_') === 0) {
+      return _typeKey;
+    }
+    return k;
+  })();
   var base = TYPE_CHECKLISTS[baseKey];
   if(!base){
     // ベースなし: 最低限の構成で返す
@@ -4925,23 +4963,4 @@ function showWarningBanner(msg, focusId) {
     <div style="font-size:20px;font-weight:700;margin-bottom:16px;color:#e2e8f0;">🔑 管理者ログイン</div>
     <div style="margin-bottom:10px;">
       <label style="font-size:14px;color:#8fa3bb;display:block;margin-bottom:4px;">メールアドレス</label>
-      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="管理者メールアドレス">
-    </div>
-    <div style="margin-bottom:18px;">
-      <label style="font-size:14px;color:#8fa3bb;display:block;margin-bottom:4px;">パスワード</label>
-      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="パスワード">
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;">ログイン</button>
-      <button onclick="closeFbModal()" style="padding:11px 16px;background:#252a3d;color:#e2e8f0;border:1px solid #363d5c;border-radius:8px;font-size:18px;cursor:pointer;">×</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 会社・班名 設定モーダル ===== -->
-<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
-    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
-    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
-    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid 
+      <input id="fbEmail" type="email" autocomplete="email" 
