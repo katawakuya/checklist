@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="型枠屋">
+<meta name="theme-color" content="#c62828">
+<link rel="manifest" href="ke-manifest.json">
+<link rel="apple-touch-icon" href="ke-apple-touch-icon.png">
+<title>型枠事業システム</title>
+<style>
+:root{
+  --bg:#1a0a0a;
+  --bg2:#2c1010;
+  --bg3:#3d1515;
+  --red:#ef5350;
+  --red2:#c62828;
+  --red3:#7f0000;
+  --orange:#ff7043;
+  --orange-dim:rgba(255,112,67,0.15);
+  --red-dim:rgba(239,83,80,0.15);
+  --text:#f5e6e6;
+  --text2:#c49898;
+  --border:rgba(255,255,255,0.08);
+  --radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  min-height:100vh;overscroll-behavior:none;
+}
+
+/* ─── HEADER ─── */
+.header{
+  background:linear-gradient(135deg,#7f0000 0%,#c62828 60%,#d84315 100%);
+  padding:16px 16px 20px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 3px 12px rgba(127,0,0,.5);
+}
+.header-row{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto;}
+.app-title{display:flex;align-items:center;gap:11px;}
+.app-title .icon{width:42px;height:42px;border-radius:10px;object-fit:cover;flex-shrink:0;}
+.app-title h1{font-size:17px;font-weight:800;letter-spacing:0.2px;color:#fff;}
+.app-title .sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.btn-reload{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.85);border-radius:8px;padding:7px 10px;
+  font-size:14px;cursor:pointer;line-height:1;
+}
+.btn-reload:active{background:rgba(255,255,255,.2);}
+
+/* ─── MAIN ─── */
+.main{max-width:760px;margin:0 auto;padding:18px 14px 40px;}
+
+/* ─── GREETING ─── */
+.greeting{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;
+  display:flex;align-items:center;gap:12px;
+}
+.greeting .g-icon{font-size:28px;}
+.greeting .g-text h2{font-size:14px;font-weight:700;color:var(--text);}
+.greeting .g-text p{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5;}
+
+/* ─── SECTION LABEL ─── */
+.sec-label{
+  font-size:11px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:1.2px;
+  margin-bottom:10px;margin-top:18px;padding:0 2px;
+}
+
+/* ─── APP GRID ─── */
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(min-width:480px){.app-grid{grid-template-columns:repeat(3,1fr);}}
+
+/* ─── APP CARD ─── */
+.app-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px 12px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  text-align:center;cursor:pointer;text-decoration:none;
+  transition:border-color .15s,background .15s;
+  position:relative;user-select:none;
+}
+.app-card:active{transform:scale(0.96);}
+.app-card .card-icon{font-size:34px;line-height:1;}
+.app-card .card-name{font-size:13px;font-weight:800;color:var(--text);}
+.app-card .card-desc{font-size:11px;color:var(--text2);line-height:1.4;}
+
+/* Emergency card — full width, animated border */
+.card-emergency{
+  grid-column:1/-1;
+  border:2px solid var(--red);
+  background:rgba(239,83,80,0.08);
+  border-radius:var(--radius);padding:16px 18px;
+  display:flex;align-items:center;gap:16px;
+  text-decoration:none;cursor:pointer;
+  transition:background .15s;
+  animation:pulse-border 2.5s infinite;
+}
+.card-emergency:active{background:rgba(239,83,80,0.18);}
+.card-emergency .ce-icon{font-size:38px;flex-shrink:0;}
+.card-emergency .ce-texts .ce-name{font-size:16px;font-weight:800;color:var(--red);letter-spacing:.3px;}
+.card-emergency .ce-texts .ce-desc{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5;}
+@keyframes pulse-border{
+  0%,100%{border-color:#ef5350;box-shadow:none;}
+  50%{border-color:#c62828;box-shadow:0 0 0 3px rgba(198,40,40,0.18);}
+}
+
+/* カラーバリアント */
+.card-red   {border-color:rgba(239,83,80,.25);}
+.card-red:hover{border-color:var(--red);background:rgba(239,83,80,.07);}
+.card-orange{border-color:rgba(255,112,67,.25);}
+.card-orange:hover{border-color:var(--orange);background:var(--orange-dim);}
+.card-gray  {border-color:rgba(255,255,255,.1);opacity:.55;}
+
+/* Coming soon badge */
+.badge-soon{
+  position:absolute;top:8px;right:8px;
+  background:rgba(255,255,255,.1);color:var(--text2);
+  font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;
+  letter-spacing:.05em;
+}
+
+/* ─── FOOTER ─── */
+.footer{text-align:center;padding:28px 16px 44px;color:var(--text2);font-size:11px;line-height:1.8;}
+.footer a{color:var(--red);text-decoration:none;font-weight:700;}
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:#2c1010;border:1px solid rgba(239,83,80,.3);
+  color:var(--text);padding:10px 22px;border-radius:22px;
+  font-size:13px;transition:transform .28s;pointer-events:none;z-index:999;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ─── PWA インストールバー ─── */
+#installBar{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:#7f0000;color:#fff;
+  padding:10px 14px;z-index:300;
+  align-items:center;justify-content:space-between;gap:10px;
+}
+#installBar.show{display:flex;}
+#installBar p{font-size:13px;font-weight:700;}
+.btn-install{
+  background:#fff;color:#7f0000;border:none;
+  border-radius:8px;padding:7px 16px;font-size:13px;font-weight:800;cursor:pointer;
+  white-space:nowrap;
+}
+.btn-install-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;padding:0 4px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <div class="app-title">
+      <img src="ke-icon-192.png" class="icon" alt="型枠屋">
+      <div>
+        <h1>株式会社型枠屋</h1>
+        <div class="sub">型枠事業　個別管理システム</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-reload" onclick="forceReload()" title="キャッシュを消去して最新版に更新">🔄</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- 日付グリーティング -->
+  <div class="greeting">
+    <div class="g-icon">👷</div>
+    <div class="g-text">
+      <h2 id="greetMsg">おはようございます</h2>
+      <p id="greetDate">---</p>
+    </div>
+  </div>
+
+  <!-- 緊急連絡（メイン機能） -->
+  <div class="sec-label">🚨 緊急連絡</div>
+  <a class="card-emergency" href="ke-launcher.html">
+    <div class="ce-icon">🚑</div>
+    <div class="ce-texts">
+      <div class="ce-name">緊急連絡ランチャー</div>
+      <div class="ce-desc">社内・協力業者・医療機関・行政への即発信<br>設定は誰でも変更できます</div>
+    </div>
+  </a>
+
+  <!-- アプリ一覧 -->
+  <div class="sec-label" style="margin-top:22px;">🗂 アプリ一覧</div>
+  <div class="app-grid">
+
+    <a class="app-card card-red" href="ke-launcher.html">
+      <div class="card-icon">📞</div>
+      <div class="card-name">緊急連絡先</div>
+      <div class="card-desc">連絡先の確認・編集</div>
+    </a>
+
+    <div class="app-card card-gray" style="cursor:default;">
+      <div class="badge-soon">近日公開</div>
+      <div class="card-icon">📋</div>
+      <div class="card-name">日報・作業記録</div>
+      <div class="card-desc">現場の作業日報</div>
+    </div>
+
+    <div class="app-card card-gray" style="cursor:default;">
+      <div class="badge-soon">近日公開</div>
+      <div class="card-icon">🗓</div>
+      <div class="card-name">工程管理</div>
+      <div class="card-desc">作業スケジュール</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  株式会社型枠屋　型枠事業システム<br>
+  <small style="color:rgba(255,255,255,.2);">v1.0</small>
+</div>
+
+<!-- PWA インストールバー -->
+<div id="installBar">
+  <p>📱 ホーム画面に追加して使えます</p>
+  <button class="btn-install" id="btnInstall">追加する</button>
+  <button class="btn-install-close" onclick="document.getElementById('installBar').classList.remove('show')">×</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── 強制リロード ─────────────────────────────────────
+function forceReload(){
+  var go = function(){
+    location.replace(location.href.split('?')[0]+'?v='+Date.now());
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+
+// ─── グリーティング ──────────────────────────────────
+(function(){
+  var now  = new Date();
+  var h    = now.getHours();
+  var greet= h < 10 ? 'おはようございます' : h < 17 ? 'お疲れ様です' : 'お疲れ様でした';
+  var wdays = ['日','月','火','水','木','金','土'];
+  var date  = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日（'+wdays[now.getDay()]+'）';
+  document.getElementById('greetMsg').textContent  = greet;
+  document.getElementById('greetDate').textContent = date;
+})();
+
+// ─── Toast ──────────────────────────────────────────
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+
+// ─── PWA インストール ──────────────────────────────
+var _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  _deferredPrompt = e;
+  document.getElementById('installBar').classList.add('show');
+});
+document.getElementById('btnInstall').addEventListener('click', function(){
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(function(res){
+    if (res.outcome === 'accepted') showToast('✅ ホーム画面に追加しました');
+    _deferredPrompt = null;
+    document.getElementById('installBar').classList.remove('show');
+  });
+});
+window.addEventListener('appinstalled', function(){
+  showToast('✅ インストール完了');
+  document.getElementById('installBar').classList.remove('show');
+});
+
+// ─── Service Worker 登録（既存 sw.js を共有） ────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
