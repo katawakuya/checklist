@@ -129,9 +129,12 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
     <div>
       <h1>🌡 熱中症　緊急連絡</h1>
-      <p class="site">小田原市富士フィルム地下埋設管敷設工事<br>現場：小田原市扇町2-33-11他</p>
+      <p class="site" id="dynSite">小田原市富士フィルム地下埋設管敷設工事<br>現場：小田原市扇町2-33-11他</p>
     </div>
-    <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <a href="heatstroke-settings.html" style="font-size:13px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:7px;padding:5px 10px;text-decoration:none;font-weight:700;">⚙ 設定</a>
+      <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
+    </div>
   </div>
 </header>
 <div class="url-bar">🔗 katawakuya.github.io/checklist/heatstroke.html</div>
@@ -152,57 +155,15 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
 </div>
 
 <!-- 担当者 -->
-<div class="sec">
+<div class="sec" id="dynContacts">
   <div class="sec-lbl">担当者連絡先</div>
-
-  <a class="call" href="tel:09092901004">
-    <div class="call-info">
-      <div class="call-role">現場責任者</div>
-      <div class="call-name-row"><span class="call-name">三枝　裕太</span><span class="call-romaji">Saegusa Yuta</span></div>
-      <div class="call-num">090-9290-1004</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
-
-  <a class="call" href="tel:08057047075">
-    <div class="call-info">
-      <div class="call-role">安全衛生管理者</div>
-      <div class="call-name-row"><span class="call-name">柴田　興平</span><span class="call-romaji">Shibata Kohei</span></div>
-      <div class="call-num">080-5704-7075</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
-
-  <a class="call" href="tel:08054000259">
-    <div class="call-info">
-      <div class="call-role">元請担当（昼間）</div>
-      <div class="call-name-row"><span class="call-name">山本　克貴</span><span class="call-romaji">Yamamoto Katsuki</span></div>
-      <div class="call-num">080-5400-0259</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
-
-  <a class="call" href="tel:09048124651">
-    <div class="call-info">
-      <div class="call-role">元請　夜間・休日緊急</div>
-      <div class="call-name">夜間緊急連絡先</div>
-      <div class="call-num">090-4812-4651</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
+  <!-- JS で動的生成 -->
 </div>
 
 <!-- 病院 -->
-<div class="sec">
+<div class="sec" id="dynHosp">
   <div class="sec-lbl">最寄り医療機関</div>
-  <div class="hosp">
-    <div class="hosp-name">医療法人財団報徳会　西湘病院</div>
-    <div class="hosp-addr">〒250-0001　神奈川県小田原市扇町1-16-35</div>
-    <div class="hosp-btns">
-      <a class="hosp-btn tel" href="tel:0465355773">📞 0465-35-5773</a>
-      <a class="hosp-btn map" href="https://maps.google.com/?q=神奈川県小田原市扇町1-16-35+西湘病院" target="_blank">🗺 地図を開く</a>
-    </div>
-  </div>
+  <!-- JS で動的生成 -->
 </div>
 
 <!-- 応急処置 -->
@@ -234,7 +195,7 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
     </div>
     <div class="org-a">↓ 即時報告</div>
     <div class="org-row">
-      <div class="org-b mid">現場責任者　三枝 裕太</div>
+      <div class="org-b mid" id="dynOrg1">現場責任者　三枝 裕太</div>
     </div>
     <div class="org-row c3" style="margin-top:5px;">
       <div>
@@ -243,11 +204,11 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
       </div>
       <div>
         <div class="org-a">↓</div>
-        <div class="org-b sub">安全管理者<br>柴田 興平</div>
+        <div class="org-b sub" id="dynOrg2">安全管理者<br>柴田 興平</div>
       </div>
       <div>
         <div class="org-a">↓</div>
-        <div class="org-b sub">元請担当<br>山本 克貴</div>
+        <div class="org-b sub" id="dynOrg3">元請担当<br>山本 克貴</div>
       </div>
     </div>
     <div class="org-a">↓</div>
@@ -264,34 +225,103 @@ footer{padding:24px 16px;text-align:center;font-size:10px;color:#bbb;line-height
 <!-- ページ2：サブ連絡先 -->
 <div class="divider"><span>── 協力業者　緊急連絡先（参考）──</span></div>
 <div class="p2-hdr">📋 サブ連絡先（カード不要・アプリのみ掲載）</div>
-
-<div style="padding:12px 16px 0;">
-  <a class="call" href="tel:09027279654">
-    <div class="call-info">
-      <div class="call-role">（1次）株式会社型枠屋</div>
-      <div class="call-name-row"><span class="call-name">佐藤　嘉秀</span><span class="call-romaji">Sato Yoshihide</span></div>
-      <div class="call-num">090-2727-9654</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
-
-  <a class="call" href="tel:09086440519">
-    <div class="call-info">
-      <div class="call-role">（2次）クラフトマンシップ・パートナーズ</div>
-      <div class="call-name-row"><span class="call-name">萩原　一彦</span><span class="call-romaji">Hagiwara Kazuhiko</span></div>
-      <div class="call-num">090-8644-0519</div>
-    </div>
-    <div class="call-ico"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg></div>
-  </a>
+<div id="dynSubContacts" style="padding:12px 16px 0;">
+  <!-- JS で動的生成 -->
 </div>
 
 <script>
+var PHONE_SVG='<svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.68-.36 1.04-.22 1.12.42 2.33.65 3.56.65.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.18 21 3 13.82 3 5c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.22 1.01l-2.25 2.22z"/></svg>';
+
+var DEFAULT_CONFIG = {
+  siteName: '小田原市富士フィルム地下埋設管敷設工事',
+  siteAddr: '現場：小田原市扇町2-33-11他',
+  footerText: '小田原市富士フィルム地下埋設管敷設工事\n令和7年度　株式会社型枠屋',
+  contacts: [
+    {role:'現場責任者',       name:'三枝　裕太',    romaji:'Saegusa Yuta',       tel:'09092901004'},
+    {role:'安全衛生管理者',   name:'柴田　興平',    romaji:'Shibata Kohei',      tel:'08057047075'},
+    {role:'元請担当（昼間）', name:'山本　克貴',    romaji:'Yamamoto Katsuki',   tel:'08054000259'},
+    {role:'元請　夜間・休日緊急', name:'夜間緊急連絡先', romaji:'',             tel:'09048124651'},
+  ],
+  hospital: {
+    name: '小田原市民病院',
+    addr: '\u300250-8558\u3000神奈川県小田原市久野46',
+    tel:  '0465343175',
+    map:  '神奈川県小田原市久野46+小田原市民病院'
+  },
+  subContacts: [
+    {role:'（1次）株式会社型枠屋',            name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654'},
+    {role:'（2次）クラフトマンシップ・パートナーズ', name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519'},
+  ]
+};
+
+function fmtTel(t){ return t.replace(/^(0\d{2})(\d{4})(\d{4})$/,'$1-$2-$3').replace(/^(0\d{3})(\d{2})(\d{4})$/,'$1-$2-$3').replace(/^(0\d{1})(\d{4})(\d{4})$/,'$1-$2-$3'); }
+
+function makeCallBtn(c){
+  var nameRow = c.romaji
+    ? '<div class="call-name-row"><span class="call-name">'+c.name+'</span><span class="call-romaji">'+c.romaji+'</span></div>'
+    : '<div class="call-name">'+c.name+'</div>';
+  return '<a class="call" href="tel:'+c.tel+'"><div class="call-info"><div class="call-role">'+c.role+'</div>'+nameRow+'<div class="call-num">'+fmtTel(c.tel)+'</div></div><div class="call-ico">'+PHONE_SVG+'</div></a>';
+}
+
+function renderDynamic(cfg){
+  // ヘッダー
+  var si = document.getElementById('dynSite');
+  if(si) si.innerHTML = cfg.siteName + '<br>' + cfg.siteAddr;
+
+  // 担当者
+  var ct = document.getElementById('dynContacts');
+  if(ct){
+    var h = '<div class="sec-lbl">担当者連絡先</div>';
+    (cfg.contacts||[]).forEach(function(c){ h += makeCallBtn(c); });
+    ct.innerHTML = h;
+  }
+
+  // 病院
+  var hp = document.getElementById('dynHosp');
+  if(hp && cfg.hospital){
+    var ho = cfg.hospital;
+    var telFmt = fmtTel(ho.tel||'');
+    hp.innerHTML = '<div class="sec-lbl">最寄り医療機関</div>'+
+      '<div class="hosp">'+
+        '<div class="hosp-name">'+ho.name+'</div>'+
+        '<div class="hosp-addr">'+ho.addr+'</div>'+
+        '<div class="hosp-btns">'+
+          '<a class="hosp-btn tel" href="tel:'+ho.tel+'">📞 '+telFmt+'</a>'+
+          '<a class="hosp-btn map" href="https://maps.google.com/?q='+(ho.map||ho.name)+'" target="_blank">🗺 地図を開く</a>'+
+        '</div>'+
+      '</div>';
+  }
+
+  // 組織図（1〜3人目の名前を反映）
+  var c0 = cfg.contacts && cfg.contacts[0];
+  var c1 = cfg.contacts && cfg.contacts[1];
+  var c2 = cfg.contacts && cfg.contacts[2];
+  if(c0){ var o1=document.getElementById('dynOrg1'); if(o1) o1.textContent=c0.role+'　'+c0.name.replace(/　/,' '); }
+  if(c1){ var o2=document.getElementById('dynOrg2'); if(o2) o2.innerHTML=(c1.role.replace('安全衛生管理者','安全管理者')||'担当者2')+'<br>'+c1.name.replace(/　/,' '); }
+  if(c2){ var o3=document.getElementById('dynOrg3'); if(o3) o3.innerHTML=(c2.role.replace('（昼間）','')||'担当者3')+'<br>'+c2.name.replace(/　/,' '); }
+
+  // サブ連絡先
+  var sb = document.getElementById('dynSubContacts');
+  if(sb){
+    var sh = '';
+    (cfg.subContacts||[]).forEach(function(c){ sh += makeCallBtn(c); });
+    sb.innerHTML = sh || '<p style="padding:10px;color:#999;font-size:13px;">協力業者は設定から登録してください</p>';
+  }
+
+  // フッター
+  var ft = document.getElementById('dynFooter');
+  if(ft) ft.innerHTML = (cfg.footerText||cfg.siteName||'').replace(/\n/g,'<br>');
+}
+
+window.addEventListener('DOMContentLoaded', function(){
+  var saved = localStorage.getItem('hs_config');
+  var cfg = DEFAULT_CONFIG;
+  if(saved){ try{ cfg = JSON.parse(saved); }catch(e){} }
+  renderDynamic(cfg);
+});
 </script>
 
-<footer>
-  小田原市富士フィルム地下埋設管敷設工事<br>
-  令和7年度　株式会社型枠屋
-</footer>
+<footer id="dynFooter">小田原市富士フィルム地下埋設管敷設工事<br>令和7年度　株式会社型枠屋</footer>
 
 </body>
 </html>
