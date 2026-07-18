@@ -221,6 +221,9 @@ main{padding:10px 14px 90px;}
     <span id="adminBadge" style="display:none;font-size:13px;padding:2px 7px;background:rgba(255,255,255,.15);border-radius:4px;color:#fff;"></span>
     <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <a href="roadbed.html" class="hd-btn" title="路盤・旗揚げマスタ">🗺 路盤</a>
+    <a href="order.html" class="hd-btn" title="計算シート（発注）">📊 計算</a>
+    <a href="viewer.html" class="hd-btn" id="viewerHdrLink" onclick="updateViewerLink(this)" title="図面">📐 図面</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
       <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
@@ -696,8 +699,8 @@ var TYPE_CHECKLISTS = {
         {n:'手掘り状況', note:'配管埋設深さに近づいたら重機での掘削を止め、スコップで手掘りしている状況を撮影。既設管や埋設物の損傷防止のために必須。'},
         {n:'発生土積込み状況', note:'掘削した発生土をダンプへ積み込む状況を撮影。黒板にダンプのナンバー・積載重量を記載して撮影する。産廃でない場合は許可番号不要。'},
         {n:'土留工（矢板・切梁・腹起）', note:'矢板・切梁・腹起設置状況を設置後に撮影（実施した場合）。【小田原仕様】', na:true},
-        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'掘削出来形検測', dim:'L＝　m：W＝　m：H＝　m'},
+        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'ダミー管（特殊部さや管）', note:'特殊部（マンホール）内で配管固定用スペーサーの取付状況を撮影。スペーサー本体の取付状況と配管を当てた状態の両方を撮影する。', na:true},
         {n:'通信管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
         {n:'電力管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
@@ -755,8 +758,8 @@ var TYPE_CHECKLISTS = {
         {n:'手掘り状況', note:'配管埋設深さに近づいたら重機での掘削を止め、スコップで手掘りしている状況を撮影。既設管や埋設物の損傷防止のために必須。'},
         {n:'発生土積込み状況', note:'掘削した発生土をダンプへ積み込む状況を撮影。黒板にダンプのナンバー・積載重量を記載して撮影する。'},
         {n:'土留工（矢板・切梁・腹起）', note:'矢板・切梁・腹起設置状況を設置後に撮影（実施した場合）。【小田原仕様】', na:true},
-        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'掘削出来形検測', dim:'L＝　m：W＝　m：H＝　m'},
+        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'ダミー管（特殊部さや管）', na:true},
         {n:'通信管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
         {n:'電力管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
@@ -809,8 +812,8 @@ var TYPE_CHECKLISTS = {
         {n:'手掘り状況', note:'配管埋設深さに近づいたら重機での掘削を止め、スコップで手掘りしている状況を撮影。既設管や埋設物の損傷防止のために必須。'},
         {n:'発生土積込み状況', note:'掘削した発生土をダンプへ積み込む状況を撮影。黒板にダンプのナンバー・積載重量を記載して撮影する。'},
         {n:'土留工（矢板・切梁・腹起）', note:'矢板・切梁・腹起設置状況を設置後に撮影（実施した場合）。【小田原仕様】', na:true},
-        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'掘削出来形検測', dim:'L＝　m：W＝　m：H＝　m'},
+        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'ダミー管（特殊部さや管）', na:true},
         {n:'通信管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
         {n:'電力管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
@@ -860,8 +863,8 @@ var TYPE_CHECKLISTS = {
         {n:'手掘り状況', note:'配管埋設深さに近づいたら重機での掘削を止め、スコップで手掘りしている状況を撮影。既設管や埋設物の損傷防止のために必須。'},
         {n:'発生土積込み状況', note:'掘削した発生土をダンプへ積み込む状況を撮影。黒板にダンプのナンバー・積載重量を記載して撮影する。'},
         {n:'土留工（矢板・切梁・腹起）', note:'矢板・切梁・腹起設置状況を設置後に撮影（実施した場合）。【小田原仕様】', na:true},
-        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'掘削出来形検測', dim:'L＝　m：W＝　m：H＝　m'},
+        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'ダミー管（特殊部さや管）', na:true},
         {n:'通信管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
         {n:'電力管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
@@ -912,8 +915,8 @@ var TYPE_CHECKLISTS = {
         {n:'路盤積込み状況', note:'掘削した路盤材（砕石類）をダンプへ積み込む状況を撮影。黒板にダンプのナンバー・積載重量・許可番号を記載して撮影する。'},
         {n:'手掘り状況', note:'配管埋設深さに近づいたら重機での掘削を止め、スコップで手掘りしている状況を撮影。既設管や埋設物の損傷防止のために必須。'},
         {n:'土留工（矢板・切梁・腹起）', note:'矢板・切梁・腹起設置状況を設置後に撮影（実施した場合）。【小田原仕様】', na:true},
-        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'掘削出来形検測', dim:'L＝　m：W＝　m：H＝　m'},
+        {n:'構造物への埋め込み状況（鞘管含む）', note:'橋台・擁壁等の構造物に管を埋め込む場合および鞘管使用時に撮影（実施した場合）。【小田原仕様】', na:true},
         {n:'ダミー管（特殊部さや管）', na:true},
         {n:'通信管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
         {n:'電力管　管台測定', dim:'L=m', note:'管台（管の受け台）の間隔を測定。0.5m以上2.5m以内であることを確認しスケールで撮影。管台下に隙間なく転圧されていることも確認する。'},
@@ -2503,6 +2506,12 @@ var _pipeTypes = ['通信管', '電力管', '', '']; // 各行の管種名
 var _pipeCustomNames = ['', '', '', '']; // 「その他」選択時のフリー入力名
 var _showDummy = false;                // ダミー管項目表示フラグ（trueの場合のみ表示）
 var _showCutter = false;               // 舗装切断工項目表示フラグ
+
+// 小田原扇町計画 現場判定
+function _isOdawaraSite(){
+  var _s = _sites && _sites.find(function(s){ return s.id === _siteId; });
+  return !!(_s && _s.name && _s.name.indexOf('小田原') >= 0);
+}
 var _pipeGradient = [false, false, false, false]; // 勾配モード per pipe slot
 var _pendingSlope = null; // restoreState→renderMain間の勾配DP仮保存
 var _history = [];
@@ -2635,12 +2644,25 @@ function buildTypeSelect(siteId){
   // または sites[].types (旧形式)
   var types = null;
 
+  // 0) roadbed_masters_{siteId} を最優先（明示的に登録済みのデータが最新）
+  if(!types && siteId){
+    try{
+      var _rbRawPri = localStorage.getItem('roadbed_masters_'+siteId);
+      var _rbMastersPri = _rbRawPri ? JSON.parse(_rbRawPri) : null;
+      if(_rbMastersPri && _rbMastersPri.length){
+        types = _rbMastersPri.map(function(m){
+          return { key: m.key||m.label, name: m.label||m.key };
+        });
+      }
+    }catch(e){}
+  }
+
   // 1) site.types が直接ある場合（旧形式）
-  if(site && site.types && site.types.length){
+  if(!types && site && site.types && site.types.length){
     types = site.types;
   }
 
-  // 2) site.presetId → road_presetsを参照（v20の現行形式）
+  // 2) site.presetId → road_presetsを参照（v20の現行形式・フォールバック）
   if(!types && site && site.presetId){
     try{
       var presetsRaw = localStorage.getItem('road_presets');
@@ -3240,8 +3262,11 @@ function renderSection(sec, si, isHon){
     // 舗装切断工項目の検出
     var _isCutterItem = !!item.cutter;
     var _cutterAttr = _isCutterItem ? ' data-cutter-item="1"' : '';
-    var _combinedStyle = (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) ? ' style="display:none;"' : '';
-    html += '<div class="'+cls+'"'+_combinedStyle+' onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'"'+_pipeSlotAttr+_dummyAttr+_cutterAttr+'>' +
+    // 小田原仕様項目の検出（noteに【小田原仕様】があれば小田原現場以外では非表示）
+    var _isOdawaraItem = !!(item.note && item.note.indexOf('【小田原仕様】') >= 0);
+    var _odawaraAttr = _isOdawaraItem ? ' data-odawara-item="1"' : '';
+    var _combinedStyle = (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) || (_isOdawaraItem && !_isOdawaraSite()) ? ' style="display:none;"' : '';
+    html += '<div class="'+cls+'"'+_combinedStyle+' onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'"'+_pipeSlotAttr+_dummyAttr+_cutterAttr+_odawaraAttr+'>' +
       '<div class="check-box">'+(isNA?'－':(isDone?'✓':''))+'</div>' +
       '<div class="check-label">' +
         '<div class="cname">'+(_comboPair ? '埋設シート・中間転圧' : item.n)+'</div>' +
