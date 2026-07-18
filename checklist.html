@@ -661,7 +661,8 @@ function savePipeSettingsToFb() {
       pipeCount:       _pipeCount,
       pipeTypes:       _pipeTypes,
       pipeCustomNames: _pipeCustomNames,
-      showDummy:       _showDummy
+      showDummy:       _showDummy,
+      showOdawara:     _showOdawara
     };
     localStorage.setItem('checklist_pipe_settings', JSON.stringify(allSettings));
     fbSaveMaster('checklist_pipe_settings', allSettings);
@@ -2506,12 +2507,7 @@ var _pipeTypes = ['通信管', '電力管', '', '']; // 各行の管種名
 var _pipeCustomNames = ['', '', '', '']; // 「その他」選択時のフリー入力名
 var _showDummy = false;                // ダミー管項目表示フラグ（trueの場合のみ表示）
 var _showCutter = false;               // 舗装切断工項目表示フラグ
-
-// 小田原扇町計画 現場判定
-function _isOdawaraSite(){
-  var _s = _sites && _sites.find(function(s){ return s.id === _siteId; });
-  return !!(_s && _s.name && _s.name.indexOf('小田原') >= 0);
-}
+var _showOdawara = false;              // 詳細撮影（小田原仕様等）表示フラグ
 var _pipeGradient = [false, false, false, false]; // 勾配モード per pipe slot
 var _pendingSlope = null; // restoreState→renderMain間の勾配DP仮保存
 var _history = [];
@@ -2878,7 +2874,8 @@ function restoreState(){
     if(d.pipeCount) _pipeCount = d.pipeCount;
     if(d.pipeTypes) _pipeTypes = d.pipeTypes;
     if(d.pipeCustomNames) _pipeCustomNames = d.pipeCustomNames;
-    if(d.showDummy !== undefined) _showDummy = d.showDummy;
+    if(d.showDummy   !== undefined) _showDummy   = d.showDummy;
+    if(d.showOdawara !== undefined) _showOdawara = d.showOdawara;
     if(d.pipeGradient !== undefined) _pipeGradient = d.pipeGradient;
     // 勾配②端DP値をDOM生成後（renderMain後）に適用するため仮保存
     _pendingSlope = {
@@ -3265,7 +3262,7 @@ function renderSection(sec, si, isHon){
     // 小田原仕様項目の検出（noteに【小田原仕様】があれば小田原現場以外では非表示）
     var _isOdawaraItem = !!(item.note && item.note.indexOf('【小田原仕様】') >= 0);
     var _odawaraAttr = _isOdawaraItem ? ' data-odawara-item="1"' : '';
-    var _combinedStyle = (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) || (_isOdawaraItem && !_isOdawaraSite()) ? ' style="display:none;"' : '';
+    var _combinedStyle = (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) || (_isOdawaraItem && !_showOdawara) ? ' style="display:none;"' : '';
     html += '<div class="'+cls+'"'+_combinedStyle+' onclick="toggleCheck('+si+','+ii+')" data-k="'+k+'"'+_pipeSlotAttr+_dummyAttr+_cutterAttr+_odawaraAttr+'>' +
       '<div class="check-box">'+(isNA?'－':(isDone?'✓':''))+'</div>' +
       '<div class="check-label">' +
@@ -3621,6 +3618,10 @@ function renderGLPanel() {
     + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
     +   '<input type="checkbox" id="chkCutterGlobal" onchange="toggleCutter(this.checked)"'+(_showCutter?' checked':'')+' style="width:14px;height:14px;accent-color:#0ea5e9;">'
     +   '<span>舗装切断工の撮影項目を表示する</span>'
+    + '</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
+    +   '<input type="checkbox" id="chkOdawaraGlobal" onchange="toggleOdawara(this.checked)"'+(_showOdawara?' checked':'')+' style="width:14px;height:14px;accent-color:#7c3aed;">'
+    +   '<span>詳細撮影（小田原仕様等）を表示する</span>'
     + '</label>'
     // ── 管下H計算補助 ──
     + '<details id="dphCalcWrap" style="margin-top:8px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">'
@@ -4210,6 +4211,14 @@ function toggleCutter(checked) {
   _showCutter = checked;
   document.querySelectorAll('[data-cutter-item]').forEach(function(el) {
     el.style.display = _showCutter ? '' : 'none';
+  });
+  saveState();
+}
+
+function toggleOdawara(checked) {
+  _showOdawara = checked;
+  document.querySelectorAll('[data-odawara-item]').forEach(function(el) {
+    el.style.display = _showOdawara ? '' : 'none';
   });
   saveState();
 }
