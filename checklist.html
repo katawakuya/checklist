@@ -2752,6 +2752,15 @@ function onTypeChange(silent){
   // 型変更時に旗揚げ番号を維持するため、変更前の値を退避
   var _savedHataVal = !silent ? ($v('hataInput') || '').trim() : '';
   if(!silent){ _checks={}; _naItems={}; _subChecks={}; restoreState(); }
+  // 小田原型自動検出：型キー/型名に「odawara」「小田原」が含まれる場合は自動ON
+  (function(){
+    var selEl = document.getElementById('selType');
+    var optText = (selEl && selEl.options[selEl.selectedIndex]) ? (selEl.options[selEl.selectedIndex].textContent || '') : '';
+    var isOdawara = val.toLowerCase().indexOf('odawara') >= 0 || _typeKey.toLowerCase().indexOf('odawara') >= 0 || optText.indexOf('小田原') >= 0;
+    _showOdawara = isOdawara;
+    var odaChk = document.getElementById('chkOdawaraGlobal');
+    if(odaChk) odaChk.checked = _showOdawara;
+  })();
   renderMain();
   // 型変更時: 旗揚げ番号を復元してloadHataで再検索
   if(!silent && _savedHataVal){
