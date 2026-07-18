@@ -201,6 +201,7 @@ header{
     </div>
     <div class="hd-right">
       <button class="btn-hd" id="btnEdit" onclick="toggleEdit()">✏️ 編集</button>
+      <button class="btn-hd" onclick="forceReload()">🔄 更新</button>
       <a class="btn-hd" href="ke-index.html">🏠</a>
     </div>
   </div>
@@ -235,6 +236,18 @@ header{
 <div id="toast" class="toast"></div>
 
 <script>
+// ─── 強制リロード ─────────────────────────────────────
+function forceReload(){
+  var go = function(){
+    location.replace(location.href.split('?')[0]+'?v='+Date.now());
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+
 // ─── デフォルト ────────────────────────────────────────
 function makeDefaultSite(label){
   return {

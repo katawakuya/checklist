@@ -155,6 +155,17 @@ body{
   outline:none;
 }
 
+/* ─── GREETING ─── */
+.greeting{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:13px 16px;
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:16px;
+}
+.greeting .g-icon{font-size:26px;flex-shrink:0;}
+.greeting .g-text .g-msg{font-size:14px;font-weight:700;color:var(--text);}
+.greeting .g-text .g-date{font-size:11px;color:var(--text2);margin-top:2px;}
+
 /* ─── APP GRID ─── */
 .app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(min-width:520px){.app-grid{grid-template-columns:repeat(3,1fr);}}
@@ -290,6 +301,15 @@ body{
   <!-- メインコンテンツ（ログイン後） -->
   <div id="mainContent" style="display:none;">
 
+    <!-- グリーティング -->
+    <div class="greeting">
+      <div class="g-icon">👷</div>
+      <div class="g-text">
+        <div class="g-msg" id="greetMsg">おはようございます</div>
+        <div class="g-date" id="greetDate">---</div>
+      </div>
+    </div>
+
     <!-- KPI -->
     <div class="kpi-row">
       <div class="kpi-card">
@@ -326,17 +346,6 @@ body{
           <div class="card-texts">
             <div class="card-name">熱中症　緊急連絡</div>
             <div class="card-desc" id="hsCardDesc">タップで即発信・応急処置・連絡組織図</div>
-          </div>
-        </div>
-      </a>
-
-      <!-- 型枠事業　緊急連絡ランチャー（誰でも利用可） -->
-      <a class="app-card card-emergency" href="ke-launcher.html">
-        <div class="card-inner">
-          <div class="card-icon">🔧</div>
-          <div class="card-texts">
-            <div class="card-name">型枠事業　緊急連絡</div>
-            <div class="card-desc">社内・業者・病院・行政への緊急連絡</div>
           </div>
         </div>
       </a>
@@ -467,6 +476,7 @@ _fbAuth.onAuthStateChanged(function(user) {
       if (_isAdmin) el.classList.add('show'); else el.classList.remove('show');
     });
     updateHsCard();
+    updateGreeting();
     loadData();
   } else {
     document.getElementById('btnAuth').style.display = 'none';
@@ -574,6 +584,23 @@ function populateSites(sites) {
 function saveSiteSel() {
   var v = document.getElementById('siteSelect').value;
   if (v) localStorage.setItem('_launcher_site', v);
+}
+
+// ── グリーティング ──────────────────────────────────────
+function updateGreeting() {
+  var now   = new Date();
+  var h     = now.getHours();
+  var greet = h < 10 ? 'おはようございます ☀️'
+            : h < 17 ? 'お疲れ様です 👷'
+            : 'お疲れ様でした 🌙';
+  var wdays = ['日','月','火','水','木','金','土'];
+  var date  = now.getFullYear() + '年'
+            + (now.getMonth()+1) + '月'
+            + now.getDate() + '日（' + wdays[now.getDay()] + '）';
+  var gm = document.getElementById('greetMsg');
+  var gd = document.getElementById('greetDate');
+  if (gm) gm.textContent = greet;
+  if (gd) gd.textContent = date;
 }
 
 // ── 緊急連絡カード（案A: hs_active を読んでアクティブ現場を表示） ──────
