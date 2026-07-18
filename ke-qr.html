@@ -46,6 +46,13 @@ body{
   white-space:nowrap;
 }
 .btn-back:active{background:rgba(255,255,255,.22);}
+.btn-reload{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.85);border-radius:8px;padding:7px 12px;
+  font-size:13px;cursor:pointer;font-weight:700;white-space:nowrap;
+}
+.btn-reload:active{background:rgba(255,255,255,.18);}
+.header-right{display:flex;align-items:center;gap:8px;}
 
 /* ── MAIN ── */
 .main{max-width:960px;margin:0 auto;padding:18px 14px 40px;}
@@ -156,7 +163,10 @@ select:focus,input[type="url"]:focus{border-color:var(--red);}
     <h1>📲 QRコード生成</h1>
     <div class="sub">型枠事業　各画面のQRコードを作成</div>
   </div>
-  <a href="ke-index.html" class="btn-back no-print">🏠 ホームへ</a>
+  <div class="header-right no-print">
+    <button class="btn-reload" onclick="forceReload()">🔄 更新</button>
+    <a href="ke-index.html" class="btn-back">🏠 ホームへ</a>
+  </div>
 </div>
 
 <!-- MAIN -->
@@ -165,10 +175,6 @@ select:focus,input[type="url"]:focus{border-color:var(--red);}
   <!-- コントロール -->
   <div class="controls no-print">
     <div class="ctrl-group">
-      <label>ベースURL</label>
-      <input type="url" id="baseUrl" placeholder="https://xxx.github.io/checklist">
-    </div>
-    <div class="ctrl-group">
       <label>現場絞り込み</label>
       <select id="siteFilter" onchange="generate()">
         <option value="">すべての現場</option>
@@ -176,6 +182,14 @@ select:focus,input[type="url"]:focus{border-color:var(--red);}
     </div>
     <button class="btn btn-gen" onclick="generate()">🔄 生成</button>
     <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+    <span style="font-size:11px;color:var(--text2);align-self:center;">
+      ベースURL: <span id="baseUrlLabel" style="color:var(--red);"></span>
+      <button onclick="toggleUrlEdit()" style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline;">変更</button>
+    </span>
+  </div>
+  <div id="urlEditRow" style="display:none;margin:-8px 0 12px;">
+    <input type="url" id="baseUrl" value="" placeholder="https://katawakuya.github.io/checklist" style="width:100%;max-width:480px;">
+    <button class="btn btn-gen" onclick="applyBaseUrl()" style="margin-left:8px;">適用</button>
   </div>
 
   <!-- アプリ選択トグル -->
@@ -196,6 +210,18 @@ select:focus,input[type="url"]:focus{border-color:var(--red);}
 <div id="toast"></div>
 
 <script>
+// ── 強制リロード ─────────────────────────────────────
+function forceReload(){
+  var go = function(){
+    location.replace(location.href.split('?')[0]+'?v='+Date.now());
+  };
+  if('caches' in window){
+    caches.keys().then(function(ns){
+      return Promise.all(ns.map(function(n){ return caches.delete(n); }));
+    }).then(go).catch(go);
+  } else { go(); }
+}
+
 // ── アプリ定義 ─────────────────────────────────────────
 var APPS = [
   { key: 'ke-home',     name: '🏠 ホーム',         file: 'ke-index.html',    siteParam: false },
@@ -204,21 +230,36 @@ var APPS = [
 var _enabledApps = new Set(APPS.map(function(a){ return a.key; }));
 var _sites = [];
 
+// ── ベースURL ────────────────────────────────────────
+var _baseUrl = 'https://katawakuya.github.io/checklist';
+
+function initBaseUrl(){
+  if (location.protocol !== 'file:') {
+    _baseUrl = location.origin + location.pathname.replace(/\/[^/]*$/, '');
+  }
+  document.getElementById('baseUrl').value = _baseUrl;
+  document.getElementById('baseUrlLabel').textContent = _baseUrl;
+}
+
+function toggleUrlEdit(){
+  var row = document.getElementById('urlEditRow');
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+function applyBaseUrl(){
+  var val = (document.getElementById('baseUrl').value || '').replace(/\/$/, '');
+  if (!val){ showToast('URLを入力してください'); return; }
+  _baseUrl = val;
+  document.getElementById('baseUrlLabel').textContent = _baseUrl;
+  document.getElementById('urlEditRow').style.display = 'none';
+  generate();
+}
+
 // ── 初期化 ────────────────────────────────────────────
 window.addEventListener('load', function(){
-  // ベースURL自動設定
-  if (location.protocol !== 'file:') {
-    document.getElementById('baseUrl').value =
-      location.origin + location.pathname.replace(/\/[^/]*$/, '');
-  }
-
-  // ke_sites を読み込む
+  initBaseUrl();
   loadKeSites();
-
-  // アプリ選択ボタン構築
   buildAppSelector();
-
-  // 初期生成
   generate();
 });
 
@@ -277,7 +318,7 @@ function buildAppSelector(){
 
 // ── QR 生成 ──────────────────────────────────────────
 function generate(){
-  var base = (document.getElementById('baseUrl').value || '').replace(/\/$/, '');
+  var base = _baseUrl || '';
   var siteFilter = document.getElementById('siteFilter').value;
   var grid = document.getElementById('qrGrid');
   var empty = document.getElementById('qrEmpty');

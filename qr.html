@@ -177,10 +177,6 @@ select:focus,input:focus{border-color:var(--accent);}
   <!-- コントロール -->
   <div class="controls no-print">
     <div class="ctrl-group">
-      <label>ベースURL</label>
-      <input type="url" id="baseUrl" value="" placeholder="https://xxx.github.io/checklist" style="min-width:280px;">
-    </div>
-    <div class="ctrl-group">
       <label>現場絞り込み</label>
       <select id="siteFilter" onchange="generate()">
         <option value="">すべての現場</option>
@@ -188,6 +184,14 @@ select:focus,input:focus{border-color:var(--accent);}
     </div>
     <button class="btn btn-primary" onclick="generate()">🔄 生成</button>
     <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+    <span style="font-size:11px;color:var(--text2);align-self:center;">
+      ベースURL: <span id="baseUrlLabel" style="color:var(--accent);"></span>
+      <button onclick="toggleUrlEdit()" style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline;">変更</button>
+    </span>
+  </div>
+  <div id="urlEditRow" style="display:none;max-width:960px;margin:-8px auto 0;padding:0 16px 12px;">
+    <input type="url" id="baseUrl" value="" placeholder="https://katawakuya.github.io/checklist" style="width:100%;max-width:500px;">
+    <button class="btn btn-primary" onclick="applyBaseUrl()" style="margin-left:8px;">適用</button>
   </div>
 
   <!-- アプリ選択トグル -->
@@ -247,20 +251,41 @@ var APPS=[
 ];
 var _enabledApps=new Set(APPS.map(function(a){return a.key;}));
 
+// ── ベースURL ──────────────────────────────────────────
+var _baseUrl = 'https://katawakuya.github.io/checklist';
+
+function initBaseUrl(){
+  // GitHub Pages 上で開かれていればそのオリジン+パスを使う
+  if(location.protocol !== 'file:'){
+    _baseUrl = location.origin + location.pathname.replace(/\/[^/]*$/, '');
+  }
+  document.getElementById('baseUrl').value = _baseUrl;
+  document.getElementById('baseUrlLabel').textContent = _baseUrl;
+}
+
+function toggleUrlEdit(){
+  var row = document.getElementById('urlEditRow');
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+function applyBaseUrl(){
+  var val = (document.getElementById('baseUrl').value || '').replace(/\/$/, '');
+  if(!val){ showToast('URLを入力してください'); return; }
+  _baseUrl = val;
+  document.getElementById('baseUrlLabel').textContent = _baseUrl;
+  document.getElementById('urlEditRow').style.display = 'none';
+  generate();
+}
+
 // ── 認証監視 ───────────────────────────────────────────
 _fbAuth.onAuthStateChanged(function(user){
   _currentUser=user;
   if(user){
     document.getElementById('loginArea').style.display='none';
     document.getElementById('mainContent').style.display='';
+    initBaseUrl();
     buildAppSelector();
     loadSites();
-    // ベースURL自動設定
-    if(!document.getElementById('baseUrl').value){
-      var guessedBase=location.protocol==='file:'
-        ? '' : location.origin+location.pathname.replace(/\/[^/]*$/, '');
-      document.getElementById('baseUrl').value=guessedBase;
-    }
   }else{
     document.getElementById('loginArea').style.display='';
     document.getElementById('mainContent').style.display='none';
@@ -325,7 +350,7 @@ function buildAppSelector(){
 
 // ── QR 生成 ────────────────────────────────────────────
 function generate(){
-  var base=(document.getElementById('baseUrl').value||'').replace(/\/$/,'');
+  var base=_baseUrl||'';
   var siteFilter=document.getElementById('siteFilter').value;
   var grid=document.getElementById('qrGrid');
   var empty=document.getElementById('qrEmpty');
