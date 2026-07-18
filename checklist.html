@@ -63,6 +63,14 @@ main{padding:10px 14px 90px;}
 .hata-area label{font-size:14px;color:#92400e;font-weight:600;}
 .hata-input{width:70px;background:#fff;color:#92400e;border:1.5px solid #fbbf24;border-radius:6px;padding:6px 8px;font-size:18px;font-weight:700;text-align:center;}
 .hata-input:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(251,191,36,.25);}
+.hata-input-wrap{position:relative;display:inline-block;}
+.hata-popup{display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:230px;max-height:280px;overflow-y:auto;background:#fff;border:1.5px solid #fbbf24;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:300;}
+.hata-popup-item{padding:9px 14px;font-size:15px;cursor:pointer;border-bottom:1px solid #fef3c7;display:flex;align-items:center;gap:8px;}
+.hata-popup-item:last-child{border-bottom:none;}
+.hata-popup-item:hover,.hata-popup-item.hpop-active{background:#fef3c7;}
+.hata-popup-num{font-size:17px;font-weight:700;color:#92400e;min-width:38px;}
+.hata-popup-meta{font-size:13px;color:#b45309;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hata-popup-empty{padding:12px;font-size:14px;color:#b45309;text-align:center;}
 
 /* 入力パネル */
 .input-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
@@ -2932,7 +2940,10 @@ function renderMain(){
   html +=
     '<div class="hata-area">' +
       '<label>🚩 旗揚げ No.</label>' +
-      '<input class="hata-input" type="number" id="hataInput" placeholder="例:35" inputmode="numeric" oninput="onHataInput()">' +
+      '<div class="hata-input-wrap">' +
+      '<input class="hata-input" type="text" id="hataInput" placeholder="例:35" inputmode="numeric" autocomplete="off" oninput="onHataInput()" onfocus="showHataPopup()" onkeydown="hataKeyNav(event)">' +
+      '<div id="hataPopup" class="hata-popup"></div>' +
+      '</div>' +
       '<button class="btn-sm btn-load" onclick="loadHata()">読込</button>' +
       '<div class="hata-info" id="hataInfo"></div>' +
       '<button class="btn-sm" id="debugBtn" style="display:none;background:#555;font-size:14px;margin-top:4px" onclick="debugHataEntry()">🔍 DEBUG</button>' +
@@ -4217,7 +4228,105 @@ function updateProgress(){
 // =====================================================
 // 旗揚げ読み込み
 // =====================================================
-function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var _db=document.getElementById('debugBtn'); if(_db)_db.style.display='none'; var _dpb=document.getElementById('saveDpBtn'); if(_dpb)_dpb.style.display='none'; var _do=document.getElementById('debugOut'); if(_do)_do.style.display='none'; closeDiagram(); }
+// =====================================================
+// 旗揚げ番号ポップアップ
+// =====================================================
+var _hataPopupItems = [];
+var _hataPopupIdx = -1;
+
+function _buildHataPopupList(){
+  var items = [];
+  if(_siteId){
+    try{ var sr=localStorage.getItem('hata_master_'+_siteId); if(sr){var sp=JSON.parse(sr);if(Array.isArray(sp))items=items.concat(sp);} }catch(e){}
+  }
+  try{ var gr=localStorage.getItem('hata_master'); if(gr){var gp=JSON.parse(gr);if(Array.isArray(gp))items=items.concat(gp);} }catch(e){}
+  // 重複除去（hata番号優先）
+  var seen={};
+  items=items.filter(function(e){ var k=String(e.hata||e.num||''); if(!k||seen[k])return false; seen[k]=true; return true; });
+  // 数値ソート
+  items.sort(function(a,b){ return (+(a.hata||a.num||0))-(+(b.hata||b.num||0)); });
+  return items;
+}
+
+function showHataPopup(){
+  _hataPopupItems=_buildHataPopupList();
+  _hataPopupIdx=-1;
+  filterHataPopup();
+}
+
+function filterHataPopup(){
+  var popup=document.getElementById('hataPopup');
+  if(!popup) return;
+  var val=((document.getElementById('hataInput')||{}).value||'').trim();
+  var filtered=_hataPopupItems.filter(function(e){
+    var k=String(e.hata||e.num||'');
+    return !val || k.indexOf(val)===0;
+  });
+  if(!filtered.length){
+    popup.innerHTML='<div class="hata-popup-empty">該当なし</div>';
+    popup.style.display=filtered.length===0&&val===''&&_hataPopupItems.length===0?'none':'block';
+    if(_hataPopupItems.length===0) popup.style.display='none';
+    return;
+  }
+  popup.innerHTML=filtered.map(function(e){
+    var k=String(e.hata||e.num||'');
+    var nm=e.name||'';
+    var dpStr=e.dp!=null?' DP:'+e.dp+'m':'';
+    var meta=(nm||dpStr)? (nm+dpStr) : '';
+    return '<div class="hata-popup-item" data-hata="'+k+'" onmousedown="event.preventDefault();selectHataItem(this.dataset.hata)">'+
+      '<span class="hata-popup-num">No.'+k+'</span>'+
+      (meta?'<span class="hata-popup-meta">'+meta+'</span>':'')+
+    '</div>';
+  }).join('');
+  popup.style.display='block';
+  _hataPopupIdx=-1;
+}
+
+function selectHataItem(num){
+  var el=document.getElementById('hataInput');
+  if(el) el.value=num;
+  closeHataPopup();
+  loadHata();
+}
+
+function closeHataPopup(){
+  var popup=document.getElementById('hataPopup');
+  if(popup) popup.style.display='none';
+}
+
+function hataKeyNav(e){
+  var popup=document.getElementById('hataPopup');
+  if(!popup||popup.style.display==='none'){
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ showHataPopup(); e.preventDefault(); return; }
+    if(e.key==='Enter'){ loadHata(); return; }
+    return;
+  }
+  var items=popup.querySelectorAll('.hata-popup-item');
+  if(!items.length){ if(e.key==='Enter'){closeHataPopup();loadHata();} if(e.key==='Escape')closeHataPopup(); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); _hataPopupIdx=Math.min(_hataPopupIdx+1,items.length-1); _hataPopupHL(items); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _hataPopupIdx=Math.max(_hataPopupIdx-1,-1); _hataPopupHL(items); }
+  else if(e.key==='Enter'){ e.preventDefault();
+    if(_hataPopupIdx>=0&&items[_hataPopupIdx]) selectHataItem(items[_hataPopupIdx].dataset.hata);
+    else{ closeHataPopup(); loadHata(); }
+  }
+  else if(e.key==='Escape'){ closeHataPopup(); }
+}
+
+function _hataPopupHL(items){
+  items.forEach(function(el,i){
+    el.classList.toggle('hpop-active',i===_hataPopupIdx);
+    if(i===_hataPopupIdx) el.scrollIntoView({block:'nearest'});
+  });
+}
+
+// 外クリックでポップアップを閉じる（DOMContentLoaded後に登録）
+document.addEventListener('click',function(e){
+  var inp=document.getElementById('hataInput');
+  var pop=document.getElementById('hataPopup');
+  if(inp&&pop&&!inp.contains(e.target)&&!pop.contains(e.target)) closeHataPopup();
+});
+
+function onHataInput(){ _hataEntry=null; var el=document.getElementById('hataInfo'); if(el)el.innerHTML=''; var _db=document.getElementById('debugBtn'); if(_db)_db.style.display='none'; var _dpb=document.getElementById('saveDpBtn'); if(_dpb)_dpb.style.display='none'; var _do=document.getElementById('debugOut'); if(_do)_do.style.display='none'; closeDiagram(); filterHataPopup(); }
 
 function debugHataEntry(){
   var out=document.getElementById('debugOut');
