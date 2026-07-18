@@ -48,8 +48,7 @@ header{
 .btn-site-add{
   padding:7px 11px;border:1.5px solid rgba(255,255,255,.4);
   border-radius:8px;background:rgba(255,255,255,.12);
-  color:#fff;font-size:13px;font-weight:700;cursor:pointer;
-  white-space:nowrap;
+  color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
 }
 .btn-site-add:active{background:rgba(255,255,255,.25);}
 
@@ -58,10 +57,7 @@ header{
 
 /* ─── SECTION ─── */
 .section{margin-bottom:14px;}
-.sec-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:8px;padding:0 2px;
-}
+.sec-header{margin-bottom:8px;padding:0 2px;}
 .sec-title{font-size:13px;font-weight:800;color:#555;letter-spacing:.05em;}
 
 /* ─── CONTACT CARD (view) ─── */
@@ -90,43 +86,42 @@ header{
   display:inline-flex;align-items:center;gap:5px;
   padding:7px 14px;background:#e8f5e9;color:#2e7d32;
   border:1.5px solid rgba(46,125,50,.2);border-radius:7px;
-  font-size:13px;font-weight:700;text-decoration:none;
-  margin-top:8px;
+  font-size:13px;font-weight:700;text-decoration:none;margin-top:8px;
 }
 .btn-map:active{background:#c8e6c9;}
 
 /* ─── CONTACT CARD (edit) ─── */
 .card-edit{
   background:#fff;border-radius:11px;padding:12px 14px;
-  margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);
+  margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);
   position:relative;border:1.5px solid #e8eaf6;background:#fafafe;
 }
-.c-field{margin-bottom:7px;}
-.c-field label{display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:2px;}
-.c-field input,.c-field textarea{
-  width:100%;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;
-  font-size:13px;font-family:inherit;background:#fff;color:#222;
+
+/* 順番 + 役割 1行レイアウト */
+.edit-top-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:8px;}
+.order-wrap{flex-shrink:0;width:64px;}
+.order-wrap label{display:block;font-size:10px;color:#9fa8da;font-weight:700;margin-bottom:2px;text-align:center;}
+.order-input{
+  width:100%;padding:6px 4px;border:1.5px solid #c5cae9;border-radius:7px;
+  font-size:16px;font-weight:800;text-align:center;color:#3949ab;
+  font-family:inherit;background:#f0f2ff;
 }
-.c-field input:focus,.c-field textarea:focus{border-color:#b71c1c;outline:none;}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.order-input:focus{border-color:#3949ab;outline:none;background:#e8eaf6;}
+.role-wrap{flex:1;}
 .btn-del-card{
   position:absolute;top:9px;right:9px;background:none;border:none;
   color:#ef9a9a;font-size:17px;cursor:pointer;padding:2px 5px;line-height:1;
 }
 
-/* ─── SECTION EDIT HEADER ─── */
-.sec-edit-header{
-  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+.c-field{margin-bottom:7px;}
+.c-field label{display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:2px;}
+.c-field input{
+  width:100%;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;
+  font-size:13px;font-family:inherit;background:#fff;color:#222;
 }
-.sec-icon-input{
-  width:42px;padding:6px 6px;border:1.5px solid #ddd;border-radius:7px;
-  font-size:16px;text-align:center;font-family:inherit;background:#fff;
-}
-.sec-title-input{
-  flex:1;padding:6px 9px;border:1.5px solid #ddd;border-radius:7px;
-  font-size:13px;font-weight:700;font-family:inherit;background:#fff;color:#222;
-}
-.sec-title-input:focus,.sec-icon-input:focus{border-color:#b71c1c;outline:none;}
+.c-field input:focus{border-color:#b71c1c;outline:none;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+
 .btn-add-contact{
   width:100%;padding:8px;border:2px dashed #c5cae9;border-radius:8px;
   background:none;color:#3949ab;font-size:13px;font-weight:700;cursor:pointer;
@@ -134,25 +129,41 @@ header{
 }
 .btn-add-contact:active{background:#e8eaf6;}
 
+/* ─── SECTION EDIT HEADER ─── */
+.sec-edit-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sec-icon-input{
+  width:42px;padding:6px;border:1.5px solid #ddd;border-radius:7px;
+  font-size:16px;text-align:center;font-family:inherit;background:#fff;
+}
+.sec-title-input{
+  flex:1;padding:6px 9px;border:1.5px solid #ddd;border-radius:7px;
+  font-size:13px;font-weight:700;font-family:inherit;background:#fff;color:#222;
+}
+.sec-title-input:focus,.sec-icon-input:focus{border-color:#b71c1c;outline:none;}
+
 /* ─── 現場名編集カード ─── */
 .site-name-card{
   background:#fff;border-radius:11px;padding:12px 14px;
   margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);
 }
-.site-name-card h3{font-size:11px;font-weight:700;color:#888;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eee;}
+.site-name-card h3{font-size:11px;font-weight:700;color:#888;
+  margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eee;}
+
+/* ─── 並替ヒント ─── */
+.sort-hint{
+  font-size:11px;color:#9fa8da;background:#f0f2ff;
+  border-radius:8px;padding:7px 10px;margin-bottom:10px;
+  border:1px solid #c5cae9;
+}
 
 /* ─── 保存バー ─── */
 .save-bar{
   position:fixed;bottom:0;left:0;right:0;padding:10px 12px 14px;
-  background:#fff;border-top:1.5px solid #e0e0e0;z-index:200;
-  display:none;
+  background:#fff;border-top:1.5px solid #e0e0e0;z-index:200;display:none;
 }
 .save-bar.show{display:block;}
 .save-row{display:flex;gap:8px;max-width:640px;margin:0 auto;}
-.btn-save{
-  flex:1;padding:12px 6px;border:none;border-radius:9px;
-  font-size:13px;font-weight:700;cursor:pointer;
-}
+.btn-save{flex:1;padding:12px 6px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
 .btn-save.primary{background:#b71c1c;color:#fff;}
 .btn-save.primary:active{background:#7f0000;}
 .btn-save.danger{background:#fde8e8;color:#b71c1c;border:1.5px solid rgba(183,28,28,.2);}
@@ -177,8 +188,6 @@ header{
   transition:opacity .25s;pointer-events:none;white-space:nowrap;
 }
 .toast.show{opacity:1;}
-
-/* ─── 最終更新 ─── */
 .updated-at{font-size:11px;color:#aaa;text-align:right;padding:4px 14px 16px;}
 </style>
 </head>
@@ -197,7 +206,6 @@ header{
   </div>
 </header>
 
-<!-- 現場セレクター -->
 <div class="site-bar">
   <select id="siteSelect" class="site-select" onchange="onSiteChange()"></select>
   <button class="btn-site-add" onclick="addSite()">＋ 現場</button>
@@ -209,11 +217,10 @@ header{
 <div class="save-bar" id="saveBar">
   <div class="save-row">
     <button class="btn-save primary" onclick="saveData()">💾 保存する</button>
-    <button class="btn-save danger" onclick="confirmDelete()">🗑 削除</button>
+    <button class="btn-save danger" onclick="confirmDelete()">🗑 この現場を削除</button>
   </div>
 </div>
 
-<!-- 削除確認モーダル -->
 <div class="modal-bg" id="deleteModal">
   <div class="modal">
     <h3>現場を削除しますか？</h3>
@@ -228,32 +235,32 @@ header{
 <div id="toast" class="toast"></div>
 
 <script>
-// ─── デフォルト現場テンプレート ──────────────────────────
+// ─── デフォルト ────────────────────────────────────────
 function makeDefaultSite(label){
   return {
-    id:       'ke_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+    id:       genId(),
     label:    label || '新規現場',
     subtitle: '株式会社型枠屋',
     updatedAt:'',
-    sections: [
+    sections:[
       {
         id:'internal', icon:'📞', title:'社内緊急連絡', style:'red',
         contacts:[
-          {role:'代表取締役',    name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654', addr:'', map:''},
-          {role:'現場責任者',    name:'三枝　裕太',  romaji:'Saegusa Yuta',       tel:'09092901004', addr:'', map:''},
-          {role:'安全衛生管理者',name:'柴田　興平',  romaji:'Shibata Kohei',      tel:'08057047075', addr:'', map:''}
+          {order:1, role:'代表取締役',    name:'森角　義人',  romaji:'Morikaku Yoshito',  tel:'09015030506', addr:'', map:''},
+          {order:2, role:'工事部長',      name:'佐藤　嘉秀',  romaji:'Sato Yoshihide',    tel:'09027279654',  addr:'', map:''},
+          {order:3, role:'現場責任者',    name:'三枝　裕太',  romaji:'Saegusa Yuta',       tel:'09092901004',  addr:'', map:''}
         ]
       },
       {
         id:'partner', icon:'🤝', title:'協力業者', style:'blue',
         contacts:[
-          {role:'クラフトマンシップ・パートナーズ',name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519', addr:'', map:''}
+          {order:1, role:'クラフトマンシップ・パートナーズ', name:'萩原　一彦', romaji:'Hagiwara Kazuhiko', tel:'09086440519', addr:'', map:''}
         ]
       },
       {
         id:'medical', icon:'🏥', title:'医療機関', style:'green',
         contacts:[
-          {role:'小田原市民病院', name:'', romaji:'', tel:'0465343175',
+          {order:1, role:'小田原市民病院', name:'', romaji:'', tel:'0465343175',
            addr:'〒250-8558　神奈川県小田原市久野46',
            map:'神奈川県小田原市久野46+小田原市民病院'}
         ]
@@ -261,8 +268,8 @@ function makeDefaultSite(label){
       {
         id:'emergency', icon:'🚒', title:'行政・緊急機関', style:'red',
         contacts:[
-          {role:'消防（119番）', name:'', romaji:'', tel:'119', addr:'', map:''},
-          {role:'警察（110番）', name:'', romaji:'', tel:'110', addr:'', map:''}
+          {order:1, role:'消防（119番）', name:'', romaji:'', tel:'119', addr:'', map:''},
+          {order:2, role:'警察（110番）', name:'', romaji:'', tel:'110', addr:'', map:''}
         ]
       }
     ]
@@ -270,7 +277,7 @@ function makeDefaultSite(label){
 }
 
 // ─── データ管理 ────────────────────────────────────────
-var _sites = [];
+var _sites    = [];
 var _activeId = null;
 var _editMode = false;
 
@@ -290,13 +297,16 @@ function loadData(){
         var o = JSON.parse(old);
         o.id    = genId();
         o.label = o.label || o.companyName || '現場1';
+        // order フィールドがなければ付与
+        (o.sections||[]).forEach(function(sec){
+          (sec.contacts||[]).forEach(function(c,i){ if(!c.order) c.order = i+1; });
+        });
         _sites  = [o];
         _activeId = o.id;
         saveMeta();
       }catch(e){}
     }
   }
-  // デフォルト初期化
   if(!_sites.length){
     var def = makeDefaultSite('小田原扇町現場');
     _sites   = [def];
@@ -331,13 +341,16 @@ function buildSelector(){
 }
 
 function onSiteChange(){
-  if(_editMode){ if(!confirm('編集中の内容は破棄されます。切り替えますか？')){ buildSelector(); return; } exitEditMode(); }
+  if(_editMode){
+    if(!confirm('編集中の内容は破棄されます。切り替えますか？')){ buildSelector(); return; }
+    exitEditMode();
+  }
   _activeId = document.getElementById('siteSelect').value;
   saveMeta();
   render();
 }
 
-// ─── 現場追加 ─────────────────────────────────────────
+// ─── 現場追加・削除 ───────────────────────────────────
 function addSite(){
   var label = prompt('新しい現場名を入力してください','新規現場');
   if(!label) return;
@@ -350,7 +363,6 @@ function addSite(){
   showToast('➕ 「'+s.label+'」を追加しました');
 }
 
-// ─── 現場削除 ─────────────────────────────────────────
 function confirmDelete(){
   if(_sites.length<=1){ showToast('最後の現場は削除できません'); return; }
   var s = currentSite();
@@ -361,7 +373,7 @@ function confirmDelete(){
 function closeModal(){ document.getElementById('deleteModal').classList.remove('open'); }
 function deleteSite(){
   closeModal();
-  var label = (currentSite()||{}).label || '現場';
+  var label = (currentSite()||{}).label||'現場';
   _sites = _sites.filter(function(s){return s.id!==_activeId;});
   _activeId = _sites[0] ? _sites[0].id : null;
   saveMeta();
@@ -389,7 +401,7 @@ function exitEditMode(){
   document.getElementById('saveBar').classList.remove('show');
 }
 
-// ─── データ収集 ───────────────────────────────────────
+// ─── データ収集（order番号でソート） ──────────────────
 function collectFromDOM(){
   var site = JSON.parse(JSON.stringify(currentSite()));
   var labelEl = document.getElementById('editSiteLabel');
@@ -410,6 +422,7 @@ function collectFromDOM(){
     };
     secEl.querySelectorAll('.js-contact').forEach(function(cEl){
       sec.contacts.push({
+        order:  parseInt((cEl.querySelector('[name=c_order]')  ||{}).value||'99') || 99,
         role:   (cEl.querySelector('[name=c_role]')   ||{}).value||'',
         name:   (cEl.querySelector('[name=c_name]')   ||{}).value||'',
         romaji: (cEl.querySelector('[name=c_romaji]') ||{}).value||'',
@@ -418,6 +431,8 @@ function collectFromDOM(){
         map:    (cEl.querySelector('[name=c_map]')    ||{}).value||''
       });
     });
+    // 順番でソート
+    sec.contacts.sort(function(a,b){ return a.order - b.order; });
     site.sections.push(sec);
   });
   return site;
@@ -441,26 +456,26 @@ function saveData(){
 function render(){
   var site = currentSite();
   if(!site){ document.getElementById('container').innerHTML=''; return; }
-
   document.getElementById('hdSub').textContent = site.subtitle || '株式会社型枠屋';
 
   var html = '';
   (site.sections||[]).forEach(function(sec){
+    // order でソートして表示
+    var contacts = (sec.contacts||[]).slice().sort(function(a,b){
+      return (a.order||99) - (b.order||99);
+    });
+    if(!contacts.length) return; // 空のセクションは省略
     html += '<div class="section">';
     html += '<div class="sec-header"><span class="sec-title">'+esc(sec.icon)+' '+esc(sec.title)+'</span></div>';
-    (sec.contacts||[]).forEach(function(c){
+    contacts.forEach(function(c){
       var btnCls = sec.style==='green'?'green':sec.style==='blue'?'blue':'';
       html += '<div class="contact-card">';
       if(c.role)   html += '<div class="c-role">'+esc(c.role)+'</div>';
       if(c.name)   html += '<div class="c-name">'+esc(c.name)+'</div>';
       if(c.romaji) html += '<div class="c-romaji">'+esc(c.romaji)+'</div>';
       if(c.addr)   html += '<div class="c-addr">📍 '+esc(c.addr)+'</div>';
-      if(c.tel){
-        html += '<a class="btn-call '+btnCls+'" href="tel:'+esc(c.tel)+'">📞 '+formatTel(c.tel)+'</a>';
-      }
-      if(c.map){
-        html += '<a class="btn-map" href="https://maps.google.com/maps?q='+encodeURIComponent(c.map)+'" target="_blank">🗺 地図で開く</a>';
-      }
+      if(c.tel)    html += '<a class="btn-call '+btnCls+'" href="tel:'+esc(c.tel)+'">📞 '+formatTel(c.tel)+'</a>';
+      if(c.map)    html += '<a class="btn-map" href="https://maps.google.com/maps?q='+encodeURIComponent(c.map)+'" target="_blank">🗺 地図で開く</a>';
       html += '</div>';
     });
     html += '</div>';
@@ -477,7 +492,7 @@ function renderEdit(){
   if(!site) return;
   var html = '';
 
-  // 現場名編集
+  // 現場名
   html += '<div class="site-name-card">';
   html += '<h3>🏗 現場情報</h3>';
   html += '<div class="c-field"><label>現場ラベル（セレクターに表示）</label>'+
@@ -486,17 +501,32 @@ function renderEdit(){
     '<input type="text" id="editSiteSubtitle" value="'+esc(site.subtitle||'')+'" placeholder="例：株式会社型枠屋"></div>';
   html += '</div>';
 
+  // 並替ヒント
+  html += '<div class="sort-hint">📋 <strong>順番</strong> 欄の数字を変えると表示順が入れ替わります。同じ番号の場合は入力順になります。</div>';
+
   (site.sections||[]).forEach(function(sec, si){
+    // order でソートして編集欄に並べる
+    var contacts = (sec.contacts||[]).slice().sort(function(a,b){
+      return (a.order||99)-(b.order||99);
+    });
     html += '<div class="section js-section" data-sec-id="'+esc(sec.id)+'" data-sec-icon="'+esc(sec.icon)+'" data-sec-style="'+esc(sec.style||'red')+'">';
     html += '<div class="sec-edit-header">';
     html += '<input class="sec-icon-input js-sec-icon" type="text" value="'+esc(sec.icon)+'" maxlength="2" placeholder="🔧">';
     html += '<input class="sec-title-input js-sec-title" type="text" value="'+esc(sec.title)+'">';
     html += '</div>';
 
-    (sec.contacts||[]).forEach(function(c){
+    contacts.forEach(function(c){
       html += '<div class="card-edit js-contact">';
       html += '<button class="btn-del-card" onclick="this.closest(\'.js-contact\').remove()" title="削除">✕</button>';
-      html += '<div class="c-field"><label>役割・機関名</label><input type="text" name="c_role" value="'+esc(c.role||'')+'"></div>';
+
+      // 順番 + 役割 1行
+      html += '<div class="edit-top-row">';
+      html +=   '<div class="order-wrap"><label>順番</label>'+
+                '<input class="order-input" type="number" name="c_order" value="'+(c.order||1)+'" min="1" max="99"></div>';
+      html +=   '<div class="role-wrap"><div class="c-field" style="margin:0;"><label>役割・機関名</label>'+
+                '<input type="text" name="c_role" value="'+esc(c.role||'')+'"></div></div>';
+      html += '</div>';
+
       html += '<div class="row2"><div class="c-field"><label>氏名</label><input type="text" name="c_name" value="'+esc(c.name||'')+'"></div>'+
         '<div class="c-field"><label>ローマ字（任意）</label><input type="text" name="c_romaji" value="'+esc(c.romaji||'')+'"></div></div>';
       html += '<div class="c-field"><label>電話番号（ハイフンなし）</label><input type="tel" name="c_tel" value="'+esc(c.tel||'')+'"></div>';
@@ -516,17 +546,29 @@ function renderEdit(){
 function addContactToSection(si){
   var sections = document.querySelectorAll('.js-section');
   if(!sections[si]) return;
+  // 現在の最大 order + 1 を自動設定
+  var maxOrder = 0;
+  sections[si].querySelectorAll('[name=c_order]').forEach(function(el){
+    maxOrder = Math.max(maxOrder, parseInt(el.value)||0);
+  });
+  var nextOrder = maxOrder + 1;
+
   var div = document.createElement('div');
   div.className = 'card-edit js-contact';
   div.innerHTML =
     '<button class="btn-del-card" onclick="this.closest(\'.js-contact\').remove()" title="削除">✕</button>'+
-    '<div class="c-field"><label>役割・機関名</label><input type="text" name="c_role" value=""></div>'+
+    '<div class="edit-top-row">'+
+      '<div class="order-wrap"><label>順番</label>'+
+        '<input class="order-input" type="number" name="c_order" value="'+nextOrder+'" min="1" max="99"></div>'+
+      '<div class="role-wrap"><div class="c-field" style="margin:0;"><label>役割・機関名</label>'+
+        '<input type="text" name="c_role" value=""></div></div>'+
+    '</div>'+
     '<div class="row2"><div class="c-field"><label>氏名</label><input type="text" name="c_name" value=""></div>'+
     '<div class="c-field"><label>ローマ字（任意）</label><input type="text" name="c_romaji" value=""></div></div>'+
     '<div class="c-field"><label>電話番号（ハイフンなし）</label><input type="tel" name="c_tel" value=""></div>'+
     '<div class="c-field"><label>住所（任意）</label><input type="text" name="c_addr" value=""></div>'+
     '<div class="c-field"><label>地図検索キーワード（任意）</label><input type="text" name="c_map" value=""></div>';
-  // ＋ボタンの前に挿入
+
   var addBtn = sections[si].querySelector('.btn-add-contact');
   sections[si].insertBefore(div, addBtn);
 }
@@ -534,9 +576,9 @@ function addContactToSection(si){
 // ─── ユーティリティ ────────────────────────────────────
 function formatTel(t){
   t = String(t||'').replace(/[^0-9]/g,'');
+  if(t==='119'||t==='110'||t==='118') return t;
   if(t.length===11) return t.slice(0,3)+'-'+t.slice(3,7)+'-'+t.slice(7);
   if(t.length===10) return t.slice(0,3)+'-'+t.slice(3,6)+'-'+t.slice(6);
-  if(t===''||t==='119'||t==='110'||t==='118') return t;
   return t;
 }
 function esc(s){
