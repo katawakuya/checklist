@@ -1459,11 +1459,21 @@ function _ckRbMasterToTypeObj(m){
     kariRC_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRcCat, m.kariRcLayers, m.kariRcH, true),
     honRM_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRmCat, m.honRmLayers,  m.honRmH,  false),
     honRC_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRcCat, m.honRcLayers,  m.honRcH,  true),
-    kariRmLayers:  m.kariRmLayers || (_ckEffFreeModeKari ? (function(){
+    kariRmLayers:  m.kariRmLayers || (function(){
       // フリーモード仮復旧: upper_rb 行の材料名を使用（例: 再生クラッシャラン）
-      var _rmRow = _ckKariFreeRows.find(function(r){ return r.type==='upper_rb'; });
-      return _rmRow ? (_rmRow.preset||_rmRow.name||'') : '';
-    })() : ''),
+      if (_ckEffFreeModeKari && _ckKariFreeRows.length > 0) {
+        var _rmRow = _ckKariFreeRows.find(function(r){ return r.type==='upper_rb'; });
+        if (_rmRow) return _rmRow.preset||_rmRow.name||'';
+      }
+      // 通常モード: kariRbLayers の 'other' 行（非RM/RC のフリー路盤材）の材料名
+      if (Array.isArray(m.kariRbLayers) && m.kariRbLayers.length > 0) {
+        var _otherRow = m.kariRbLayers.find(function(r){
+          return r.type === 'other' && (r.name || r.preset);
+        });
+        if (_otherRow) return _otherRow.preset || _otherRow.name || '';
+      }
+      return '';
+    })(),
     kariRcLayers:  m.kariRcLayers || (_ckEffFreeModeKari ? (function(){
       var _rcRow = _ckKariFreeRows.find(function(r){ return r.type==='lower_rb'; });
       return _rcRow ? (_rcRow.preset||_rcRow.name||'') : '';
@@ -1889,7 +1899,7 @@ function buildChecklistFromPreset(presetType){
   var _rmLayersStr = _ckResolveLayersStr(presetType, 'kariRmLayers');
   var _rcLayersStr = _ckResolveLayersStr(presetType, 'kariRcLayers');
   var rmBadgeLabel = (_rmLayersStr && !_isStdLayersStr(_rmLayersStr))
-    ? _rmLayersStr
+    ? '路盤　' + _rmLayersStr
     : ('RM-'+rmS);
   var rcBadgeLabel = (_rcLayersStr && !_isStdLayersStr(_rcLayersStr))
     ? _rcLayersStr
@@ -3129,7 +3139,10 @@ function renderMain(){
       // 🔧 仮復旧（路盤先行）側チップ：AS層 → 上層路盤工RM → 下層路盤工RC
       var _kariChips = [];
       (rb.asLayers||[]).forEach(function(a){ _kariChips.push(_ckRbAsChip(a.name, Math.round((a.t||0)*1000))); });
-      if(rb.rmH>0) _kariChips.push(_ckRbRmcChip('上層路盤工 RM-'+rb.rmSize, ckLayerAdditionStr(rb._kariRM_layers, rb.rmH*1000), 'kari'));
+      if(rb.rmH>0) {
+        var _kariRmChipLabel = (rb.rmLabel && !String(rb.rmLabel).startsWith('RM-')) ? rb.rmLabel : ('上層路盤工 RM-'+rb.rmSize);
+        _kariChips.push(_ckRbRmcChip(_kariRmChipLabel, ckLayerAdditionStr(rb._kariRM_layers, rb.rmH*1000), 'kari'));
+      }
       if(rb.rcH>0) _kariChips.push(_ckRbRmcChip('下層路盤工 RC-'+rb.rcSize, ckLayerAdditionStr(rb._kariRC_layers, rb.rcH*1000), 'kari'));
       // 🏗 現況・本復旧側チップ：honAsLayersが無い場合はgenkyoAsHから単層フォールバック
       var _honAsArr = (rb.honAsLayers && rb.honAsLayers.length) ? rb.honAsLayers
@@ -5016,4 +5029,12 @@ function showWarningBanner(msg, focusId) {
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
     <input id="teamModalTeam" type="text" placeholder="例: ㅧ1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
-    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);co
+    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
