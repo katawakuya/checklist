@@ -1280,12 +1280,20 @@ function _ckRbMasterToTypeObj(m){
   if (!honFreeMode) {
     if (genkyoRM === 0 && (m.honRbLayers||[]).length > 0) {
       genkyoRM = (m.honRbLayers||[]).filter(function(r){
-        return _ckIsRmCat(r.subcat||r.cat||r.type||'');
+        if(_ckIsRmCat(r.subcat||r.cat||'')) return true;
+        // type形式(honFreeRows互換): upper_rb かつRC系でない
+        if((r.type||r.cat||'').indexOf('upper_rb')>=0){var sc=r.subcat||'';return sc!=='RC-30'&&sc!=='RC-40';}
+        return false;
       }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
     }
     if (genkyoRC === 0 && (m.honRbLayers||[]).length > 0) {
       genkyoRC = (m.honRbLayers||[]).filter(function(r){
-        return _ckIsRcCat(r.subcat||r.cat||r.type||'');
+        if(_ckIsRcCat(r.subcat||r.cat||'')) return true;
+        // type形式: lower_rb かつRM系でない
+        if((r.type||r.cat||'').indexOf('lower_rb')>=0){var sc=r.subcat||'';return sc!=='RM-30'&&sc!=='RM-40';}
+        // upper_rb でRC サブカテ
+        if((r.type||r.cat||'').indexOf('upper_rb')>=0){var sc=r.subcat||'';return sc==='RC-30'||sc==='RC-40';}
+        return false;
       }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
     }
   }
@@ -1905,8 +1913,10 @@ function buildChecklistFromPreset(presetType){
   if(!presetType.asLayers){ hasTack=true; hasPrime=true; }
   // Fix A-2: 仮復旧タックコート追加判定: RC/RM路盤あり＋粗粒度AS（基層）がある場合
   if(!hasTack && (rcH > 0 || rmH > 0)) {
-    if((presetType.asT粗粒||0) > 0 || (presetType.asLayers||[]).length > 1) hasTack = true;
+    // LOCAL asLayers（既に構築済み）長で判定（presetType.asLayersより正確）
+    if(asLayers.length > 1 || (presetType.asT粗粒||0) > 0) hasTack = true;
   }
+  console.log('[CK] genkyo: RM='+genkyoRM+' RC='+genkyoRC+' honRmH='+(m.honRmH||0)+' honRcH='+(m.honRcH||0)+' honRbLen='+(m.honRbLayers||[]).length+' honTotalH='+(m.honTotalH||0)+' computedH='+_ckComputedHonTotalH);
   // Fix C-3: 本復旧タックコート有無（仮復旧の hasTack とは独立判定）
   var honHasTack = (function(){
     if(presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0) {
@@ -1927,6 +1937,10 @@ function buildChecklistFromPreset(presetType){
         nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0||nm.indexOf('調整')>=0;
       return !isSpec && (a.t||0) > 0;
     });
+    // honAsLayersが未設定のとき: kariと同じAS構成を本復旧も使用するとみなす
+    if(_honNorm.length === 0 && !(presetType.honAsLayers||[]).length) {
+      return asLayers.length > 1 || (presetType.asT粗粒||0) > 0;
+    }
     return _honNorm.length > 1;
   })();
 
@@ -2311,6 +2325,19 @@ function buildChecklistFromPreset(presetType){
   // 基層合計厚
   var baseMm = asLayers.length > 1
     ? asLayers.slice(1).reduce(function(s,a){ return s+Math.round(a.t*1000); }, 0) : 0;
+  // 本復旧基層厚（基層転圧・タックコート表示制御用）
+  var _honNormArr = (presetType.honAsLayers||[]).filter(function(a){
+    var nm=a.name||a.preset||a.custom||''; var r=a.role||'';
+    if(r==='tack'||r==='prime'||nm.indexOf('タック')>=0||nm.indexOf('プライム')>=0) return false;
+    var isSpec=r==='stabilize'||r==='existing'||r==='special'||
+      nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0||
+      nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0||nm.indexOf('調整')>=0;
+    return !isSpec && (a.t||0) > 0;
+  });
+  var honBaseMm = _honNormArr.length > 1
+    ? _honNormArr.slice(1).reduce(function(s,a){ return s+Math.round((a.t||0)); }, 0) : 0;
+  if(honBaseMm === 0 && !_honNormArr.length) honBaseMm = baseMm; // kariフォールバック
+  console.log('[CK] tack: hasTack='+hasTack+' honHasTack='+honHasTack+' baseMm='+baseMm+' honBaseMm='+honBaseMm+' asL='+asLayers.length+' rcH='+rcH+' rmH='+rmH+' pAsL='+(presetType.asLayers||[]).length);
 
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
@@ -2435,8 +2462,13 @@ function buildChecklistFromPreset(presetType){
 
       // 基層転圧：基層がない場合は削除
       if(n.indexOf('基層転圧') >= 0){
-        if(baseMm > 0){
-          item.dim = 'GL-'+asLayers[0].t.toFixed(3)+'m（基層 t='+baseMm+'mm）';
+        var _isHonBaseItem = n.indexOf('本復旧') >= 0;
+        var _bMm = _isHonBaseItem ? honBaseMm : baseMm;
+        if(_bMm > 0){
+          var _bGL = _isHonBaseItem
+            ? ((_honNormArr.length>0 ? (_honNormArr[0].t||0)/1000 : 0) || (presetType.genkyoAsH && presetType.genkyoAsH>0 ? presetType.genkyoAsH : (asLayers[0]||{t:0.05}).t))
+            : asLayers[0].t;
+          item.dim = 'GL-'+parseFloat(_bGL).toFixed(3)+'m（基層 t='+_bMm+'mm）';
         } else {
           item._remove = true;
         }
@@ -3974,6 +4006,7 @@ function recalcGL(){
         parseFloat(((_presetType.genkyoAsH||0)+(_presetType.genkyoRM||0)+(_presetType.genkyoRC||0)+
           (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)+(_presetType.genkyoFreeH||0)).toFixed(4));
       if(_honTH > _presetType.totalH) f40 = -_honTH;
+      console.log('[CK] recalcGL: totalH='+(_presetType.totalH||0).toFixed(3)+' genkyoTotalH='+(_presetType.genkyoTotalH||0).toFixed(3)+' genkyoRM='+(_presetType.genkyoRM||0).toFixed(3)+' genkyoRC='+(_presetType.genkyoRC||0).toFixed(3)+' _honTH='+(_honTH||0).toFixed(3)+' f40='+f40);
     } else {
       // totalHがない場合はAS+RC+RM+specialから再計算
       var _asT = (((_presetType.asT密粒||0)+(_presetType.asT粗粒||0))/1000);
