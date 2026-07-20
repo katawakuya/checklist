@@ -1889,6 +1889,9 @@ function buildChecklistFromPreset(presetType){
   });
   // プリセットがない場合はデフォルトでtrueにしてコートを表示する
   if(!presetType.asLayers){ hasTack=true; hasPrime=true; }
+  // 路盤材があるときはプライムコート・タックコートを必ず表示（小田原仕様）
+  if(!hasPrime && (rcH > 0 || rmH > 0)) hasPrime = true;
+  if(!hasTack && (rcH > 0 || rmH > 0)) hasTack = true;
 
   // 鉄板
   var hasTeppan = presetType.teppan && presetType.teppan.use;
@@ -2043,13 +2046,15 @@ function buildChecklistFromPreset(presetType){
   var honRmLayers = [];
   if (genRcH > 0) {
     var _hRcTop = Math.max(0, honTotalH - genRcH);
-    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+rcS, 0.200).map(function(l){
+    var _honRcSz = presetType.honRcSize || rcS;
+    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+_honRcSz, 0.200).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
   if (genRmH > 0) {
     var _hRmTop = Math.max(0, honTotalH - genRcH - genRmH);
-    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+rmS, 0.200).map(function(l){
+    var _honRmSz = presetType.honRmSize || rmS;
+    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+_honRmSz, 0.200).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
@@ -2204,6 +2209,12 @@ function buildChecklistFromPreset(presetType){
     var _sPIdx = -1;
     for(var _si = 0; _si < _sHon2.length; _si++){
       if(_sHon2[_si].n && _sHon2[_si].n.indexOf('プライムコート') >= 0){ _sPIdx = _si; break; }
+    }
+    if(_sPIdx < 0){
+      // プライムコートなし → 基層転圧の直前を代替挿入位置とする
+      for(var _si2 = 0; _si2 < _sHon2.length; _si2++){
+        if(_sHon2[_si2].n && _sHon2[_si2].n.indexOf('基層転圧') >= 0){ _sPIdx = _si2 - 1; break; }
+      }
     }
     if(_sPIdx < 0) return;
 
@@ -3921,6 +3932,11 @@ function recalcGL(){
     if(_presetType.totalH){
       // totalH = AS含む全路盤構成合計（order側で計算済みの値を優先）
       f40 = -_presetType.totalH;
+      // 本復旧（現況）が仮復旧より深い場合は本復旧の深さを路盤変更点として使用
+      var _honTH = _presetType.genkyoTotalH ||
+        parseFloat(((_presetType.genkyoAsH||0)+(_presetType.genkyoRM||0)+(_presetType.genkyoRC||0)+
+          (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)).toFixed(4));
+      if(_honTH > _presetType.totalH) f40 = -_honTH;
     } else {
       // totalHがない場合はAS+RC+RM+specialから再計算
       var _asT = (((_presetType.asT密粒||0)+(_presetType.asT粗粒||0))/1000);
