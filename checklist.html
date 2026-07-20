@@ -4005,7 +4005,9 @@ function recalcGL(){
       var _honTH = _presetType.genkyoTotalH ||
         parseFloat(((_presetType.genkyoAsH||0)+(_presetType.genkyoRM||0)+(_presetType.genkyoRC||0)+
           (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)+(_presetType.genkyoFreeH||0)).toFixed(4));
-      if(_honTH > _presetType.totalH) f40 = -_honTH;
+      // genkyoRM>0 のとき（=本復旧に上層路盤あり）のみ本復旧深さを採用
+      // 切り下げ部等（RM=0）はkari深さを使用（honTH > totalHでも適用しない）
+      if(_honTH > _presetType.totalH && (_presetType.genkyoRM||0) > 0) f40 = -_honTH;
       console.log('[CK] recalcGL: totalH='+(_presetType.totalH||0).toFixed(3)+' genkyoTotalH='+(_presetType.genkyoTotalH||0).toFixed(3)+' genkyoRM='+(_presetType.genkyoRM||0).toFixed(3)+' genkyoRC='+(_presetType.genkyoRC||0).toFixed(3)+' _honTH='+(_honTH||0).toFixed(3)+' f40='+f40);
     } else {
       // totalHがない場合はAS+RC+RM+specialから再計算
