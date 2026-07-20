@@ -2254,6 +2254,8 @@ function buildChecklistFromPreset(presetType){
     }
     return k;
   })();
+  console.log('[CK] buildChecklistFromPreset baseKey='+baseKey+' _typeKey='+_typeKey+' ckType='+(presetType.ckType||'')
+    +' rmH='+(presetType.rmH||0)+' totalH='+(presetType.totalH||0)+' asLayers='+(presetType.asLayers||[]).length);
   var base = TYPE_CHECKLISTS[baseKey];
   if(!base){
     // ベースなし: 最低限の構成で返す
@@ -4962,10 +4964,4 @@ function showWarningBanner(msg, focusId) {
     var st = document.documentElement.scrollTop || document.body.scrollTop || 0;
     if (st <= 0 && y > _sy + 8) {
       e.preventDefault();
-      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null); }
-    }
-  }, { passive: false });
-  document.addEventListener('DOMContentLoaded', function() {
-    var b = document.createElement('button');
-    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
-    b.style.cssText = 'position:fix
+      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null)
