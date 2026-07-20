@@ -1371,11 +1371,21 @@ function _ckRbMasterToTypeObj(m){
   if (_ckKariTotalH === 0 && _ckComputedHonTotalH > 0) {
     _ckKariTotalH = _ckComputedHonTotalH;
   }
+  // 最終フォールバック: kariRmH が 0 のまま かつ kariTotalH が有効なら
+  // totalH - rcH - kariAsH で RM 厚を導出（AS と RC 以外は全て上層路盤）
+  // ※ フリーモード時は _ckKariAsArr の t 単位が mm なので対象外
+  if (_ckKariRmH === 0 && _ckKariTotalH > 0 && !_ckEffFreeModeKari) {
+    var _kariAsH = _ckKariAsArr.reduce(function(s,a){ return s+(a.t||0); }, 0); // m単位
+    var _rmDerived = Math.round((_ckKariTotalH - _ckKariRcH - _kariAsH) * 1000) / 1000;
+    if (_rmDerived > 0.001) _ckKariRmH = _rmDerived;
+  }
 
   return {
     key:        'type_import_' + m.key,
     label:      m.label || m.key,
     color:      m.color || '#7c3aed',
+    // ckType: 明示値 → key に 'odawara' を含む場合は 85型
+    ckType:     m.ckType || ((m.key||'').toLowerCase().indexOf('odawara') >= 0 ? '85' : ''),
     rmH:        _ckKariRmH,
     rcH:        _ckKariRcH,
     rmSize: (function(){
@@ -1503,7 +1513,7 @@ function _ckApplyLiveRbOverride(presetType, siteId, typeKey, presetTypeKey){
     var merged = {};
     for(var k in presetType){ merged[k] = presetType[k]; }
     var overrideKeys = [
-      'key','label','rmH','rcH','rmSize','rcSize','honRmSize','honRcSize','asT密粒','asT粗粒','totalH','asLayers',
+      'key','label','ckType','rmH','rcH','rmSize','rcSize','honRmSize','honRcSize','asT密粒','asT粗粒','totalH','asLayers',
       'honAsLayers','genkyoAsH','genkyoRM','genkyoRC','genkyoCnH','genkyoCnRC','genkyoCnRCSubcat','honFreeRows','genkyoTotalH','genkyoFreeRows','genkyoFreeH',
       'kariRM_layers','kariRC_layers','honRM_layers','honRC_layers',
       'kariRmLayers','kariRcLayers','honRmLayers','honRcLayers',
@@ -2225,13 +2235,22 @@ function buildChecklistFromPreset(presetType){
 
   // TYPE_CHECKLISTSのベースをディープコピーして値を上書き
   // type_import_* キー（Firestoreマスタ由来）は resolveBaseKey が常に'40'を返す。
-  // グローバル _typeKey（buildTypeSelect が設定した 85/40 等）を優先することで
-  // 小田原仕様の 85型ベースが正しく使われる。
+  // 以下の優先順位で正しい型を決定:
+  //   ① presetType.ckType（_ckRbMasterToTypeObj が設定）
+  //   ② グローバル _typeKey（buildTypeSelect が設定した 85/40 等）
+  //   ③ 現場名に「小田原」が含まれる場合は 85型
   var baseKey = (function(){
     var k = resolveBaseKey(presetType.key);
-    if (k === '40' && _typeKey && TYPE_CHECKLISTS[_typeKey]
-        && String(presetType.key||'').indexOf('type_import_') === 0) {
-      return _typeKey;
+    if (k === '40' && String(presetType.key||'').indexOf('type_import_') === 0) {
+      // ① presetType.ckType
+      var _ptCk = presetType.ckType || '';
+      if (_ptCk && TYPE_CHECKLISTS[_ptCk]) return _ptCk;
+      // ② _typeKey（セレクタ選択値のプレフィックス）
+      if (_typeKey && _typeKey !== '40' && TYPE_CHECKLISTS[_typeKey]) return _typeKey;
+      // ③ 現場名フォールバック
+      var _scObj = _sites && _sites.find(function(s){ return s.id === _siteId; });
+      var _scName = _scObj ? (_scObj.name || '') : '';
+      if (_scName.indexOf('小田原') >= 0 && TYPE_CHECKLISTS['85']) return '85';
     }
     return k;
   })();
@@ -4949,18 +4968,4 @@ function showWarningBanner(msg, focusId) {
   document.addEventListener('DOMContentLoaded', function() {
     var b = document.createElement('button');
     b.innerHTML = '▲'; b.title = 'ページ先頭へ';
-    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
-    document.body.appendChild(b);
-    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
-    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
-  });
-})();
-
-</script>
-<!-- 管理者ログインモーダル -->
-<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#1e2233;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
-    <div style="font-size:20px;font-weight:700;margin-bottom:16px;color:#e2e8f0;">🔑 管理者ログイン</div>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:14px;color:#8fa3bb;display:block;margin-bottom:4px;">メールアドレス</label>
-      <input id="fbEmail" type="email" autocomplete="email" 
+    b.style.cssText = 'position:fix
