@@ -1375,7 +1375,8 @@ function _ckRbMasterToTypeObj(m){
   // totalH - rcH - kariAsH で RM 厚を導出（AS と RC 以外は全て上層路盤）
   // ※ フリーモード時は _ckKariAsArr の t 単位が mm なので対象外
   if (_ckKariRmH === 0 && _ckKariTotalH > 0 && !_ckEffFreeModeKari) {
-    var _kariAsH = _ckKariAsArr.reduce(function(s,a){ return s+(a.t||0); }, 0); // m単位
+    // kariAsLayers の t は mm単位 → /1000 で m変換してから引く
+    var _kariAsH = _ckKariAsArr.reduce(function(s,a){ return s+(a.t||0); }, 0) / 1000;
     var _rmDerived = Math.round((_ckKariTotalH - _ckKariRcH - _kariAsH) * 1000) / 1000;
     if (_rmDerived > 0.001) _ckKariRmH = _rmDerived;
   }
@@ -4964,4 +4965,4 @@ function showWarningBanner(msg, focusId) {
     var st = document.documentElement.scrollTop || document.body.scrollTop || 0;
     if (st <= 0 && y > _sy + 8) {
       e.preventDefault();
-      if (!_wd) { _wd = true; showWarningBanner('ページ最上部です（リロード防止中）', null)
+      if (!_wd) { _wd = true; sho
