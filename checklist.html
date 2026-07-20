@@ -1255,12 +1255,15 @@ function _ckRbMasterToTypeObj(m){
   var honFreeMode = !!m.honFreeMode;
   var honFreeRows = Array.isArray(m.honFreeRows) ? m.honFreeRows : [];
 
-  var genkyoAsH = honFreeMode
+  // honFreeMode=true でも honFreeRows が空の場合は通常フィールドからフォールバック（Bug B fix）
+  var _honFreeModeEff = honFreeMode && honFreeRows.length > 0;
+
+  var genkyoAsH = _honFreeModeEff
     ? honFreeRows.filter(function(r){ return r.type==='surface'||r.type==='base'; })
                  .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); }, 0)/1000;
 
-  var genkyoRM = honFreeMode
+  var genkyoRM = _honFreeModeEff
     ? honFreeRows.filter(function(r){
         if (r.type==='upper_rb') return true;
         if (r.type==='lower_rb') { var sc=r.subcat||''; return sc==='RM-30'||sc==='RM-40'; }
@@ -1268,7 +1271,7 @@ function _ckRbMasterToTypeObj(m){
       }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honRmH || 0);
 
-  var genkyoRC = honFreeMode
+  var genkyoRC = _honFreeModeEff
     ? honFreeRows.filter(function(r){
         if (r.type==='lower_rb') { var sc=r.subcat||''; return sc!=='RM-30'&&sc!=='RM-40'; }
         if (r.type==='upper_rb') { var sc=r.subcat||''; return sc==='RC-30'||sc==='RC-40'; }
@@ -1276,7 +1279,7 @@ function _ckRbMasterToTypeObj(m){
       }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honRcH || 0);
 
-  var genkyoCnH = honFreeMode
+  var genkyoCnH = _honFreeModeEff
     ? honFreeRows.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; })
                  .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : 0;
@@ -1357,7 +1360,8 @@ function _ckRbMasterToTypeObj(m){
   }).reduce(function(s,r){ return (r.t||0)>0 ? s+(r.t||0)/1000 : s; }, 0) : 0;
   // 現況（本復旧）路盤合計H: honTotalH が未設定でも構成要素（鉄板含む）から算出
   var _ckComputedHonTotalH = (m.honTotalH||0) > 0 ? m.honTotalH : (function(){
-    if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
+    // honFreeMode=true でも honFreeRows が空の場合は通常計算にフォールバック（Bug B fix）
+    if (m.honFreeMode && Array.isArray(m.honFreeRows) && m.honFreeRows.length > 0) {
       return m.honFreeRows.reduce(function(s,r){ return s+(r.t||0); },0)/1000;
     }
     var _asH = (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); },0)/1000;
@@ -1889,9 +1893,13 @@ function buildChecklistFromPreset(presetType){
   });
   // プリセットがない場合はデフォルトでtrueにしてコートを表示する
   if(!presetType.asLayers){ hasTack=true; hasPrime=true; }
-  // 路盤材があるときはプライムコート・タックコートを必ず表示（小田原仕様）
+  // 路盤材があるときはプライムコートを必ず表示（小田原仕様）
   if(!hasPrime && (rcH > 0 || rmH > 0)) hasPrime = true;
-  if(!hasTack && (rcH > 0 || rmH > 0)) hasTack = true;
+  // タックコートはAS2層以上（基層=粗粒度AS あり）の場合のみ（Bug A fix）
+  // 仮復旧でAS1層（表層のみ）のときはタックコート不要
+  if(!hasTack && (rcH > 0 || rmH > 0)) {
+    if((presetType.asT粗粒||0) > 0) hasTack = true;
+  }
 
   // 鉄板
   var hasTeppan = presetType.teppan && presetType.teppan.use;
@@ -2279,9 +2287,20 @@ function buildChecklistFromPreset(presetType){
   var asTotalMm = Math.round(asTotal * 1000);
   // 表層厚（最初のAS層）
   var surfMm = asLayers.length > 0 ? Math.round(asLayers[0].t * 1000) : 50;
-  // 基層合計厚
+  // 基層合計厚（仮復旧 asLayers ベース）
   var baseMm = asLayers.length > 1
     ? asLayers.slice(1).reduce(function(s,a){ return s+Math.round(a.t*1000); }, 0) : 0;
+
+  // 本復旧の通常AS層（基層・表層）— 瀝青安定処理等の特殊層は除く（Bug C fix）
+  var honNormalAsArr = (presetType.honAsLayers || []).filter(function(a){
+    var nm = a.name || a.preset || a.custom || '';
+    return !(nm.indexOf('瀝青')>=0 || nm.indexOf('安定処理')>=0 || nm.indexOf('既設')>=0
+             || nm.indexOf('コンクリート')>=0 || nm.indexOf('改良')>=0);
+  });
+  // honAsLayers の t は mm 単位
+  var honSurfMm = honNormalAsArr.length > 0 ? Math.round(honNormalAsArr[0].t || 0) : surfMm;
+  var honBaseMm = honNormalAsArr.length > 1
+    ? honNormalAsArr.slice(1).reduce(function(s,a){ return s+Math.round(a.t||0); }, 0) : 0;
 
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
@@ -2405,9 +2424,16 @@ function buildChecklistFromPreset(presetType){
       }
 
       // 基層転圧：基層がない場合は削除
+      // 本復旧は honNormalAsArr（瀝青安定処理除く）ベース、仮復旧は asLayers ベース（Bug C fix）
       if(n.indexOf('基層転圧') >= 0){
-        if(baseMm > 0){
-          item.dim = 'GL-'+asLayers[0].t.toFixed(3)+'m（基層 t='+baseMm+'mm）';
+        var _isHonBase = n.indexOf('本復旧') >= 0;
+        var _bmUse = _isHonBase ? honBaseMm : baseMm;
+        var _surfTUse = _isHonBase
+          ? (_bmUse > 0 ? (honNormalAsArr.length > 0 ? (honNormalAsArr[0].t||0)/1000 : (surfMm/1000))
+                        : (surfMm/1000))
+          : (asLayers.length > 0 ? asLayers[0].t : (surfMm/1000));
+        if(_bmUse > 0){
+          item.dim = 'GL-'+_surfTUse.toFixed(3)+'m（基層 t='+_bmUse+'mm）';
         } else {
           item._remove = true;
         }
