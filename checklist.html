@@ -1469,7 +1469,7 @@ function _ckRbMasterToTypeObj(m){
       // name / preset / subcat いずれかに格納されているケースに対応
       if (Array.isArray(m.kariRbLayers) && m.kariRbLayers.length > 0) {
         var _otherRow = m.kariRbLayers.find(function(r){
-          return r.type === 'other' && (r.name || r.preset || r.subcat);
+          return (r.type === 'other' || r.cat === 'free') && (r.name || r.preset || r.subcat);
         });
         if (_otherRow) {
           var _nm = _otherRow.preset || _otherRow.name || _otherRow.subcat || '';
@@ -1905,7 +1905,7 @@ function buildChecklistFromPreset(presetType){
   var _rmLayersStr = _ckResolveLayersStr(presetType, 'kariRmLayers');
   var _rcLayersStr = _ckResolveLayersStr(presetType, 'kariRcLayers');
   var rmBadgeLabel = (_rmLayersStr && !_isStdLayersStr(_rmLayersStr))
-    ? '路盤　' + _rmLayersStr
+    ? _rmLayersStr
     : ('RM-'+rmS);
   var rcBadgeLabel = (_rcLayersStr && !_isStdLayersStr(_rcLayersStr))
     ? _rcLayersStr
@@ -1945,7 +1945,7 @@ function buildChecklistFromPreset(presetType){
   // 例: RC t=350mm → 200mm+150mmで2分割 → GL-(totalH-150mm), GL-(totalH-0mm=路盤変更点)
 
   // maxStep: 1層あたりの最大転圧厚（省略=0.200m）。RC=0.200, RM=0.150が標準
-  function compactLayers(topGL, thickness, name, maxStep){
+  function compactLayers(topGL, thickness, name, maxStep, note){
     // topGL: この路盤層の上端（天端）GL深さ（正の値、m単位）
     // thickness: 路盤層の総厚（m）
     // 下から積み上げ、各分割の天端GLを転圧ポイントとする
@@ -2018,7 +2018,7 @@ function buildChecklistFromPreset(presetType){
   if(rmH > 0){
     var _rmLayers = _ckResolveLayersStr(presetType, 'kariRmLayers');
     var rmLabel = (_rmLayers && !_isStdLayersStr(_rmLayers))
-      ? ('路盤転圧　' + _rmLayers)
+      ? ('路盤転圧　' + (_rmLayers.replace(/^路盤[　 ]*/, '') || _rmLayers))
       : ('上層路盤転圧　RM-'+rmS);
     var _rmStep = _rmCompactStep(presetType.kariRM_layers);
     rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel, _rmStep, _odawaraRbNote);
