@@ -1385,6 +1385,7 @@ function _ckRbMasterToTypeObj(m){
     var _asH = (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); },0)/1000;
     return _asH + genkyoRM + genkyoRC + _ckGenkyoFreeH;
   })();
+  console.log('[CK] genkyo: RM='+genkyoRM+' RC='+genkyoRC+' honRmH='+(m.honRmH||0)+' honRcH='+(m.honRcH||0)+' honRbLen='+(m.honRbLayers||[]).length+' honTotalH='+(m.honTotalH||0)+' computedH='+_ckComputedHonTotalH);
   var _ckKariTotalH = (m.kariTotalH || 0);
   if (_ckEffFreeModeKari && _ckKariTotalH === 0 && _ckKariFreeRows.length > 0) {
     _ckKariTotalH = _ckKariFreeRows.reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
@@ -1916,7 +1917,6 @@ function buildChecklistFromPreset(presetType){
     // LOCAL asLayers（既に構築済み）長で判定（presetType.asLayersより正確）
     if(asLayers.length > 1 || (presetType.asT粗粒||0) > 0) hasTack = true;
   }
-  console.log('[CK] genkyo: RM='+genkyoRM+' RC='+genkyoRC+' honRmH='+(m.honRmH||0)+' honRcH='+(m.honRcH||0)+' honRbLen='+(m.honRbLayers||[]).length+' honTotalH='+(m.honTotalH||0)+' computedH='+_ckComputedHonTotalH);
   // Fix C-3: 本復旧タックコート有無（仮復旧の hasTack とは独立判定）
   var honHasTack = (function(){
     if(presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0) {
