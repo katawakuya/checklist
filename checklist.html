@@ -1463,15 +1463,21 @@ function _ckRbMasterToTypeObj(m){
       // フリーモード仮復旧: upper_rb 行の材料名を使用（例: 再生クラッシャラン）
       if (_ckEffFreeModeKari && _ckKariFreeRows.length > 0) {
         var _rmRow = _ckKariFreeRows.find(function(r){ return r.type==='upper_rb'; });
-        if (_rmRow) return _rmRow.preset||_rmRow.name||'';
+        if (_rmRow) return _rmRow.preset||_rmRow.name||_rmRow.subcat||'';
       }
       // 通常モード: kariRbLayers の 'other' 行（非RM/RC のフリー路盤材）の材料名
+      // name / preset / subcat いずれかに格納されているケースに対応
       if (Array.isArray(m.kariRbLayers) && m.kariRbLayers.length > 0) {
         var _otherRow = m.kariRbLayers.find(function(r){
-          return r.type === 'other' && (r.name || r.preset);
+          return r.type === 'other' && (r.name || r.preset || r.subcat);
         });
-        if (_otherRow) return _otherRow.preset || _otherRow.name || '';
+        if (_otherRow) {
+          var _nm = _otherRow.preset || _otherRow.name || _otherRow.subcat || '';
+          console.log('[CK] kariRbLayers other:', JSON.stringify(_otherRow), '→', _nm);
+          return _nm;
+        }
       }
+      console.log('[CK] kariRmLayers fallback: kariRbLayers=', JSON.stringify(m.kariRbLayers), 'freeModeKari=', _ckEffFreeModeKari);
       return '';
     })(),
     kariRcLayers:  m.kariRcLayers || (_ckEffFreeModeKari ? (function(){
@@ -1953,21 +1959,24 @@ function buildChecklistFromPreset(presetType){
       // i=n-1: 最下段の天端（最初に転圧）= topGL + tEach
       // i=0:   最上段の天端（最後に転圧）= topGL + thickness = topGL（この層の上端）
       var gl = topGL + thickness - tEach * (n - i);
-      layers.push({
+      var _item = {
         dim: 'GL-' + gl.toFixed(3) + 'm（t=' + tLabel + 'mm）',
         n: '仮復旧　' + name
-      });
+      };
+      if (note) _item.note = note;
+      layers.push(_item);
     }
     return layers;
   }
 
-  // kariRM_layersの層定義から転圧ステップ（m）を取得。未定義なら0.150（RM標準）
+  // kariRM_layersの層定義から転圧ステップ（m）を取得。未定義なら0.200（@200以内ルール）
+  // ※ 201mm以上のとき@200以内で均等分割。200mm以下は1層（割らない）
   function _rmCompactStep(layersDef) {
-    if (!Array.isArray(layersDef) || !layersDef.length) return 0.150;
-    // 単一エントリーで n=1 → 標準@150mm にフォールバック
-    if (layersDef.length === 1 && (layersDef[0].n || 1) === 1) return 0.150;
-    // 複数エントリーまたは n>1 → 均等割りステップを取得
-    var t0 = (layersDef[0].t || 150);
+    if (!Array.isArray(layersDef) || !layersDef.length) return 0.200;
+    // 単一エントリーで n=1 → @200mm標準（200mmは1回、201mm以上で分割）
+    if (layersDef.length === 1 && (layersDef[0].n || 1) === 1) return 0.200;
+    // 複数エントリーまたは n>1 → エントリー定義のステップを使用
+    var t0 = (layersDef[0].t || 200);
     return t0 / 1000;
   }
 
@@ -1980,12 +1989,26 @@ function buildChecklistFromPreset(presetType){
     return /t=\d|\d+mm/i.test(s);
   }
 
+  // 85型（小田原仕様）判定：転圧項目注釈の付与に使用
+  var _pre85Key = (function(){
+    if (String(presetType.key||'').indexOf('type_import_') === 0) {
+      var _ptCk = presetType.ckType || '';
+      if (_ptCk && TYPE_CHECKLISTS[_ptCk]) return _ptCk;
+      if (_typeKey && TYPE_CHECKLISTS[_typeKey]) return _typeKey;
+    }
+    return resolveBaseKey(presetType.key);
+  })();
+  var _is85 = (_pre85Key === '85');
+  var _odawaraRbNote = _is85
+    ? 'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷き均し・締固め状況と記載。【小田原仕様】'
+    : '';
+
   if(rcH > 0){
     var _rcLayers = _ckResolveLayersStr(presetType, 'kariRcLayers');
     var rcLabel = (_rcLayers && !_isStdLayersStr(_rcLayers))
-      ? (_rcLayers + '転圧')
+      ? ('路盤転圧　' + _rcLayers)
       : ('下層路盤転圧　RC-'+rcS);
-    rcLayers = compactLayers(totalH - rcH, rcH, rcLabel);
+    rcLayers = compactLayers(totalH - rcH, rcH, rcLabel, undefined, _odawaraRbNote);
     rcCompact = rcLayers.map(function(l){ return l.dim; });
   }
 
@@ -1995,10 +2018,10 @@ function buildChecklistFromPreset(presetType){
   if(rmH > 0){
     var _rmLayers = _ckResolveLayersStr(presetType, 'kariRmLayers');
     var rmLabel = (_rmLayers && !_isStdLayersStr(_rmLayers))
-      ? (_rmLayers + '転圧')
+      ? ('路盤転圧　' + _rmLayers)
       : ('上層路盤転圧　RM-'+rmS);
     var _rmStep = _rmCompactStep(presetType.kariRM_layers);
-    rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel, _rmStep);
+    rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel, _rmStep, _odawaraRbNote);
     rmCompact = rmLayers.map(function(l){ return l.dim; });
   }
 
@@ -5025,7 +5048,6 @@ function showWarningBanner(msg, focusId) {
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
     <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
-    <input id="teamModalCompany" type="text" placeholder="例: 関電工" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
     <input id="teamModalTeam" type="text" placeholder="例: ㅧ1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
