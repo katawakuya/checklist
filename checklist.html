@@ -1917,6 +1917,8 @@ function buildChecklistFromPreset(presetType){
     // LOCAL asLayers（既に構築済み）長で判定（presetType.asLayersより正確）
     if(asLayers.length > 1 || (presetType.asT粗粒||0) > 0) hasTack = true;
   }
+  // Fix Prime: 路盤とAS間は必ずプライムコート（切り下げ部等 rcH>0||rmH>0 のフリー路盤型対応）
+  if(!hasPrime && (rcH > 0 || rmH > 0)) hasPrime = true;
   // Fix C-3: 本復旧タックコート有無（仮復旧の hasTack とは独立判定）
   var honHasTack = (function(){
     if(presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0) {
@@ -3996,6 +3998,7 @@ function recalcGL(){
   var embedMm = EMBED_MM[tk] || 300;
   var emb = embedMm / 1000;
   var f40 = ROADBED_GL[tk] || -0.85;
+  var f40_hon = f40; // 本復旧路盤変更点（仮復旧と異なる場合に上書き）
   var _presetType = getPresetTypeData(_siteId, _typeKey, _presetTypeKey);
   if(_presetType){
     if(_presetType.totalH){
@@ -4008,6 +4011,8 @@ function recalcGL(){
       // genkyoRM>0 のとき（=本復旧に上層路盤あり）のみ本復旧深さを採用
       // 切り下げ部等（RM=0）はkari深さを使用（honTH > totalHでも適用しない）
       if(_honTH > _presetType.totalH && (_presetType.genkyoRM||0) > 0) f40 = -_honTH;
+      // 本復旧路盤変更点: genkyoRM条件に関係なくhonTotalHを使用（切り下げ部対応）
+      f40_hon = (_honTH > 0 && _honTH > _presetType.totalH) ? -_honTH : f40;
       console.log('[CK] recalcGL: totalH='+(_presetType.totalH||0).toFixed(3)+' genkyoTotalH='+(_presetType.genkyoTotalH||0).toFixed(3)+' genkyoRM='+(_presetType.genkyoRM||0).toFixed(3)+' genkyoRC='+(_presetType.genkyoRC||0).toFixed(3)+' _honTH='+(_honTH||0).toFixed(3)+' f40='+f40);
     } else {
       // totalHがない場合はAS+RC+RM+specialから再計算
@@ -4129,6 +4134,24 @@ function recalcGL(){
     }
     return arr;
   }
+  // Fix B: 本復旧用 midList ビルダー（f40_hon 基準）
+  function buildMidSimpleWith(f28Sh, _f40){
+    var fs = f28Sh!=='' ? parseFloat((f28Sh+0.2).toFixed(4)) : '';
+    var arr = fs!=='' ? midList(fs, _f40) : [];
+    if(fs!=='' && !arr.some(function(v){return Math.abs(v-_f40)<0.005;})) arr.push(_f40);
+    return arr;
+  }
+  function buildMidGradWith(dpSh, dpDe, f28Sh, f28De, f30Sh, _f40){
+    var fss = parseFloat((f28De+0.2).toFixed(4));
+    var deepList = midList(fss, _f40);
+    var shList = f28Sh!=='' ? midList(parseFloat((f28Sh+0.2).toFixed(4)), _f40) : [];
+    var merged = deepList.slice();
+    shList.forEach(function(v){
+      if(!merged.some(function(m){return Math.abs(m-v)<0.005;})) merged.push(v);
+    });
+    if(!merged.some(function(m){return Math.abs(m-_f40)<0.005;})) merged.push(_f40);
+    return merged.sort(function(a,b){return a-b;});
+  }
   var f_mid = (_pipeGradient[0] && dp1s>0 && f28s!=='')
     ? buildMidGrad(dp1, dp1s, f28, f28s, f30)
     : buildMidSimple(f28);
@@ -4141,6 +4164,12 @@ function recalcGL(){
   var i_mid = (_pipeGradient[3] && dp4s>0 && i28s!=='')
     ? buildMidGrad(dp4, dp4s, i28, i28s, i30)
     : buildMidSimple(i28);
+  // 本復旧用 midList（f40_hon が f40 と異なるときのみ再計算、それ以外は共用）
+  var _f40_diff = (f40_hon !== f40);
+  var f_mid_hon = _f40_diff ? ((_pipeGradient[0]&&dp1s>0&&f28s!=='') ? buildMidGradWith(dp1,dp1s,f28,f28s,f30,f40_hon) : buildMidSimpleWith(f28,f40_hon)) : f_mid;
+  var g_mid_hon = _f40_diff ? ((_pipeGradient[1]&&dp2s>0&&g28s!=='') ? buildMidGradWith(dp2,dp2s,g28,g28s,g30,f40_hon) : buildMidSimpleWith(g28,f40_hon)) : g_mid;
+  var h_mid_hon = _f40_diff ? ((_pipeGradient[2]&&dp3s>0&&h28s!=='') ? buildMidGradWith(dp3,dp3s,h28,h28s,h30,f40_hon) : buildMidSimpleWith(h28,f40_hon)) : h_mid;
+  var i_mid_hon = _f40_diff ? ((_pipeGradient[3]&&dp4s>0&&i28s!=='') ? buildMidGradWith(dp4,dp4s,i28,i28s,i30,f40_hon) : buildMidSimpleWith(i28,f40_hon)) : i_mid;
 
   // 埋設シート = 路盤変更点 同値判定
   var embSameAsF40 = (f30 !== '' && String(f30) === String(f40)) ||
@@ -4171,12 +4200,13 @@ function recalcGL(){
   }
 
   // 中間転圧エントリ一覧（GL深い順・ラベル/動的注記つき）。.mid-list-wrap と統合表示(.combo-wrap)で共用
-  function buildMidEntries(){
+  // Fix B: パラメータ化（仮復旧=f40/f_mid、本復旧=f40_hon/f_mid_hon を切り替え可能）
+  function buildMidEntriesFor(_f40, _f_mid, _g_mid, _h_mid, _i_mid){
     var allPipes = [
-      {pi:0, dpV:dp1, dpSv:dp1s, midArr:f_mid, f28v:f28, f28sv:f28s, cls:'tag-blue'},
-      {pi:1, dpV:dp2, dpSv:dp2s, midArr:g_mid, f28v:g28, f28sv:g28s, cls:'tag-green'},
-      {pi:2, dpV:dp3, dpSv:dp3s, midArr:h_mid, f28v:h28, f28sv:h28s, cls:'tag-gray'},
-      {pi:3, dpV:dp4, dpSv:dp4s, midArr:i_mid, f28v:i28, f28sv:i28s, cls:'tag-gray'}
+      {pi:0, dpV:dp1, dpSv:dp1s, midArr:_f_mid, f28v:f28, f28sv:f28s, cls:'tag-blue'},
+      {pi:1, dpV:dp2, dpSv:dp2s, midArr:_g_mid, f28v:g28, f28sv:g28s, cls:'tag-green'},
+      {pi:2, dpV:dp3, dpSv:dp3s, midArr:_h_mid, f28v:h28, f28sv:h28s, cls:'tag-gray'},
+      {pi:3, dpV:dp4, dpSv:dp4s, midArr:_i_mid, f28v:i28, f28sv:i28s, cls:'tag-gray'}
     ];
     var activePipes = allPipes.filter(function(p){ return p.dpV>0 && p.pi<_pipeCount; });
     var merged = {};
@@ -4190,28 +4220,28 @@ function recalcGL(){
     var result = [];
     if(entries.length === 0){
       activePipes.forEach(function(p){
-        var note = sheetValueMatch(f40) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
-        result.push({piIdx:p.pi, v:f40, cls:p.cls, lbl:getPipeLbl(p.pi)+' '+fmtGL(f40), note:note});
+        var note = sheetValueMatch(_f40) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
+        result.push({piIdx:p.pi, v:_f40, cls:p.cls, lbl:getPipeLbl(p.pi)+' '+fmtGL(_f40), note:note});
       });
       return result;
     }
     entries.forEach(function(e){
       var p = e.p;
       var grad = _pipeGradient[p.pi] && p.dpSv>0;
-      var isShallowF40 = grad && Math.abs(e.v - f40) < 0.005;
+      var isShallowF40 = grad && Math.abs(e.v - _f40) < 0.005;
       var lbl, note = '';
       if(grad && isShallowF40){
         lbl = glGradLbl(p.pi, 1, e.v);
         note = sheetValueMatch(e.v) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
       } else if(grad && p.f28sv!==''){
-        var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), f40);
+        var deepListRef = midList(parseFloat((p.f28sv+0.2).toFixed(4)), _f40);
         var inDeepList = deepListRef.some(function(dv){ return Math.abs(dv-e.v)<0.005; });
         lbl = inDeepList ? glGradLbl(p.pi, 2, e.v) : glGradLbl(p.pi, 1, e.v);
       } else {
         lbl = glLbl(p.pi+1, e.v);
       }
       if(!note){
-        if(Math.abs(e.v - f40) < 0.005){
+        if(Math.abs(e.v - _f40) < 0.005){
           note = sheetValueMatch(e.v) ? '（路盤変更点・埋設シートと同GL）' : '（路盤変更点）';
         } else if(sheetValueMatch(e.v)){
           note = '（中間転圧・埋設シートと同GL）';
@@ -4223,6 +4253,8 @@ function recalcGL(){
     });
     return result;
   }
+  function buildMidEntries(){ return buildMidEntriesFor(f40, f_mid, g_mid, h_mid, i_mid); }
+  function buildMidEntriesHon(){ return buildMidEntriesFor(f40_hon, f_mid_hon, g_mid_hon, h_mid_hon, i_mid_hon); }
 
   // ── ヘルパー ──
   function glLbl(pipe, v){
@@ -4325,7 +4357,9 @@ function recalcGL(){
 
   // 中間転圧リスト（.mid-list-wrap）…埋設シートと統合されない場合のフォールバック表示
   document.querySelectorAll('.mid-list-wrap').forEach(function(wrap){
-    var midEntries = buildMidEntries();
+    var _sec = wrap.closest('.checklist-section');
+    var _isHonBurialCtx = _sec && !!_sec.querySelector('.hon-burial-hdr');
+    var midEntries = _isHonBurialCtx ? buildMidEntriesHon() : buildMidEntries();
     var html = '';
     if(!midEntries.length){
       html = '<span class="tag tag-yellow">DP入力後にGL値・繰り返し回数を計算</span>';
@@ -4341,12 +4375,14 @@ function recalcGL(){
   // GL深い順（数値が小さい=深い）に1本のシーケンスとしてインターリーブし、
   // 勾配時はDP①／DP②の実測値に応じて動的に順序が入れ替わる。各エントリは個別にチェック可能。
   document.querySelectorAll('.combo-wrap').forEach(function(wrap){
+    var _csec = wrap.closest('.checklist-section');
+    var _cIsHonBurialCtx = _csec && !!_csec.querySelector('.hon-burial-hdr');
     var combo = [];
     _sheetEntries.forEach(function(e){
       var lbl = e.end===0 ? glLbl(e.piIdx+1, e.v) : glGradLbl(e.piIdx, e.end, e.v);
       combo.push({kind:'sheet', piIdx:e.piIdx, end:(e.end||0), v:e.v, cls:e.cls, lbl:lbl, note:''});
     });
-    buildMidEntries().forEach(function(e){
+    (_cIsHonBurialCtx ? buildMidEntriesHon() : buildMidEntries()).forEach(function(e){
       combo.push({kind:'mid', piIdx:e.piIdx, end:0, v:e.v, cls:e.cls, lbl:e.lbl, note:e.note});
     });
     // 深い順（GL値が小さい順）。同GLの場合は埋設シート→中間転圧の順（敷設してから転圧するため）
