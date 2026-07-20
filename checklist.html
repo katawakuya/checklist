@@ -1255,15 +1255,12 @@ function _ckRbMasterToTypeObj(m){
   var honFreeMode = !!m.honFreeMode;
   var honFreeRows = Array.isArray(m.honFreeRows) ? m.honFreeRows : [];
 
-  // honFreeMode=true でも honFreeRows が空の場合は通常フィールドからフォールバック（Bug B fix）
-  var _honFreeModeEff = honFreeMode && honFreeRows.length > 0;
-
-  var genkyoAsH = _honFreeModeEff
+  var genkyoAsH = honFreeMode
     ? honFreeRows.filter(function(r){ return r.type==='surface'||r.type==='base'; })
                  .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); }, 0)/1000;
 
-  var genkyoRM = _honFreeModeEff
+  var genkyoRM = honFreeMode
     ? honFreeRows.filter(function(r){
         if (r.type==='upper_rb') return true;
         if (r.type==='lower_rb') { var sc=r.subcat||''; return sc==='RM-30'||sc==='RM-40'; }
@@ -1271,7 +1268,7 @@ function _ckRbMasterToTypeObj(m){
       }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honRmH || 0);
 
-  var genkyoRC = _honFreeModeEff
+  var genkyoRC = honFreeMode
     ? honFreeRows.filter(function(r){
         if (r.type==='lower_rb') { var sc=r.subcat||''; return sc!=='RM-30'&&sc!=='RM-40'; }
         if (r.type==='upper_rb') { var sc=r.subcat||''; return sc==='RC-30'||sc==='RC-40'; }
@@ -1279,24 +1276,21 @@ function _ckRbMasterToTypeObj(m){
       }).reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : (m.honRcH || 0);
 
-  // honFreeMode=false かつ honRmH/honRcH が未設定の場合 honRbLayers の RM/RC 行からフォールバック
-  // （roadbed.html が honRmH スカラーを保存しないで honRbLayers だけ持つケースに対応）
-  if (!_honFreeModeEff) {
-    if (genkyoRM === 0 && Array.isArray(m.honRbLayers) && m.honRbLayers.length > 0) {
-      var _fbHonRM = m.honRbLayers
-        .filter(function(r){ return _ckIsRmCat(r.subcat||r.cat||r.type||''); })
-        .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
-      if (_fbHonRM > 0) genkyoRM = _fbHonRM;
+  // Fix 1: honRbLayers スカラー欠落時のフォールバック（配列から集計）
+  if (!honFreeMode) {
+    if (genkyoRM === 0 && (m.honRbLayers||[]).length > 0) {
+      genkyoRM = (m.honRbLayers||[]).filter(function(r){
+        return _ckIsRmCat(r.subcat||r.cat||r.type||'');
+      }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
     }
-    if (genkyoRC === 0 && Array.isArray(m.honRbLayers) && m.honRbLayers.length > 0) {
-      var _fbHonRC = m.honRbLayers
-        .filter(function(r){ return _ckIsRcCat(r.subcat||r.cat||r.type||''); })
-        .reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
-      if (_fbHonRC > 0) genkyoRC = _fbHonRC;
+    if (genkyoRC === 0 && (m.honRbLayers||[]).length > 0) {
+      genkyoRC = (m.honRbLayers||[]).filter(function(r){
+        return _ckIsRcCat(r.subcat||r.cat||r.type||'');
+      }).reduce(function(s,r){ return s+(r.t||0); }, 0) / 1000;
     }
   }
 
-  var genkyoCnH = _honFreeModeEff
+  var genkyoCnH = honFreeMode
     ? honFreeRows.filter(function(r){ return r.type==='concrete'||r.type==='コンクリート'; })
                  .reduce(function(s,r){ return s+(r.t||0); }, 0)/1000
     : 0;
@@ -1377,12 +1371,10 @@ function _ckRbMasterToTypeObj(m){
   }).reduce(function(s,r){ return (r.t||0)>0 ? s+(r.t||0)/1000 : s; }, 0) : 0;
   // 現況（本復旧）路盤合計H: honTotalH が未設定でも構成要素（鉄板含む）から算出
   var _ckComputedHonTotalH = (m.honTotalH||0) > 0 ? m.honTotalH : (function(){
-    // honFreeMode=true でも honFreeRows が空の場合は通常計算にフォールバック（Bug B fix）
-    if (m.honFreeMode && Array.isArray(m.honFreeRows) && m.honFreeRows.length > 0) {
+    if (m.honFreeMode && Array.isArray(m.honFreeRows)) {
       return m.honFreeRows.reduce(function(s,r){ return s+(r.t||0); },0)/1000;
     }
     var _asH = (m.honAsLayers||[]).reduce(function(s,a){ return s+(a.t||0); },0)/1000;
-    // genkyoRM/genkyoRC は上で honRbLayers フォールバック済みなので m.honRmH スカラーより正確
     return _asH + genkyoRM + genkyoRC + _ckGenkyoFreeH;
   })();
   var _ckKariTotalH = (m.kariTotalH || 0);
@@ -1911,15 +1903,32 @@ function buildChecklistFromPreset(presetType){
   });
   // プリセットがない場合はデフォルトでtrueにしてコートを表示する
   if(!presetType.asLayers){ hasTack=true; hasPrime=true; }
-  // 路盤材があるときはプライムコートを必ず表示（小田原仕様）
-  if(!hasPrime && (rcH > 0 || rmH > 0)) hasPrime = true;
-  // タックコートはAS2層以上（基層=粗粒度AS あり）の場合のみ（Bug A fix）
-  // 仮復旧でAS1層（表層のみ）のときはタックコート不要
-  // asT粗粒 は kariAsLayers に role 未設定の場合 sumAS が 0 を返すため
-  // presetType.asLayers の長さ（>1 = 基層あり）でも判断（Bug A-2 補完）
+  // Fix A-2: 仮復旧タックコート追加判定: RC/RM路盤あり＋粗粒度AS（基層）がある場合
   if(!hasTack && (rcH > 0 || rmH > 0)) {
     if((presetType.asT粗粒||0) > 0 || (presetType.asLayers||[]).length > 1) hasTack = true;
   }
+  // Fix C-3: 本復旧タックコート有無（仮復旧の hasTack とは独立判定）
+  var honHasTack = (function(){
+    if(presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0) {
+      var _hn = (presetType.honFreeRows||[]).filter(function(r){
+        if(r.type!=='surface'&&r.type!=='base') return false;
+        var nm=r.name||r.preset||'';
+        return !(nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0||
+                 nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0);
+      });
+      return _hn.length > 1;
+    }
+    var _honNorm = (presetType.honAsLayers||[]).filter(function(a){
+      var nm=a.name||a.preset||a.custom||''; var r=a.role||'';
+      if(r==='tack'||r==='prime') return false;
+      if(nm.indexOf('タック')>=0||nm.indexOf('プライム')>=0) return false;
+      var isSpec=r==='stabilize'||r==='existing'||r==='special'||
+        nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0||
+        nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0||nm.indexOf('調整')>=0;
+      return !isSpec && (a.t||0) > 0;
+    });
+    return _honNorm.length > 1;
+  })();
 
   // 鉄板
   var hasTeppan = presetType.teppan && presetType.teppan.use;
@@ -2074,15 +2083,13 @@ function buildChecklistFromPreset(presetType){
   var honRmLayers = [];
   if (genRcH > 0) {
     var _hRcTop = Math.max(0, honTotalH - genRcH);
-    var _honRcSz = presetType.honRcSize || rcS;
-    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+_honRcSz, 0.200).map(function(l){
+    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+rcS, 0.200).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
   if (genRmH > 0) {
     var _hRmTop = Math.max(0, honTotalH - genRcH - genRmH);
-    var _honRmSz = presetType.honRmSize || rmS;
-    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+_honRmSz, 0.200).map(function(l){
+    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+rmS, 0.200).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
@@ -2238,12 +2245,6 @@ function buildChecklistFromPreset(presetType){
     for(var _si = 0; _si < _sHon2.length; _si++){
       if(_sHon2[_si].n && _sHon2[_si].n.indexOf('プライムコート') >= 0){ _sPIdx = _si; break; }
     }
-    if(_sPIdx < 0){
-      // プライムコートなし → 基層転圧の直前を代替挿入位置とする
-      for(var _si2 = 0; _si2 < _sHon2.length; _si2++){
-        if(_sHon2[_si2].n && _sHon2[_si2].n.indexOf('基層転圧') >= 0){ _sPIdx = _si2 - 1; break; }
-      }
-    }
     if(_sPIdx < 0) return;
 
     // 本復旧側通常AS合計厚 = 特殊AS層の上端GL（地表面からの深さ）
@@ -2307,36 +2308,9 @@ function buildChecklistFromPreset(presetType){
   var asTotalMm = Math.round(asTotal * 1000);
   // 表層厚（最初のAS層）
   var surfMm = asLayers.length > 0 ? Math.round(asLayers[0].t * 1000) : 50;
-  // 基層合計厚（仮復旧 asLayers ベース）
+  // 基層合計厚
   var baseMm = asLayers.length > 1
     ? asLayers.slice(1).reduce(function(s,a){ return s+Math.round(a.t*1000); }, 0) : 0;
-
-  // 本復旧の通常AS層（基層・表層）— 瀝青安定処理等の特殊層は除く（Bug C fix）
-  // honFreeMode=true のときは honFreeRows（surface/base 型）から通常AS層を取得（Bug C-1b fix）
-  var _honFreeEff = presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0;
-  var honNormalAsArr;
-  if (_honFreeEff) {
-    honNormalAsArr = (presetType.honFreeRows||[])
-      .filter(function(r){
-        if(r.type !== 'surface' && r.type !== 'base') return false;
-        var nm = r.name || r.preset || '';
-        return !(nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0
-                 ||nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0);
-      })
-      .map(function(r){ return { name: r.name||'', t: r.t||0 }; });
-  } else {
-    honNormalAsArr = (presetType.honAsLayers || []).filter(function(a){
-      var nm = a.name || a.preset || a.custom || '';
-      return !(nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0
-               ||nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0);
-    });
-  }
-  // honAsLayers の t は mm 単位、honFreeRows の t も mm 単位
-  var honSurfMm = honNormalAsArr.length > 0 ? Math.round(honNormalAsArr[0].t || 0) : surfMm;
-  var honBaseMm = honNormalAsArr.length > 1
-    ? honNormalAsArr.slice(1).reduce(function(s,a){ return s+Math.round(a.t||0); }, 0) : 0;
-  // 本復旧タックコート判定（仮復旧の hasTack とは独立）（Bug C-3 fix）
-  var honHasTack = honBaseMm > 0;
 
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
@@ -2460,25 +2434,18 @@ function buildChecklistFromPreset(presetType){
       }
 
       // 基層転圧：基層がない場合は削除
-      // 本復旧は honNormalAsArr（瀝青安定処理除く）ベース、仮復旧は asLayers ベース（Bug C fix）
       if(n.indexOf('基層転圧') >= 0){
-        var _isHonBase = n.indexOf('本復旧') >= 0;
-        var _bmUse = _isHonBase ? honBaseMm : baseMm;
-        var _surfTUse = _isHonBase
-          ? (_bmUse > 0 ? (honNormalAsArr.length > 0 ? (honNormalAsArr[0].t||0)/1000 : (surfMm/1000))
-                        : (surfMm/1000))
-          : (asLayers.length > 0 ? asLayers[0].t : (surfMm/1000));
-        if(_bmUse > 0){
-          item.dim = 'GL-'+_surfTUse.toFixed(3)+'m（基層 t='+_bmUse+'mm）';
+        if(baseMm > 0){
+          item.dim = 'GL-'+asLayers[0].t.toFixed(3)+'m（基層 t='+baseMm+'mm）';
         } else {
           item._remove = true;
         }
       }
 
-      // タックコート：なければ削除（本復旧・仮復旧で独立判断）（Bug C-3 fix）
+      // タックコート：なければ削除（仮/本復旧で独立判定）
       if(n.indexOf('タックコート') >= 0){
-        var _tackIsHon = n.indexOf('本復旧') >= 0;
-        if(_tackIsHon ? !honHasTack : !hasTack) item._remove = true;
+        var _isHonTack = n.indexOf('本復旧') >= 0;
+        if(!(_isHonTack ? honHasTack : hasTack)) item._remove = true;
       }
 
       // プライムコート：なければ削除
@@ -2769,19 +2736,14 @@ function setKojiKbn(kbn){
   var _dpIds = ['inDP1','inDPH','inDP2','inDPH2','inDP3','inDPH3','inDP4','inDPH4','inBH','inExtra'];
   var _dpSaved = {};
   _dpIds.forEach(function(id){ _dpSaved[id] = $v(id); });
-  // 旗揚げ番号と _hataEntry も退避（restoreState がクリアするため）
-  var _savedHataVal = ($v('hataInput') || '').trim();
+  var _savedHata = ($v('hataInput') || '').trim();
   renderMain();
-  // 旗揚げ番号を復元（renderMain 内の restoreState がクリアするため手動復元）
-  if (_savedHataVal) {
-    var _hEl = document.getElementById('hataInput');
-    if (_hEl) {
-      _hEl.value = _savedHataVal;
-      // loadHata() で hataInfo・図面を再描画（DP はエントリ値で一時上書きされる）
-      loadHata();
-    }
+  // 旗揚げ番号を復元して hataInfo 表示を再構築
+  if(_savedHata){
+    var _hataEl = document.getElementById('hataInput');
+    if(_hataEl){ _hataEl.value = _savedHata; loadHata(); }
   }
-  // DP/管下H値を最終復元（loadHata のエントリ値より手動入力値を優先）
+  // DP/管下H値を復元
   _dpIds.forEach(function(id){ sv(id, _dpSaved[id]); });
   if (_dpSaved['inDP1'] || _dpSaved['inDPH'] || _dpSaved['inBH']) recalcGL();
   saveState();
@@ -4007,7 +3969,7 @@ function recalcGL(){
     if(_presetType.totalH){
       // totalH = AS含む全路盤構成合計（order側で計算済みの値を優先）
       f40 = -_presetType.totalH;
-      // 本復旧（現況）が仮復旧より深い場合は本復旧の深さを路盤変更点として使用
+      // 本復旧路盤が仮復旧より深い場合は本復旧深さを優先（路盤変更点は本復旧基準）
       var _honTH = _presetType.genkyoTotalH ||
         parseFloat(((_presetType.genkyoAsH||0)+(_presetType.genkyoRM||0)+(_presetType.genkyoRC||0)+
           (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)+(_presetType.genkyoFreeH||0)).toFixed(4));
@@ -5105,4 +5067,49 @@ function showWarningBanner(msg, focusId) {
   }, { passive: false });
   document.addEventListener('DOMContentLoaded', function() {
     var b = document.createElement('button');
-    b.innerHT
+    b.innerHTML = '▲'; b.title = 'ページ先頭へ';
+    b.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9000;width:48px;height:48px;border-radius:50%;border:none;background:#4f8ef7;color:#fff;font-size:20px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;opacity:0;transition:opacity 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(b);
+    b.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
+    window.addEventListener('scroll', function() { var s=(document.documentElement.scrollTop||document.body.scrollTop)>300; b.style.opacity=s?'1':'0'; b.style.pointerEvents=s?'auto':'none'; }, { passive: true });
+  });
+})();
+
+</script>
+<!-- 管理者ログインモーダル -->
+<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e2233;border-radius:14px;padding:24px 20px;width:88%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
+    <div style="font-size:20px;font-weight:700;margin-bottom:16px;color:#e2e8f0;">🔑 管理者ログイン</div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:14px;color:#8fa3bb;display:block;margin-bottom:4px;">メールアドレス</label>
+      <input id="fbEmail" type="email" autocomplete="email" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="管理者メールアドレス">
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-size:14px;color:#8fa3bb;display:block;margin-bottom:4px;">パスワード</label>
+      <input id="fbPass" type="password" autocomplete="current-password" style="width:100%;border:1.5px solid #363d5c;border-radius:7px;padding:10px;font-size:17px;box-sizing:border-box;background:#252a3d;color:#e2e8f0;" placeholder="パスワード">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="fbLogin()" style="flex:1;padding:11px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;">ログイン</button>
+      <button onclick="closeFbModal()" style="padding:11px 16px;background:#252a3d;color:#e2e8f0;border:1px solid #363d5c;border-radius:8px;font-size:18px;cursor:pointer;">×</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 会社・班名 設定モーダル ===== -->
+<div id="teamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;width:360px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">👷 会社名・班名の設定</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:18px;line-height:1.5;">記録に自動でひも付けられます。</div>
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">会社名</label>
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
+    <input id="teamModalTeam" type="text" placeholder="例: ㅧ1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
+    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
