@@ -1897,8 +1897,10 @@ function buildChecklistFromPreset(presetType){
   if(!hasPrime && (rcH > 0 || rmH > 0)) hasPrime = true;
   // タックコートはAS2層以上（基層=粗粒度AS あり）の場合のみ（Bug A fix）
   // 仮復旧でAS1層（表層のみ）のときはタックコート不要
+  // asT粗粒 は kariAsLayers に role 未設定の場合 sumAS が 0 を返すため
+  // presetType.asLayers の長さ（>1 = 基層あり）でも判断（Bug A-2 補完）
   if(!hasTack && (rcH > 0 || rmH > 0)) {
-    if((presetType.asT粗粒||0) > 0) hasTack = true;
+    if((presetType.asT粗粒||0) > 0 || (presetType.asLayers||[]).length > 1) hasTack = true;
   }
 
   // 鉄板
@@ -2292,15 +2294,31 @@ function buildChecklistFromPreset(presetType){
     ? asLayers.slice(1).reduce(function(s,a){ return s+Math.round(a.t*1000); }, 0) : 0;
 
   // 本復旧の通常AS層（基層・表層）— 瀝青安定処理等の特殊層は除く（Bug C fix）
-  var honNormalAsArr = (presetType.honAsLayers || []).filter(function(a){
-    var nm = a.name || a.preset || a.custom || '';
-    return !(nm.indexOf('瀝青')>=0 || nm.indexOf('安定処理')>=0 || nm.indexOf('既設')>=0
-             || nm.indexOf('コンクリート')>=0 || nm.indexOf('改良')>=0);
-  });
-  // honAsLayers の t は mm 単位
+  // honFreeMode=true のときは honFreeRows（surface/base 型）から通常AS層を取得（Bug C-1b fix）
+  var _honFreeEff = presetType.honFreeMode && (presetType.honFreeRows||[]).length > 0;
+  var honNormalAsArr;
+  if (_honFreeEff) {
+    honNormalAsArr = (presetType.honFreeRows||[])
+      .filter(function(r){
+        if(r.type !== 'surface' && r.type !== 'base') return false;
+        var nm = r.name || r.preset || '';
+        return !(nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0
+                 ||nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0);
+      })
+      .map(function(r){ return { name: r.name||'', t: r.t||0 }; });
+  } else {
+    honNormalAsArr = (presetType.honAsLayers || []).filter(function(a){
+      var nm = a.name || a.preset || a.custom || '';
+      return !(nm.indexOf('瀝青')>=0||nm.indexOf('安定処理')>=0||nm.indexOf('既設')>=0
+               ||nm.indexOf('コンクリート')>=0||nm.indexOf('改良')>=0);
+    });
+  }
+  // honAsLayers の t は mm 単位、honFreeRows の t も mm 単位
   var honSurfMm = honNormalAsArr.length > 0 ? Math.round(honNormalAsArr[0].t || 0) : surfMm;
   var honBaseMm = honNormalAsArr.length > 1
     ? honNormalAsArr.slice(1).reduce(function(s,a){ return s+Math.round(a.t||0); }, 0) : 0;
+  // 本復旧タックコート判定（仮復旧の hasTack とは独立）（Bug C-3 fix）
+  var honHasTack = honBaseMm > 0;
 
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
@@ -2439,9 +2457,10 @@ function buildChecklistFromPreset(presetType){
         }
       }
 
-      // タックコート：なければ削除
+      // タックコート：なければ削除（本復旧・仮復旧で独立判断）（Bug C-3 fix）
       if(n.indexOf('タックコート') >= 0){
-        if(!hasTack) item._remove = true;
+        var _tackIsHon = n.indexOf('本復旧') >= 0;
+        if(_tackIsHon ? !honHasTack : !hasTack) item._remove = true;
       }
 
       // プライムコート：なければ削除
@@ -3961,7 +3980,7 @@ function recalcGL(){
       // 本復旧（現況）が仮復旧より深い場合は本復旧の深さを路盤変更点として使用
       var _honTH = _presetType.genkyoTotalH ||
         parseFloat(((_presetType.genkyoAsH||0)+(_presetType.genkyoRM||0)+(_presetType.genkyoRC||0)+
-          (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)).toFixed(4));
+          (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)+(_presetType.genkyoFreeH||0)).toFixed(4));
       if(_honTH > _presetType.totalH) f40 = -_honTH;
     } else {
       // totalHがない場合はAS+RC+RM+specialから再計算
