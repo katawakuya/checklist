@@ -370,22 +370,44 @@ function forceReload(){
     margin-bottom: 12px;
   }
 
-  /* PIPE TABLE */
-  .pipe-table { width: 100%; border-collapse: collapse; font-size:16px; }
-  .pipe-table th {
-    padding: 6px 8px; text-align: center;
-    color: var(--text2); font-size:14px;
-    border-bottom: 1px solid var(--border);
+  /* PIPE ADD TABLE (行追加型) */
+  .pa-wrap { margin-top: 4px; }
+  .pa-row {
+    display: flex; flex-wrap: nowrap; gap: 6px; align-items: center;
+    margin-bottom: 8px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(46,51,80,0.5);
   }
-  .pipe-table td { padding: 5px 6px; }
-  .pipe-table input {
-    width: 60px; background: var(--surface2); border: 1px solid var(--border);
+  .pa-row:last-child { border-bottom: none; }
+  .pa-row select, .pa-row input[type=number] {
+    background: var(--surface2); border: 1px solid var(--border);
     border-radius: 6px; color: var(--text);
-    padding: 4px 6px; font-size:16px; font-family: var(--mono);
-    text-align: right;
+    padding: 4px 6px; font-family: var(--mono);
   }
-  .pipe-table input:focus { outline: none; border-color: var(--accent); }
-  .pipe-table .pipe-name { font-size:14px; color: var(--text2); font-family: var(--mono); }
+  .pa-row select:focus, .pa-row input[type=number]:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .pa-type { flex: 1; min-width: 110px; }
+  .pa-kind { width: 68px; flex-shrink: 0; }
+  .pa-len-wrap { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .pa-len { width: 60px; text-align: right; }
+  .pa-num-wrap { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .pa-num { width: 50px; text-align: right; }
+  .pa-unit { color: var(--text3); font-size: 12px; }
+  .pa-add-btn {
+    margin-top: 6px;
+    padding: 5px 12px;
+    background: rgba(79,142,247,0.12);
+    border: 1px solid rgba(79,142,247,0.35);
+    border-radius: 6px; color: var(--accent);
+    cursor: pointer; font-family: var(--sans);
+  }
+  .pa-add-btn:hover { background: rgba(79,142,247,0.22); }
+  .pa-del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); padding: 2px 4px;
+    border-radius: 4px; flex-shrink: 0;
+  }
+  .pa-del-btn:hover { color: var(--red); background: rgba(239,68,68,0.1); }
 
   /* SPECIAL SECTION */
   .special-section {
@@ -478,9 +500,9 @@ input,select,button{font-size:21px!important}
   .tab-btn{white-space:nowrap;min-width:fit-content;padding:10px 14px}
   /* カードのpadding縮小 */
   main{padding:12px 10px 60px}
-  /* テーブルを横スクロール */
-  .pipe-table{font-size:16px}
-  .pipe-table input{width:60px!important;padding:4px!important}
+  /* 配管行をラップ */
+  .pa-row{flex-wrap:wrap}
+  .pa-type{min-width:calc(100% - 34px)}
   /* ボタンをタップしやすく */
   .btn{padding:12px 16px;min-height:44px}
   /* チップをwrap */
@@ -2620,32 +2642,101 @@ function getCalcRatios(typeKey) {
 // パイプ入力 UI 生成
 // =====================================================================
 function buildPipeInputs(containerId) {
-  const el = document.getElementById(containerId);
+  var el = document.getElementById(containerId);
   if (!el) return;
-  let html = '<table class="pipe-table"><thead><tr><th>管種</th><th>延長1(m)</th><th>本数1</th><th>延長2(m)</th><th>本数2</th></tr></thead><tbody>';
-  for (const p of PIPE_TYPES) {
-    html += `<tr>
-      <td class="pipe-name">${p.name}</td>
-      <td><input type="number" step="0.1" id="${containerId}-${p.key}-L1" placeholder="0"></td>
-      <td><input type="number" step="1"   id="${containerId}-${p.key}-N1" placeholder="1" value="1"></td>
-      <td><input type="number" step="0.1" id="${containerId}-${p.key}-L2" placeholder="0"></td>
-      <td><input type="number" step="1"   id="${containerId}-${p.key}-N2" placeholder="1" value="1"></td>
-    </tr>`;
-  }
-  html += '</tbody></table>';
-  el.innerHTML = html;
+  el.innerHTML =
+    '<div class="pa-wrap" id="' + containerId + '-rows"></div>' +
+    '<button type="button" class="pa-add-btn" onclick="_addPipeInputRow(\'' + containerId + '\')">＋ 配管追加</button>';
+  _addPipeInputRow(containerId);
+}
+
+function _addPipeInputRow(containerId, pipeKey, kind, L, N) {
+  var wrap = document.getElementById(containerId + '-rows');
+  if (!wrap) return;
+
+  var div = document.createElement('div');
+  div.className = 'pa-row';
+
+  // 管種 select
+  var selType = document.createElement('select');
+  selType.className = 'pa-type';
+  PIPE_TYPES.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.key; opt.textContent = p.name;
+    if (pipeKey && p.key === pipeKey) opt.selected = true;
+    selType.appendChild(opt);
+  });
+
+  // 品種 select
+  var selKind = document.createElement('select');
+  selKind.className = 'pa-kind';
+  ['直管','曲げ管'].forEach(function(k) {
+    var opt = document.createElement('option');
+    opt.value = k; opt.textContent = k;
+    if (k === (kind || '直管')) opt.selected = true;
+    selKind.appendChild(opt);
+  });
+
+  // 延長 wrap（曲げ管では非表示）
+  var lenWrap = document.createElement('span');
+  lenWrap.className = 'pa-len-wrap';
+  if ((kind || '直管') === '曲げ管') lenWrap.style.display = 'none';
+  var inpLen = document.createElement('input');
+  inpLen.type = 'number'; inpLen.className = 'pa-len';
+  inpLen.step = '0.1'; inpLen.min = '0'; inpLen.placeholder = '延長m';
+  if (L != null && L > 0) inpLen.value = L;
+  var unitLen = document.createElement('span');
+  unitLen.className = 'pa-unit'; unitLen.textContent = 'm';
+  lenWrap.appendChild(inpLen); lenWrap.appendChild(unitLen);
+
+  // 本数 wrap
+  var numWrap = document.createElement('span');
+  numWrap.className = 'pa-num-wrap';
+  var inpNum = document.createElement('input');
+  inpNum.type = 'number'; inpNum.className = 'pa-num';
+  inpNum.step = '1'; inpNum.min = '1'; inpNum.placeholder = '本数';
+  inpNum.value = (N != null && N > 0) ? N : 1;
+  var unitNum = document.createElement('span');
+  unitNum.className = 'pa-unit'; unitNum.textContent = '本';
+  numWrap.appendChild(inpNum); numWrap.appendChild(unitNum);
+
+  // ✕ 削除ボタン
+  var btnDel = document.createElement('button');
+  btnDel.type = 'button'; btnDel.className = 'pa-del-btn';
+  btnDel.textContent = '✕';
+  btnDel.onclick = function() { div.remove(); };
+
+  // 品種変更 → 延長欄の表示切替
+  selKind.addEventListener('change', function() {
+    lenWrap.style.display = (this.value === '曲げ管') ? 'none' : '';
+  });
+
+  div.appendChild(selType);
+  div.appendChild(selKind);
+  div.appendChild(lenWrap);
+  div.appendChild(numWrap);
+  div.appendChild(btnDel);
+  wrap.appendChild(div);
 }
 
 function getPipeVolume(containerId) {
-  let total = 0;
-  for (const p of PIPE_TYPES) {
-    const L1 = parseFloat(document.getElementById(`${containerId}-${p.key}-L1`)?.value) || 0;
-    const N1 = parseFloat(document.getElementById(`${containerId}-${p.key}-N1`)?.value) || 1;
-    const L2 = parseFloat(document.getElementById(`${containerId}-${p.key}-L2`)?.value) || 0;
-    const N2 = parseFloat(document.getElementById(`${containerId}-${p.key}-N2`)?.value) || 1;
-    if (L1 > 0) total += p.area * L1 * N1;
-    if (L2 > 0) total += p.area * L2 * N2;
-  }
+  var wrap = document.getElementById(containerId + '-rows');
+  if (!wrap) return 0;
+  var total = 0;
+  wrap.querySelectorAll('.pa-row').forEach(function(row) {
+    var keyEl  = row.querySelector('.pa-type');
+    var kindEl = row.querySelector('.pa-kind');
+    var lenEl  = row.querySelector('.pa-len');
+    var numEl  = row.querySelector('.pa-num');
+    if (!keyEl) return;
+    var kind = kindEl ? kindEl.value : '直管';
+    if (kind !== '直管') return;
+    var L = parseFloat(lenEl ? lenEl.value : '0') || 0;
+    var N = parseInt(numEl ? numEl.value : '1') || 1;
+    if (L <= 0) return;
+    var pType = PIPE_TYPES.find(function(p) { return p.key === keyEl.value; });
+    if (pType) total += pType.area * L * N;
+  });
   return total;
 }
 
@@ -3673,23 +3764,35 @@ function _zmDiamSelect(val) {
   return '<select style="padding:5px;font-size:13px;border:1px solid #363d5c;border-radius:5px;background:#252a3d;color:#e2e8f0;">'+opts+'</select>';
 }
 
-// 配管テーブルから使用管材データを収集（L1*N1 + L2*N2）
+// 配管行追加テーブルから使用管材データを収集
 function _getPipesFromContainer(containerId) {
+  var wrap = document.getElementById(containerId + '-rows');
+  if (!wrap) return [];
   var result = [];
-  PIPE_TYPES.forEach(function(p) {
-    var L1 = parseFloat(document.getElementById(containerId+'-'+p.key+'-L1')?.value||'0')||0;
-    var N1 = parseInt(document.getElementById(containerId+'-'+p.key+'-N1')?.value||'1')||1;
-    var L2 = parseFloat(document.getElementById(containerId+'-'+p.key+'-L2')?.value||'0')||0;
-    var N2 = parseInt(document.getElementById(containerId+'-'+p.key+'-N2')?.value||'1')||1;
-    var totalL = (L1>0 ? L1*N1 : 0) + (L2>0 ? L2*N2 : 0);
-    if (totalL > 0) {
-      result.push({
-        key: p.key, name: p.name,
-        diam: _PIPE_DIAM_MAP[p.key] || 'φ130',
-        totalL: +totalL.toFixed(3),
-        L1: L1, N1: N1, L2: L2, N2: N2
-      });
-    }
+  wrap.querySelectorAll('.pa-row').forEach(function(row) {
+    var keyEl  = row.querySelector('.pa-type');
+    var kindEl = row.querySelector('.pa-kind');
+    var lenEl  = row.querySelector('.pa-len');
+    var numEl  = row.querySelector('.pa-num');
+    if (!keyEl) return;
+    var key  = keyEl.value;
+    var kind = kindEl ? kindEl.value : '直管';
+    var L    = (kind === '直管' && lenEl) ? (parseFloat(lenEl.value) || 0) : 0;
+    var N    = parseInt(numEl ? numEl.value : '1') || 1;
+    // 直管は延長 > 0 が必要、曲げ管は本数のみで記録
+    if (kind === '直管' && L <= 0) return;
+    var pType = PIPE_TYPES.find(function(p) { return p.key === key; });
+    var totalL = kind === '直管' ? +(L * N).toFixed(3) : 0;
+    result.push({
+      key: key,
+      name: pType ? pType.name : key,
+      diam: _PIPE_DIAM_MAP[key] || 'φ130',
+      kind: kind,
+      L: L, N: N,
+      totalL: totalL,
+      // zm モーダル backward compat 用フィールド
+      L1: L, N1: N, L2: 0, N2: 0
+    });
   });
   return result;
 }
