@@ -2268,10 +2268,12 @@ function buildChecklistFromPreset(presetType){
     // 通常AS層（基層・表層）がある ＝ 瀝青安定処理の上にAS層が存在 → タックコートが必要
     // honAsLayers内のタックコートエントリ有無に依存せず、AS構成から判断する
 
-    var _spGL = _honNormalTotal;
+    // 深い順に処理（施工順序: 最深から順に転圧・コート散布）
+    var _spTotalH = _honSpecialAs.reduce(function(s,sp){ return s + sp.t; }, 0);
+    var _spGLBottom = parseFloat((_honNormalTotal + _spTotalH).toFixed(4));
     var _spItems = [];
-    _honSpecialAs.forEach(function(sp){
-      var _spTopGL = parseFloat(_spGL.toFixed(4));
+    _honSpecialAs.slice().reverse().forEach(function(sp, revIdx){
+      var _spTopGL = parseFloat((_spGLBottom - sp.t).toFixed(4));
       var _spName = normalizeMaterialName(sp.name) + '転圧';
       compactLayers(_spTopGL, sp.t, _spName).forEach(function(l){
         _spItems.push({
@@ -2281,16 +2283,19 @@ function buildChecklistFromPreset(presetType){
           _isSpecial: true
         });
       });
-      // 特殊AS層（瀝青安定処理等）の後に タックコート を挿入（基層AS接着のため）
-      // 通常AS層（基層・表層）が存在する場合は必ずタックコートが必要
-      if(_honNormalAs.length > 0){
+      // この層の上方にタックコートが必要:
+      //   最浅層(revIdx===_honSpecialAs.length-1)かつ通常AS層なし → 不要
+      //   それ以外(上に別の特殊AS層 or 通常AS層がある) → 必要
+      var isShallowmost = (revIdx === _honSpecialAs.length - 1);
+      var needsTack = !isShallowmost || _honNormalAs.length > 0;
+      if(needsTack){
         _spItems.push({
           n: '本復旧　タックコート散布',
           note: '特殊AS層（瀝青安定処理等）の上面にPK-4乳剤を散布。散布直後の状態で全景を撮影する。',
           _isSpecial: true
         });
       }
-      _spGL = parseFloat((_spGL + sp.t).toFixed(4));
+      _spGLBottom = _spTopGL;
     });
     if(_spItems.length > 0){
       _sHon2.splice.apply(_sHon2, [_sPIdx + 1, 0].concat(_spItems));
@@ -2340,6 +2345,85 @@ function buildChecklistFromPreset(presetType){
     ? _honNormArr.slice(1).reduce(function(s,a){ return s+Math.round((a.t||0)); }, 0) : 0;
   if(honBaseMm === 0 && !_honNormArr.length) honBaseMm = baseMm; // kariフォールバック
   console.log('[CK] tack: hasTack='+hasTack+' honHasTack='+honHasTack+' baseMm='+baseMm+' honBaseMm='+honBaseMm+' asL='+asLayers.length+' rcH='+rcH+' rmH='+rmH+' pAsL='+(presetType.asLayers||[]).length);
+  // ── _dynHonBurialSection に 本復旧通常AS層転圧項目を動的生成 ──
+  // 静的テンプレートの 基層転圧/タックコート(非_isSpecial)/表層転圧 を除去し
+  // honAsLayers の通常AS層（_honNormArr）から路盤構成に合わせて完全動的生成する
+  // 対応: 2層(新型)/3層(85型)/1層（表層のみ）
+  (function(){
+    if(_honNormArr.length === 0) return;
+    var _sHon3 = _dynHonBurialSection.items;
+    if(_sHon3.some(function(x){ return x._isDynHonNorm; })) return; // 二重挿入防止
+    // Step1: 静的 基層転圧・表層転圧・非_isSpecialタックコートを除去
+    _dynHonBurialSection.items = _sHon3 = _sHon3.filter(function(x){
+      if(x._isSpecial || x._isGfLayer || x._isDynHonNorm) return true;
+      var n = x.n || '';
+      if(n.indexOf('本復旧') >= 0 && n.indexOf('基層転圧') >= 0) return false;
+      if(n.indexOf('本復旧') >= 0 && n.indexOf('表層転圧') >= 0) return false;
+      if(n.indexOf('本復旧') >= 0 && n.indexOf('タックコート') >= 0) return false;
+      return true;
+    });
+    // Step2: 挿入位置 = 最後の_isSpecial項目の次 or プライムコートの次
+    var insertAt = -1;
+    for(var _xi = _sHon3.length - 1; _xi >= 0; _xi--){
+      if(_sHon3[_xi]._isSpecial){ insertAt = _xi + 1; break; }
+    }
+    if(insertAt < 0){
+      for(var _pi2 = 0; _pi2 < _sHon3.length; _pi2++){
+        if(_sHon3[_pi2].n && _sHon3[_pi2].n.indexOf('プライムコート') >= 0){
+          insertAt = _pi2 + 1; break;
+        }
+      }
+    }
+    if(insertAt < 0) insertAt = _sHon3.length;
+    // 仕上げ系項目（白線・復旧延長・施工後・道路ライン）の手前に収める
+    var _finishKW = ['白線', '復旧延長', '施工後', '道路ライン'];
+    for(var _qi = insertAt; _qi < _sHon3.length; _qi++){
+      var _qn = _sHon3[_qi].n || '';
+      if(_finishKW.some(function(kw){ return _qn.indexOf(kw) >= 0; })){ insertAt = _qi; break; }
+    }
+    // Step3: 通常AS層を深い順（基層→中間層→表層）に動的生成
+    var _revNorm = _honNormArr.slice().reverse(); // [最深, ..., 最浅（表層）]
+    var _normTotalM = _honNormArr.reduce(function(s,a){ return s + (a.t||0)/1000; }, 0);
+    var _normGLBottom = parseFloat(_normTotalM.toFixed(4));
+    var _dynNormItems = [];
+    _revNorm.forEach(function(layer, idx){
+      var isSurface = (idx === _revNorm.length - 1);
+      var tMm = Math.round(layer.t || 0);
+      var tM  = tMm / 1000;
+      var bottomGL = parseFloat(_normGLBottom.toFixed(4));
+      _normGLBottom = parseFloat((_normGLBottom - tM).toFixed(4));
+      var nm = normalizeMaterialName(layer.name || layer.preset || layer.custom || '');
+      if(isSurface){
+        _dynNormItems.push({
+          n: '本復旧　表層転圧',
+          dim: 't＝' + tMm + 'mm',
+          note: 'AS表層をローラー（振動ローラーまたはランマー）で転圧している状況を撮影。転圧後の仕上がり面も撮影。スケールで幅を実測・撮影。【小田原仕様】',
+          _isDynHonNorm: true
+        });
+      } else {
+        var itemNm = (idx === 0)
+          ? '本復旧　基層転圧'
+          : '本復旧　中間層転圧（' + nm + '）';
+        var noteStr = (idx === 0)
+          ? '粗粒度AS基層をランマーで転圧。転圧後スケールでGL値と幅を実測・撮影。黒板に敷均し・締固め状況と記載。【小田原仕様】'
+          : nm + 'をランマーで転圧。転圧後スケールでGL値と幅を実測・撮影。黒板に敷均し・締固め状況と記載。【小田原仕様】';
+        _dynNormItems.push({
+          n: itemNm,
+          dim: 'GL-' + bottomGL.toFixed(3) + 'm（t=' + tMm + 'mm）',
+          note: noteStr,
+          _isDynHonNorm: true
+        });
+        _dynNormItems.push({
+          n: '本復旧　タックコート散布',
+          note: '基層面にPK-4乳剤を散布。散布直後の状態で全景を撮影する。',
+          _isDynHonNorm: true
+        });
+      }
+    });
+    if(_dynNormItems.length > 0){
+      _sHon3.splice.apply(_sHon3, [insertAt, 0].concat(_dynNormItems));
+    }
+  })();
 
   // 土被りGL（DP入力後にgl:1/2タグで動的表示）→ dim は 'DP=m' のまま
 
@@ -4010,8 +4094,7 @@ function recalcGL(){
           (_presetType.genkyoCnH||0)+(_presetType.genkyoCnRC||0)+(_presetType.genkyoFreeH||0)).toFixed(4));
       // genkyoRM>0 のとき（=本復旧に上層路盤あり）のみ本復旧深さを採用
       // 切り下げ部等（RM=0）はkari深さを使用（honTH > totalHでも適用しない）
-      if(_honTH > _presetType.totalH && (_presetType.genkyoRM||0) > 0) f40 = -_honTH;
-      // 本復旧路盤変更点: genkyoRM条件に関係なくhonTotalHを使用（切り下げ部対応）
+      // 本復旧路盤変更点: f40=kariTotalH基準（固定）、f40_honは本復旧totalHを独立適用
       f40_hon = (_honTH > 0 && _honTH > _presetType.totalH) ? -_honTH : f40;
       console.log('[CK] recalcGL: totalH='+(_presetType.totalH||0).toFixed(3)+' genkyoTotalH='+(_presetType.genkyoTotalH||0).toFixed(3)+' genkyoRM='+(_presetType.genkyoRM||0).toFixed(3)+' genkyoRC='+(_presetType.genkyoRC||0).toFixed(3)+' _honTH='+(_honTH||0).toFixed(3)+' f40='+f40);
     } else {
