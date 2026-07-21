@@ -2555,8 +2555,21 @@ function buildChecklistFromPreset(presetType){
             ? ((_honNormArr.length>0 ? (_honNormArr[0].t||0)/1000 : 0) || (presetType.genkyoAsH && presetType.genkyoAsH>0 ? presetType.genkyoAsH : (asLayers[0]||{t:0.05}).t))
             : asLayers[0].t;
           item.dim = 'GL-'+parseFloat(_bGL).toFixed(3)+'m（基層 t='+_bMm+'mm）';
+          // 仮復旧：最深の通常AS層名を項目名に付加
+          if(!_isHonBaseItem && asLayers.length > 1){
+            var _kariBaseNm = normalizeMaterialName(asLayers[asLayers.length-1].name || '');
+            if(_kariBaseNm) item.n = n + '　' + _kariBaseNm;
+          }
         } else {
           item._remove = true;
+        }
+      }
+
+      // 表層転圧（仮復旧）：表層AS材料名を項目名に付加
+      if(n.indexOf('表層転圧') >= 0 && n.indexOf('本復旧') < 0){
+        if(asLayers.length > 0){
+          var _kariSurfNm = normalizeMaterialName(asLayers[0].name || '');
+          if(_kariSurfNm) item.n = n + '　' + _kariSurfNm;
         }
       }
 
