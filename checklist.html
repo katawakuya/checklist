@@ -2395,14 +2395,14 @@ function buildChecklistFromPreset(presetType){
       var nm = normalizeMaterialName(layer.name || layer.preset || layer.custom || '');
       if(isSurface){
         _dynNormItems.push({
-          n: '本復旧　表層転圧',
+          n: '本復旧　表層転圧' + (nm ? '　' + nm : ''),
           dim: 't＝' + tMm + 'mm',
           note: 'AS表層をローラー（振動ローラーまたはランマー）で転圧している状況を撮影。転圧後の仕上がり面も撮影。スケールで幅を実測・撮影。',
           _isDynHonNorm: true
         });
       } else {
         var itemNm = (idx === 0)
-          ? '本復旧　基層転圧'
+          ? '本復旧　基層転圧' + (nm ? '　' + nm : '')
           : '本復旧　中間層転圧（' + nm + '）';
         var noteStr = (idx === 0)
           ? '粗粒度AS基層をランマーで転圧。転圧後スケールでGL値と幅を実測・撮影。黒板に敷均し・締固め状況と記載。'
