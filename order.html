@@ -4233,6 +4233,11 @@ function saveRecord(typeKey) {
     isoilOrd:   +s.isoilOrd.toFixed(6),
     sandOrd:    +s.sandOrd.toFixed(6),
     sandSoilSum:+s.sandSoilSum.toFixed(6),
+    // ── 廃材量（作業日報の搬出参考値に使用）──
+    wasteAsTon:   +(( (_lastWasteByTid[typeKey]||{}).asWasteTon || 0 )).toFixed(4),
+    wasteRbM3:    +(( (_lastWasteByTid[typeKey]||{}).rbWasteM3  || 0 )).toFixed(4),
+    wasteCnM3:    +(( (_lastWasteByTid[typeKey]||{}).cnWasteM3  || 0 )).toFixed(4),
+    wasteCongaraM3:+(( (_lastWasteByTid[typeKey]||{}).congaraM3 || 0 )).toFixed(4),
   };
 
   const h = getHistory();
@@ -8048,6 +8053,8 @@ const _typeUpdateFns = {};
 // 型ごとの発注量計算モード: 'kari'（仮復旧）または 'hon'（本復旧）
 // kariHonDiffers が true の型のみ有効
 const _dynCalcModes = {};
+// 型ごとの廃材量（日報アプリへの参考値連携に使用）
+const _lastWasteByTid = {};
 
 function bindDynamicCalc(tid, typeConf) {
   // TYPESオブジェクトに動的型を登録
@@ -8438,6 +8445,23 @@ function renderDynTotal(tid, typeConf) {
   const honRcWaste   = (_kariT.genkyoRC||0) * _honWasteArea * WASTE_RB_BULK;
   const honRmWaste   = (_kariT.genkyoRM||0) * _honWasteArea * WASTE_RB_BULK;
   const honRcRmWaste = honRcWaste + honRmWaste + honFrbWaste;
+
+  // ── 日報連携用：この型で算出した廃材量を退避（発注記録の保存時に使う）──
+  _lastWasteByTid[tid] = {
+    asWasteTon:   +(kariAsWaste + honAsWaste).toFixed(4),          // AS廃材 t
+    rbWasteM3:    +(kariRcRmWaste + honRcRmWaste).toFixed(4),      // 路盤廃材 m³
+    cnWasteM3:    +(kariCnWasteVol + honCnWasteVol).toFixed(4),    // 既設コンクリート廃材 m³
+    congaraM3:    +(function(){                                    // コンガラ（LO・L型壊し）m³
+      var v = 0;
+      patterns.forEach(function(p){
+        var w = parseFloat((document.getElementById(p + '-loW')||{}).value) || 0;
+        var l = parseFloat((document.getElementById(p + '-loL')||{}).value) || 0;
+        var t = parseFloat((document.getElementById(p + '-loT')||{}).value) || 0;
+        v += w * l * (t / 1000);
+      });
+      return v;
+    })().toFixed(4),
+  };
 
   const el = document.getElementById(`${tid}-total`);
   if (!el) return;

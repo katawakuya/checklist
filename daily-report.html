@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>土工事配管工 作業日報</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -503,7 +506,11 @@
       <div class="section-body">
         <div class="field">
           <label>現場名</label>
-          <input type="text" id="siteName" placeholder="例）小田原市扇町">
+          <select id="siteSelect" onchange="onSiteSelectChange()">
+            <option value="">― 現場マスタから選択 ―</option>
+            <option value="__free__">その他（直接入力）</option>
+          </select>
+          <input type="text" id="siteName" placeholder="例）小田原市扇町" style="margin-top:6px;">
         </div>
         <div class="row2">
           <div class="field">
@@ -591,6 +598,21 @@
       <div class="section-body">
         <div class="field">
           <textarea id="safety" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
+    <div class="section">
+      <div class="section-head"><span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
+      <div class="section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRefCloud()">☁ クラウドから取り込む</button>
+          <button type="button" class="btn btn-ghost" onclick="clearOrderRef()">参考値をクリア</button>
+        </div>
+        <div id="orderRefBox" style="font-size:12px;color:#666;">
+          現場名と作業日を入力してから「取り込む」を押してください。
         </div>
       </div>
     </div>
@@ -860,6 +882,221 @@ function setSelectFreeValue(selectId, freeId, value, presetOptions){
 const CHIEF_OPTIONS = ['三枝 裕太','佐藤 嘉秀'];
 const WEATHER_OPTIONS = ['晴れ','曇り','雨','雪','晴れのち曇り','曇りのち雨','荒天'];
 
+/* ═══════════════════════════════════════════════════════════════
+   発注計算（order.html）との連携：参考値の取り込み
+   ・台数欄（±）には一切書き込みません。実績と見比べるための表示専用です。
+   ═══════════════════════════════════════════════════════════════ */
+
+// 比重（t/m³）… 一般値の上振れ側。現場実績に合わせてここを変更できます。
+const HAUL_DENSITY = {
+  as:      2.35,   // アスファルト混合物
+  rb:      2.00,   // 路盤材 RM・RC（再生砕石）
+  sand:    1.90,   // 再生砂
+  soil:    1.80,   // 改良土
+  zando:   1.90,   // 発生残土
+  congara: 2.30,   // コンクリートガラ
+};
+const ORDER_HISTORY_KEY = 'order_history';
+const SITE_MASTER_KEY   = 'site_master';
+let ORDER_REF = null;   // 取り込んだ参考値（保存・PDFにも同梱）
+
+/* ---- 現場マスタ ---- */
+function getSiteMaster(){
+  try { return JSON.parse(localStorage.getItem(SITE_MASTER_KEY) || '[]'); } catch(e){ return []; }
+}
+function buildSiteOptions(){
+  const sel = document.getElementById('siteSelect');
+  if (!sel) return;
+  const sites = getSiteMaster();
+  const cur = document.getElementById('siteName').value.trim();
+  sel.innerHTML = '<option value="">― 現場マスタから選択 ―</option>'
+    + sites.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')
+    + '<option value="__free__">その他（直接入力）</option>';
+  if (cur && sites.some(s => s.name === cur)) sel.value = cur;
+  else if (cur) sel.value = '__free__';
+}
+function onSiteSelectChange(){
+  const sel = document.getElementById('siteSelect');
+  const inp = document.getElementById('siteName');
+  if (!sel || !inp) return;
+  if (sel.value && sel.value !== '__free__') { inp.value = sel.value; inp.readOnly = true; }
+  else { inp.readOnly = false; if (sel.value === '__free__') inp.focus(); }
+}
+
+/* ---- 発注記録の集計 ---- */
+function _orderRecords(){
+  try { return JSON.parse(localStorage.getItem(ORDER_HISTORY_KEY) || '[]'); } catch(e){ return []; }
+}
+// 現場名・作業日で絞り込み（現場名は前後の空白と全半角を無視して緩く一致）
+function _norm(v){ return String(v||'').replace(/\s|　/g,'').toLowerCase(); }
+function pickOrderRecords(records, siteName, workDate){
+  const sn = _norm(siteName);
+  return records.filter(r =>
+    (!workDate || String(r.date) === String(workDate)) &&
+    (!sn || _norm(r.siteName).indexOf(sn) >= 0 || sn.indexOf(_norm(r.siteName)) >= 0)
+  );
+}
+// 集計 → 搬出入カテゴリ別の数量とダンプ目安台数
+function summarizeOrder(recs){
+  const sum = (f) => recs.reduce((a,r) => a + (Number(r[f]) || 0), 0);
+  const asIn      = sum('asTon密粒') + sum('asTon粗粒');          // t
+  const rbIn      = sum('rmOrd') + sum('rcOrd');                   // m³
+  const sandIn    = sum('sandOrd');                                // m³
+  const soilIn    = sum('isoilOrd');                               // m³
+  const asOut     = sum('wasteAsTon');                             // t
+  const rbOutM3   = sum('wasteRbM3');                              // m³
+  const cnOutM3   = sum('wasteCnM3') + sum('wasteCongaraM3');      // m³
+  const zandoM3   = sandIn + soilIn;                               // 発生残土＝再生砂＋改良土（図面上の考え方）
+  return {
+    records: recs.length,
+    in: {
+      as:   { qty: asIn,   unit:'t',  ton: asIn },
+      rb:   { qty: rbIn,   unit:'m³', ton: rbIn   * HAUL_DENSITY.rb },
+      sand: { qty: sandIn, unit:'m³', ton: sandIn * HAUL_DENSITY.sand },
+      soil: { qty: soilIn, unit:'m³', ton: soilIn * HAUL_DENSITY.soil },
+    },
+    out: {
+      as:      { qty: asOut,   unit:'t',  ton: asOut },
+      rb:      { qty: rbOutM3, unit:'m³', ton: rbOutM3 * HAUL_DENSITY.rb },
+      zando:   { qty: zandoM3, unit:'m³', ton: zandoM3 * HAUL_DENSITY.zando },
+      congara: { qty: cnOutM3, unit:'m³', ton: cnOutM3 * HAUL_DENSITY.congara },
+    },
+    detail: recs.map(r => ({ date:r.date, hata:r.hata, typeLabel:r.typeLabel, calcMode:r.calcMode }))
+  };
+}
+const _dumpCount = (ton, cap) => (ton > 0 ? Math.ceil(ton / cap) : 0);
+
+/* ---- 参考値パネルの描画 ---- */
+function renderOrderRef(){
+  const box = document.getElementById('orderRefBox');
+  if (!box) return;
+  if (!ORDER_REF) {
+    box.innerHTML = '現場名と作業日を入力してから「取り込む」を押してください。';
+    return;
+  }
+  const s = ORDER_REF;
+  const row = (label, o, dens) => {
+    if (!(o.ton > 0)) return '';
+    const q = o.unit === 't' ? o.ton.toFixed(2) + ' t'
+            : o.qty.toFixed(2) + ' m³ → ' + o.ton.toFixed(2) + ' t';
+    return `<tr>
+      <td style="padding:4px 8px;border:1px solid #ddd;">${label}</td>
+      <td style="padding:4px 8px;border:1px solid #ddd;text-align:right;white-space:nowrap;">${q}</td>
+      <td style="padding:4px 8px;border:1px solid #ddd;text-align:right;white-space:nowrap;">
+        4t車 ${_dumpCount(o.ton,4)}台 ／ 8t車 ${_dumpCount(o.ton,8)}台 ／ 10t車 ${_dumpCount(o.ton,10)}台</td>
+    </tr>`;
+  };
+  const tbl = (title, rows) => rows
+    ? `<div style="font-weight:700;margin:8px 0 4px;">${title}</div>
+       <table style="width:100%;border-collapse:collapse;font-size:12px;">
+         <tr style="background:#eef2f7;">
+           <th style="padding:4px 8px;border:1px solid #ddd;text-align:left;">項目</th>
+           <th style="padding:4px 8px;border:1px solid #ddd;">数量</th>
+           <th style="padding:4px 8px;border:1px solid #ddd;">ダンプ目安</th></tr>
+         ${rows}</table>` : '';
+  const outRows = row('既存アスファルト廃材', s.out.as) + row('路盤廃材', s.out.rb)
+                + row('発生残土（再生砂＋改良土）', s.out.zando) + row('コンクリートガラ', s.out.congara);
+  const inRows  = row('アスファルト', s.in.as) + row('路盤材 RM・RC', s.in.rb)
+                + row('再生砂', s.in.sand) + row('改良土', s.in.soil);
+  box.innerHTML =
+    `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 10px;margin-bottom:8px;color:#7a5c00;">
+       ⚠️ これは発注計算からの<b>参考値</b>です。下の台数欄には反映していません。実際に使ったダンプ台数を入力し、見比べてください。
+     </div>
+     <div style="font-size:12px;color:#555;margin-bottom:6px;">
+       取込元: ${s.source === 'cloud' ? '☁ クラウド' : '📱 この端末'} ／ ${s.records}件の発注記録
+       ${s.detail.map(d => `<span style="display:inline-block;background:#eef2f7;border-radius:10px;padding:1px 8px;margin:2px 2px 0 0;">
+          ${escapeHtml(d.date||'')} No.${escapeHtml(String(d.hata||''))} ${escapeHtml(d.typeLabel||'')}
+          ${d.calcMode==='hon'?'本復旧':'仮復旧'}</span>`).join('')}
+     </div>
+     ${tbl('🚚 搬出', outRows)} ${tbl('🚚 搬入', inRows)}
+     <div style="font-size:11px;color:#888;margin-top:6px;">
+       比重 AS ${HAUL_DENSITY.as} ／ 路盤材 ${HAUL_DENSITY.rb} ／ 再生砂 ${HAUL_DENSITY.sand}
+       ／ 改良土 ${HAUL_DENSITY.soil} ／ 残土 ${HAUL_DENSITY.zando} ／ ガラ ${HAUL_DENSITY.congara} t/m³
+     </div>`;
+}
+
+/* ---- 取り込み操作 ---- */
+function loadOrderRef(){
+  const siteName = document.getElementById('siteName').value.trim();
+  const workDate = document.getElementById('workDate').value;
+  if (!siteName) { alert('先に現場名を選択・入力してください。'); return; }
+  const all = _orderRecords();
+  if (!all.length) { alert('この端末に発注計算の記録がありません。\n発注計算アプリで記録を保存するか、「発注データを貼り付けて取り込む」をお使いください。'); return; }
+  let recs = pickOrderRecords(all, siteName, workDate);
+  if (!recs.length) {
+    if (!confirm('作業日 ' + (workDate||'(未設定)') + ' に一致する記録がありません。\n日付を無視して同じ現場の記録すべてを取り込みますか？')) return;
+    recs = pickOrderRecords(all, siteName, '');
+    if (!recs.length) { alert('この現場名の発注記録が見つかりませんでした。'); return; }
+  }
+  ORDER_REF = summarizeOrder(recs);
+  ORDER_REF.source = 'local';
+  renderOrderRef();
+  showToast('この端末の発注記録から ' + recs.length + '件の参考値を取り込みました');
+}
+/* ---- ☁ クラウド（Firestore）の発注記録から取り込む ----
+   order.html が保存時に order_records へ同期しているものを読みます。
+   別端末・別の人が入力した発注記録でも取り込めます。          */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain: "alrit-kandenkou.firebaseapp.com",
+  projectId: "alrit-kandenkou",
+  storageBucket: "alrit-kandenkou.firebasestorage.app",
+  messagingSenderId: "640432772833",
+  appId: "1:640432772833:web:ab2aff11980621322809a0"
+};
+let _fbDb = null;
+function _initFb(){
+  if (_fbDb) return _fbDb;
+  if (typeof firebase === 'undefined') return null;
+  try {
+    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _fbDb = firebase.firestore();
+    return _fbDb;
+  } catch(e) { return null; }
+}
+function loadOrderRefCloud(){
+  const siteName = document.getElementById('siteName').value.trim();
+  const workDate = document.getElementById('workDate').value;
+  if (!siteName) { alert('先に現場名を選択・入力してください。'); return; }
+  const db = _initFb();
+  if (!db) {
+    alert('クラウドに接続できませんでした。\nインターネット接続を確認してください。\n（オフライン時は「この端末の発注記録から取り込む」をお使いください）');
+    return;
+  }
+  const box = document.getElementById('orderRefBox');
+  if (box) box.innerHTML = '☁ クラウドから読み込んでいます…';
+  let q = db.collection('order_records');
+  if (workDate) q = q.where('date', '==', workDate);   // 日付で絞ると転送量を抑えられる
+  q.get().then(function(snap){
+    const all = [];
+    snap.forEach(function(d){ all.push(d.data()); });
+    let recs = pickOrderRecords(all, siteName, workDate);
+    if (!recs.length && workDate) {
+      // 日付一致が無ければ日付なしで再検索（全件取得）
+      db.collection('order_records').get().then(function(s2){
+        const all2 = []; s2.forEach(function(d){ all2.push(d.data()); });
+        const recs2 = pickOrderRecords(all2, siteName, '');
+        if (!recs2.length) { renderOrderRef(); alert('クラウドにこの現場の発注記録が見つかりませんでした。'); return; }
+        if (!confirm('作業日 ' + workDate + ' に一致する記録がありません。\n日付を無視して同じ現場の記録すべて（' + recs2.length + '件）を取り込みますか？')) { renderOrderRef(); return; }
+        ORDER_REF = summarizeOrder(recs2);
+        ORDER_REF.source = 'cloud';
+        renderOrderRef();
+        showToast('クラウドから ' + recs2.length + '件の参考値を取り込みました');
+      }).catch(function(e){ renderOrderRef(); alert('読み込みに失敗しました: ' + e.message); });
+      return;
+    }
+    if (!recs.length) { renderOrderRef(); alert('クラウドにこの現場・作業日の発注記録が見つかりませんでした。'); return; }
+    ORDER_REF = summarizeOrder(recs);
+    ORDER_REF.source = 'cloud';
+    renderOrderRef();
+    showToast('クラウドから ' + recs.length + '件の参考値を取り込みました');
+  }).catch(function(e){
+    renderOrderRef();
+    alert('クラウドからの読み込みに失敗しました。\n' + e.message);
+  });
+}
+function clearOrderRef(){ ORDER_REF = null; renderOrderRef(); }
+
 /* ---------- dynamic material / dump-truck sections (generic, config-driven) ---------- */
 const DYNAMIC_SECTIONS = [
   {key:'existingAsphaltOut', title:'既存アスファルト廃材搬出ダンプ台数', fields:[
@@ -1060,6 +1297,7 @@ function collectFormData(){
     creator: document.getElementById('creator').value.trim()
   };
   DYNAMIC_SECTIONS.forEach(cfg => { data[cfg.key] = collectDynSection(cfg.key); });
+  data.orderRef = ORDER_REF || null;   // 発注計算の参考値（PDF・復元でも持ち回る）
   return data;
 }
 function normalizeWitnesses(data){
@@ -1071,6 +1309,8 @@ function normalizeWitnesses(data){
 }
 function populateForm(data){
   document.getElementById('siteName').value = data.siteName || '';
+  ORDER_REF = data.orderRef || null;
+  try { buildSiteOptions(); renderOrderRef(); } catch(e) {}
   document.getElementById('workDate').value = data.workDate || '';
   setSelectFreeValue('chiefSelect','chiefFree', data.chief || '', CHIEF_OPTIONS);
   document.getElementById('worker').value = data.worker || '';
@@ -1390,10 +1630,36 @@ function buildPrintHTML(r){
     </div>
 
     <div class="p-datablock">
+      ${buildOrderRefPrintHTML(r)}
       <div class="p-datalabel">―― この行は本アプリでの記録復元用データです。削除しないでください ――</div>
       ${DATA_MARK_START}${encodeReportData(r)}${DATA_MARK_END}
     </div>
   `;
+}
+
+/* ---- 発注計算の参考値を印刷面にも出す（実績と見比べるため）---- */
+function buildOrderRefPrintHTML(r){
+  const s = r && r.orderRef;
+  if (!s) return '';
+  const line = (label, o) => (o && o.ton > 0)
+    ? `<tr><td style="border:1px solid #999;padding:2px 6px;">${label}</td>
+         <td style="border:1px solid #999;padding:2px 6px;text-align:right;">${
+           o.unit === 't' ? o.ton.toFixed(2)+' t' : o.qty.toFixed(2)+' m³ ('+o.ton.toFixed(2)+' t)'}</td>
+         <td style="border:1px solid #999;padding:2px 6px;text-align:right;">4t ${Math.ceil(o.ton/4)}台 / 8t ${Math.ceil(o.ton/8)}台 / 10t ${Math.ceil(o.ton/10)}台</td></tr>`
+    : '';
+  const rows = line('既存AS廃材 搬出', s.out.as) + line('路盤廃材 搬出', s.out.rb)
+             + line('発生残土 搬出', s.out.zando) + line('コンガラ 搬出', s.out.congara)
+             + line('アスファルト 搬入', s.in.as) + line('路盤材 搬入', s.in.rb)
+             + line('再生砂 搬入', s.in.sand) + line('改良土 搬入', s.in.soil);
+  if (!rows) return '';
+  return `<div style="margin-top:6px;">
+      <div style="font-size:9pt;font-weight:700;margin-bottom:2px;">発注計算による参考値（実績台数との比較用・発注数量ではありません）</div>
+      <table style="width:100%;border-collapse:collapse;font-size:8pt;">
+        <tr><th style="border:1px solid #999;padding:2px 6px;text-align:left;">項目</th>
+            <th style="border:1px solid #999;padding:2px 6px;">数量</th>
+            <th style="border:1px solid #999;padding:2px 6px;">ダンプ目安</th></tr>
+        ${rows}
+      </table></div>`;
 }
 
 /* ---- embed / restore data via PDF text layer ---- */
@@ -1407,6 +1673,7 @@ function encodeReportData(r){
     irregular:r.irregular, safety:r.safety, notice:r.notice, tomorrow:r.tomorrow, creator:r.creator
   };
   DYNAMIC_SECTIONS.forEach(cfg => { payload[cfg.key] = r[cfg.key] || []; });
+  payload.orderRef = r.orderRef || null;   // 発注計算の参考値も同梱（別端末で復元できる）
   return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
 }
 function decodeReportData(b64){
@@ -1497,6 +1764,7 @@ function showToast(msg){
 (function init(){
   document.getElementById('headerSub').textContent = 'DAILY SITE REPORT';
   buildDynamicSectionsHTML();
+  try { buildSiteOptions(); renderOrderRef(); } catch(e) {}
   const draftRaw = localStorage.getItem(DRAFT_KEY);
   if(draftRaw){
     try{
