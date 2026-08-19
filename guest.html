@@ -60,6 +60,7 @@ body{background:var(--bg);color:var(--text);
 .card-blue{border-color:rgba(96,165,250,0.2);}
 .card-blue:hover{border-color:var(--accent);background:rgba(96,165,250,0.07);}
 .card-orange{border-color:rgba(251,146,60,0.2);}
+  .card-indigo{border-color:rgba(129,140,248,0.2);}
 .card-orange:hover{border-color:#fb923c;background:rgba(251,146,60,0.07);}
 .login-prompt{margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;}
 .login-prompt p{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;}
@@ -165,6 +166,11 @@ body{background:var(--bg);color:var(--text);
       <div class="card-icon">&#x1F4E6;</div>
       <div class="card-name">資材管理</div>
       <div class="card-desc">在庫・使用・発注管理</div>
+    </a>
+    <a class="app-card card-indigo" onclick="return goApp('daily-report.html')">
+      <div class="card-icon">&#x1F4DD;</div>
+      <div class="card-name">作業日報</div>
+      <div class="card-desc">日々の作業記録・PDF出力</div>
     </a>
   </div>
 
