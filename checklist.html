@@ -329,6 +329,7 @@ main{padding:10px 14px 90px;}
     <a href="roadbed.html" class="hd-btn" title="路盤・旗揚げマスタ">🗺 路盤</a>
     <a href="order.html" class="hd-btn" title="計算シート（発注）">📊 計算</a>
     <a href="viewer.html" class="hd-btn" id="viewerHdrLink" onclick="updateViewerLink(this)" title="図面">📐 図面</a>
+    <a href="daily-report.html" target="_blank" class="hd-btn" title="作業日報">📝 日報</a>
     <button id="adminBtn" onclick="openFbModal()" class="hd-btn" title="管理者ログイン" style="font-size:16px;">🔑</button>
       <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>

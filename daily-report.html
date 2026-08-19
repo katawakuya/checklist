@@ -536,22 +536,6 @@
         border:1px solid #ffe082;border-radius:6px;padding:6px 10px;display:none;"></div>
     </div>
 
-    <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
-    <div class="section" data-sec="orderref">
-      <div class="section-head">
-        <span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
-      <div class="section-body">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-          <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
-          <button type="button" class="btn btn-secondary" onclick="loadOrderRefCloud()">☁ クラウドから取り込む</button>
-          <button type="button" class="btn btn-ghost" onclick="clearOrderRef()">参考値をクリア</button>
-        </div>
-        <div id="orderRefBox" style="font-size:12px;color:#666;">
-          現場名と作業日を入力してから「取り込む」を押してください。
-        </div>
-      </div>
-    </div>
-
     <div class="section" data-sec="basic">
       <div class="section-head">
         <span>基本情報</span><span class="req">必須</span></div>
@@ -653,6 +637,22 @@
       <div class="section-body">
         <div class="field">
           <textarea id="safety" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
+    <div class="section" data-sec="orderref">
+      <div class="section-head">
+        <span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
+      <div class="section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRefCloud()">☁ クラウドから取り込む</button>
+          <button type="button" class="btn btn-ghost" onclick="clearOrderRef()">参考値をクリア</button>
+        </div>
+        <div id="orderRefBox" style="font-size:12px;color:#666;">
+          現場名と作業日を入力してから「取り込む」を押してください。
         </div>
       </div>
     </div>
