@@ -667,7 +667,7 @@ function applyAccessControl(){
 
   // ダッシュボードの注記
   document.getElementById('dashboardNote').textContent = _isLoggedIn
-    ? '期首在庫・発注点は黄色セルを直接編集できます。使用数・入荷数・残数・未入荷発注数は自動計算です。'
+    ? '期首在庫・発注点は黄色セルを直接編集できます。使用数・入荷数・残数・未入荷発注数は自動計算です。※使用数は「新品を切った本数」のみを計上します（端物使用ぶんは在庫を消費しません）。'
     : '閲覧のみ（管理者ログインで編集可）。使用数・入荷数・残数・未入荷発注数は自動計算です。';
 
   renderAll();
@@ -819,7 +819,14 @@ function renderUsageTable(){
         // order.html からの登録: diameter+type を直接持つ
         var label = (i.diameter||'')+(i.type==='直管'?'直管':i.type||'');
         if (i.lengthM && i.spanCount) label += ' L='+i.lengthM+'m×'+i.spanCount+'スパン';
-        if (i.qty) label += ' '+i.qty+'本';
+        // qty＝在庫から引く新品の本数。端物使用ぶんは在庫を消費しないので別表記にする
+        label += ' 新品'+(i.qty||0)+'本';
+        if (i.scrapPieceCount > 0) {
+          label += '＋端物'+i.scrapPieceCount+'片'
+                 + (i.scrapPieceLen ? '('+i.scrapPieceLen+'m)' : '')
+                 + '<span class="muted">※在庫消費なし</span>';
+        }
+        if (i.wastePieceLen > 0) label += ' <span class="muted">→端物'+i.wastePieceLen+'m発生</span>';
         return label;
       }
       return '';

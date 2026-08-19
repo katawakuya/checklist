@@ -513,6 +513,92 @@ input,select,button{font-size:21px!important}
 /* 安全エリア対応 */
 body{padding-bottom:env(safe-area-inset-bottom)}
 
+/* ══════════════════════════════════════════════════════
+   計算入力ウィザード（checklist.html と同設計・ダークテーマ版）
+   ══════════════════════════════════════════════════════ */
+#owizModal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9500;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:16px 8px 40px;}
+.owiz-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.5);overflow:hidden;margin:auto;}
+.owiz-header{background:linear-gradient(135deg,var(--accent),#3b6fd4);color:#fff;padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.owiz-header h2{font-size:19px;font-weight:800;margin:0;white-space:nowrap;}
+.owiz-skip{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;padding:5px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;}
+.owiz-viewer-btn{background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.6);color:#fff;font-size:16px;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;}
+.owiz-progress{height:4px;background:rgba(255,255,255,.25);}
+.owiz-progress-bar{height:4px;background:#fff;border-radius:2px;transition:width .3s;}
+.owiz-body{padding:20px 18px 8px;max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.owiz-loc-chip{display:inline-block;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.45);color:var(--accent);border-radius:20px;padding:3px 12px;font-size:15px;font-weight:700;margin-bottom:12px;}
+.owiz-loc-chip-step{margin-left:8px;padding-left:8px;border-left:1px solid rgba(79,142,247,.4);color:var(--text3);font-weight:600;font-size:14px;}
+.owiz-confirm-banner{display:inline-block;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.45);color:#4ade80;border-radius:20px;padding:4px 14px;font-size:15px;font-weight:700;margin-bottom:10px;}
+/* 3段階幅の説明図 */
+.owiz-w3-fig{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+.owiz-w3-row{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--text2);margin-bottom:7px;}
+.owiz-w3-row:last-child{margin-bottom:0;}
+.owiz-w3-bar{height:11px;border-radius:3px;flex-shrink:0;}
+.owiz-w3-bar.as{width:132px;background:rgba(52,211,153,.75);}
+.owiz-w3-bar.rb{width:96px;background:rgba(129,140,248,.75);margin-left:18px;}
+.owiz-w3-bar.ex{width:60px;background:rgba(249,115,22,.75);margin-left:36px;}
+/* 改良土ルールの説明図 */
+.owiz-soil-fig{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.owiz-soil-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 13px;font-size:16px;}
+.owiz-soil-row b{font-size:17px;}
+.owiz-soil-row span{color:var(--text3);font-size:14px;text-align:right;}
+.owiz-soil-row.top{background:rgba(129,140,248,.14);color:#a5b4fc;}
+.owiz-soil-row.mid{background:rgba(234,179,8,.18);color:#fde047;border-top:1px dashed rgba(234,179,8,.5);border-bottom:1px dashed rgba(234,179,8,.5);}
+.owiz-soil-row.bot{background:rgba(79,142,247,.12);color:#93c5fd;}
+.owiz-q{font-size:20px;font-weight:800;color:var(--text);margin-bottom:16px;line-height:1.45;}
+.owiz-q small{display:block;font-size:16px;font-weight:600;color:var(--text3);margin-top:5px;line-height:1.5;}
+.owiz-label{font-size:15px;font-weight:700;color:var(--text3);letter-spacing:.08em;margin:12px 0 6px;}
+.owiz-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.owiz-chip{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:10px;padding:9px 14px;font-size:16px;font-weight:600;cursor:pointer;transition:all .15s;}
+.owiz-chip:active{background:rgba(79,142,247,.2);}
+.owiz-chip.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+.owiz-pick-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.owiz-pick{border:2px solid var(--border);border-radius:12px;padding:16px 8px;font-size:17px;font-weight:800;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all .15s;text-align:center;}
+.owiz-pick.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+.owiz-pick.warn.sel{background:var(--orange);border-color:var(--orange);}
+.owiz-input{background:var(--surface2);color:var(--text);border:2px solid var(--border);border-radius:8px;padding:11px 12px;font-size:18px;width:100%;-webkit-appearance:none;box-sizing:border-box;margin-bottom:6px;}
+.owiz-input:focus{border-color:var(--accent);outline:none;}
+.owiz-input-num{font-size:32px!important;padding:14px 16px!important;text-align:center;letter-spacing:1px;font-family:var(--mono);}
+.owiz-master-note{font-size:16px;color:#9ecbff;background:rgba(79,142,247,.13);border:1px solid rgba(79,142,247,.3);border-radius:6px;padding:7px 11px;margin-bottom:9px;}
+.owiz-master-note strong{font-size:26px;display:inline-block;line-height:1.2;font-family:var(--mono);}
+.owiz-hint{background:rgba(234,179,8,.09);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:17px;color:var(--yellow);line-height:1.5;}
+.owiz-diag-preview{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+.owiz-diag-label{font-size:15px;color:var(--text3);font-weight:700;margin-bottom:6px;letter-spacing:.05em;}
+.owiz-diag-img{width:100%;border-radius:6px;display:block;border:1px solid var(--border);}
+.owiz-summary{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:6px 14px;margin-bottom:14px;}
+.owiz-summary-row{font-size:16px;color:var(--text);padding:8px 0;border-bottom:1px solid var(--border);line-height:1.6;}
+.owiz-summary-row:last-child{border:none;}
+.owiz-summary-row b{color:var(--accent);}
+.owiz-summary-row .owiz-sm-sub{display:block;font-size:15px;color:var(--text3);font-family:var(--mono);}
+.owiz-merge-note{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:16px;color:var(--green);line-height:1.6;}
+.owiz-warn-note{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:16px;color:#fca5a5;line-height:1.6;}
+.owiz-footer{padding:12px 18px 18px;display:flex;gap:8px;}
+.owiz-btn-back{flex:0 0 auto;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:13px 18px;font-size:15px;font-weight:700;cursor:pointer;}
+.owiz-btn-next{flex:1;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:13px;font-size:16px;font-weight:800;cursor:pointer;}
+.owiz-btn-skip{flex:0 0 auto;background:var(--surface2);border:1px solid var(--border);color:var(--text3);border-radius:10px;padding:13px 14px;font-size:16px;font-weight:700;cursor:pointer;}
+.owiz-pipe-row{display:grid;grid-template-columns:1fr 84px 76px 52px 74px 34px;gap:6px;align-items:center;margin-bottom:7px;}
+.owiz-pipe-row select,.owiz-pipe-row input{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:7px;padding:9px 6px;font-size:16px;width:100%;box-sizing:border-box;text-align:center;}
+.owiz-pipe-row select{text-align:left;padding:9px 8px;}
+.owiz-pipe-del{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#fca5a5;border-radius:7px;padding:9px 0;font-size:15px;cursor:pointer;}
+.owiz-pipe-add{width:100%;background:rgba(79,142,247,.12);border:1.5px dashed rgba(79,142,247,.5);color:var(--accent);border-radius:8px;padding:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;}
+.owiz-pipe-head{display:grid;grid-template-columns:1fr 84px 76px 52px 74px 34px;gap:6px;font-size:14px;color:var(--text3);font-weight:700;letter-spacing:.05em;margin-bottom:4px;text-align:center;}
+.owiz-pipe-head>div:first-child{text-align:left;}
+/* 路盤構成の選択リスト・常時バナー */
+.owiz-rb-list{display:flex;flex-direction:column;gap:9px;}
+.owiz-rb-item{border:2px solid var(--border);border-radius:11px;padding:12px 14px;background:var(--surface2);cursor:pointer;transition:all .15s;}
+.owiz-rb-item:active{background:rgba(79,142,247,.15);}
+.owiz-rb-item-readonly{cursor:default;opacity:.7;}
+.owiz-rb-item-readonly:active{background:var(--surface2);}
+.owiz-rb-item.sel{border-color:var(--accent);background:rgba(79,142,247,.16);}
+.owiz-rb-name{font-size:18px;font-weight:800;color:var(--text);margin-bottom:5px;line-height:1.35;}
+.owiz-rb-item.sel .owiz-rb-name{color:var(--accent);}
+.owiz-rb-spec{font-size:15px;color:var(--text3);font-family:var(--mono);line-height:1.55;}
+.owiz-rb-banner{background:rgba(124,58,237,.13);border:1px solid rgba(124,58,237,.4);border-left:4px solid var(--accent2);
+  border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:16px;color:var(--text2);line-height:1.55;}
+.owiz-rb-banner b{color:#c4b5fd;font-size:14.5px;}
+.owiz-rb-banner span{display:block;font-size:14px;color:var(--text3);font-family:var(--mono);margin-top:3px;}
+#owizOpenBtn{display:block;width:100%;margin:0 0 12px;background:linear-gradient(135deg,rgba(79,142,247,.18),rgba(79,142,247,.08));border:2px solid rgba(79,142,247,.55);color:var(--accent);border-radius:12px;padding:14px 20px;font-size:17px;font-weight:800;cursor:pointer;text-align:center;letter-spacing:.03em;}
+#owizOpenBtn:active{background:rgba(79,142,247,.3);}
+
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -607,6 +693,21 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       border-radius:6px;padding:6px 14px;
       animation:pulse-guide 2s ease-in-out infinite;
     ">現場を選ぶと路盤構成に合わせた型タブが表示されます</div>
+  </div>
+
+  <!-- 入力ウィザード起動ボタン -->
+  <button id="owizOpenBtn" onclick="openOrderWizard()" style="display:none;">🧭 ウィザードで入力する</button>
+
+  <!-- ═══ 全型・全パターン 横断集計（入力済みのものだけを一覧＋合計）═══ -->
+  <div class="card" id="allSumCard" style="display:none;border:2px solid rgba(34,197,94,.45);background:rgba(34,197,94,.05);">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      🧾 入力済み 全型・全パターン 合計発注量
+      <button onclick="renderAllTypesSummary()"
+        style="font-size:13px;padding:4px 12px;border-radius:6px;border:1px solid rgba(34,197,94,.5);
+        background:rgba(34,197,94,.12);color:#4ade80;cursor:pointer;font-family:var(--sans);">🔄 再集計</button>
+      <span style="font-size:12px;color:var(--text3);font-weight:400;">型タブをまたいで、入力済みの箇所をすべて合計します</span>
+    </div>
+    <div id="allSumBody"></div>
   </div>
 
   <!-- 型サブタブナビ -->
@@ -732,14 +833,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85k-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="85k-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="85k-DPH1" placeholder="0.509"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="85k-DPH2" placeholder="0.309"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="85k-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="85k-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="85k-DPH1" placeholder="0.509"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="85k-DPH2" placeholder="0.309"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="85k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="85k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="85k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="85k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="85k-pipes"></div></div>
     <div class="result-row" id="85k-result"></div>
@@ -756,14 +857,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="85ks-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="85ks-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="85ks-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="85ks-DPH1" placeholder="0.509"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="85ks-DPH2" placeholder="0.309"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="85ks-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="85ks-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="85ks-DPH1" placeholder="0.509"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="85ks-DPH2" placeholder="0.309"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="85ks-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="85ks-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="85ks-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="85ks-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>桝H（m）</label><input type="number" step="0.001" id="85ks-masH" placeholder="1.2"></div>
@@ -927,14 +1028,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="40k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="40k-DP1" placeholder="0.7"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="40k-DP2" placeholder="1.0"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="40k-DPH1" placeholder="0.309"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="40k-DPH2" placeholder="0.209"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="40k-DP1" placeholder="0.7"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="40k-DP2" placeholder="1.0"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="40k-DPH1" placeholder="0.309"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="40k-DPH2" placeholder="0.209"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="40k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="40k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="40k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="40k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="40k-pipes"></div></div>
     <div class="result-row" id="40k-result"></div>
@@ -1065,14 +1166,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="30k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="30k-DP1" placeholder="0.55"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="30k-DP2" placeholder="0.75"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="30k-DPH1" placeholder="0.209"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="30k-DPH2" placeholder="0.109"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="30k-DP1" placeholder="0.55"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="30k-DP2" placeholder="0.75"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="30k-DPH1" placeholder="0.209"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="30k-DPH2" placeholder="0.109"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="30k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="30k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="30k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="30k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="30k-pipes"></div></div>
     <div class="result-row" id="30k-result"></div>
@@ -1195,14 +1296,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="20k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="20k-DP1" placeholder="0.45"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="20k-DP2" placeholder="0.65"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="20k-DPH1" placeholder="0.209"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="20k-DPH2" placeholder="0.109"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="20k-DP1" placeholder="0.45"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="20k-DP2" placeholder="0.65"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="20k-DPH1" placeholder="0.209"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="20k-DPH2" placeholder="0.109"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="20k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="20k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="20k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="20k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="20k-pipes"></div></div>
     <div class="result-row" id="20k-result"></div>
@@ -1346,14 +1447,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(79,142,247,0.4);padding-left:8px;"><label style="color:rgba(79,142,247,0.9);font-size:14px;">現況AS高さ上書き（m）</label><input type="number" step="0.001" id="14k-genAsH" placeholder="空白=自動"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="14k-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="14k-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="14k-DPH1" placeholder="0.509"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="14k-DPH2" placeholder="0.309"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="14k-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="14k-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="14k-DPH1" placeholder="0.509"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="14k-DPH2" placeholder="0.309"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="14k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="14k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="14k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="14k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="14k-pipes"></div></div>
     <div class="result-row" id="14k-result"></div>
@@ -1367,14 +1468,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 L（m）</label><input type="number" step="0.01" id="14ks-genL" placeholder="0"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="14ks-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="14ks-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="14ks-DPH1" placeholder="0.509"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="14ks-DPH2" placeholder="0.309"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="14ks-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="14ks-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="14ks-DPH1" placeholder="0.509"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="14ks-DPH2" placeholder="0.309"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="14ks-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="14ks-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="14ks-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="14ks-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>桝H（m）</label><input type="number" step="0.001" id="14ks-masH" placeholder="2"></div>
@@ -1601,19 +1702,19 @@ body{padding-bottom:env(safe-area-inset-bottom)}
             text-transform:uppercase;margin-bottom:8px;">勾配あり（省略可）</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="field">
-              <label>DP 始点（m）</label>
+              <label>DP 起点側（m）</label>
               <input type="number" step="0.001" id="diag-in-dp1" placeholder="省略可">
             </div>
             <div class="field">
-              <label>DP 終点（m）</label>
+              <label>DP 終点側（m）</label>
               <input type="number" step="0.001" id="diag-in-dp2" placeholder="省略可">
             </div>
             <div class="field">
-              <label>DP下配管H 始（m）</label>
+              <label>DP下配管H 起点側（m）</label>
               <input type="number" step="0.001" id="diag-in-dph1" placeholder="省略可">
             </div>
             <div class="field">
-              <label>DP下配管H 終（m）</label>
+              <label>DP下配管H 終点側（m）</label>
               <input type="number" step="0.001" id="diag-in-dph2" placeholder="省略可">
             </div>
           </div>
@@ -2622,6 +2723,7 @@ const CALC_DEFAULTS = {
   bulkRatioRM: 1.25,  // RM嵩増率
   bulkRatioSand:  1.25, // 再生砂嵩増率
   bulkRatioSoil:  1.25, // 改良土嵩増率
+  congaraDensity: 2.30, // コンガラ（コンクリート殻）比重 t/m³
 };
 
 // typeKeyから現場プリセットの嵩増率を取得（なければデフォルト）
@@ -2635,6 +2737,7 @@ function getCalcRatios(typeKey) {
     bulkRatioRM:    br.bulkRatioRM ?? CALC_DEFAULTS.bulkRatioRM,
     bulkRatioSand:  br.bulkRatioSand ?? CALC_DEFAULTS.bulkRatioSand,
     bulkRatioSoil:  br.bulkRatioSoil ?? CALC_DEFAULTS.bulkRatioSoil,
+    congaraDensity: br.congaraDensity ?? CALC_DEFAULTS.congaraDensity,
   };
 }
 
@@ -2650,7 +2753,7 @@ function buildPipeInputs(containerId) {
   _addPipeInputRow(containerId);
 }
 
-function _addPipeInputRow(containerId, pipeKey, kind, L, N) {
+function _addPipeInputRow(containerId, pipeKey, kind, L, N, src) {
   var wrap = document.getElementById(containerId + '-rows');
   if (!wrap) return;
 
@@ -2700,6 +2803,18 @@ function _addPipeInputRow(containerId, pipeKey, kind, L, N) {
   unitNum.className = 'pa-unit'; unitNum.textContent = '本';
   numWrap.appendChild(inpNum); numWrap.appendChild(unitNum);
 
+  // 調達区分 select（在庫計算に影響：新品＝在庫1本消費／端物＝在庫消費なし）
+  var selSrc = document.createElement('select');
+  selSrc.className = 'pa-src';
+  selSrc.title = '新品を切る＝在庫を1本消費／端物を使う＝切った余りの在庫品なので在庫は減らない';
+  [['新品','新品を切る'],['端物','端物を使う']].forEach(function(o) {
+    var opt = document.createElement('option');
+    opt.value = o[0]; opt.textContent = o[1];
+    if (o[0] === (src || '新品')) opt.selected = true;
+    selSrc.appendChild(opt);
+  });
+  if ((kind || '直管') === '曲げ管') selSrc.style.display = 'none';
+
   // ✕ 削除ボタン
   var btnDel = document.createElement('button');
   btnDel.type = 'button'; btnDel.className = 'pa-del-btn';
@@ -2709,12 +2824,14 @@ function _addPipeInputRow(containerId, pipeKey, kind, L, N) {
   // 品種変更 → 延長欄の表示切替
   selKind.addEventListener('change', function() {
     lenWrap.style.display = (this.value === '曲げ管') ? 'none' : '';
+    selSrc.style.display  = (this.value === '曲げ管') ? 'none' : '';
   });
 
   div.appendChild(selType);
   div.appendChild(selKind);
   div.appendChild(lenWrap);
   div.appendChild(numWrap);
+  div.appendChild(selSrc);
   div.appendChild(btnDel);
   wrap.appendChild(div);
 }
@@ -2792,6 +2909,180 @@ function splitExcess(dp, dph, typeKey) {
   return { excessSandH, soilH };
 }
 
+// ══ 使用パターンだけ表示するフィルタ ══════════════════════════
+//   W と L の両方が空のパターンカードは「未入力＝使わない」とみなして隠す。
+//   型ごとに「すべて表示 / 使用中のみ」を切り替えられる。
+//   ★既定は常にON（入力済みのみ表示）。
+//     「すべて表示」はその場かぎりの一時解除にして保存しない。
+//     （保存するとOFFのまま固定されてしまい、空のカードが出続けるため）
+let _patFilterOn = {};
+// 「＋追加」で一時的に表示中の未入力パターン（tid|pat をキーに保持）
+const _patForceShow = {};
+function showPatternCard(tid, pat){
+  _patForceShow[tid + '|' + pat] = true;
+  applyPatternFilter(tid);
+  var card = document.querySelector('[data-dyn-type="' + String(tid).replace(/^dyntype_/, '')
+           + '"][data-pattern="' + pat + '"]');
+  try { if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(e) {}
+}
+function _patFilterSave(){ /* 保存しない：ページを開くたび既定ONに戻す */ }
+try { localStorage.removeItem('owiz_patfilter'); } catch(e) {}   // 旧バージョンの保存値を破棄
+function _patCards(tid){
+  // 動的タブのカードは data-dyn-type="<key>"（dyntype_ 接頭辞なし）で出力される点に注意
+  var bare = String(tid).replace(/^dyntype_/, '');
+  return document.querySelectorAll(
+    '[data-dyn-type="' + bare + '"][data-pattern], [data-type="' + bare + '"][data-pattern]');
+}
+function _patUsed(tid, pat){
+  var g = function(k){
+    var e = document.getElementById(tid + pat + '-' + k);
+    return e && e.value !== '' && parseFloat(e.value) > 0;
+  };
+  return g('W') || g('L');
+}
+function applyPatternFilter(tid){
+  var cards = _patCards(tid);
+  // 1つも入力が無い型は全部出す（これから入力するため）
+  var anyUsed = Array.prototype.some.call(cards, function(c){ return _patUsed(tid, c.dataset.pattern); });
+  // 既定（ユーザーが触っていない）＝入力があるときだけ絞り込む。
+  // ボタンを押した場合はその指示に従う（入力ゼロでも全部たたんで「＋入力」ボタンだけにできる）。
+  var on = (_patFilterOn[tid] === undefined) ? anyUsed : (_patFilterOn[tid] !== false);
+  var shown = 0, hidden = 0;
+  var hiddenPats = [];
+  cards.forEach(function(card){
+    var pat   = card.dataset.pattern;
+    var use   = _patUsed(tid, pat);
+    var force = !!_patForceShow[tid + '|' + pat];
+    if (use && force) delete _patForceShow[tid + '|' + pat];   // 入力されたら一時表示フラグは不要
+    if (on && !use && !force) {
+      card.style.display = 'none'; hidden++; hiddenPats.push(pat);
+    } else {
+      // 表示するカードは淡色化しない（グレーアウトは廃止）
+      card.style.display = ''; card.style.opacity = ''; shown++;
+      var mk = card.querySelector('.pat-empty-mark');
+      if (!use && !mk) {
+        var t = card.querySelector('.card-title');
+        if (t) {
+          var sp = document.createElement('span');
+          sp.className = 'pat-empty-mark';
+          sp.textContent = '未入力';
+          sp.style.cssText = 'margin-left:8px;font-size:12px;font-weight:700;color:var(--text3);'
+            + 'background:rgba(148,163,184,.15);border:1px solid rgba(148,163,184,.35);'
+            + 'border-radius:12px;padding:2px 9px;';
+          var firstSpan = t.querySelector('span');
+          if (firstSpan) firstSpan.appendChild(sp); else t.appendChild(sp);
+        }
+      } else if (use && mk) { mk.remove(); }
+    }
+  });
+
+  // 隠したパターンは「＋ 〇〇を入力」ボタンで必要な時だけ出す（画面を短く保つ）
+  var addBar = document.getElementById(tid + '-patadd');
+  if (addBar) {
+    var LBL = { n:'通常', ns:'通常・特殊部あり', k:'勾配あり', ks:'勾配あり・特殊部あり' };
+    var lead = (shown === 0 && hiddenPats.length)
+      ? '<span style="font-size:13px;color:var(--text3);align-self:center;margin-right:4px;">まだ入力がありません。入力するパターンを選んでください →</span>'
+      : '';
+    addBar.innerHTML = lead + hiddenPats.map(function(pt){
+      return '<button onclick="showPatternCard(\'' + tid + '\',\'' + pt + '\')"'
+        + ' style="font-size:13px;padding:5px 12px;border-radius:16px;border:1px dashed rgba(79,142,247,.5);'
+        + 'background:rgba(79,142,247,.08);color:var(--accent);cursor:pointer;font-family:var(--sans);">'
+        + '＋ ' + (LBL[pt] || pt) + 'を入力</button>';
+    }).join('');
+  }
+  var btn = document.getElementById(tid + '-patfilter-btn');
+  if (btn) {
+    btn.textContent = on ? ('👁 すべてのパターンを表示（' + hidden + '件 非表示中）') : '🔽 入力済みのパターンだけ表示';
+    btn.style.display = cards.length > 1 ? '' : 'none';
+  }
+  return { shown: shown, hidden: hidden };
+}
+// 指定パターンの入力を消す（残留値の掃除用）
+function clearPatternInputs(tid, pat){
+  var pfx = tid + pat;
+  var keys = ['W','L','DP','DPH','DP1','DP2','DPH1','DPH2','masH','masW','masL',
+              'loW','loL','loT','asW','rbW','genW','genL','asReW','asReL','asReT'];
+  var label = ({ n:'通常', ns:'通常・特殊部あり', k:'勾配あり', ks:'勾配あり・特殊部あり' })[pat] || pat;
+  if (!confirm('「' + label + '」の入力をすべて消します。よろしいですか？')) return;
+  keys.forEach(function(k){
+    var e = document.getElementById(pfx + '-' + k);
+    if (e) e.value = '';
+  });
+  var rows = document.getElementById(pfx + '-pipes-rows');
+  if (rows) rows.innerHTML = '';
+  if (_typeUpdateFns[tid]) { try { _typeUpdateFns[tid](); } catch(e) {} }
+  try { applyPatternFilter(tid); } catch(e) {}
+  try { renderAllTypesSummary(); } catch(e) {}
+}
+
+function togglePatternFilter(tid){
+  // 現在の実効状態を反転する（未設定なら「入力の有無」で決まっている状態を基準にする）
+  var cards = _patCards(tid);
+  var anyUsed = Array.prototype.some.call(cards, function(c){ return _patUsed(tid, c.dataset.pattern); });
+  var cur = (_patFilterOn[tid] === undefined) ? anyUsed : (_patFilterOn[tid] !== false);
+  _patFilterOn[tid] = !cur;
+  _patFilterSave();
+  applyPatternFilter(tid);
+}
+
+// ══ 本復旧 掘削影響範囲：3段階幅（AS幅 ＞ 路盤幅 ＞ 掘削幅）════════════
+//   本復旧では影響範囲のすりつけで断面が段々になるため、層ごとに幅が異なる。
+//     AS層（密粒・粗粒）      → AS幅
+//     路盤層（RM・RC）        → 路盤幅
+//     埋戻し（再生砂・改良土） → 掘削幅（＝従来の W）
+//   未入力の欄は掘削幅 W をそのまま使う（＝従来どおりの計算になる）。
+function getW3(prefix, W) {
+  var asW = getNum(prefix + '-asW');
+  var rbW = getNum(prefix + '-rbW');
+  return {
+    asW: (asW > 0 ? asW : W),
+    rbW: (rbW > 0 ? rbW : W),
+    exW: W,
+    stepped: ((asW > 0 && Math.abs(asW - W) > 0.0005) || (rbW > 0 && Math.abs(rbW - W) > 0.0005))
+  };
+}
+
+// ══ コンガラ（L型・LO 壊しで発生するコンクリート殻）════════════════════
+//   寸法は既存の「既設CN撤去（LO・L型壊し）」欄 loW × loL × loT(mm) を使う。
+//   撤去量・廃材重量は発注量合計側で計上済み。ここでは復旧しない場合の補填だけを扱う。
+//   「復旧なし」＝ L型を戻さずその断面を舗装で埋めるため、
+//   GL から下へ AS密粒 → AS粗粒 → RM → RC の順に厚みを割り当てて各層へ加算する。
+function calcKongara(prefix, typeKey, r) {
+  var zero = { vol:0, ton:0, addAs密粒:0, addAs粗粒:0, addRm:0, addRc:0, restore:true, H:0 };
+  var loW = getNum(prefix + '-loW');
+  var loL = getNum(prefix + '-loL');
+  var loT = getNum(prefix + '-loT') / 1000;   // mm → m
+  if (!(loW > 0) || !(loL > 0) || !(loT > 0)) return zero;
+
+  var t   = TYPES[typeKey] || {};
+  var vol = loW * loL * loT;
+  var res = { vol: vol, ton: vol * (r && r.congaraDensity ? r.congaraDensity : 2.3),
+              addAs密粒:0, addAs粗粒:0, addRm:0, addRc:0, restore:true, H:loT };
+
+  // チェックあり＝L型を復旧する（既定）。外すと舗装材で埋め戻す。
+  var chk = document.getElementById(prefix + '-loRestore');
+  res.restore = chk ? !!chk.checked : true;
+  if (res.restore) return res;
+
+  var asH密粒 = (t.asT密粒 || 0) / 1000;
+  var asH粗粒 = (t.asT粗粒 || 0) / 1000;
+  var rmH     = t.rmH || 0;
+  var rcH     = t.rcH || 0;
+
+  var rest = loT;
+  var h1 = Math.min(rest, asH密粒); rest -= h1;
+  var h2 = Math.min(rest, asH粗粒); rest -= h2;
+  var h3 = Math.min(rest, rmH);     rest -= h3;
+  var h4 = Math.min(rest, rcH);     rest -= h4;
+
+  var area = loW * loL;
+  res.addAs密粒 = h1 * area * r.asDensity * r.bulkRatioAS;
+  res.addAs粗粒 = h2 * area * r.asDensity * r.bulkRatioAS;
+  res.addRm     = h3 * area * r.bulkRatioRM;
+  res.addRc     = h4 * area * r.bulkRatioRC;
+  return res;
+}
+
 // 通常パターン計算（路盤厚は仮復旧構成図の固定値を使用）
 function calcNormal(prefix, typeKey) {
   const W   = getNum(`${prefix}-W`);
@@ -2808,23 +3099,29 @@ function calcNormal(prefix, typeKey) {
   const rcH      = t.rcH;
   const rmH      = t.rmH;
 
-  const asTon密粒 = asH密粒 * W * L * r.asDensity * r.bulkRatioAS;
-  const asTon粗粒 = asH粗粒 > 0 ? asH粗粒 * W * L * r.asDensity * r.bulkRatioAS : 0;
-  const rcOrd = rcH * W * L * r.bulkRatioRC;
-  const rmOrd = rmH * W * L * r.bulkRatioRM;
+  // 層ごとの幅（本復旧の段々断面に対応。未入力なら全て W）
+  const w3 = getW3(prefix, W);
+  const kg = calcKongara(prefix, typeKey, r);
+
+  const asTon密粒 = asH密粒 * w3.asW * L * r.asDensity * r.bulkRatioAS + kg.addAs密粒;
+  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asDensity * r.bulkRatioAS : 0) + kg.addAs粗粒;
+  const rcOrd = rcH * w3.rbW * L * r.bulkRatioRC + kg.addRc;
+  const rmOrd = rmH * w3.rbW * L * r.bulkRatioRM + kg.addRm;
 
   const { excessSandH, soilH } = splitExcess(DP, DPH, typeKey);
-  const isoilOrd = soilH * W * L * r.bulkRatioSoil;
+  const isoilOrd = soilH * w3.exW * L * r.bulkRatioSoil;
 
   const pipeVol   = getPipeVolume(`${prefix}-pipes`);
   const hasExcess = excessSandH > 0;
   const _floor    = DP + DPH;  // 床付け深さ
   const sandH     = hasExcess ? excessSandH : Math.max(0, _floor - t.totalH);  // 床付け基準（路盤変更点より下～床付け）
-  const sandOrd   = (sandH * W * L - pipeVol) * r.bulkRatioSand;
+  // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
+  const sandOrd   = Math.max(0, (sandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
            sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
-           _W: W, _L: L };
+           congaraVol: kg.vol, congaraTon: kg.ton, congaraRestore: kg.restore,
+           _w3: w3, _W: W, _L: L };
 }
 
 // 特殊部あり計算（本体から桝部分を控除）
@@ -2859,22 +3156,26 @@ function calcSpecial(prefix, typeKey) {
   const masSoil   = masSoilH      * masW * masL;
   const masSand   = masTotalSandH * masW * masL;
 
-  const rcOrd  = base.rcOrd  - masRC  * r.bulkRatioRC;
-  const rmOrd  = base.rmOrd  - masRM  * r.bulkRatioRM;
+  // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
+  const rcOrd    = Math.max(0, base.rcOrd  - masRC * r.bulkRatioRC);
+  const rmOrd    = Math.max(0, base.rmOrd  - masRM * r.bulkRatioRM);
+  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * r.bulkRatioSoil);
+  const sandOrd  = Math.max(0, base.sandOrd  - masSand * r.bulkRatioSand);
   return {
-    asTon密粒:   base.asTon密粒   - masAS密粒 * r.asDensity * r.bulkRatioAS,
-    asTon粗粒:   base.asTon粗粒   - masAS粗粒 * r.asDensity * r.bulkRatioAS,
+    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asDensity * r.bulkRatioAS),
+    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asDensity * r.bulkRatioAS),
     rcOrd,
     rmOrd,
-    isoilOrd:    base.isoilOrd    - masSoil * r.bulkRatioSoil,
-    sandOrd:     base.sandOrd     - masSand * r.bulkRatioSand,
-    sandSoilSum: base.sandSoilSum - (masSoil + masSand) * r.bulkRatioSand,
+    isoilOrd,
+    sandOrd,
+    sandSoilSum: isoilOrd + sandOrd,
     rcRmSum:     rcOrd + rmOrd,
-    _W: base._W, _L: base._L,
+    congaraVol: base.congaraVol, congaraTon: base.congaraTon, congaraRestore: base.congaraRestore,
+    _w3: base._w3, _W: base._W, _L: base._L,
   };
 }
 
-// 勾配あり計算（DP・DPHを始終点平均）
+// 勾配あり計算（DP・DPHを起点/終点の平均）
 function calcGradient(prefix, typeKey) {
   const W    = getNum(`${prefix}-W`);
   const L    = getNum(`${prefix}-L`);
@@ -2894,23 +3195,29 @@ function calcGradient(prefix, typeKey) {
   const rmH      = t.rmH;
 
   const r = getCalcRatios(typeKey);
-  const asTon密粒 = asH密粒 * W * L * r.asDensity * r.bulkRatioAS;
-  const asTon粗粒 = asH粗粒 > 0 ? asH粗粒 * W * L * r.asDensity * r.bulkRatioAS : 0;
-  const rcOrd    = rcH * W * L * r.bulkRatioRC;
-  const rmOrd    = rmH * W * L * r.bulkRatioRM;
+  // 層ごとの幅（本復旧の段々断面に対応。未入力なら全て W）
+  const w3 = getW3(prefix, W);
+  const kg = calcKongara(prefix, typeKey, r);
+
+  const asTon密粒 = asH密粒 * w3.asW * L * r.asDensity * r.bulkRatioAS + kg.addAs密粒;
+  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asDensity * r.bulkRatioAS : 0) + kg.addAs粗粒;
+  const rcOrd    = rcH * w3.rbW * L * r.bulkRatioRC + kg.addRc;
+  const rmOrd    = rmH * w3.rbW * L * r.bulkRatioRM + kg.addRm;
 
   const avgDPH = (DPH1 + DPH2) / 2;
   const { excessSandH: gExSandH, soilH: gSoilH } = splitExcess(avgDP, avgDPH, typeKey);
-  const isoilOrd  = gSoilH * W * L * r.bulkRatioSoil;
+  const isoilOrd  = gSoilH * w3.exW * L * r.bulkRatioSoil;
 
   const pipeVol    = getPipeVolume(`${prefix}-pipes`);
   const gHasExcess = gExSandH > 0;
   const gSandH     = gHasExcess ? gExSandH : Math.max(0, (avgDP + avgDPH) - t.totalH);  // 床付け基準
-  const sandOrd    = (gSandH * W * L - pipeVol) * r.bulkRatioSand;
+  // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
+  const sandOrd    = Math.max(0, (gSandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
            sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
-           _W: W, _L: L };
+           congaraVol: kg.vol, congaraTon: kg.ton, congaraRestore: kg.restore,
+           _w3: w3, _W: W, _L: L };
 }
 
 // 勾配あり特殊部計算
@@ -2944,16 +3251,21 @@ function calcGradientSpecial(prefix, typeKey) {
   const masSoil   = ksSoilH        * masW * masL;
   const masSand   = ksTotalSandH   * masW * masL;
 
-  const rcOrd = base.rcOrd - masRC * r.bulkRatioRC;
-  const rmOrd = base.rmOrd - masRM * r.bulkRatioRM;
+  // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
+  const rcOrd    = Math.max(0, base.rcOrd - masRC * r.bulkRatioRC);
+  const rmOrd    = Math.max(0, base.rmOrd - masRM * r.bulkRatioRM);
+  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * r.bulkRatioSoil);
+  const sandOrd  = Math.max(0, base.sandOrd  - masSand * r.bulkRatioSand);
   return {
-    asTon密粒:   base.asTon密粒   - masAS密粒 * r.asDensity * r.bulkRatioAS,
-    asTon粗粒:   base.asTon粗粒   - masAS粗粒 * r.asDensity * r.bulkRatioAS,
+    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asDensity * r.bulkRatioAS),
+    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asDensity * r.bulkRatioAS),
     rcOrd,
     rmOrd,
-    isoilOrd:    base.isoilOrd    - masSoil * r.bulkRatioSoil,
-    sandOrd:     base.sandOrd     - masSand * r.bulkRatioSand,
-    sandSoilSum: base.sandSoilSum - (masSoil + masSand) * r.bulkRatioSand,
+    isoilOrd,
+    sandOrd,
+    sandSoilSum: isoilOrd + sandOrd,
+    congaraVol: base.congaraVol, congaraTon: base.congaraTon, congaraRestore: base.congaraRestore,
+    _w3: base._w3,
     rcRmSum:     rcOrd + rmOrd,
     _W: base._W, _L: base._L,
   };
@@ -3317,6 +3629,237 @@ function sumResults(arr) {
     out.totalL       += r._L           || 0;
   }
   return out;
+}
+
+// ══ 全型・全パターン 横断集計 ══════════════════════════════
+//   型タブをまたいで、入力済み（W>0 かつ L>0）のカードをすべて拾い、
+//   明細（型・パターン・旗揚げ番号・W・L・DP）と材料合計を1画面に出す。
+const _ALL_PAT_LABEL = { n:'通常', ns:'通常・特殊部あり', k:'勾配あり', ks:'勾配あり・特殊部あり' };
+
+// 材料名 → 色。既知の名前は固定色、未知（フリー入力の材料名など）はパレットから自動割当。
+const _MAT_COLORS = {
+  '再生密粒度AS混合物':'#fbbf24', '密粒度AS混合物':'#fbbf24', '密粒度改質AS混合物':'#fbbf24',
+  '再生粗粒度AS混合物':'#fb923c', '粗粒度AS混合物':'#fb923c', '粗粒度改質AS混合物（改質Ⅱ型）':'#fb923c',
+  '瀝青安定処理':'#f97316',
+  '改良土':'#facc15', '再生砂':'#60a5fa', '再生砂RC-10':'#60a5fa',
+};
+const _MAT_PALETTE = ['#34d399','#4ade80','#22d3ee','#a78bfa','#f472b6','#fca5a5','#c4b5fd','#67e8f9','#fdba74','#86efac'];
+const _matColorCache = {};
+function _matColor(name){
+  if (_MAT_COLORS[name]) return _MAT_COLORS[name];
+  if (/^RM/.test(name)) return '#34d399';
+  if (/^RC/.test(name)) return '#4ade80';
+  if (_matColorCache[name]) return _matColorCache[name];
+  var n = Object.keys(_matColorCache).length;
+  return (_matColorCache[name] = _MAT_PALETTE[n % _MAT_PALETTE.length]);
+}
+
+// 厚みの単位ゆらぎ（mm保存 / m保存）を mm に統一
+function _tmm(v){ var n = parseFloat(v) || 0; return (n > 0 && n < 1) ? n * 1000 : n; }
+
+// 型の AS層を「表層系」と「基層・その他系（瀝青安定処理など）」に分けて名前と厚みを返す
+//   仮復旧/本復旧で層構成も名称も変わるため、現在のモードに合う配列を優先する。
+function _asLayerSplit(conf, tid){
+  var mode = 'kari';
+  try { if (tid && typeof _dynCalcModes !== 'undefined' && _dynCalcModes[tid] === 'hon') mode = 'hon'; } catch(e) {}
+  var byMode = (mode === 'hon') ? (conf && conf.honAsLayers) : (conf && conf.kariAsLayers);
+  var other  = (mode === 'hon') ? (conf && conf.kariAsLayers) : (conf && conf.honAsLayers);
+  // 該当モードの層が未登録なら、もう一方 → 汎用 asLayers の順に材料名を探す
+  var arr = (byMode && byMode.length) ? byMode
+          : ((other && other.length) ? other
+          : ((conf && conf.asLayers && conf.asLayers.length) ? conf.asLayers : null));
+  if (arr) {
+    var nm = function(a){ return a.custom || a.preset || a.name || 'AS'; };
+    // role が無い配列（路盤マスタ直の kariAsLayers 等）は名前で表層/基層その他を判定する
+    var _BASE_OTHER = /粗粒|瀝青|安定処理|開粒/;
+    var isSurf = function(a){
+      if (a.role) return a.role === 'surface';
+      return !_BASE_OTHER.test(nm(a));
+    };
+    return {
+      surf:  arr.filter(isSurf)
+                .map(function(a){ return { name: nm(a), t: _tmm(a.t) }; }).filter(function(a){ return a.t > 0; }),
+      other: arr.filter(function(a){ return !isSurf(a); })
+                .map(function(a){ return { name: nm(a), t: _tmm(a.t) }; }).filter(function(a){ return a.t > 0; })
+    };
+  }
+  return { surf: [], other: [] };
+}
+
+// 路盤層（RM/RC）の表示名を路盤マスタから拾う（フリー入力の材料名にも対応）
+function _rbLayerName(conf, isRm){
+  var rows = (conf && conf.kariRbLayers) || [];
+  var hit = rows.filter(function(r){
+    var c = String(r.cat || r.name || r.preset || '');
+    return isRm ? /^RM|^rm|上層/.test(c) : /^RC|^rc|下層/.test(c);
+  });
+  if (hit.length) {
+    var n = hit[0].name || hit[0].cat || hit[0].preset;
+    if (n) return String(n);
+  }
+  return isRm ? ('RM-' + ((conf && conf.rmSize) || 40)) : ('RC-' + ((conf && conf.rcSize) || 40));
+}
+
+// 1カード分の計算結果を「材料名 → 数量」の配列に展開する。
+//   AS の合計トン数は層の厚み比で按分する（同じ密度・嵩増率のため厳密に比例する）。
+function _matsOf(tid, r){
+  var conf = null;
+  try { conf = TYPES[tid]; } catch(e) {}
+  conf = conf || {};
+  var out = [];
+  var push = function(name, val, unit){ if (val > 0) out.push({ name: name, val: val, unit: unit }); };
+
+  var sp = _asLayerSplit(conf, tid);
+  var spread = function(layers, total, fallback){
+    if (!(total > 0)) return;
+    if (!layers.length) { push(fallback, total, 't'); return; }
+    var sumT = layers.reduce(function(a, x){ return a + x.t; }, 0);
+    if (!(sumT > 0)) { push(layers[0].name, total, 't'); return; }
+    layers.forEach(function(x){ push(x.name, total * (x.t / sumT), 't'); });
+  };
+  spread(sp.surf,  r.asTon密粒 || 0, '再生密粒度AS混合物');
+  spread(sp.other, r.asTon粗粒 || 0, '再生粗粒度AS混合物');
+
+  push(_rbLayerName(conf, true),  r.rmOrd || 0, 'm³');
+  push(_rbLayerName(conf, false), r.rcOrd || 0, 'm³');
+
+  var isoilName = '改良土';
+  try { if (typeof getIsoilLabel === 'function') isoilName = getIsoilLabel(tid) || '改良土'; } catch(e) {}
+  push(isoilName, r.isoilOrd || 0, 'm³');
+  push('再生砂',   r.sandOrd  || 0, 'm³');
+  push('コンガラ（廃材）', r.congaraVol || 0, 'm³');
+  return out;
+}
+function _allTypeTids(){
+  var out = [];
+  document.querySelectorAll('#type-subnav .type-subbtn').forEach(function(b){
+    var tid = b.dataset ? b.dataset.typetab : '';
+    if (tid) out.push({ tid: tid, label: (b.textContent || '').trim() });
+  });
+  return out;
+}
+function _calcByPattern(tid, pat){
+  var pfx = tid + pat;
+  if (!document.getElementById(pfx + '-W')) return null;
+  try {
+    if (pat === 'n')  return calcNormal(pfx, tid);
+    if (pat === 'ns') return calcSpecial(pfx, tid);
+    if (pat === 'k')  return calcGradient(pfx, tid);
+    if (pat === 'ks') return calcGradientSpecial(pfx, tid);
+  } catch(e) { return null; }
+  return null;
+}
+function renderAllTypesSummary(){
+  var card = document.getElementById('allSumCard');
+  var body = document.getElementById('allSumBody');
+  if (!card || !body) return;
+
+  var rows = [], sum = {}, anyHon = false;   // sum: 材料名 → {val, unit}
+  _allTypeTids().forEach(function(t){
+    var conf = null;
+    try { conf = TYPES[t.tid]; } catch(e) {}
+    var label = (conf && conf.label) ? conf.label : t.label;
+    ['n','ns','k','ks'].forEach(function(pat){
+      var wEl = document.getElementById(t.tid + pat + '-W');
+      var lEl = document.getElementById(t.tid + pat + '-L');
+      if (!wEl || !lEl) return;
+      var W = parseFloat(wEl.value) || 0, L = parseFloat(lEl.value) || 0;
+      if (!(W > 0) || !(L > 0)) return;              // 未入力のパターンは出さない
+      var r = _calcByPattern(t.tid, pat);
+      if (!r) return;
+      var hEl  = document.getElementById(t.tid + '-hata');
+      var isK  = (pat === 'k' || pat === 'ks');
+      var dpEl = document.getElementById(t.tid + pat + (isK ? '-DP1' : '-DP'));
+      var dp2El= document.getElementById(t.tid + pat + '-DP2');
+      var mode = (typeof _dynCalcModes !== 'undefined' && _dynCalcModes[t.tid] === 'hon') ? 'hon' : 'kari';
+      if (mode === 'hon') anyHon = true;
+      var mats = _matsOf(t.tid, r);
+      rows.push({
+        label: label, pat: pat, mode: mode,
+        hata: hEl ? (hEl.value || '') : '',
+        W: W, L: L,
+        dp:  dpEl  ? (parseFloat(dpEl.value)  || 0) : 0,
+        dp2: (isK && dp2El) ? (parseFloat(dp2El.value) || 0) : 0,
+        w3: r._w3 || null, r: r, mats: mats
+      });
+      // 材料名ごとに合計（型ごとに材料名が違っても自動で列が増える）
+      mats.forEach(function(m){
+        if (!sum[m.name]) sum[m.name] = { val: 0, unit: m.unit };
+        sum[m.name].val += m.val;
+      });
+    });
+  });
+
+  if (!rows.length) { card.style.display = 'none'; body.innerHTML = ''; return; }
+  card.style.display = '';
+
+  var esc = function(s){ return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  // ── 材料の列を動的に決定（出現順。型ごとに名称が違っても自動で増える）──
+  var matCols = [];
+  rows.forEach(function(x){
+    x.mats.forEach(function(m){
+      if (matCols.indexOf(m.name) < 0) matCols.push(m.name);
+    });
+  });
+  var unitOf = function(n){ return (sum[n] && sum[n].unit) || 'm³'; };
+
+  var html = '<div style="overflow-x:auto;margin-bottom:14px;">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap;">'
+    + '<thead><tr style="background:rgba(34,197,94,.14);color:var(--text2);font-size:12px;">'
+    + ['型（路盤構成）','パターン','仮/本','旗揚げ番号','W(m)','L(m)','DP(m)']
+        .map(function(h){ return '<th style="padding:6px 9px;border:1px solid var(--border);font-weight:700;">' + h + '</th>'; }).join('')
+    + matCols.map(function(n){
+        return '<th style="padding:6px 9px;border:1px solid var(--border);font-weight:700;color:'
+             + _matColor(n) + ';">' + esc(n) + '<br><span style="font-weight:400;opacity:.75;">(' + unitOf(n) + ')</span></th>';
+      }).join('')
+    + '</tr></thead><tbody>';
+
+  rows.forEach(function(x){
+    var dpTxt = (x.pat === 'k' || x.pat === 'ks')
+      ? (x.dp.toFixed(3) + '→' + x.dp2.toFixed(3))
+      : x.dp.toFixed(3);
+    var w3Txt = (x.w3 && x.w3.stepped)
+      ? '<br><span style="font-size:11px;color:#a5b4fc;">AS' + x.w3.asW.toFixed(2) + '/路盤' + x.w3.rbW.toFixed(2) + '</span>' : '';
+    var byName = {};
+    x.mats.forEach(function(m){ byName[m.name] = (byName[m.name] || 0) + m.val; });
+    html += '<tr>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);text-align:left;font-weight:700;">' + esc(x.label) + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);">' + (_ALL_PAT_LABEL[x.pat] || x.pat) + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);color:' + (x.mode === 'hon' ? '#c4b5fd' : '#93c5fd') + ';">'
+        + (x.mode === 'hon' ? '🏗 本' : '🔧 仮') + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);">' + esc(x.hata || '―') + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);text-align:right;">' + x.W.toFixed(2) + w3Txt + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);text-align:right;">' + x.L.toFixed(2) + '</td>'
+      + '<td style="padding:6px 9px;border:1px solid var(--border);text-align:right;">' + dpTxt + '</td>'
+      + matCols.map(function(n){
+          var v = byName[n] || 0;
+          // その型に無い材料は「―」で空欄と区別する
+          return '<td style="padding:6px 9px;border:1px solid var(--border);text-align:right;font-family:var(--mono);'
+               + (v > 0 ? 'color:' + _matColor(n) + ';font-weight:700;' : 'color:var(--text3);') + '">'
+               + (v > 0 ? v.toFixed(3) : '―') + '</td>';
+        }).join('')
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  html += '<div style="font-size:14px;font-weight:700;color:#4ade80;margin-bottom:8px;">合計（' + rows.length + 'カード分）</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:10px;">'
+    + matCols.map(function(n){
+        var v = (sum[n] && sum[n].val) || 0;
+        if (!(v > 0)) return '';
+        return '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;min-width:150px;">'
+          + '<div style="color:var(--text2);font-size:13px;margin-bottom:3px;">' + esc(n) + '</div>'
+          + '<div style="font-family:var(--mono);font-size:21px;font-weight:700;color:' + _matColor(n) + ';">'
+          + v.toFixed(3) + ' <span style="font-size:13px;">' + unitOf(n) + '</span></div></div>';
+      }).join('')
+    + '</div>';
+  if (anyHon) {
+    html += '<div style="margin-top:10px;font-size:12px;color:var(--text3);">'
+          + '※ 仮復旧と本復旧は路盤構成が異なります。上表の「仮/本」列で内訳を確認してください。</div>';
+  }
+  body.innerHTML = html;
 }
 
 function renderTotal(typeKey) {
@@ -3774,9 +4317,11 @@ function _getPipesFromContainer(containerId) {
     var kindEl = row.querySelector('.pa-kind');
     var lenEl  = row.querySelector('.pa-len');
     var numEl  = row.querySelector('.pa-num');
+    var srcEl  = row.querySelector('.pa-src');
     if (!keyEl) return;
     var key  = keyEl.value;
     var kind = kindEl ? kindEl.value : '直管';
+    var src  = srcEl ? srcEl.value : '新品';
     var L    = (kind === '直管' && lenEl) ? (parseFloat(lenEl.value) || 0) : 0;
     var N    = parseInt(numEl ? numEl.value : '1') || 1;
     // 直管は延長 > 0 が必要、曲げ管は本数のみで記録
@@ -3790,6 +4335,9 @@ function _getPipesFromContainer(containerId) {
       kind: kind,
       L: L, N: N,
       totalL: totalL,
+      // 調達区分：端物を使う場合は在庫を消費しない（zaimatsu 側の端材使用と同じ扱い）
+      src: src,
+      useScrap: (src === '端物'),
       // zm モーダル backward compat 用フィールド
       L1: L, N1: N, L2: 0, N2: 0
     });
@@ -4016,10 +4564,14 @@ function sendToZaimatsu() {
 
   // items: 資材管理アプリの materialId ではなく diameter+type で記録
   var allItems = pipeItems.concat(standItems).map(function(i){
-    return { diameter:i.diameter, type:i.type, qty:i.qty,
-             lengthM:  i.lenPerSpan || i.lengthM || 0,  // スパン1本の長さ(m)
+    return { diameter:i.diameter, type:i.type,
+             qty:i.qty,                                  // ★在庫から引く本数（端物使用ぶんは含まない）
+             lengthM:  i.lenPerSpan || i.lengthM || 0,   // スパン1本の長さ(m)
              spanCount:i.spanCount  || 0,                // スパン数
              useScrap: !!i.useScrap,
+             scrapPieceLen:   i.scrapPieceLen   || 0,    // 端物使用: 1片の長さ(m)
+             scrapPieceCount: i.scrapPieceCount || 0,    // 端物使用: 使用片数（在庫は減らない）
+             wastePieceLen:   i.wastePieceLen   || 0,    // 新品を切った余り(m)＝新たな端物
              isScrap:  !!i.isScrap };
   });
 
@@ -4716,6 +5268,25 @@ function activateTypeTab(typeTabId) {
       _newHataEl.dispatchEvent(new Event('input', {bubbles: true}));
     }
   }
+  // タブを開くたびにパターン表示を判定し直す
+  //   （タブ生成時点ではまだ保存値が復元されておらず「全部未入力」と判定されるため）
+  try { applyPatternFilter(typeTabId); } catch(e) {}
+}
+
+// 保存値の復元が終わったあとに、全タイプのパターン表示をまとめて判定し直す
+function refreshAllPatternFilters(){
+  try {
+    document.querySelectorAll('#type-subnav .type-subbtn').forEach(function(b){
+      var tid = b.dataset ? b.dataset.typetab : '';
+      if (tid) { try { applyPatternFilter(tid); } catch(e) {} }
+    });
+  } catch(e) {}
+}
+// 読み込み直後は復元処理が非同期で走るため、数回に分けて再判定する
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', function(){
+    [300, 900, 2000].forEach(function(ms){ setTimeout(refreshAllPatternFilters, ms); });
+  });
 }
 
 // =====================================================================
@@ -7007,6 +7578,11 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       try { renderDiagTypeUI(_currentDiagType); } catch(e) {}
     }
   }, 50);
+
+  // タブを組み直したあとは保存値の復元が後から入るので、少し遅らせて表示判定をやり直す
+  [200, 700, 1500].forEach(function(ms){
+    setTimeout(function(){ try { refreshAllPatternFilters(); } catch(e) {} }, ms);
+  });
 }
 
 function setTodayDate(id) {
@@ -7188,16 +7764,29 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     </button>
   </div>
 
+  <!-- パターン表示フィルタ -->
+  <div style="margin:0 0 10px;">
+    <button id="${tid}-patfilter-btn" onclick="togglePatternFilter('${tid}')"
+      style="font-size:14px;padding:6px 14px;border-radius:7px;border:1px solid rgba(148,163,184,0.4);
+      background:rgba(148,163,184,0.10);color:var(--text2);cursor:pointer;font-family:var(--sans);font-weight:700;">
+      🔽 入力済みのパターンだけ表示
+    </button>
+    <div id="${tid}-patadd" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+  </div>
+
   <!-- 通常パターン（左側） -->
   <div class="card" data-dyn-type="${t.key}" data-pattern="n">
-    <div class="card-title">通常パターン（左側）</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>通常パターン（左側）</span><button onclick="clearPatternInputs('${tid}','n')" title="このパターンの入力を消す" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.10);color:#fca5a5;cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">🧹 このパターンを消す</button></div>
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="${tid}n-W" placeholder="0.9"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}n-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}n-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}n-genL" placeholder="0"></div>
-      <div id="${tid}n-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}n-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}n-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}n-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況AS厚 上書き（mm）</label><input type="number" step="1" min="0" id="${tid}n-genAsH" placeholder="マスタどおり" title="既存ASが本復旧構成と違う厚みのときだけ入力します（空欄なら路盤マスタの本復旧AS厚）"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">捲るAS</label><select id="${tid}n-genMode" onchange="recalcAll()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:15px;width:100%;"><option value="">自動（現況廃材W×Lで判定）</option><option value="kari">仮復旧のASを捲る</option><option value="gen">現況（既設）のASを捲る</option></select></div>
+      <div id="${tid}n-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 コンガラ（LO・L型壊し）撤去</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}n-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}n-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}n-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="display:flex;align-items:center;gap:5px;margin-left:10px;color:#fdba74;font-size:14px;font-weight:700;cursor:pointer;"><input type="checkbox" id="${tid}n-loRestore" checked onchange="recalcAll()" style="width:17px;height:17px;accent-color:#f97316;cursor:pointer;">L型を復旧する</label><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">チェックを外す＝L型を戻さない → その断面を舗装で埋めるため AS・路盤材へ自動加算します</span></div>
       <div id="${tid}n-as-row" style="border-left:2px solid rgba(16,185,129,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#10b981;font-size:14px;width:100%;margin-bottom:2px;">🔵 掘削影響範囲AS再舗装</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}n-asReW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}n-asReL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}n-asReT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div id="${tid}n-w3-row" style="border-left:2px solid rgba(129,140,248,0.55);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#818cf8;font-size:14px;width:100%;margin-bottom:2px;">📐 掘削影響範囲 3段階幅（本復旧・段々断面）</label><label style="color:var(--text3);font-size:14px;">AS幅（m）</label><input type="number" step="0.01" id="${tid}n-asW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">路盤幅（m）</label><input type="number" step="0.01" id="${tid}n-rbW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">掘削幅（m）</label><input type="text" id="${tid}n-exW-disp" readonly placeholder="上のW" style="width:110px;background:rgba(129,140,248,0.10);border:1px solid rgba(129,140,248,0.3);border-radius:4px;color:#a5b4fc;padding:4px 6px;font-size:17px;"><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">AS層＝AS幅／RM・RC路盤層＝路盤幅／埋戻し(再生砂・改良土)＝掘削幅 で体積計算します。空欄なら全て掘削幅Wを使用（従来どおり）。</span></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="${tid}n-DP" placeholder="1.1"></div>
@@ -7210,14 +7799,17 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
 
   <!-- 通常パターン・特殊部あり（右側） -->
   <div class="card" data-dyn-type="${t.key}" data-pattern="ns">
-    <div class="card-title">通常パターン・特殊部あり（右側）</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>通常パターン・特殊部あり（右側）</span><button onclick="clearPatternInputs('${tid}','ns')" title="このパターンの入力を消す" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.10);color:#fca5a5;cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">🧹 このパターンを消す</button></div>
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="${tid}ns-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}ns-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}ns-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}ns-genL" placeholder="0"></div>
-      <div id="${tid}ns-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ns-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ns-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ns-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況AS厚 上書き（mm）</label><input type="number" step="1" min="0" id="${tid}ns-genAsH" placeholder="マスタどおり" title="既存ASが本復旧構成と違う厚みのときだけ入力します（空欄なら路盤マスタの本復旧AS厚）"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">捲るAS</label><select id="${tid}ns-genMode" onchange="recalcAll()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:15px;width:100%;"><option value="">自動（現況廃材W×Lで判定）</option><option value="kari">仮復旧のASを捲る</option><option value="gen">現況（既設）のASを捲る</option></select></div>
+      <div id="${tid}ns-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 コンガラ（LO・L型壊し）撤去</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ns-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ns-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ns-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="display:flex;align-items:center;gap:5px;margin-left:10px;color:#fdba74;font-size:14px;font-weight:700;cursor:pointer;"><input type="checkbox" id="${tid}ns-loRestore" checked onchange="recalcAll()" style="width:17px;height:17px;accent-color:#f97316;cursor:pointer;">L型を復旧する</label><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">チェックを外す＝L型を戻さない → その断面を舗装で埋めるため AS・路盤材へ自動加算します</span></div>
       <div id="${tid}ns-as-row" style="border-left:2px solid rgba(16,185,129,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#10b981;font-size:14px;width:100%;margin-bottom:2px;">🔵 掘削影響範囲AS再舗装</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ns-asReW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ns-asReL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ns-asReT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div id="${tid}ns-w3-row" style="border-left:2px solid rgba(129,140,248,0.55);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#818cf8;font-size:14px;width:100%;margin-bottom:2px;">📐 掘削影響範囲 3段階幅（本復旧・段々断面）</label><label style="color:var(--text3);font-size:14px;">AS幅（m）</label><input type="number" step="0.01" id="${tid}ns-asW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">路盤幅（m）</label><input type="number" step="0.01" id="${tid}ns-rbW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">掘削幅（m）</label><input type="text" id="${tid}ns-exW-disp" readonly placeholder="上のW" style="width:110px;background:rgba(129,140,248,0.10);border:1px solid rgba(129,140,248,0.3);border-radius:4px;color:#a5b4fc;padding:4px 6px;font-size:17px;"><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">AS層＝AS幅／RM・RC路盤層＝路盤幅／埋戻し(再生砂・改良土)＝掘削幅 で体積計算します。空欄なら全て掘削幅Wを使用（従来どおり）。</span></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>DP（m）</label><input type="number" step="0.001" id="${tid}ns-DP" placeholder="1.1"></div>
@@ -7236,48 +7828,54 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
   <!-- 勾配ありパターン（noGradientがtrueの場合は非表示） -->
   ${!t.noGradient ? `
   <div class="card" data-dyn-type="${t.key}" data-pattern="k">
-    <div class="card-title">勾配ありパターン（左側）</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>勾配ありパターン（左側）</span><button onclick="clearPatternInputs('${tid}','k')" title="このパターンの入力を消す" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.10);color:#fca5a5;cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">🧹 このパターンを消す</button></div>
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="${tid}k-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}k-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}k-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}k-genL" placeholder="0"></div>
-      <div id="${tid}k-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}k-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}k-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}k-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況AS厚 上書き（mm）</label><input type="number" step="1" min="0" id="${tid}k-genAsH" placeholder="マスタどおり" title="既存ASが本復旧構成と違う厚みのときだけ入力します（空欄なら路盤マスタの本復旧AS厚）"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">捲るAS</label><select id="${tid}k-genMode" onchange="recalcAll()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:15px;width:100%;"><option value="">自動（現況廃材W×Lで判定）</option><option value="kari">仮復旧のASを捲る</option><option value="gen">現況（既設）のASを捲る</option></select></div>
+      <div id="${tid}k-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 コンガラ（LO・L型壊し）撤去</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}k-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}k-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}k-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="display:flex;align-items:center;gap:5px;margin-left:10px;color:#fdba74;font-size:14px;font-weight:700;cursor:pointer;"><input type="checkbox" id="${tid}k-loRestore" checked onchange="recalcAll()" style="width:17px;height:17px;accent-color:#f97316;cursor:pointer;">L型を復旧する</label><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">チェックを外す＝L型を戻さない → その断面を舗装で埋めるため AS・路盤材へ自動加算します</span></div>
       <div id="${tid}k-as-row" style="border-left:2px solid rgba(16,185,129,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#10b981;font-size:14px;width:100%;margin-bottom:2px;">🔵 掘削影響範囲AS再舗装</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}k-asReW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}k-asReL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}k-asReT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div id="${tid}k-w3-row" style="border-left:2px solid rgba(129,140,248,0.55);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#818cf8;font-size:14px;width:100%;margin-bottom:2px;">📐 掘削影響範囲 3段階幅（本復旧・段々断面）</label><label style="color:var(--text3);font-size:14px;">AS幅（m）</label><input type="number" step="0.01" id="${tid}k-asW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">路盤幅（m）</label><input type="number" step="0.01" id="${tid}k-rbW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">掘削幅（m）</label><input type="text" id="${tid}k-exW-disp" readonly placeholder="上のW" style="width:110px;background:rgba(129,140,248,0.10);border:1px solid rgba(129,140,248,0.3);border-radius:4px;color:#a5b4fc;padding:4px 6px;font-size:17px;"><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">AS層＝AS幅／RM・RC路盤層＝路盤幅／埋戻し(再生砂・改良土)＝掘削幅 で体積計算します。空欄なら全て掘削幅Wを使用（従来どおり）。</span></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="${tid}k-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="${tid}k-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="${tid}k-DPH1" placeholder="0.5"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="${tid}k-DPH2" placeholder="0.3"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="${tid}k-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="${tid}k-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="${tid}k-DPH1" placeholder="0.5"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="${tid}k-DPH2" placeholder="0.3"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}k-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}k-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}k-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}k-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="pipe-section"><div class="ps-title">埋設配管</div><div id="${tid}k-pipes"></div></div>
     <div class="result-row" id="${tid}k-result"></div>
   </div>
 
   <div class="card" data-dyn-type="${t.key}" data-pattern="ks">
-    <div class="card-title">勾配あり・特殊部あり（右側）</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>勾配あり・特殊部あり（右側）</span><button onclick="clearPatternInputs('${tid}','ks')" title="このパターンの入力を消す" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.10);color:#fca5a5;cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">🧹 このパターンを消す</button></div>
     <div class="input-grid">
       <div class="field"><label>W（m）</label><input type="number" step="0.01" id="${tid}ks-W" placeholder="1"></div>
       <div class="field"><label>L（m）</label><input type="number" step="0.01" id="${tid}ks-L" placeholder="5"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 W（m）</label><input type="number" step="0.01" id="${tid}ks-genW" placeholder="0"></div>
       <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況廃材 L（m）</label><input type="number" step="0.01" id="${tid}ks-genL" placeholder="0"></div>
-      <div id="${tid}ks-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 既設CN撤去（LO壊し）</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ks-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ks-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ks-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">現況AS厚 上書き（mm）</label><input type="number" step="1" min="0" id="${tid}ks-genAsH" placeholder="マスタどおり" title="既存ASが本復旧構成と違う厚みのときだけ入力します（空欄なら路盤マスタの本復旧AS厚）"></div>
+      <div class="field" style="border-left:2px solid rgba(234,88,12,0.4);padding-left:8px;"><label style="color:rgba(234,179,8,0.9);font-size:14px;">捲るAS</label><select id="${tid}ks-genMode" onchange="recalcAll()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:15px;width:100%;"><option value="">自動（現況廃材W×Lで判定）</option><option value="kari">仮復旧のASを捲る</option><option value="gen">現況（既設）のASを捲る</option></select></div>
+      <div id="${tid}ks-cn-row" style="border-left:2px solid rgba(249,115,22,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><label style="color:#f97316;font-size:14px;width:100%;margin-bottom:2px;">🗑 コンガラ（LO・L型壊し）撤去</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ks-loW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ks-loL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ks-loT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="display:flex;align-items:center;gap:5px;margin-left:10px;color:#fdba74;font-size:14px;font-weight:700;cursor:pointer;"><input type="checkbox" id="${tid}ks-loRestore" checked onchange="recalcAll()" style="width:17px;height:17px;accent-color:#f97316;cursor:pointer;">L型を復旧する</label><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">チェックを外す＝L型を戻さない → その断面を舗装で埋めるため AS・路盤材へ自動加算します</span></div>
       <div id="${tid}ks-as-row" style="border-left:2px solid rgba(16,185,129,0.5);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#10b981;font-size:14px;width:100%;margin-bottom:2px;">🔵 掘削影響範囲AS再舗装</label><label style="color:var(--text3);font-size:14px;">W（m）</label><input type="number" step="0.01" id="${tid}ks-asReW" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">L（m）</label><input type="number" step="0.01" id="${tid}ks-asReL" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">t（mm）</label><input type="number" step="1" id="${tid}ks-asReT" placeholder="0" style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"></div>
+      <div id="${tid}ks-w3-row" style="border-left:2px solid rgba(129,140,248,0.55);padding-left:8px;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;"><label style="color:#818cf8;font-size:14px;width:100%;margin-bottom:2px;">📐 掘削影響範囲 3段階幅（本復旧・段々断面）</label><label style="color:var(--text3);font-size:14px;">AS幅（m）</label><input type="number" step="0.01" id="${tid}ks-asW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">路盤幅（m）</label><input type="number" step="0.01" id="${tid}ks-rbW" placeholder="上のWと同じ" oninput="recalcAll()" style="width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:17px;"><label style="color:var(--text3);font-size:14px;margin-left:4px;">掘削幅（m）</label><input type="text" id="${tid}ks-exW-disp" readonly placeholder="上のW" style="width:110px;background:rgba(129,140,248,0.10);border:1px solid rgba(129,140,248,0.3);border-radius:4px;color:#a5b4fc;padding:4px 6px;font-size:17px;"><span style="width:100%;color:var(--text3);font-size:12px;margin-top:2px;">AS層＝AS幅／RM・RC路盤層＝路盤幅／埋戻し(再生砂・改良土)＝掘削幅 で体積計算します。空欄なら全て掘削幅Wを使用（従来どおり）。</span></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>DP 始点（m）</label><input type="number" step="0.001" id="${tid}ks-DP1" placeholder="1.1"></div>
-      <div class="field"><label>DP 終点（m）</label><input type="number" step="0.001" id="${tid}ks-DP2" placeholder="1.5"></div>
-      <div class="field"><label>DP下配管H 始（m）</label><input type="number" step="0.001" id="${tid}ks-DPH1" placeholder="0.5"></div>
-      <div class="field"><label>DP下配管H 終（m）</label><input type="number" step="0.001" id="${tid}ks-DPH2" placeholder="0.3"></div>
+      <div class="field"><label>DP 起点側（m）</label><input type="number" step="0.001" id="${tid}ks-DP1" placeholder="1.1"></div>
+      <div class="field"><label>DP 終点側（m）</label><input type="number" step="0.001" id="${tid}ks-DP2" placeholder="1.5"></div>
+      <div class="field"><label>DP下配管H 起点側（m）</label><input type="number" step="0.001" id="${tid}ks-DPH1" placeholder="0.5"></div>
+      <div class="field"><label>DP下配管H 終点側（m）</label><input type="number" step="0.001" id="${tid}ks-DPH2" placeholder="0.3"></div>
     </div>
     <div class="input-grid row-divider">
-      <div class="field"><label>床付け 始（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}ks-FLOOR1" readonly class="floor-display"></div>
-      <div class="field"><label>床付け 終（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}ks-FLOOR2" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 起点側（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}ks-FLOOR1" readonly class="floor-display"></div>
+      <div class="field"><label>床付け 終点側（m）<span class="auto-badge">自動</span></label><input type="text" id="${tid}ks-FLOOR2" readonly class="floor-display"></div>
     </div>
     <div class="input-grid row-divider">
       <div class="field"><label>桝H（m）</label><input type="number" step="0.001" id="${tid}ks-masH" placeholder="1.2"></div>
@@ -7475,15 +8073,32 @@ function bindDynamicCalc(tid, typeConf) {
   }
 
   // update関数を外部から呼べるよう登録
-  _typeUpdateFns[tid] = update;
+  // 型の再計算 → 続けて「全型 横断集計」も更新する
+  const updateAndSum = function(){
+    update();
+    try { renderAllTypesSummary(); } catch(e) {}
+    try { applyPatternFilter(tid); } catch(e) {}
+  };
+  _typeUpdateFns[tid] = updateAndSum;
 
   // v15以降: DOM構造は typepanel-dyntype_xxx
   const fullKey = tid.startsWith('dyntype_') ? tid : `dyntype_${tid}`;
   const panel   = document.getElementById(`typepanel-${fullKey}`);
   if (panel) {
-    panel.querySelectorAll('input').forEach(inp => inp.addEventListener('input', update));
+    panel.querySelectorAll('input').forEach(inp => inp.addEventListener('input', updateAndSum));
+    panel.querySelectorAll('select').forEach(sel => sel.addEventListener('change', updateAndSum));
   }
-  update();
+  updateAndSum();
+}
+
+// 全型を再計算して横断集計も更新する（入力欄の oninput/onchange から呼ばれる）
+function recalcAll(){
+  try {
+    Object.keys(_typeUpdateFns).forEach(function(k){
+      try { _typeUpdateFns[k](); } catch(e) {}
+    });
+  } catch(e) {}
+  try { renderAllTypesSummary(); } catch(e) {}
 }
 
 // honAsLayers の layers を role ベースで合計するヘルパー（name / preset 両対応）
@@ -7769,12 +8384,8 @@ function renderDynTotal(tid, typeConf) {
     ? typeConf.honFreeRows.filter(r => _isCnType(r) && (r.t||0) > 0).reduce((s,r)=>s+(r.t||0),0)/1000
     : (typeConf.genkyoCnH || 0);
   const kariAsH      = (_kariT.asT密粒 + (_kariT.asT粗粒||0)) / 1000;
-  const kariAsWaste  = kariAsH * kariHaibanWL * AS_DENSITY * WASTE_AS_BULK;
-  const kariRcWaste  = _kariT.rcH * kariHaibanWL * WASTE_RB_BULK;
-  const kariRmWaste  = _kariT.rmH * kariHaibanWL * WASTE_RB_BULK;
-  const kariRcRmWaste = kariRcWaste + kariRmWaste;
-  const kariCnWasteVol = _kariCnH * kariHaibanWL;           // m³ 仮復旧コンクリート廃材
-  const kariCnWasteT   = kariCnWasteVol * CONCRETE_DENSITY;  // t
+  // 面積は下で求める _kariWasteArea（現況計上ぶんを除いた実面積）を使う
+
   // honFreeRbRows（既設路盤等、鉄板除く）廃材量
   // cat='free' 層は genkyoRC に算入済みのため廃材二重計上を防ぐ
   const _honFrbWasteRows = (typeConf.honFreeRbRows||[]).filter(r => (r.t||0) > 0 && (r.name||'') !== '鉄板' && (r.cat||'') !== 'free');
@@ -7785,15 +8396,45 @@ function renderDynTotal(tid, typeConf) {
   //   差異なし（kari==hon）の場合は kariHaibanWL を使わない（二重計上防止）
   const _honRcDiff    = Math.abs((_kariT.genkyoRC||0) - (_kariT.rcH||0)) > 0.001;
   const _honRmDiff    = Math.abs((_kariT.genkyoRM||0) - (_kariT.rmH||0)) > 0.001;
-  const _honWasteArea = genWL > 0
-    ? genWL
-    : (_dynModeNow === 'hon' && kariHaibanWL > 0
-        && (_honRcDiff || _honRmDiff || _honFrbWasteRows.length > 0)
-      ? kariHaibanWL : 0);
+  // 「捲るAS」の明示指定（ウィザード/カードで選択）があれば自動判定より優先する
+  const _genModeSel = (function(){
+    for (var _i = 0; _i < patterns.length; _i++) {
+      var _e = document.getElementById(patterns[_i] + '-genMode');
+      if (_e && _e.value) return _e.value;
+    }
+    return '';
+  })();
+  const _honWasteArea =
+      _genModeSel === 'kari' ? 0                                   // 仮復旧ASのみ → 現況は計上しない
+    : _genModeSel === 'gen'  ? (genWL > 0 ? genWL : totalWL)       // 現況ASのみ → 全面を現況で計上
+    : (genWL > 0
+        ? genWL
+        : (_dynModeNow === 'hon' && kariHaibanWL > 0
+            && (_honRcDiff || _honRmDiff || _honFrbWasteRows.length > 0)
+          ? kariHaibanWL : 0));
+  // ★ 同じ面積を「仮復旧AS厚」と「現況AS厚」で二重に計上しない。
+  //    実際に捲るASは1層だけなので、現況として計上した面積は仮復旧側から差し引く。
+  const _kariWasteArea = Math.max(0, totalWL - _honWasteArea);
+  const kariAsWaste  = kariAsH * _kariWasteArea * AS_DENSITY * WASTE_AS_BULK;
+  const kariRcWaste  = _kariT.rcH * _kariWasteArea * WASTE_RB_BULK;
+  const kariRmWaste  = _kariT.rmH * _kariWasteArea * WASTE_RB_BULK;
+  const kariRcRmWaste = kariRcWaste + kariRmWaste;
+  const kariCnWasteVol = _kariCnH * _kariWasteArea;          // m³ 仮復旧コンクリート廃材
+  const kariCnWasteT   = kariCnWasteVol * CONCRETE_DENSITY;  // t
   const honFrbWaste   = _honFrbWasteRows.reduce((s, r) => s + (r.t/1000) * _honWasteArea * WASTE_RB_BULK, 0);
   const honCnWasteVol  = _honCnH * _honWasteArea;           // m³ 現況コンクリート廃材
   const honCnWasteT    = honCnWasteVol * CONCRETE_DENSITY;   // t
-  const honAsWaste   = (_kariT.genkyoAsH||0) * _honWasteArea * AS_DENSITY * WASTE_AS_BULK;
+  // 現況AS厚：計算カードの上書き欄（mm）があればそれを優先（イレギュラーな既存厚に対応）
+  const _genAsOv = (function(){
+    for (var _i = 0; _i < patterns.length; _i++) {
+      var _e = document.getElementById(patterns[_i] + '-genAsH');
+      var _v = _e ? parseFloat(_e.value) : NaN;
+      if (!isNaN(_v) && _v > 0) return _v / 1000;   // mm → m
+    }
+    return null;
+  })();
+  const _honAsH_eff  = (_genAsOv != null) ? _genAsOv : (_kariT.genkyoAsH || 0);
+  const honAsWaste   = _honAsH_eff * _honWasteArea * AS_DENSITY * WASTE_AS_BULK;
   const honRcWaste   = (_kariT.genkyoRC||0) * _honWasteArea * WASTE_RB_BULK;
   const honRmWaste   = (_kariT.genkyoRM||0) * _honWasteArea * WASTE_RB_BULK;
   const honRcRmWaste = honRcWaste + honRmWaste + honFrbWaste;
@@ -7973,19 +8614,26 @@ function renderDynTotal(tid, typeConf) {
     }
   }
 
-  // ── 既設CN撤去（LO壊し） ──
+  // ── コンガラ（LO・L型壊し）撤去 ──
   const _cnPats = [`${tid}n`, `${tid}ns`, ...(typeConf.noGradient ? [] : [`${tid}k`, `${tid}ks`])];
-  let totalLoVol = 0;
+  let totalLoVol = 0, noRestoreVol = 0;
   _cnPats.forEach(p => {
     const loW = parseFloat(document.getElementById(`${p}-loW`)?.value) || 0;
     const loL = parseFloat(document.getElementById(`${p}-loL`)?.value) || 0;
     const loT = parseFloat(document.getElementById(`${p}-loT`)?.value) || 0;
-    totalLoVol += loW * loL * (loT / 1000);
+    const v   = loW * loL * (loT / 1000);
+    totalLoVol += v;
+    const _rc = document.getElementById(`${p}-loRestore`);
+    if (_rc && !_rc.checked) noRestoreVol += v;   // 復旧しない＝舗装で埋め戻す
   });
   if (totalLoVol > 0) {
-    html += sep('🗑️ 既設CN撤去（LO壊し）', 'rgba(249,115,22,0.75)');
-    html += add('既設CN撤去量', totalLoVol, 'm³', '#fb923c');
-    html += add('既設CN廃材 重量', totalLoVol * CONCRETE_DENSITY, 't', '#fdba74');
+    html += sep('🗑️ コンガラ（LO・L型壊し）撤去', 'rgba(249,115,22,0.75)');
+    html += add('コンガラ撤去量', totalLoVol, 'm³', '#fb923c');
+    html += add('コンガラ廃材 重量', totalLoVol * CONCRETE_DENSITY, 't', '#fdba74');
+    if (noRestoreVol > 0) {
+      html += `<div style="grid-column:1/-1;font-size:13px;color:#fdba74;background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.35);border-radius:7px;padding:7px 11px;margin-top:2px;">
+        ⚠️ うち <b>${noRestoreVol.toFixed(3)} m³</b> は「L型を復旧しない」設定です。この断面ぶんの AS・路盤材を上の各材料へ自動加算しています。</div>`;
+    }
   }
 
   // ── 掘削影響範囲AS再舗装 ──
@@ -8404,7 +9052,7 @@ function renderMasterCards(arr) {
         <span>DP下配管H: <b style="color:var(--text)">${r.kanH??r.dph??''}</b></span>
         ${r.pipetype?`<span>${r.pipetype}</span>`:''}
       </div>
-      ${(r.dp_start??r.dp1)!=null?`<div style="font-size:14px;color:var(--text3);font-family:var(--mono);">勾配: DP ${r.dp_start??r.dp1}→${r.dp_end??r.dp2??'―'}</div>`:''}
+      ${(r.dp_start??r.dp1)!=null?`<div style="font-size:14px;color:var(--text3);font-family:var(--mono);">勾配: DP 起点${r.dp_start??r.dp1}→終点${r.dp_end??r.dp2??'―'}</div>`:''}
       ${r.note?`<div style="font-size:14px;color:var(--text3);margin-top:4px;">${r.note}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-ghost" style="padding:5px 10px;font-size:14px;" onclick="showDiagram('${r.hata}')">📐 図面</button>
@@ -8462,7 +9110,7 @@ function importMasterExcel(e) {
           const nameKey  = findKey(row, ['名称','名前','name','管路']);
           const noteKey  = findKey(row, ['備考','メモ','note','remark']);
           const pipeKey  = findKey(row, ['管種','管径','pipe']);
-          const dp1Key   = findKey(row, ['dp始','dp1','dp_start','始点dp']);
+          const dp1Key   = findKey(row, ['dp始','dp起','dp1','dp_start','始点dp','起点dp']);
           const dp2Key   = findKey(row, ['dp終','dp2','dp_end','終点dp']);
           const dph1Key  = findKey(row, ['管下h始','dph1','dph_start']);
           const dph2Key  = findKey(row, ['管下h終','dph2','dph_end']);
@@ -8514,7 +9162,7 @@ function downloadMasterTemplate() {
   const doDownload = () => {
     const wb = XLSX.utils.book_new();
     const data = [
-      ['旗揚げ番号','管路名称','DP','管下H','勾配DP始点','勾配DP終点','勾配管下H始','勾配管下H終','管種','備考'],
+      ['旗揚げ番号','管路名称','DP','管下H','勾配DP起点側','勾配DP終点側','勾配管下H起点側','勾配管下H終点側','管種','備考'],
       [1,'A区間φ200',1.1,0.509,'','','','','BD管φ200',''],
       [2,'B区間φ150',0.8,0.409,0.8,1.2,0.409,0.209,'FA管φ150','勾配あり'],
     ];
@@ -8764,64 +9412,6 @@ function _diagApplyZoom() {
 }
 // ===========================
 
-function showDiagram(hata) {
-  // roadbed.html は num フィールド、order.html は hata フィールドを使用するため両対応
-  const entry = getMaster().find(r => String(r.hata||r.num||'') === String(hata));
-  _currentDiagHata = hata;
-
-  // タイトル
-  document.getElementById('diag-title').textContent = `旗揚げ番号 №${hata}${entry?.name ? ' — ' + entry.name : ''}`;
-  document.getElementById('diag-sub').textContent = entry?.note || (entry ? `更新日: ${entry.updatedAt}` : '');
-
-  // 数値
-  let valHTML = '';
-  if (entry) {
-    const chip = (l,v) => v!=null ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
-      <div style="font-size:14px;color:var(--text3);">${l}</div>
-      <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);">${v}</div>
-    </div>` : '';
-    valHTML += chip('DP（通常）', entry.dp);
-    valHTML += chip('管下H（通常）', entry.kanH ?? entry.dph);
-    if (entry.dp1 != null) valHTML += chip('DP 始点（勾配）', entry.dp1);
-    if (entry.dp2 != null) valHTML += chip('DP 終点（勾配）', entry.dp2);
-    if (entry.dph1 != null) valHTML += chip('管下H 始（勾配）', entry.dph1);
-    if (entry.dph2 != null) valHTML += chip('管下H 終（勾配）', entry.dph2);
-    if (entry.pipetype) valHTML += chip('主な管種', entry.pipetype);
-  }
-  document.getElementById('diag-values').innerHTML = valHTML;
-
-  // 画像（imgData = order.html形式、img = roadbed.html形式、両対応）
-  const imgWrap = document.getElementById('diag-imgWrap');
-  const noImg   = document.getElementById('diag-noimg');
-  const diagZoomCtrl = document.getElementById('diag-zoom-ctrl');
-  const imgSrc  = entry?.imgData || entry?.img || '';
-  _diagZoomLevel = 1.0; _diagBaseW = 0;
-  if (imgSrc) {
-    const imgEl = document.getElementById('diag-img');
-    imgEl.style.width = '100%'; imgEl.style.maxWidth = '';
-    imgEl.src = imgSrc;
-    imgEl.onload = function(){ _diagBaseW = imgEl.naturalWidth || imgEl.offsetWidth || 600; };
-    imgWrap.style.display = 'block';
-    noImg.style.display = 'none';
-    if (diagZoomCtrl) { diagZoomCtrl.style.display = 'flex'; }
-    const lbl = document.getElementById('diag-zoom-level'); if (lbl) lbl.textContent = '100%';
-  } else {
-    imgWrap.style.display = 'none';
-    noImg.style.display = 'block';
-    if (diagZoomCtrl) diagZoomCtrl.style.display = 'none';
-  }
-
-  // 現在アクティブなタブの型を初期選択として設定
-  const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab || '';
-  const initType  = activeTab.replace('calc','');
-  _currentDiagType = ['85','40','30','20','14'].includes(initType) ? initType : '85';
-
-  // 型ボタンのハイライトとパターンボタンを描画
-  renderDiagTypeUI(_currentDiagType);
-
-  document.getElementById('diagramOverlay').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
 
 // 現在選択中の型（ポップアップ内）
 let _currentDiagType = null;
@@ -9122,32 +9712,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function applyMasterValues(typeKey, patternId) {
-  const entry = getMaster().find(r => String(r.hata) === String(_currentDiagHata));
-  if (!entry) return;
-  const prefix = `${typeKey}${patternId}`;
-  const isGradient = patternId === 'k' || patternId === 'ks';
-
-  if (!isGradient) {
-    setVal(`${prefix}-DP`,  entry.dp);
-    setVal(`${prefix}-DPH`, entry.dph);
-  } else {
-    setVal(`${prefix}-DP1`,  entry.dp1  ?? entry.dp);
-    setVal(`${prefix}-DP2`,  entry.dp2  ?? entry.dp);
-    setVal(`${prefix}-DPH1`, entry.dph1 ?? entry.dph);
-    setVal(`${prefix}-DPH2`, entry.dph2 ?? entry.dph);
-  }
-  // トリガー再計算
-  const inp = document.getElementById(`${prefix}-DP`) || document.getElementById(`${prefix}-DP1`);
-  if (inp) inp.dispatchEvent(new Event('input', {bubbles:true}));
-
-  _closeDiagram();
-  // フラッシュ確認
-  const badge = document.getElementById('saveBadge');
-  badge.textContent = `✅ №${_currentDiagHata} の値を適用しました`;
-  badge.style.display = 'block';
-  setTimeout(() => { badge.style.display = 'none'; badge.textContent = '💾 保存済み'; }, 2500);
-}
 
 function setVal(id, val) {
   const el = document.getElementById(id);
@@ -10064,6 +10628,1107 @@ function saveHonpukyuRecord() {
   }
 }
 
+
+// =====================================================================
+// 🧭 計算入力ウィザード（checklist.html の入力ウィザードと同設計）
+//    現場 → 旗揚げ番号 → 型 → パターン → W/L → DP/DP下配管H → 桝 → 配管
+//    を1問1答で入力し、最後に各型カードへ一括反映する。
+//    複数箇所を連続入力でき、同じ型×同じパターンに当たった場合は
+//    L（延長）を合算し、DP・DP下配管H・W は L加重平均でまとめる。
+// =====================================================================
+var _owiz = null;
+
+var _OWIZ_PAT_LABEL = { n:'通常', ns:'通常・特殊部あり', k:'勾配あり', ks:'勾配あり・特殊部あり' };
+function _owizPatLabel(p){ return _OWIZ_PAT_LABEL[p] || p; }
+function _esc0(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── 現在選択中の現場 ──────────────────────────────
+function _owizSiteId(){
+  var el = document.getElementById('global-site-sel');
+  return el ? el.value : '';
+}
+function _owizSiteName(){
+  var el = document.getElementById('global-site-sel');
+  if (!el) return '';
+  var o = el.options[el.selectedIndex];
+  return o ? o.textContent : '';
+}
+
+// ── 型（路盤構成）の定義を取得 ────────────────────────
+//    タブ ID (dyntype_type_import_xxx) から元の路盤マスタ由来の型定義を引く
+function _owizTypeConfMap(){
+  var map = {};
+  var list = [];
+  try { list = _getMastersAsTypes(_owizSiteId()) || []; } catch(e) {}
+  list.forEach(function(t){ map['dyntype_' + t.key] = t; });
+  return map;
+}
+
+// ── 路盤構成のフィンガープリント ──────────────────────
+//    ★L合算の可否はこの値で判定する（同じ型名でも構成が違えば合算しない）
+function _owizRbSig(conf){
+  if (!conf) return '?';
+  var num = function(v){ return (Math.round((parseFloat(v) || 0) * 1000) / 1000).toFixed(3); };
+  var as  = (conf.kariAsLayers && conf.kariAsLayers.length ? conf.kariAsLayers : (conf.asLayers || []))
+              .map(function(a){ return (a.name || a.preset || 'AS') + ':' + num((a.t || 0)); }).join(',');
+  var rb  = (conf.kariRbLayers || []).map(function(r){
+              return (r.cat || r.name || r.preset || '') + ':' + num(r.t || r.h || 0) + 'x' + (r.n || 1);
+            }).join(',');
+  return [as, rb, 'RM' + num(conf.kariRmH != null ? conf.kariRmH : conf.rmH),
+          'RC' + num(conf.kariRcH != null ? conf.kariRcH : conf.rcH),
+          'H'  + num(conf.kariTotalH != null ? conf.kariTotalH : conf.totalH),
+          'sz' + (conf.rmSize || '') + '/' + (conf.rcSize || '')].join('|');
+}
+
+// ── 路盤構成の人が読める要約（ウィザードに表示）──────────
+function _owizRbSummary(conf){
+  if (!conf) return '路盤構成 不明';
+  var mm = function(v){ return Math.round((parseFloat(v) || 0) * 1000); };
+  // AS層の厚みは mm 保存（50）と m 保存（0.05）が混在するため単位を自動判定する
+  //   1未満 → m とみなして×1000／1以上 → 既に mm
+  var mmAuto = function(v){
+    var n = parseFloat(v) || 0;
+    return Math.round(n > 0 && n < 1 ? n * 1000 : n);
+  };
+  var parts = [];
+  var as = (conf.kariAsLayers && conf.kariAsLayers.length ? conf.kariAsLayers : (conf.asLayers || []));
+  as.forEach(function(a){
+    var t = mmAuto(a.t || 0); if (t > 0) parts.push((a.name || a.preset || 'AS') + ' ' + t + 'mm');
+  });
+  var rmH = mm(conf.kariRmH != null ? conf.kariRmH : conf.rmH);
+  var rcH = mm(conf.kariRcH != null ? conf.kariRcH : conf.rcH);
+  if (rmH > 0) parts.push('RM-' + (conf.rmSize || 40) + ' ' + rmH + 'mm');
+  if (rcH > 0) parts.push('RC-' + (conf.rcSize || 40) + ' ' + rcH + 'mm');
+  var tot = mm(conf.kariTotalH != null ? conf.kariTotalH : conf.totalH);
+  return (parts.length ? parts.join(' ／ ') : '構成データなし') + (tot > 0 ? '　＝ 全厚 H' + tot + 'mm' : '');
+}
+
+// ── 計算タブに実際に出ている型を DOM から取得（表示と必ず一致させる）──
+function _owizTypes(){
+  var out = [], confMap = _owizTypeConfMap(), sname = _owizSiteName();
+  document.querySelectorAll('#type-subnav .type-subbtn').forEach(function(b){
+    var tid = b.dataset ? b.dataset.typetab : '';
+    if (!tid) return;
+    var btnTxt = (b.textContent || '').trim();
+    var conf = confMap[tid] || null;
+    // tid で引けない場合はラベル一致でフォールバック（構成が引けないと合算判定が壊れるため）
+    if (!conf) {
+      var _keys = Object.keys(confMap);
+      for (var _i = 0; _i < _keys.length; _i++) {
+        var _c = confMap[_keys[_i]];
+        var _l = String((_c && _c.label) || '').replace(/\s+/g, '');
+        if (_l && _l === btnTxt.replace(/\s+/g, '')) { conf = _c; break; }
+      }
+    }
+    // タブのボタンは現場名を省略して短縮表示しているのでマスタの正式ラベルを優先
+    var full = (conf && conf.label) ? conf.label : btnTxt;
+    out.push({
+      tid:     tid,
+      label:   full,
+      short:   btnTxt,
+      site:    sname,
+      conf:    conf,
+      // ★構成が読めなかった場合は tid を混ぜて「別物」として扱う（誤合算より分割を優先）
+      rbSig:   conf ? _owizRbSig(conf) : ('NOCONF:' + tid),
+      rbText:  _owizRbSummary(conf),
+      hasGrad: !!document.getElementById(tid + 'k-DP1'),   // 勾配カードが存在するか
+      hasSpec: !!document.getElementById(tid + 'ns-DP')    // 特殊部カードが存在するか
+    });
+  });
+  return out;
+}
+function _owizTypeByTid(tid){
+  var a = _owizTypes().filter(function(t){ return t.tid === tid; });
+  return a.length ? a[0] : null;
+}
+
+// ── 旗揚げマスタ ─────────────────────────────────
+function _owizHataList(){
+  var arr = [];
+  try { arr = getMaster(_owizSiteId()) || []; } catch(e) {}
+  if (!arr.length) { try { arr = getMaster('') || []; } catch(e) {} }
+  return arr;
+}
+function _owizHataEntry(h){
+  if (h === '' || h == null) return null;
+  var list = _owizHataList();
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].hata || list[i].num || '') === String(h)) return list[i];
+  }
+  return null;
+}
+// マスタから DP / DP下配管H を取り出す（roadbed.html 形式と order.html 形式の両対応）
+function _owizMasterDP(e){
+  if (!e) return { dp:null, dpEnd:null, dph:null, dph2:null };
+  return {
+    dp:    e.dp    != null ? e.dp    : (e.dp_start != null ? e.dp_start : null),
+    dpEnd: e.dp_end != null ? e.dp_end : (e.rangeTo != null ? e.rangeTo : (e.dp1s != null ? e.dp1s : null)),
+    dph:   e.kanH  != null ? e.kanH  : (e.dph != null ? e.dph : (e.dph1 != null ? e.dph1 : null)),
+    dph2:  e.dph2  != null ? e.dph2  : (e.dph1s != null ? e.dph1s : null)
+  };
+}
+function _owizDiagImg(h){
+  var e = _owizHataEntry(h);
+  if (!e) return '';
+  return e.imgData || e.img || '';
+}
+function _owizOpenViewer(){
+  var sid = _owizSiteId();
+  window.open('viewer.html' + (sid ? '?site=' + encodeURIComponent(sid) : ''), 'owizViewer');
+}
+
+// ── 直近入力の記憶（次回のチップ候補に使う）──────────────
+function _owizMem(k, v){
+  var key = 'owiz_' + k;
+  if (v === undefined) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
+  try { localStorage.setItem(key, JSON.stringify(v)); } catch(e) {}
+}
+
+// ── ステップ構成（箇所ごとに動的）──────────────────────
+function _owizSteps(){
+  var c = _owiz.cur, s = [];
+  if (_owiz.locs.length === 0) s.push('site');   // 現場は最初の1回だけ
+  s.push('hata');
+  // 型（路盤構成）ステップ：
+  //   1箇所目のみ「site画面で既に選んでいれば省略」。
+  //   2箇所目以降は箇所ごとに路盤構成が変わるので必ず確認する（前の箇所の型を初期選択にしておく）。
+  if (!c.tid || _owiz.locs.length > 0) s.push('type');
+  s.push('mode', 'special');
+  if (c.typeHasGrad) s.push('grad');
+  s.push('W');
+  if (c.mode === 'hon') s.push('w3');   // 本復旧は段々断面（AS幅・路盤幅）
+  s.push('L', 'genzai', 'DP', 'DPH');
+  if (c.hasGrad)    s.push('DP2', 'DPH2');
+  s.push('isoil', 'sheet');
+  if (c.hasSpecial) s.push('mas');
+  s.push('kongara');
+  if (c.hasKongara) s.push('kongaraDim');
+  s.push('pipes', 'more');
+  return s;
+}
+function _owizCurStep(){ var s = _owizSteps(); return s[Math.min(_owiz.step, s.length - 1)]; }
+
+// ── 新しい箇所の初期値 ───────────────────────────
+function _owizNewLoc(){
+  return { hata:'', tid:'', typeLabel:'', typeHasGrad:false, typeHasSpec:false,
+           hasSpecial:false, hasGrad:false,
+           mode:'kari',                                   // 仮復旧 / 本復旧
+           isoil:null, isoilLabel:'',                     // 管上100〜路盤変更点の埋戻し材
+           sheetPos:null, sheetMm:null, sheetCols:null,    // 埋設シート 敷設位置・列数（1〜複数列）
+           W:null, L:null, DP:null, DPH:null, DP2:null, DPH2:null,
+           asW:null, rbW:null,                            // 本復旧の段々断面（AS幅 / 路盤幅）
+           genMode:'kari', genW:null, genL:null, genAsH:null,  // 捲るAS（現況/仮復旧/両方）と現況AS実測厚(mm)
+           hasKongara:false, kgW:null, kgL:null, kgT:null, kgRestore:true,
+           masH:null, masW:null, masL:null, pipes:[] };
+}
+
+// ── 起動 / 終了 ────────────────────────────────
+function openOrderWizard(){
+  if (!_owizSiteId()) { alert('先に「計算現場」を選択してください。'); return; }
+  if (!_owizTypes().length) { alert('この現場には型（路盤構成）が登録されていません。\n路盤マスタで登録してからお試しください。'); return; }
+  _owiz = { step:0, locs:[], cur:_owizNewLoc() };
+  document.getElementById('owizModal').style.display = 'flex';
+  _owizRender();
+}
+function closeOrderWizard(){
+  document.getElementById('owizModal').style.display = 'none';
+}
+
+// ── 描画 ──────────────────────────────────────
+function _owizRender(){
+  var c = _owiz.cur, steps = _owizSteps(), st = _owizCurStep();
+  var body = document.getElementById('owizBody');
+  var html = '';
+
+  // 進捗バー
+  var pct = Math.round(((_owiz.step + 1) / steps.length) * 100);
+  document.getElementById('owizProgressBar').style.width = pct + '%';
+
+  // 何箇所目か（常時表示・現在ステップも併記して「取り違え」を防止）
+  html += '<div class="owiz-loc-chip">📍 ' + (_owiz.locs.length + 1) + '箇所目'
+        + (c.hata ? '　No.' + c.hata : '') + '<span class="owiz-loc-chip-step">ステップ ' + (_owiz.step + 1) + '/' + steps.length + '</span></div>';
+  // 型を選んだ後は「現場／路盤構成」を常時表示（取り違え防止）
+  if (c.tid && st !== 'type' && st !== 'site') {
+    var _ct = _owizTypeByTid(c.tid);
+    if (_ct) {
+      html += '<div class="owiz-rb-banner">🏗 ' + _esc0(_ct.site) + '　▸　<b>' + _esc0(_ct.label) + '</b>'
+            + '<span>' + _esc0(_ct.rbText) + '</span></div>';
+    }
+  }
+
+  var esc = function(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var numInput = function(id, val, ph, step){
+    return '<input type="number" id="' + id + '" class="owiz-input owiz-input-num" inputmode="decimal" step="'
+         + (step || '0.001') + '" min="0" placeholder="' + ph + '" value="'
+         + (val != null ? val : '') + '">';
+  };
+
+  if (st === 'site') {
+    html += '<div class="owiz-q">この現場で入力します<small>現場を変える場合は一度閉じて「計算現場」を選び直してください</small></div>';
+    html += '<div class="owiz-master-note">🏗 <strong style="font-size:18px;">' + esc(_owizSiteName()) + '</strong></div>';
+    html += '<div class="owiz-label">型（路盤構成）を選んでください<small style="display:block;font-weight:400;margin-top:2px;">※ここで選ばなくても、あとの専用ステップで選べます（二重に聞かれることはありません）</small></div>';
+    html += '<div class="owiz-rb-list">';
+    _owizTypes().forEach(function(t){
+      var on = (c.tid === t.tid);
+      html += '<div class="owiz-rb-item' + (on ? ' sel' : '') + '" onclick="_owizPickType(' + esc(JSON.stringify(t.tid)) + ')">'
+            + '<div class="owiz-rb-name">' + (on ? '✅ ' : '') + esc(t.label) + '</div>'
+            + '<div class="owiz-rb-spec">' + esc(t.rbText) + '</div>'
+            + '</div>';
+    });
+    html += '</div>';
+  }
+
+  else if (st === 'hata') {
+    html += '<div class="owiz-q">旗揚げ番号を入力してください</div>';
+    var recent = _owizMem('recent_hata') || [];
+    var reg = _owizHataList().map(function(r){ return String(r.hata || r.num || ''); })
+                             .filter(function(v){ return v !== ''; });
+    var cand = recent.concat(reg.filter(function(v){ return recent.indexOf(v) < 0; })).slice(0, 12);
+    if (cand.length) {
+      html += '<div class="owiz-label">候補</div><div class="owiz-chips">';
+      cand.forEach(function(h){
+        html += '<span class="owiz-chip' + (String(c.hata) === h ? ' sel' : '') + '" onclick="_owiz.cur.hata=' + esc(JSON.stringify(h)) + ';_owizRender()">No.' + esc(h) + '</span>';
+      });
+      html += '</div>';
+    }
+    html += '<div class="owiz-label">直接入力</div>'
+          + '<input type="text" id="owizHata" class="owiz-input" placeholder="例: 1-1" value="' + esc(c.hata) + '" '
+          + 'oninput="_owiz.cur.hata=this.value">';
+    var im = _owizDiagImg(c.hata);
+    if (im) html += '<div class="owiz-diag-preview"><div class="owiz-diag-label">📐 登録図面</div><img class="owiz-diag-img" src="' + im + '"></div>';
+  }
+
+  else if (st === 'type') {
+    html += '<div class="owiz-q">No.' + esc(c.hata) + ' の路盤構成（型）を選んでください<small>🏗 ' + esc(_owizSiteName()) + '　※ここで選んだ路盤構成の計算カードに反映されます</small></div>';
+    // この旗揚げ番号を前回どの構成で入力したか
+    var memTid = _owizMem('hata_type_' + c.hata);
+    if (memTid) {
+      var mt = _owizTypeByTid(memTid);
+      if (mt) html += '<div class="owiz-master-note">🕘 参考: No.' + esc(c.hata) + ' は以前「<strong style="font-size:15px;">' + esc(mt.label) + '</strong>」を選んだ記録があります（過去の入力履歴です・今回の選択ではありません）</div>';
+    }
+    html += '<div class="owiz-rb-list">';
+    _owizTypes().forEach(function(t){
+      var on = (c.tid === t.tid);
+      html += '<div class="owiz-rb-item' + (on ? ' sel' : '') + '" onclick="_owizPickType(' + esc(JSON.stringify(t.tid)) + ')">'
+            + '<div class="owiz-rb-name">' + (on ? '✅ ' : '') + esc(t.label) + '</div>'
+            + '<div class="owiz-rb-spec">' + esc(t.rbText) + '</div>'
+            + '</div>';
+    });
+    html += '</div>';
+  }
+
+  else if (st === 'mode') {
+    html += '<div class="owiz-q">この箇所は 仮復旧 ／ 本復旧 どちらですか？<small>仮と本では路盤構成が違うため、発注量も変わります</small></div>';
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick' + (c.mode !== 'hon' ? ' sel' : '') + '" onclick="_owiz.cur.mode=\'kari\';_owizRender()">🔧 仮復旧</div>'
+          + '<div class="owiz-pick' + (c.mode === 'hon' ? ' sel' : '') + '" onclick="_owiz.cur.mode=\'hon\';_owizRender()">🏗 本復旧</div>'
+          + '</div>';
+    var _mt = _owizTypeByTid(c.tid);
+    if (_mt && _mt.conf) {
+      var _kh = Math.round(((_mt.conf.kariTotalH != null ? _mt.conf.kariTotalH : 0)) * 1000);
+      var _hh = Math.round(((_mt.conf.honTotalH != null ? _mt.conf.honTotalH
+                          : (_mt.conf.genkyoTotalH != null ? _mt.conf.genkyoTotalH : 0))) * 1000);
+      if (_kh || _hh) {
+        html += '<div class="owiz-hint">この型の全厚　🔧 仮復旧 H=' + (_kh || '―') + 'mm'
+              + '　／　🏗 本復旧 H=' + (_hh || '―') + 'mm</div>';
+      }
+    }
+    if (c.mode === 'hon') html += '<div class="owiz-hint">本復旧を選ぶと、このあと「掘削影響範囲の3段階幅」を入力できます。</div>';
+  }
+
+  else if (st === 'w3') {
+    html += '<div class="owiz-q">掘削影響範囲の幅を入力してください<small>本復旧は AS・路盤・掘削で幅が段々になります。同じ幅なら空欄のまま「次へ」でOK</small></div>';
+    html += '<div class="owiz-w3-fig">'
+          + '<div class="owiz-w3-row"><span class="owiz-w3-bar as"></span><span>① AS幅（いちばん広い）</span></div>'
+          + '<div class="owiz-w3-row"><span class="owiz-w3-bar rb"></span><span>② 路盤幅（RM・RC）</span></div>'
+          + '<div class="owiz-w3-row"><span class="owiz-w3-bar ex"></span><span>③ 掘削幅（いちばん狭い＝先ほどのW）</span></div>'
+          + '</div>';
+    html += '<div class="owiz-label">① AS幅（m）</div>'   + numInput('owizAsW', c.asW, String(c.W != null ? c.W : '1.60'), '0.01');
+    html += '<div class="owiz-label">② 路盤幅（m）</div>' + numInput('owizRbW', c.rbW, String(c.W != null ? c.W : '1.20'), '0.01');
+    html += '<div class="owiz-hint">③ 掘削幅 = <b>' + (c.W != null ? c.W.toFixed(2) : '―') + ' m</b>（入力済み）<br>'
+          + 'AS層はAS幅、RM・RC路盤層は路盤幅、埋戻し（再生砂・改良土）は掘削幅で体積計算します。</div>';
+  }
+
+  else if (st === 'genzai') {
+    html += '<div class="owiz-q">この掘削で <u>捲るAS</u> はどれですか？<small>廃材はここで選んだASの厚みで計上します（初回は現況、2回目以降は前回の仮復旧を捲ります）</small></div>';
+    var _gt = _owizTypeByTid(c.tid);
+    var _gc = (_gt && _gt.conf) || {};
+    var _mmv = function(v){ var n = parseFloat(v) || 0; return Math.round(n > 0 && n < 1 ? n * 1000 : n); };
+    var _honAs = (_gc.honAsLayers && _gc.honAsLayers.length ? _gc.honAsLayers : (_gc.asLayers || []))
+                   .reduce(function(a, x){ return a + _mmv(x.t); }, 0);
+    var _karAs = (_gc.kariAsLayers || []).reduce(function(a, x){ return a + _mmv(x.t); }, 0);
+    var _pick2 = function(v, lbl, sub){
+      return '<div class="owiz-rb-item' + (c.genMode === v ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.genMode=' + _esc0(JSON.stringify(v)) + ';_owizRender()">'
+           + '<div class="owiz-rb-name">' + (c.genMode === v ? '✅ ' : '') + esc(lbl) + '</div>'
+           + '<div class="owiz-rb-spec">' + esc(sub) + '</div></div>';
+    };
+    html += '<div class="owiz-rb-list">'
+          + _pick2('gen',  '現況（既設）のAS ＝ 初回',
+                   'マスタ登録の現況AS厚' + (_honAs ? ' ' + _honAs + 'mm' : '') + 'で全掘削面積を廃材計上')
+          + _pick2('kari', '仮復旧のAS ＝ 2回目以降',
+                   '仮復旧AS厚' + (_karAs ? ' ' + _karAs + 'mm' : '') + 'で全掘削面積を廃材計上。現況ASは計上しません')
+          + _pick2('part', '両方（範囲が分かれる）',
+                   '現況ASを捲る範囲だけ指定し、残りは仮復旧ASで計上します')
+          + '</div>';
+    if (c.genMode === 'part') {
+      html += '<div class="owiz-label">現況ASを捲る 幅 W（m）</div>'   + numInput('owizGenW', c.genW, String(c.W != null ? c.W : '1.00'), '0.01');
+      html += '<div class="owiz-label">現況ASを捲る 延長 L（m）</div>' + numInput('owizGenL', c.genL, String(c.L != null ? c.L : '5.00'), '0.01');
+    }
+    // 現況ASを捲る場合のみ、実測厚の上書きを聞く（イレギュラー対応）
+    if (c.genMode === 'gen' || c.genMode === 'part') {
+      html += '<div class="owiz-label">現況ASの厚み（mm）　※マスタと違う場合だけ入力</div>'
+            + numInput('owizGenAsH', c.genAsH, (_honAs ? 'マスタどおり ' + _honAs + 'mm' : '例: 150'), '1');
+      html += '<div class="owiz-hint">既存舗装が図面より厚い／薄いことがあります。試掘や現物で確認した実測値があれば入力してください。空欄ならマスタの'
+            + (_honAs ? ' ' + _honAs + 'mm ' : '') + 'を使います。</div>';
+    }
+    if (c.genMode === 'gen' && c.W != null && c.L != null) {
+      html += '<div class="owiz-hint">現況AS撤去 ' + c.W.toFixed(2) + 'm × ' + c.L.toFixed(2) + 'm ＝ '
+            + (c.W * c.L).toFixed(2) + '㎡（仮復旧ASは計上しません）</div>';
+    }
+    if (c.genMode === 'part' && c.genW > 0 && c.genL > 0 && c.W != null && c.L != null) {
+      var _rest = Math.max(0, (c.W * c.L) - (c.genW * c.genL));
+      html += '<div class="owiz-hint">現況AS撤去 ' + (c.genW * c.genL).toFixed(2) + '㎡'
+            + '　／　仮復旧AS撤去 ' + _rest.toFixed(2) + '㎡</div>';
+    }
+  }
+
+  else if (st === 'isoil') {
+    var _fh  = (c.DP != null && c.DPH != null) ? (c.DP + c.DPH) : null;
+    var _cnf = (_owizTypeByTid(c.tid) || {}).conf || {};
+    var _refH = (_cnf.kariTotalH != null && _cnf.kariTotalH > 0) ? _cnf.kariTotalH : (_cnf.totalH || 0);
+    html += '<div class="owiz-q">管上100mm から 路盤の下端 までを何で埋め戻しますか？<small>管上100mmより下は水締めの再生砂で固定です。ここで聞いているのはその上の区間だけです。</small></div>';
+    html += '<div class="owiz-soil-fig">'
+          + '<div class="owiz-soil-row top"><b>路盤（RM・RC）</b><span>' + (_refH ? 'GL−' + _refH.toFixed(3) + 'm まで' : '') + '</span></div>'
+          + '<div class="owiz-soil-row mid"><b>◀ ここの材料を選びます</b><span>路盤の下端 〜 管上100mm</span></div>'
+          + '<div class="owiz-soil-row bot"><b>再生砂（水締め）</b><span>管上100mm 〜 床付け' + (_fh ? ' GL−' + _fh.toFixed(3) + 'm' : '') + '</span></div>'
+          + '</div>';
+    var _pick = function(v, lbl, sub){
+      return '<div class="owiz-rb-item' + (c.isoil === v ? ' sel' : '') + '" onclick="_owiz.cur.isoil=' + _esc0(JSON.stringify(v)) + ';_owizRender()">'
+           + '<div class="owiz-rb-name">' + (c.isoil === v ? '✅ ' : '') + esc(lbl) + '</div>'
+           + '<div class="owiz-rb-spec">' + esc(sub) + '</div></div>';
+    };
+    html += '<div class="owiz-rb-list">'
+          + _pick('改良土',      '改良土を使う',            'この区間を改良土で埋め戻します（環状2号線など）')
+          + _pick('再生砂RC-10', '砂を使う（小田原はこちら）', 'この区間も再生砂RC-10で埋め戻します。改良土は発注しません')
+          + _pick('none',        '路盤まで届かない（該当なし）', '床付けが浅く、この区間自体が発生しない場合')
+          + '</div>';
+    if (_fh != null && _refH > 0) {
+      var _ex = Math.max(0, _fh - _refH);
+      html += '<div class="owiz-hint">床付け GL−' + _fh.toFixed(3) + 'm ／ 路盤下端 GL−' + _refH.toFixed(3) + 'm'
+            + '　→ 対象区間の厚み ' + _ex.toFixed(3) + 'm'
+            + (_ex <= 0 ? '（発生しません＝「該当なし」でOK）' : '') + '</div>';
+    }
+  }
+
+  else if (st === 'sheet') {
+    html += '<div class="owiz-q">埋設シートの敷設位置を選んでください<small>管の上 何mm の位置に敷くか。列数は次で指定します</small></div>';
+    var _sp = function(v, lbl, sub){
+      return '<div class="owiz-rb-item' + (c.sheetPos === v ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.sheetPos=' + _esc0(JSON.stringify(v)) + ';_owizRender()">'
+           + '<div class="owiz-rb-name">' + (c.sheetPos === v ? '✅ ' : '') + esc(lbl) + '</div>'
+           + '<div class="owiz-rb-spec">' + esc(sub) + '</div></div>';
+    };
+    html += '<div class="owiz-rb-list">'
+          + _sp('200',  '管上 200mm', '管天端から200mm上に敷設')
+          + _sp('300',  '管上 300mm', '管天端から300mm上に敷設')
+          + _sp('other', 'その他の高さ', '200/300以外。次の欄に数値を入力します')
+          + _sp('none', '敷設なし', 'この箇所は埋設シートを使いません')
+          + '</div>';
+    if (c.sheetPos === 'other') {
+      html += '<div class="owiz-label">管上 何mm に敷きますか？</div>' + numInput('owizSheetMm', c.sheetMm, '250', '10');
+    }
+    if (c.sheetPos && c.sheetPos !== 'none') {
+      html += '<div class="owiz-label">列数（掘削幅・配管本数により変わります）</div>';
+      html += '<div class="owiz-chips">';
+      [1, 2, 3, 4].forEach(function(n){
+        html += '<span class="owiz-chip' + (c.sheetCols === n ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.sheetCols=' + n + ';_owizRender()">' + n + '列</span>';
+      });
+      html += '</div>';
+      html += '<div class="owiz-label">上に無い列数はこちら</div>' + numInput('owizSheetCols', c.sheetCols, '2', '1');
+      html += '<div class="owiz-hint">配管の布設状況で列数は変わります（幅が広ければ2列・3列）。小田原は2列指定です。</div>';
+      var _sd = (c.sheetPos === '200') ? 0.2 : (c.sheetPos === '300' ? 0.3
+               : (c.sheetMm > 0 ? c.sheetMm / 1000 : null));
+      if (_sd != null && c.DP != null) {
+        html += '<div class="owiz-hint">敷設深さの目安　GL − ' + Math.max(0, c.DP - _sd).toFixed(3)
+              + ' m（DP ' + c.DP.toFixed(3) + 'm − ' + _sd.toFixed(3) + 'm）</div>';
+      }
+    }
+  }
+
+  else if (st === 'kongara') {
+    html += '<div class="owiz-q">コンガラ（LO・L型壊し）は発生しますか？<small>コンクリート殻の撤去量として廃材に計上します</small></div>';
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick' + (!c.hasKongara ? ' sel' : '') + '" onclick="_owiz.cur.hasKongara=false;_owizRender()">なし</div>'
+          + '<div class="owiz-pick warn' + (c.hasKongara ? ' sel' : '') + '" onclick="_owiz.cur.hasKongara=true;_owizRender()">あり</div>'
+          + '</div>';
+  }
+
+  else if (st === 'kongaraDim') {
+    html += '<div class="owiz-q">コンガラの寸法を入力してください<small>壊す範囲の 幅 × 延長 × 厚み</small></div>';
+    html += '<div class="owiz-label">幅 W（m）</div>'    + numInput('owizKgW', c.kgW, '0.50', '0.01');
+    html += '<div class="owiz-label">延長 L（m）</div>'  + numInput('owizKgL', c.kgL, String(c.L != null ? c.L : '5.00'), '0.01');
+    html += '<div class="owiz-label">厚み t（mm）</div>' + numInput('owizKgT', c.kgT, '150', '1');
+    if (c.kgW > 0 && c.kgL > 0 && c.kgT > 0) {
+      var _kv = c.kgW * c.kgL * (c.kgT / 1000);
+      html += '<div class="owiz-hint">撤去量 ' + _kv.toFixed(3) + ' m³　／　廃材重量 約 ' + (_kv * 2.3).toFixed(2) + ' t（比重2.3）</div>';
+    }
+    html += '<div class="owiz-q" style="margin-top:16px;">壊したL型は復旧しますか？<small>復旧しない場合、その断面は舗装で埋めるため AS・路盤材が増えます</small></div>';
+    // ★ _owizReadStep() を先に呼ぶ：入力済みの寸法を読み取ってから再描画しないと値が消える
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick' + (c.kgRestore ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.kgRestore=true;_owizRender()">L型を復旧する</div>'
+          + '<div class="owiz-pick warn' + (!c.kgRestore ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.kgRestore=false;_owizRender()">復旧しない（舗装で埋める）</div>'
+          + '</div>';
+    if (!c.kgRestore) html += '<div class="owiz-warn-note">この断面ぶんを GL から順に AS密粒 → AS粗粒 → RM → RC の厚みで割り当て、各材料の発注量へ加算します。</div>';
+  }
+
+  else if (st === 'special') {
+    html += '<div class="owiz-q">特殊部（桝）はありますか？<small>桝がある場合、その体積分を発注量から控除します</small></div>';
+    if (!c.typeHasSpec) html += '<div class="owiz-hint">この型には特殊部パターンがないため「なし」で進みます</div>';
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick' + (!c.hasSpecial ? ' sel' : '') + '" onclick="_owiz.cur.hasSpecial=false;_owizRender()">なし</div>'
+          + '<div class="owiz-pick warn' + (c.hasSpecial ? ' sel' : '') + '" onclick="_owiz.cur.hasSpecial=' + (c.typeHasSpec ? 'true' : 'false') + ';_owizRender()">あり</div>'
+          + '</div>';
+  }
+
+  else if (st === 'grad') {
+    html += '<div class="owiz-q">縦断勾配はありますか？<small>ありの場合、起点側と終点側の DP をそれぞれ入力します</small></div>';
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick' + (!c.hasGrad ? ' sel' : '') + '" onclick="_owiz.cur.hasGrad=false;_owizRender()">勾配なし</div>'
+          + '<div class="owiz-pick' + (c.hasGrad ? ' sel' : '') + '" onclick="_owiz.cur.hasGrad=true;_owizRender()">勾配あり</div>'
+          + '</div>';
+  }
+
+  else if (st === 'W') {
+    html += '<div class="owiz-q">W（掘削幅）を入力してください<small>単位: m</small></div>';
+    var lastW = _owizMem('last_W');
+    if (lastW != null) html += '<div class="owiz-chips" style="margin-bottom:10px;"><span class="owiz-chip" onclick="_owiz.cur.W=' + lastW + ';_owizRender()">前回と同じ ' + lastW + 'm</span></div>';
+    html += numInput('owizW', c.W, '0.90', '0.01');
+  }
+
+  else if (st === 'L') {
+    html += '<div class="owiz-q">L（掘削延長）を入力してください<small>単位: m</small></div>';
+    html += numInput('owizL', c.L, '5.00', '0.01');
+  }
+
+  else if (st === 'DP') {
+    html += '<div class="owiz-q">' + (c.hasGrad ? '起点側の DP（土被り）' : 'DP（土被り）') + 'を入力してください<small>単位: m</small></div>';
+    var m1 = _owizMasterDP(_owizHataEntry(c.hata));
+    if (m1.dp != null) html += '<div class="owiz-master-note">📋 旗揚げマスタ No.' + esc(c.hata) + ' → <strong>' + m1.dp + '</strong> m'
+          + ' <span class="owiz-chip" style="padding:4px 10px;font-size:13px;margin-left:6px;" onclick="_owiz.cur.DP=' + m1.dp + ';_owizRender()">この値を使う</span></div>';
+    html += numInput('owizDP', c.DP, '1.100');
+  }
+
+  else if (st === 'DPH') {
+    html += '<div class="owiz-q">' + (c.hasGrad ? '起点側の DP下配管H' : 'DP下配管H') + 'を入力してください<small>管の外径ぶんの高さ。床付け＝DP＋DP下配管H</small></div>';
+    var m2 = _owizMasterDP(_owizHataEntry(c.hata));
+    if (m2.dph != null) html += '<div class="owiz-master-note">📋 旗揚げマスタ No.' + esc(c.hata) + ' → <strong>' + m2.dph + '</strong> m'
+          + ' <span class="owiz-chip" style="padding:4px 10px;font-size:13px;margin-left:6px;" onclick="_owiz.cur.DPH=' + m2.dph + ';_owizRender()">この値を使う</span></div>';
+    html += numInput('owizDPH', c.DPH, '0.509');
+    if (c.DP != null && c.DPH != null) html += '<div class="owiz-hint">床付け = ' + (c.DP + c.DPH).toFixed(3) + ' m</div>';
+  }
+
+  else if (st === 'DP2') {
+    html += '<div class="owiz-q">終点側の DP（土被り）を入力してください<small>起点側より深くても構いません</small></div>';
+    var m3 = _owizMasterDP(_owizHataEntry(c.hata));
+    if (m3.dpEnd != null) html += '<div class="owiz-master-note">📋 旗揚げマスタ 終点側 → <strong>' + m3.dpEnd + '</strong> m'
+          + ' <span class="owiz-chip" style="padding:4px 10px;font-size:13px;margin-left:6px;" onclick="_owiz.cur.DP2=' + m3.dpEnd + ';_owizRender()">この値を使う</span></div>';
+    html += numInput('owizDP2', c.DP2, '1.500');
+    html += '<div class="owiz-hint">起点側 DP = ' + (c.DP != null ? c.DP.toFixed(3) : '―') + ' m<br>発注量は起点・終点の平均 DP で計算されます</div>';
+  }
+
+  else if (st === 'DPH2') {
+    html += '<div class="owiz-q">終点側の DP下配管H を入力してください<small>起点側と同じなら空欄のまま「次へ」でOK</small></div>';
+    var m4 = _owizMasterDP(_owizHataEntry(c.hata));
+    if (m4.dph2 != null) html += '<div class="owiz-master-note">📋 旗揚げマスタ 終点側 → <strong>' + m4.dph2 + '</strong> m'
+          + ' <span class="owiz-chip" style="padding:4px 10px;font-size:13px;margin-left:6px;" onclick="_owiz.cur.DPH2=' + m4.dph2 + ';_owizRender()">この値を使う</span></div>';
+    html += numInput('owizDPH2', c.DPH2, String(c.DPH != null ? c.DPH : 0.509));
+    if (c.DP2 != null) {
+      var _d2 = (c.DPH2 != null ? c.DPH2 : c.DPH) || 0;
+      html += '<div class="owiz-hint">床付け 起点 = ' + ((c.DP || 0) + (c.DPH || 0)).toFixed(3) + ' m　／　終点 = ' + (c.DP2 + _d2).toFixed(3) + ' m</div>';
+    }
+  }
+
+  else if (st === 'mas') {
+    html += '<div class="owiz-q">桝（特殊部）の寸法を入力してください<small>この体積ぶんが発注量から控除されます</small></div>';
+    html += '<div class="owiz-label">桝 H（深さ m）</div>' + numInput('owizMasH', c.masH, '1.400');
+    html += '<div class="owiz-label">桝 W（幅 m）</div>'   + numInput('owizMasW', c.masW, '0.100');
+    html += '<div class="owiz-label">桝 L（長さ m）</div>' + numInput('owizMasL', c.masL, '2.000');
+  }
+
+  else if (st === 'pipes') {
+    html += '<div class="owiz-q">埋設配管を入力してください<small>不要なら何も入れずに「次へ」</small></div>';
+    html += '<div class="owiz-pipe-head"><div>管種</div><div>品種</div><div>延長m</div><div>本数</div><div>調達</div><div></div></div>';
+    html += '<div id="owizPipeRows">';
+    (c.pipes || []).forEach(function(p, i){
+      html += _owizPipeRowHTML(p, i);
+    });
+    html += '</div>';
+    html += '<button class="owiz-pipe-add" onclick="_owizAddPipe()">＋ 配管を追加</button>';
+    html += '<div class="owiz-hint" style="margin-top:12px;">「曲げ管」は延長を使わず本数のみで記録します。<br><b>調達</b>：直管1本＝5m。<b>新品</b>を切ると在庫を1本消費、<b>端物</b>（切った余りの在庫品）を使うと在庫は減りません。資材管理アプリの在庫計算に反映されます。</div>';
+  }
+
+  else if (st === 'more') {
+    html += '<div class="owiz-confirm-banner">✅ ここは確認画面です（入力欄はありません）</div>';
+    html += '<div class="owiz-q">No.' + esc(c.hata) + ' の入力が終わりました<small>このあと「＋ もう1箇所」を押すと、別の旗揚げ番号の入力が新しく始まります。追加が無ければ「完了して反映」を押してください。</small></div>';
+    html += _owizSummaryHTML(_owiz.locs.concat([c]));
+    html += '<div class="owiz-pick-row">'
+          + '<div class="owiz-pick" onclick="_owizAddLoc()">＋ もう1箇所（別のNo.を追加入力）</div>'
+          + '<div class="owiz-pick sel" onclick="_owizFinish()">✅ ここまでの内容で完了して反映</div>'
+          + '</div>';
+  }
+
+  body.innerHTML = html;
+
+  // ボタン制御
+  document.getElementById('owizBtnBack').style.display = (_owiz.step === 0 && _owiz.locs.length === 0) ? 'none' : '';
+  var next = document.getElementById('owizBtnNext');
+  var skip = document.getElementById('owizBtnSkip');
+  next.style.display = (st === 'more') ? 'none' : '';
+  next.textContent  = '次へ →';
+  // 任意入力のステップは「後で入力」を出す
+  skip.style.display = (st === 'pipes' || st === 'DPH2' || st === 'mas' || st === 'w3') ? '' : 'none';
+
+  // 数値欄にフォーカス（モバイルでキーボードが出るように）
+  var f = body.querySelector('.owiz-input-num, #owizHata');
+  if (f && st !== 'more' && st !== 'pipes') { try { f.focus(); f.select && f.select(); } catch(e) {} }
+}
+
+// ── 埋設配管の行 ────────────────────────────────
+function _owizPipeRowHTML(p, i){
+  var opts = PIPE_TYPES.map(function(t){
+    return '<option value="' + t.key + '"' + (t.key === p.key ? ' selected' : '') + '>' + t.name + '</option>';
+  }).join('');
+  var isBend = p.kind === '曲げ管';
+  return '<div class="owiz-pipe-row" data-i="' + i + '">'
+    + '<select onchange="_owiz.cur.pipes[' + i + '].key=this.value">' + opts + '</select>'
+    + '<select onchange="_owiz.cur.pipes[' + i + '].kind=this.value;_owizRender()">'
+    +   '<option value="直管"' + (!isBend ? ' selected' : '') + '>直管</option>'
+    +   '<option value="曲げ管"' + (isBend ? ' selected' : '') + '>曲げ管</option>'
+    + '</select>'
+    +   '<input type="number" step="0.1" min="0" placeholder="延長" value="' + (p.L != null ? p.L : '') + '"'
+    +     (isBend ? ' disabled style="opacity:.35"' : '') + ' oninput="_owiz.cur.pipes[' + i + '].L=parseFloat(this.value)||0">'
+    +   '<input type="number" step="1" min="1" placeholder="本" value="' + (p.N != null ? p.N : 1) + '"'
+    +     ' oninput="_owiz.cur.pipes[' + i + '].N=parseInt(this.value)||1">'
+    + '<select onchange="_owiz.cur.pipes[' + i + '].src=this.value;_owizRender()"'
+    +   (isBend ? ' disabled style="opacity:.35"' : '') + '>'
+    +   '<option value="新品"' + (p.src !== '端物' ? ' selected' : '') + '>新品</option>'
+    +   '<option value="端物"' + (p.src === '端物' ? ' selected' : '') + '>端物</option>'
+    + '</select>'
+    + '<button class="owiz-pipe-del" onclick="_owizDelPipe(' + i + ')">✕</button>'
+    + '</div>';
+}
+function _owizAddPipe(){
+  _owiz.cur.pipes.push({ key: PIPE_TYPES[0].key, kind:'直管', L:null, N:1, src:'新品' });
+  _owizRender();
+}
+function _owizDelPipe(i){
+  _owiz.cur.pipes.splice(i, 1);
+  _owizRender();
+}
+
+// ── 型を選択 ──────────────────────────────────
+function _owizPickType(tid){
+  var t = _owizTypeByTid(tid);
+  if (!t) return;
+  _owiz.cur.tid         = t.tid;
+  _owiz.cur.typeLabel   = t.label;
+  _owiz.cur.siteName    = t.site;
+  _owiz.cur.rbSig       = t.rbSig;     // ★L合算判定に使う路盤構成フィンガープリント
+  _owiz.cur.rbText      = t.rbText;
+  _owiz.cur.typeHasGrad = t.hasGrad;
+  _owiz.cur.typeHasSpec = t.hasSpec;
+  if (!t.hasGrad) _owiz.cur.hasGrad    = false;
+  if (!t.hasSpec) _owiz.cur.hasSpecial = false;
+  // この旗揚げ番号がどの路盤構成だったかを記憶（次回の取り違え防止）
+  if (_owiz.cur.hata) _owizMem('hata_type_' + _owiz.cur.hata, t.tid);
+  _owizRender();
+}
+
+// ── ステップ移動 ───────────────────────────────
+function _owizReadStep(){
+  var c = _owiz.cur, st = _owizCurStep();
+  var g = function(id){ var e = document.getElementById(id); if (!e) return null; var v = e.value; return (v === '' || v == null) ? null : parseFloat(v); };
+  if (st === 'hata') { var h = document.getElementById('owizHata'); if (h) c.hata = h.value.trim(); }
+  if (st === 'W')    c.W    = g('owizW');
+  if (st === 'L')    c.L    = g('owizL');
+  if (st === 'DP')   c.DP   = g('owizDP');
+  if (st === 'DPH')  c.DPH  = g('owizDPH');
+  if (st === 'DP2')  c.DP2  = g('owizDP2');
+  if (st === 'DPH2') c.DPH2 = g('owizDPH2');
+  if (st === 'mas')  { c.masH = g('owizMasH'); c.masW = g('owizMasW'); c.masL = g('owizMasL'); }
+  if (st === 'w3')   { c.asW  = g('owizAsW');  c.rbW  = g('owizRbW'); }
+  if (st === 'genzai') {
+    if (c.genMode === 'part') { c.genW = g('owizGenW'); c.genL = g('owizGenL'); }
+    var _ga = g('owizGenAsH'); if (_ga != null) c.genAsH = _ga;
+  }
+  if (st === 'kongaraDim') { c.kgW = g('owizKgW'); c.kgL = g('owizKgL'); c.kgT = g('owizKgT'); }
+  if (st === 'genzai') {
+    if (c.genMode === 'part' && (!(c.genW > 0) || !(c.genL > 0))) {
+      alert('現況ASを撤去する範囲の 幅・延長 を入力してください。'); return;
+    }
+  }
+  if (st === 'sheet') { var _sm=g('owizSheetMm'); if(_sm!=null) c.sheetMm=_sm; var _sc=g('owizSheetCols'); if(_sc!=null) c.sheetCols=_sc; }
+}
+function _owizNext(){
+  _owizReadStep();
+  var c = _owiz.cur, st = _owizCurStep();
+  // 必須チェック
+  var need = { hata:'旗揚げ番号', W:'W（掘削幅）', L:'L（掘削延長）', DP:'DP（土被り）', DPH:'DP下配管H', DP2:'終点側の DP' };
+  if (st === 'hata' && !c.hata) { alert('旗揚げ番号を入力してください。'); return; }
+  if (st === 'type' && !c.tid)  { alert('型を選んでください。'); return; }
+  if (st === 'isoil' && !c.isoil) { alert('管上100mm〜路盤下端の埋戻し材を選んでください。'); return; }
+  if (st === 'sheet') {
+    if (!c.sheetPos) { alert('埋設シートの敷設位置を選んでください。'); return; }
+    if (c.sheetPos === 'other' && !(c.sheetMm > 0)) { alert('管上 何mm に敷くかを入力してください。'); return; }
+    if (c.sheetPos !== 'none' && !(c.sheetCols > 0)) { alert('埋設シートの列数を入力してください。'); return; }
+  }
+  if (st === 'kongaraDim') {
+    if (!(c.kgW > 0) || !(c.kgL > 0) || !(c.kgT > 0)) { alert('コンガラの 幅・延長・厚み をすべて入力してください。'); return; }
+  }
+  if (need[st] && st !== 'hata' && (c[st] == null || c[st] <= 0)) { alert(need[st] + ' を入力してください。'); return; }
+  _owiz.step++;
+  _owizRender();
+}
+function _owizBack(){
+  _owizReadStep();
+  if (_owiz.step > 0) { _owiz.step--; _owizRender(); return; }
+  // 先頭で戻る → 1つ前の箇所を編集し直す
+  if (_owiz.locs.length > 0) {
+    _owiz.cur  = _owiz.locs.pop();
+    _owiz.step = _owizSteps().length - 1;
+    _owizRender();
+  }
+}
+function _owizSkipStep(){
+  var st = _owizCurStep();
+  if (st === 'pipes') _owiz.cur.pipes = [];
+  if (st === 'mas')   { _owiz.cur.masH = null; _owiz.cur.masW = null; _owiz.cur.masL = null; _owiz.cur.hasSpecial = false; }
+  if (st === 'DPH2')  _owiz.cur.DPH2 = null;
+  if (st === 'w3')    { _owiz.cur.asW = null; _owiz.cur.rbW = null; }  // 全て掘削幅Wを使う
+  _owiz.step++;
+  _owizRender();
+}
+function _owizAddLoc(){
+  var c = _owiz.cur;
+  // 直近入力を記憶
+  var recent = _owizMem('recent_hata') || [];
+  recent = [String(c.hata)].concat(recent.filter(function(x){ return x !== String(c.hata); })).slice(0, 8);
+  _owizMem('recent_hata', recent);
+  if (c.W) _owizMem('last_W', c.W);
+  _owiz.locs.push(c);
+  // 型・パターン・Wは引き継ぐと入力が速い
+  var n = _owizNewLoc();
+  n.tid = c.tid; n.typeLabel = c.typeLabel;
+  n.siteName = c.siteName; n.rbSig = c.rbSig; n.rbText = c.rbText;
+  n.typeHasGrad = c.typeHasGrad; n.typeHasSpec = c.typeHasSpec;
+  n.W = c.W;
+  // 現場ルール（仮/本・埋戻し材・シート位置）は同じ現場なら同条件が続くことが多いので引き継ぐ
+  n.mode = c.mode; n.isoil = c.isoil; n.sheetPos = c.sheetPos; n.sheetMm = c.sheetMm; n.sheetCols = c.sheetCols;
+  n.genMode = c.genMode; n.genAsH = c.genAsH;
+  n.asW = c.asW; n.rbW = c.rbW;
+  _owiz.cur  = n;
+  _owiz.step = 0;
+  _owizRender();
+}
+
+// ── 入力サマリー ───────────────────────────────
+function _owizSummaryHTML(locs){
+  var esc = _esc0;
+  var html = '<div class="owiz-summary">';
+  locs.forEach(function(l, i){
+    var pat = _owizPattern(l);
+    html += '<div class="owiz-summary-row"><b>' + (i + 1) + '. No.' + esc(l.hata) + '</b>　'
+          + esc(l.typeLabel) + '　' + _owizPatLabel(pat)
+          + '<span class="owiz-sm-sub">🏗 ' + esc(l.rbText || '') + '</span>'
+          + '<span class="owiz-sm-sub">W=' + (l.W || 0).toFixed(2) + 'm　L=' + (l.L || 0).toFixed(2) + 'm　'
+          + (l.hasGrad
+              ? 'DP 起点=' + (l.DP || 0).toFixed(3) + 'm／終点=' + (l.DP2 || 0).toFixed(3) + 'm'
+              : 'DP=' + (l.DP || 0).toFixed(3) + 'm')
+          + '　管下H=' + (l.DPH || 0).toFixed(3) + 'm'
+          + (l.hasSpecial && l.masH ? '　桝 ' + l.masH + '×' + l.masW + '×' + l.masL : '')
+          + (l.pipes && l.pipes.length ? '　配管' + l.pipes.length + '件' : '')
+          + '</span>'
+          + '<span class="owiz-sm-sub">'
+          + (l.mode === 'hon' ? '🏗 本復旧' : '🔧 仮復旧')
+          + (l.isoil ? '　埋戻し材: ' + esc(l.isoil === 'none' ? '該当なし' : l.isoil) : '')
+          + '　' + ({ gen:'🔨 現況ASを撤去', part:'🔨 現況＋仮復旧ASを撤去', kari:'🔨 仮復旧ASを撤去' }[l.genMode || 'kari'])
+          + (l.genMode === 'part' && l.genW > 0 ? '(現況 ' + l.genW + '×' + l.genL + 'm)' : '')
+          + (l.genAsH > 0 && l.genMode !== 'kari' ? '(現況AS ' + l.genAsH + 'mm 実測)' : '')
+          + (l.sheetPos ? '　シート: ' + (l.sheetPos === 'none' ? 'なし'
+                : ('管上' + (l.sheetPos === 'other' ? (l.sheetMm || 0) : l.sheetPos) + 'mm '
+                   + (l.sheetCols || 1) + '列')) : '')
+          + '</span>'
+          + ((l.asW > 0 || l.rbW > 0)
+              ? '<span class="owiz-sm-sub">📐 AS幅=' + (l.asW > 0 ? l.asW.toFixed(2) : (l.W || 0).toFixed(2))
+                + 'm／路盤幅=' + (l.rbW > 0 ? l.rbW.toFixed(2) : (l.W || 0).toFixed(2))
+                + 'm／掘削幅=' + (l.W || 0).toFixed(2) + 'm</span>' : '')
+          + (l.hasKongara && l.kgW > 0
+              ? '<span class="owiz-sm-sub">🗑️ コンガラ ' + l.kgW + '×' + l.kgL + '×' + l.kgT + 'mm ＝ '
+                + (l.kgW * l.kgL * (l.kgT / 1000)).toFixed(3) + 'm³'
+                + (l.kgRestore ? '（L型復旧あり）' : '（復旧なし→AS・路盤材へ加算）') + '</span>' : '')
+          + '</div>';
+  });
+  html += '</div>';
+
+  // ── 路盤構成＋パターンが一致する箇所だけを合算対象として予告 ──
+  var groups = _owizGroup(locs), merged = [], singles = [];
+  Object.keys(groups).forEach(function(k){
+    var g = groups[k];
+    if (g.length > 1) {
+      merged.push('<b>' + _esc0(g[0].typeLabel) + '</b>　' + _owizPatLabel(_owizPattern(g[0])) + '<br>'
+                + '　<span style="opacity:.85">' + _esc0(g[0].rbText || '') + '</span><br>'
+                + '　' + g.map(function(l){ return 'No.' + _esc0(l.hata) + '(L=' + (l.L || 0).toFixed(2) + 'm)'; }).join(' ＋ ')
+                + ' → <b>L合算 ' + g.reduce(function(a, l){ return a + (l.L || 0); }, 0).toFixed(2) + 'm</b>');
+    } else {
+      singles.push(g[0]);
+    }
+  });
+  if (merged.length) {
+    html += '<div class="owiz-merge-note">🔗 <b>同一路盤構成・同一パターンのため L値を合算します</b><br><br>'
+          + merged.join('<br><br>')
+          + '<br><br><span style="opacity:.85">※ W・DP・DP下配管H は L による加重平均。断面積×延長＝土量が保存されるため発注量が正しくなります。</span></div>';
+  }
+  // 路盤構成が違う箇所は必ず別カードになる旨を明示
+  var distinct = {};
+  locs.forEach(function(l){ distinct[(l.rbSig || '') + '|' + _owizPattern(l)] = l; });
+  if (Object.keys(distinct).length > 1) {
+    html += '<div class="owiz-warn-note">🧱 <b>路盤構成が異なる箇所は合算しません</b>（それぞれ別の計算カードへ反映します）<br>'
+          + Object.keys(distinct).map(function(k){
+              var l = distinct[k];
+              return '・' + _esc0(l.typeLabel) + '／' + _owizPatLabel(_owizPattern(l)) + '　<span style="opacity:.8">' + _esc0(l.rbText || '') + '</span>';
+            }).join('<br>') + '</div>';
+  }
+  return html;
+}
+
+// ── パターン判定・グループ化 ────────────────────────
+function _owizPattern(l){
+  return (l.hasGrad ? 'k' : 'n') + (l.hasSpecial ? 's' : '');
+}
+// ★ グループ化キー = 路盤構成(tid) ＋ 路盤構成フィンガープリント ＋ パターン
+//   路盤構成が違えば絶対に L合算しない（型名が同じでも構成が違えば別グループ）
+function _owizGroup(locs){
+  var g = {};
+  locs.forEach(function(l){
+    // ★ 仮復旧と本復旧は路盤構成そのものが違うので絶対に合算しない。
+    //    埋戻し材（改良土/砂）・段々幅が違う場合も断面が変わるため別グループにする。
+    var k = [l.tid,
+             (l.rbSig || _owizRbSig((_owizTypeByTid(l.tid) || {}).conf)),
+             _owizPattern(l),
+             'mode:'  + (l.mode || 'kari'),
+             'isoil:' + (l.isoil || ''),
+             'w3:'    + (l.asW || 0) + '/' + (l.rbW || 0)].join('|');
+    (g[k] = g[k] || []).push(l);
+  });
+  return g;
+}
+
+// ── 完了：各型カードへ反映 ─────────────────────────
+function _owizFinish(){
+  _owizReadStep();
+  var c = _owiz.cur;
+  // 直近入力を記憶
+  var recent = _owizMem('recent_hata') || [];
+  recent = [String(c.hata)].concat(recent.filter(function(x){ return x !== String(c.hata); })).slice(0, 8);
+  _owizMem('recent_hata', recent);
+  if (c.W) _owizMem('last_W', c.W);
+
+  var all = _owiz.locs.concat([c]);
+  // 必須項目が欠けている箇所は反映しない（0で上書きしてしまう事故を防ぐ）
+  var incomplete = [];
+  all = all.filter(function(l){
+    var ok = l.tid && l.W > 0 && l.L > 0 && l.DP > 0 && l.DPH > 0
+          && (!l.hasGrad || l.DP2 > 0);
+    if (!ok) incomplete.push('No.' + (l.hata || '?'));
+    return ok;
+  });
+  if (!all.length) {
+    alert('入力が完了している箇所がないため、反映しませんでした。\n（W・L・DP・DP下配管H は必須です）');
+    return;
+  }
+  var groups = _owizGroup(all);
+  var warns = [], mergeNotes = [], touchedTids = {}, usedPfx = {}, firstTid = null, firstPat = null, appliedCards = 0;
+  if (incomplete.length) warns.push('入力が不完全だったため反映しなかった箇所: ' + incomplete.join('、'));
+
+  Object.keys(groups).forEach(function(key){
+    var g   = groups[key];
+    var tid = g[0].tid;
+    var pat = _owizPattern(g[0]);
+    var pfx = tid + pat;
+    if (!document.getElementById(pfx + '-W')) {
+      warns.push('【' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '】該当する入力カードが見つかりませんでした');
+      return;
+    }
+    // ★ 反映直前にもう一度 路盤構成の一致を確認（グループ化のバグ・データ変化に対する安全弁）
+    var sig0 = g[0].rbSig;
+    var sigNG = g.filter(function(l){ return l.rbSig !== sig0; });
+    if (sigNG.length) {
+      warns.push('【' + g[0].typeLabel + '】路盤構成が一致しない箇所が混在していたため合算を中止しました（'
+               + sigNG.map(function(l){ return 'No.' + l.hata; }).join('、') + '）');
+      g = g.filter(function(l){ return l.rbSig === sig0; });
+      if (!g.length) return;
+    }
+    var sumL = g.reduce(function(a, l){ return a + (l.L || 0); }, 0);
+    if (g.length > 1) {
+      mergeNotes.push('No.' + g.map(function(l){ return l.hata; }).join('＋No.')
+                    + ' を「' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '」へ L合算 '
+                    + sumL.toFixed(2) + 'm（同一路盤構成）');
+    }
+    // L加重平均（掘削断面が保存されるため発注量の観点で正しい）
+    var wavg = function(f){
+      if (sumL <= 0) return f(g[0]) || 0;
+      return g.reduce(function(a, l){ return a + ((f(l) || 0) * (l.L || 0)); }, 0) / sumL;
+    };
+    var Ws     = g.map(function(l){ return l.W || 0; });
+    var wSame  = Ws.every(function(w){ return Math.abs(w - Ws[0]) < 0.0001; });
+    var W      = wSame ? Ws[0] : wavg(function(l){ return l.W; });
+    if (!wSame) {
+      warns.push('【' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '】W が箇所ごとに違うため L加重平均 W=' + W.toFixed(3) + 'm を使用（'
+               + g.map(function(l){ return 'No.' + l.hata + ' W=' + (l.W || 0) + 'm'; }).join('、') + '）');
+    }
+    var DP   = wavg(function(l){ return l.DP; });
+    var DPH  = wavg(function(l){ return l.DPH; });
+    var DP2  = wavg(function(l){ return l.DP2  != null ? l.DP2  : l.DP; });
+    var DPH2 = wavg(function(l){ return l.DPH2 != null ? l.DPH2 : l.DPH; });
+
+    setVal(pfx + '-W', +W.toFixed(3));
+    setVal(pfx + '-L', +sumL.toFixed(3));
+    if (pat === 'k' || pat === 'ks') {
+      setVal(pfx + '-DP1',  +DP.toFixed(3));
+      setVal(pfx + '-DP2',  +DP2.toFixed(3));
+      setVal(pfx + '-DPH1', +DPH.toFixed(3));
+      setVal(pfx + '-DPH2', +DPH2.toFixed(3));
+    } else {
+      setVal(pfx + '-DP',  +DP.toFixed(3));
+      setVal(pfx + '-DPH', +DPH.toFixed(3));
+    }
+    // ── 掘削影響範囲の3段階幅（本復旧の段々断面）──
+    //    AS幅・路盤幅は L加重平均。未入力なら空欄のまま＝掘削幅Wを使う。
+    var anyAsW = g.some(function(l){ return l.asW > 0; });
+    var anyRbW = g.some(function(l){ return l.rbW > 0; });
+    setVal(pfx + '-asW', anyAsW ? +wavg(function(l){ return l.asW > 0 ? l.asW : l.W; }).toFixed(3) : '');
+    setVal(pfx + '-rbW', anyRbW ? +wavg(function(l){ return l.rbW > 0 ? l.rbW : l.W; }).toFixed(3) : '');
+    var _exDisp = document.getElementById(pfx + '-exW-disp');
+    if (_exDisp) _exDisp.value = W.toFixed(2) + ' m';
+
+    // ── 現況廃材（初回作業＝現況ASを捲る範囲）──
+    //    gen  : 掘削範囲すべて＝W×合算L
+    //    part : 指定範囲（Wは最大値・Lは合算）
+    //    kari : 現況廃材なし（仮復旧ASのみ）
+    var gm = g[0].genMode || 'kari';
+    if (gm === 'gen') {
+      setVal(pfx + '-genW', +W.toFixed(3));
+      setVal(pfx + '-genL', +sumL.toFixed(3));
+    } else if (gm === 'part') {
+      var pg = g.filter(function(l){ return l.genW > 0 && l.genL > 0; });
+      if (pg.length) {
+        setVal(pfx + '-genW', +Math.max.apply(null, pg.map(function(l){ return l.genW; })).toFixed(3));
+        setVal(pfx + '-genL', +pg.reduce(function(a, l){ return a + l.genL; }, 0).toFixed(3));
+      }
+    } else {
+      setVal(pfx + '-genW', '');
+      setVal(pfx + '-genL', '');
+    }
+    // 「捲るAS」の指定をカードへ（part は現況範囲W×Lで判定させるため自動のまま）
+    var gmEl = document.getElementById(pfx + '-genMode');
+    if (gmEl) gmEl.value = (gm === 'part') ? '' : gm;
+
+    // 現況AS厚の実測値（イレギュラー）をカードの上書き欄へ
+    var gAs = g.filter(function(l){ return l.genAsH > 0; });
+    setVal(pfx + '-genAsH', (gm !== 'kari' && gAs.length)
+      ? +Math.max.apply(null, gAs.map(function(l){ return l.genAsH; })).toFixed(0) : '');
+
+    var gmMix = g.some(function(l){ return (l.genMode || 'kari') !== gm; });
+    if (gmMix) warns.push('【' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '】初回/2回目以降の指定が箇所ごとに違います（1箇所目の指定を適用）');
+
+    // ── コンガラ（LO・L型壊し）──
+    var kg = g.filter(function(l){ return l.hasKongara && l.kgW > 0 && l.kgL > 0 && l.kgT > 0; });
+    if (kg.length) {
+      // 幅・厚みは最大値、延長は合算（桝と同じ考え方）
+      setVal(pfx + '-loW', +Math.max.apply(null, kg.map(function(l){ return l.kgW; })).toFixed(3));
+      setVal(pfx + '-loL', +kg.reduce(function(a, l){ return a + l.kgL; }, 0).toFixed(3));
+      setVal(pfx + '-loT', +Math.max.apply(null, kg.map(function(l){ return l.kgT; })).toFixed(0));
+      var _rcEl = document.getElementById(pfx + '-loRestore');
+      // 1箇所でも「復旧しない」があれば、そのカードは復旧しない扱い（材料が増える側＝安全側）
+      var _anyNoRestore = kg.some(function(l){ return !l.kgRestore; });
+      if (_rcEl) _rcEl.checked = !_anyNoRestore;
+      var _mixed = kg.some(function(l){ return !l.kgRestore; }) && kg.some(function(l){ return l.kgRestore; });
+      if (_mixed) {
+        warns.push('【' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '】L型の復旧有無が箇所ごとに違うため「復旧しない」に揃えました（材料が増える側）。カードで個別に確認してください');
+      }
+    }
+
+    // ── 改良土ルール（管上100mm〜路盤下端の埋戻し材）──
+    var _isoil = g[0].isoil;
+    if (_isoil) {
+      var _tg = document.getElementById(tid + '-isoil-toggle');
+      var _useIsoil = (_isoil === '改良土');
+      if (_tg && !_tg.disabled) {
+        _tg.checked = _useIsoil || (_isoil === '再生砂RC-10');
+        if (typeof toggleDynIsoil === 'function') {
+          try { toggleDynIsoil(tid, _tg.checked, TYPES[tid]); } catch(e) {}
+        }
+      }
+      var _sel = document.getElementById(tid + '-isoil-sel');
+      if (_sel && _isoil !== 'none') {
+        _sel.value = _isoil;
+        if (typeof updateIsoilLabel === 'function') { try { updateIsoilLabel(tid); } catch(e) {} }
+      }
+      var _mixIso = g.some(function(l){ return l.isoil !== _isoil; });
+      if (_mixIso) warns.push('【' + g[0].typeLabel + '】埋戻し材の選択が箇所ごとに違います（1箇所目の「' + _isoil + '」を適用）');
+    }
+
+    // ── 仮復旧 / 本復旧 モード ──
+    if (typeof switchDynMode === 'function' && document.getElementById(tid + '-mode-btn-hon')) {
+      try { switchDynMode(tid, g[0].mode === 'hon' ? 'hon' : 'kari'); } catch(e) {}
+    }
+
+    // 桝：Lは合算、H・Wは最大値（異なる場合は警告）
+    if (pat === 'ns' || pat === 'ks') {
+      var mg = g.filter(function(l){ return l.masH && l.masW && l.masL; });
+      if (mg.length) {
+        var masH = Math.max.apply(null, mg.map(function(l){ return l.masH; }));
+        var masW = Math.max.apply(null, mg.map(function(l){ return l.masW; }));
+        var masL = mg.reduce(function(a, l){ return a + l.masL; }, 0);
+        setVal(pfx + '-masH', +masH.toFixed(3));
+        setVal(pfx + '-masW', +masW.toFixed(3));
+        setVal(pfx + '-masL', +masL.toFixed(3));
+        if (mg.length > 1) {
+          var hSame = mg.every(function(l){ return Math.abs(l.masH - mg[0].masH) < 0.0001; });
+          var wSameM = mg.every(function(l){ return Math.abs(l.masW - mg[0].masW) < 0.0001; });
+          if (!hSame || !wSameM) {
+            warns.push('【' + g[0].typeLabel + '／' + _owizPatLabel(pat) + '】桝の H・W が箇所ごとに違うため最大値を使用しました（桝Lは合算）');
+          }
+        }
+      }
+    }
+    // 埋設配管：全箇所ぶんを連結
+    var pc = pfx + '-pipes';
+    if (document.getElementById(pc)) {
+      buildPipeInputs(pc);
+      var rows = document.getElementById(pc + '-rows');
+      if (rows) rows.innerHTML = '';
+      var added = 0;
+      g.forEach(function(l){
+        (l.pipes || []).forEach(function(p){
+          if (p.kind === '直管' && !(p.L > 0)) return;   // 直管は延長必須
+          _addPipeInputRow(pc, p.key, p.kind, p.L, p.N, p.src);
+          added++;
+        });
+      });
+      if (!added) _addPipeInputRow(pc);
+    }
+    // 旗揚げ番号（型パネルに1つ）
+    var hEl = document.getElementById(tid + '-hata');
+    if (hEl) {
+      var hs = g.map(function(l){ return l.hata; }).filter(function(v, i, a){ return a.indexOf(v) === i; });
+      hEl.value = hs.join('、');
+    }
+    touchedTids[tid] = true;
+    usedPfx[pfx] = true;
+    if (!firstTid) { firstTid = tid; firstPat = pat; }
+    appliedCards++;
+  });
+
+  // ── 今回使わなかったパターンの残留値をクリア ────────────────
+  //   前回の入力が残っていると、発注量合計にも横断集計にも加算されてしまうため。
+  var clearedPats = [];
+  Object.keys(touchedTids).forEach(function(tid){
+    ['n','ns','k','ks'].forEach(function(pat){
+      var pfx = tid + pat;
+      if (usedPfx[pfx]) return;
+      var wEl = document.getElementById(pfx + '-W');
+      if (!wEl) return;
+      // 何か入力が残っているパターンだけを対象にする
+      var hasAny = ['W','L','DP','DPH','DP1','DP2','DPH1','DPH2','masH','masW','masL',
+                    'loW','loL','loT','asW','rbW','genW','genL','asReW','asReL','asReT']
+        .some(function(k){
+          var e = document.getElementById(pfx + '-' + k);
+          return e && e.value !== '' && parseFloat(e.value) > 0;
+        });
+      if (!hasAny) return;
+      ['W','L','DP','DPH','DP1','DP2','DPH1','DPH2','masH','masW','masL',
+       'loW','loL','loT','asW','rbW','genW','genL','asReW','asReL','asReT']
+        .forEach(function(k){
+          var e = document.getElementById(pfx + '-' + k);
+          if (e) e.value = '';
+        });
+      var rows = document.getElementById(pfx + '-pipes-rows');
+      if (rows) rows.innerHTML = '';
+      clearedPats.push(_owizPatLabel(pat));
+    });
+  });
+  if (clearedPats.length) {
+    warns.push('今回使わなかったパターンに残っていた入力をクリアしました（' + clearedPats.join('、') + '）');
+  }
+
+  closeOrderWizard();
+
+  // 再計算＋対象タブへ移動
+  setTimeout(function(){
+    Object.keys(touchedTids).forEach(function(tid){
+      if (_typeUpdateFns[tid]) { try { _typeUpdateFns[tid](); } catch(e) {} }
+      // ウィザードで入力したパターンだけを表示（使わないカードは自動で隠す）
+      try { _patFilterOn[tid] = true; _patFilterSave(); applyPatternFilter(tid); } catch(e) {}
+    });
+    if (firstTid) {
+      var btn = document.querySelector('#type-subnav .type-subbtn[data-typetab="' + firstTid + '"]');
+      if (btn) btn.click();
+      // 反映したパターンだけ表示（複数パターンに反映した場合は全部見せる）
+      if (Object.keys(groups).length === 1) {
+        try { showOnlyPattern(firstTid, firstPat); } catch(e) {}
+      } else {
+        try { showAllPatterns(firstTid); } catch(e) {}
+      }
+    }
+    var msg = '';
+    if (mergeNotes.length) msg += '🔗 同一路盤構成・同一パターンのため L値を合算しました:\n・' + mergeNotes.join('\n・') + '\n\n';
+    if (warns.length)      msg += '⚠️ ご確認ください:\n・' + warns.join('\n・');
+    if (msg) alert(msg.trim());
+
+    var badge = document.getElementById('saveBadge');
+    if (badge) {
+      badge.textContent = '✅ ウィザードから ' + all.length + '箇所を ' + appliedCards + '枚のカードへ反映'
+                        + (mergeNotes.length ? '（L合算 ' + mergeNotes.length + '件）' : '');
+      badge.style.display = 'block';
+      setTimeout(function(){ badge.style.display = 'none'; badge.textContent = '💾 保存済み'; }, 4000);
+    }
+    window.scrollTo(0, 0);
+  }, 60);
+}
+
+// ── ウィザード起動ボタンの表示制御（現場が選ばれたら出す）──────
+function _owizUpdateOpenBtn(){
+  var b = document.getElementById('owizOpenBtn');
+  if (!b) return;
+  var ok = !!_owizSiteId() && _owizTypes().length > 0;
+  b.style.display = ok ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function(){
+  _owizUpdateOpenBtn();
+  var sel = document.getElementById('global-site-sel');
+  if (sel) sel.addEventListener('change', function(){ setTimeout(_owizUpdateOpenBtn, 300); });
+  // 型タブが後から組み上がるケースに備えて数回チェック
+  [600, 1500, 3000].forEach(function(ms){ setTimeout(_owizUpdateOpenBtn, ms); });
+});
+
+// ── 埋設配管の行を後から追加しても再計算されるように（イベント委譲）──
+//    ※ bindCalc / bindDynamicCalc は初回バインド時の input にしか
+//      リスナーを張らないため、動的に増えた配管行が無視されていた
+document.addEventListener('DOMContentLoaded', function(){
+  ['input', 'change'].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (!t.closest('.pa-row')) return;
+      var panel = t.closest('.type-panel') || t.closest('[id^="tab-calc"]');
+      if (!panel) return;
+      var tid = (panel.id || '').replace(/^typepanel-/, '').replace(/^tab-calc/, '');
+      if (_typeUpdateFns && _typeUpdateFns[tid]) { try { _typeUpdateFns[tid](); } catch(err) {} }
+    }, true);
+  });
+});
+
+
 // ── 本復旧タブ 施工日 自動入力（今日の日付）──
 (function() {
   var _hpDate = document.getElementById('hp-date');
@@ -10099,4 +11764,34 @@ function saveHonpukyuRecord() {
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">班名</label>
     <input id="teamModalTeam" type="text" placeholder="例: 第1班" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:12px;box-sizing:border-box;">
     <label style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;display:block;margin-bottom:4px;">氏名（担当者名）</label>
-    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:r
+    <input id="teamModalName" type="text" placeholder="例: 佐藤 嘉秀" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeTeamModal()" style="padding:9px 20px;border-radius:7px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);font-size:15px;cursor:pointer;">後で設定</button>
+      <button onclick="saveTeamSettings()" style="padding:9px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✅ 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     計算入力ウィザード
+     ================================================================ -->
+<div id="owizModal" onclick="if(event.target===this)closeOrderWizard()">
+  <div class="owiz-card">
+    <div class="owiz-header">
+      <h2>🧭 計算入力ウィザード</h2>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="owiz-viewer-btn" onclick="_owizOpenViewer()" title="図面を別タブで開く">📐 図面</button>
+        <button class="owiz-skip" onclick="closeOrderWizard()">閉じる ✕</button>
+      </div>
+    </div>
+    <div class="owiz-progress"><div class="owiz-progress-bar" id="owizProgressBar" style="width:5%"></div></div>
+    <div class="owiz-body" id="owizBody"></div>
+    <div class="owiz-footer">
+      <button class="owiz-btn-back" id="owizBtnBack" onclick="_owizBack()">← 戻る</button>
+      <button class="owiz-btn-skip" id="owizBtnSkip" onclick="_owizSkipStep()" style="display:none">後で入力</button>
+      <button class="owiz-btn-next" id="owizBtnNext" onclick="_owizNext()">次へ →</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

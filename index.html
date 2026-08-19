@@ -202,6 +202,7 @@ body{
 .card-orange{border-color:rgba(251,146,60,0.2);}
 .card-orange:hover{border-color:var(--orange);background:rgba(251,146,60,0.07);}
 .card-teal  {border-color:rgba(20,184,166,0.2);}
+.card-indigo{border-color:rgba(129,140,248,0.2);}
 .card-teal:hover{border-color:#14b8a6;background:rgba(20,184,166,0.07);}
 .card-emergency{
   border-color:#ef5350;border-width:2px;
@@ -389,6 +390,12 @@ body{
         <div class="card-icon">📦</div>
         <div class="card-name">資材管理</div>
         <div class="card-desc">使用実績・入荷・発注・在庫</div>
+      </a>
+
+      <a class="app-card card-indigo" onclick="return goApp('daily-report.html')">
+        <div class="card-icon">📝</div>
+        <div class="card-name">作業日報</div>
+        <div class="card-desc">土工事配管工 日々の作業記録</div>
       </a>
 
       <a class="app-card card-red" href="manage.html">
@@ -652,6 +659,7 @@ function openQrModal() {
     {name:'🧮 発注計算',  url: base + '/order.html'},
     {name:'✅ チェックリスト', url: base + '/checklist.html'},
     {name:'📂 図面ビューア',  url: base + '/viewer.html'},
+    {name:'📝 作業日報',  url: base + '/daily-report.html'},
     {name:'📊 集計',      url: base + '/manage.html'},
   ];
   var siteId = document.getElementById('siteSelect').value;

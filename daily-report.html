@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>土工事配管工 作業日報</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --navy:#1D3557;
+    --navy-dark:#132540;
+    --orange:#E4692B;
+    --orange-dark:#C4551F;
+    --bg:#F2F3F1;
+    --surface:#FFFFFF;
+    --border:#DCE0E3;
+    --text:#1F2933;
+    --muted:#6B7686;
+    --danger:#C0392B;
+    --success:#2E7D46;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:84px;
+  }
+  header.app-header{
+    background:var(--navy);
+    color:#fff;
+    padding:14px 16px 12px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  .app-header .stripe{
+    height:4px;
+    width:100%;
+    background:repeating-linear-gradient(135deg,var(--orange) 0 10px, #f0a068 10px 20px);
+    border-radius:2px;
+    margin-bottom:10px;
+    opacity:0.9;
+  }
+  .app-header h1{
+    margin:0;
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  .app-header .sub{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    color:#B9C6D9;
+    margin-top:2px;
+  }
+  nav.tabs{
+    display:flex;
+    background:var(--navy-dark);
+    position:sticky;
+    top:64px;
+    z-index:19;
+  }
+  nav.tabs button{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:#9FB0C6;
+    padding:11px 4px;
+    font-family:inherit;
+    font-size:13px;
+    font-weight:700;
+    border-bottom:3px solid transparent;
+  }
+  nav.tabs button.active{
+    color:#fff;
+    border-bottom:3px solid var(--orange);
+  }
+  main{
+    padding:14px 12px 20px;
+    max-width:640px;
+    margin:0 auto;
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .section{
+    background:var(--surface);
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    margin-bottom:12px;
+    overflow:hidden;
+  }
+  .section-head{
+    background:var(--navy);
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
+    padding:9px 12px;
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .section-head .req{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    background:var(--orange);
+    padding:2px 6px;
+    border-radius:4px;
+    font-weight:700;
+  }
+  .section-body{padding:12px;}
+
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  .field input[type=text],
+  .field input[type=date],
+  .field input[type=time],
+  .field input[type=number],
+  .field textarea,
+  .field select{
+    width:100%;
+    padding:11px 10px;
+    font-size:16px;
+    font-family:inherit;
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    background:#fff;
+    color:var(--text);
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{
+    outline:none;
+    border-color:var(--orange);
+  }
+  .field textarea{resize:vertical;min-height:64px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  .pipe-card{
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:10px;
+    position:relative;
+    background:#FAFBFC;
+  }
+  .pipe-card .pipe-num{
+    position:absolute;
+    top:-9px;
+    left:8px;
+    background:var(--orange);
+    color:#fff;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:8px;
+  }
+  .pipe-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:6px;
+  }
+  .pipe-grid .full{grid-column:1 / -1;}
+  .pipe-grid label{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--muted);
+    display:block;
+    margin-bottom:3px;
+  }
+  .pipe-grid input, .pipe-grid select{
+    width:100%;
+    padding:8px;
+    font-size:15px;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    font-family:inherit;
+    background:#fff;
+  }
+  .pipe-grid .affix-wrap{
+    display:flex;
+    align-items:center;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    overflow:hidden;
+    background:#fff;
+  }
+  .pipe-grid .affix-wrap span{
+    background:#EEF1F4;
+    color:var(--muted);
+    font-weight:700;
+    font-size:14px;
+    padding:8px 6px;
+    flex-shrink:0;
+  }
+  .pipe-grid .affix-wrap input{
+    border:none;
+    flex:1;
+    min-width:0;
+  }
+  .pipe-grid .fixed-value{
+    padding:8px;
+    font-size:15px;
+    color:var(--muted);
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    background:#F4F5F3;
+  }
+  .pipe-grid .counter-wrap{
+    display:flex;
+    align-items:stretch;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    overflow:hidden;
+    background:#fff;
+    height:38px;
+  }
+  .pipe-grid .counter-btn{
+    flex:0 0 38px;
+    border:none;
+    background:#F4F5F3;
+    color:var(--navy);
+    font-size:18px;
+    font-weight:700;
+    line-height:1;
+    padding:0;
+  }
+  .pipe-grid .counter-btn:active{
+    background:var(--orange);
+    color:#fff;
+  }
+  .pipe-grid .counter-input{
+    flex:1;
+    min-width:0;
+    border:none;
+    border-left:1.5px solid var(--border);
+    border-right:1.5px solid var(--border);
+    text-align:center;
+    font-size:16px;
+    font-weight:700;
+    padding:0;
+  }
+  .pipe-remove{
+    display:block;
+    margin:8px auto 0;
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:12px;
+    font-weight:700;
+    padding:4px 10px;
+  }
+  .add-pipe-btn{
+    width:100%;
+    padding:11px;
+    border:1.5px dashed var(--orange);
+    background:#FFF4EC;
+    color:var(--orange-dark);
+    border-radius:8px;
+    font-weight:700;
+    font-size:14px;
+    font-family:inherit;
+  }
+
+  .btn{
+    display:inline-block;
+    padding:12px 16px;
+    border-radius:8px;
+    border:none;
+    font-family:inherit;
+    font-weight:700;
+    font-size:14px;
+    text-align:center;
+  }
+  .btn-primary{background:var(--orange);color:#fff;width:100%;}
+  .btn-secondary{background:#fff;color:var(--navy);border:1.5px solid var(--navy);width:100%;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+  .btn-danger-ghost{background:transparent;color:var(--danger);border:1.5px solid var(--danger);}
+  .btn-sm{padding:8px 10px;font-size:12.5px;border-radius:6px;}
+
+  .action-bar{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    display:flex;
+    gap:8px;
+    z-index:25;
+    box-shadow:0 -2px 8px rgba(0,0,0,0.06);
+  }
+  .action-bar .btn{flex:1;}
+  .action-bar .btn{padding:12px 6px;font-size:13px;}
+
+  /* history */
+  .history-toolbar{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .history-toolbar input{
+    flex:1;
+    padding:10px;
+    font-size:15px;
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    font-family:inherit;
+  }
+  .empty-state{
+    text-align:center;
+    padding:40px 16px;
+    color:var(--muted);
+  }
+  .empty-state .big{font-size:32px;margin-bottom:8px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:4px solid var(--orange);
+    border-radius:8px;
+    padding:12px;
+    margin-bottom:10px;
+  }
+  .card .date{
+    font-family:'Space Mono',monospace;
+    font-size:12px;
+    color:var(--orange-dark);
+    font-weight:700;
+  }
+  .card .site{
+    font-size:16px;
+    font-weight:700;
+    margin:2px 0 4px;
+  }
+  .card .meta{
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .card .card-actions{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:90px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--navy-dark);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:700;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s, transform 0.25s;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(-6px);
+  }
+
+  .note{
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.5;
+    padding:2px 2px 0;
+  }
+
+  @media (max-width:360px){
+    .row3{grid-template-columns:1fr 1fr;}
+  }
+
+  /* ---------- print / PDF layout ---------- */
+  #printArea{display:none;}
+  @media print{
+    body > *:not(#printArea){ display:none !important; }
+    #printArea{
+      display:block;
+    }
+    body{ margin:0; padding:0; }
+    @page{ size:A4; margin:10mm; }
+  }
+  .p-title{
+    font-size:20px;
+    font-weight:900;
+    text-align:center;
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:3px solid var(--navy);
+  }
+  .p-section{margin-bottom:9px;}
+  .p-head{
+    background:var(--navy);
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+    padding:4px 8px;
+  }
+  table.p-grid{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+  }
+  .p-grid .lbl{
+    background:#EEF1F4;
+    font-size:10.5px;
+    font-weight:700;
+    padding:5px 6px;
+    border:1px solid #999;
+    border-top:none;
+    width:17%;
+  }
+  .p-grid .val{
+    font-size:11.5px;
+    padding:5px 6px;
+    border:1px solid #999;
+    border-top:none;
+    word-break:break-word;
+    width:33%;
+  }
+  .p-box{
+    border:1px solid #999;
+    border-top:none;
+    font-size:11.5px;
+    padding:6px 8px;
+    min-height:16px;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  table.p-pipe{
+    width:100%;
+    border-collapse:collapse;
+    font-size:10px;
+  }
+  table.p-pipe th, table.p-pipe td{
+    border:1px solid #999;
+    padding:4px;
+    text-align:center;
+    word-break:break-word;
+  }
+  table.p-pipe th{background:#EEF1F4;}
+  .p-datablock{
+    margin-top:14px;
+    padding-top:6px;
+    border-top:1px dashed #bbb;
+    font-family:'Space Mono',monospace;
+    font-size:5px;
+    line-height:1.3;
+    color:#c9c9c9;
+    word-break:break-all;
+  }
+  .p-datablock .p-datalabel{
+    font-family:'Noto Sans JP',sans-serif;
+    font-size:8px;
+    color:#999;
+    margin-bottom:2px;
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="stripe"></div>
+  <h1>土工事配管工 作業日報</h1>
+  <div class="sub" id="headerSub">DAILY SITE REPORT</div>
+</header>
+
+<nav class="tabs">
+  <button class="active" data-tab="form" onclick="switchTab('form')">入力</button>
+  <button data-tab="history" onclick="switchTab('history')">履歴一覧</button>
+</nav>
+
+<main>
+
+  <!-- ===================== 入力 VIEW ===================== -->
+  <div class="view active" id="view-form">
+
+    <div class="section">
+      <div class="section-head"><span>基本情報</span><span class="req">必須</span></div>
+      <div class="section-body">
+        <div class="field">
+          <label>現場名</label>
+          <input type="text" id="siteName" placeholder="例）小田原市扇町">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>作業日</label>
+            <input type="date" id="workDate">
+          </div>
+          <div class="field">
+            <label>現場責任者</label>
+            <select id="chiefSelect" onchange="toggleFree('chiefSelect','chiefFree')">
+              <option value="三枝 裕太">三枝 裕太</option>
+              <option value="佐藤 嘉秀">佐藤 嘉秀</option>
+              <option value="フリー入力">フリー入力</option>
+            </select>
+            <input type="text" id="chiefFree" placeholder="氏名を入力" style="display:none;margin-top:6px;">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>施工班職長名</label>
+            <input type="text" id="worker" placeholder="氏名">
+          </div>
+          <div class="field">
+            <label>作業人員</label>
+            <input type="text" id="workerCount" placeholder="例）5名">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>天候</label>
+            <select id="weatherSelect" onchange="toggleFree('weatherSelect','weatherFree')">
+              <option value="晴れ">晴れ</option>
+              <option value="曇り">曇り</option>
+              <option value="雨">雨</option>
+              <option value="雪">雪</option>
+              <option value="晴れのち曇り">晴れのち曇り</option>
+              <option value="曇りのち雨">曇りのち雨</option>
+              <option value="荒天">荒天</option>
+              <option value="フリー入力">フリー入力</option>
+            </select>
+            <input type="text" id="weatherFree" placeholder="天候を入力" style="display:none;margin-top:6px;">
+          </div>
+          <div class="field">
+            <label>気温</label>
+            <input type="text" id="temp" placeholder="例）28℃">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>開始</label>
+            <input type="time" id="timeStart">
+          </div>
+          <div class="field">
+            <label>終了</label>
+            <input type="time" id="timeEnd">
+          </div>
+        </div>
+        <div class="field">
+          <label>使用機械・重機</label>
+          <input type="text" id="machinery" placeholder="例）バックホウ0.25㎥、振動ローラー">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>立会者</span></div>
+      <div class="section-body">
+        <div id="witnessList"></div>
+        <button type="button" class="add-pipe-btn" onclick="addWitnessRow()">＋ 立会者を追加</button>
+      </div>
+    </div>
+
+
+    <div class="section">
+
+      <div class="section-head"><span>本日の作業内容</span></div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="workContent" rows="4" placeholder="作業内容を入力"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>安全確認・架空線・既設埋設配管有無</span></div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="safety" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div id="dynamicSections"></div>
+
+    <div class="section">
+      <div class="section-head"><span>使用配管数・管種</span></div>
+      <div class="section-body">
+        <div id="pipeList"></div>
+        <button type="button" class="add-pipe-btn" onclick="addPipeRow()">＋ 配管を追加</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>イレギュラー事項</span></div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="irregular" rows="3" placeholder="例）想定外の埋設物発見、天候による中断 等"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>気づいたこと・今日思ったこと</span></div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="notice" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>明日の作業内容</span></div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="tomorrow" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span>作成者</span></div>
+      <div class="section-body">
+        <div class="field">
+          <input type="text" id="creator" placeholder="作成者名">
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="editingNote"></p>
+  </div>
+
+  <!-- ===================== 履歴一覧 VIEW ===================== -->
+  <div class="view" id="view-history">
+    <div class="history-toolbar">
+      <input type="text" id="searchBox" placeholder="現場名・担当者で検索" oninput="renderHistory()">
+    </div>
+    <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="document.getElementById('pdfImportInput').click()">📄 他の人のPDFを取り込む</button>
+    <input type="file" id="pdfImportInput" accept="application/pdf" style="display:none;" onchange="importPDFFile(event)">
+    <div id="historyList"></div>
+    <button class="btn btn-secondary" style="margin-top:6px;" onclick="exportAllCSV()">全件をCSVで書き出す</button>
+  </div>
+
+</main>
+
+<div class="action-bar" id="formActionBar">
+  <button class="btn btn-ghost" onclick="newReport()">クリア</button>
+  <button class="btn btn-secondary" onclick="exportPDFFromForm()">PDF出力</button>
+  <button class="btn btn-primary" onclick="saveReport()">保存する</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="printArea"></div>
+
+<script>
+const STORAGE_KEY = 'kanro_workReports_v1';
+const DRAFT_KEY = 'kanro_workReports_draft_v1';
+let editingId = null;
+
+function uid(){ return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function loadReports(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveReports(list){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+}
+
+/* ---------- tabs ---------- */
+function switchTab(tab){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('view-form').classList.toggle('active', tab==='form');
+  document.getElementById('view-history').classList.toggle('active', tab==='history');
+  document.getElementById('formActionBar').style.display = (tab==='form') ? 'flex' : 'none';
+  if(tab==='history') renderHistory();
+}
+
+/* ---------- pipe rows ---------- */
+const PIPE_TYPE_OPTIONS = ['直管','曲げ管','フリー入力'];
+function pipeRowTemplate(id, data){
+  data = data || {};
+  const f = (k)=> data[k] ? String(data[k]).replace(/"/g,'&quot;') : '';
+  const typeVal = data.type || '';
+  const typeIsPreset = PIPE_TYPE_OPTIONS.slice(0,2).includes(typeVal);
+  const typeSelectVal = typeVal ? (typeIsPreset ? typeVal : 'フリー入力') : '直管';
+  const typeFreeVal = (typeVal && !typeIsPreset) ? typeVal : '';
+  const typeFreeShow = typeSelectVal === 'フリー入力';
+
+  return `
+  <div class="pipe-card" data-pipe-id="${id}">
+    <span class="pipe-num">#${document.querySelectorAll('#pipeList .pipe-card').length + 1}</span>
+    <div class="pipe-grid">
+      <div class="full">
+        <label>管種</label>
+        <select data-field="type-select" onchange="togglePipeTypeFree('${id}')">
+          ${PIPE_TYPE_OPTIONS.map(o=>`<option value="${o}" ${o===typeSelectVal?'selected':''}>${o}</option>`).join('')}
+        </select>
+        <input type="text" data-field="type-free" value="${f2(typeFreeVal)}" placeholder="管種を入力" style="display:${typeFreeShow?'block':'none'};margin-top:6px;">
+      </div>
+      <div>
+        <label>呼び径</label>
+        <div class="affix-wrap"><span>Φ</span><input type="text" data-field="size" value="${f('size')}" placeholder="150" inputmode="decimal"></div>
+      </div>
+      <div><label>数量</label><input type="text" data-field="qty" value="${f('qty')}" placeholder="10" inputmode="numeric"></div>
+      <div><label>単位</label><div class="fixed-value">本</div></div>
+      <div>
+        <label>配管延長</label>
+        <div class="affix-wrap"><input type="text" data-field="meter" value="${f('meter')}" placeholder="50" inputmode="decimal"><span>m</span></div>
+      </div>
+      <div><label>埋設深さ(DP)</label><input type="text" data-field="dp" value="${f('dp')}" placeholder="0.80m"></div>
+      <div><label>管下H</label><input type="text" data-field="kanka" value="${f('kanka')}" placeholder="0.60m"></div>
+      <div class="full"><label>備考</label><input type="text" data-field="note" value="${f('note')}"></div>
+    </div>
+    <button type="button" class="pipe-remove" onclick="removePipeRow('${id}')">− この配管を削除</button>
+  </div>`;
+}
+function f2(v){ return v ? String(v).replace(/"/g,'&quot;') : ''; }
+function togglePipeTypeFree(id){
+  const card = document.querySelector(`.pipe-card[data-pipe-id="${id}"]`);
+  if(!card) return;
+  const sel = card.querySelector('[data-field="type-select"]');
+  const free = card.querySelector('[data-field="type-free"]');
+  free.style.display = (sel.value === 'フリー入力') ? 'block' : 'none';
+}
+
+/* ---------- witness rows ---------- */
+const WITNESS_ORG_PRESETS = ['関電工'];
+function witnessRowTemplate(id, data){
+  data = data || {};
+  const orgVal = data.org || '';
+  const orgIsPreset = WITNESS_ORG_PRESETS.includes(orgVal);
+  const orgSelectVal = orgVal ? (orgIsPreset ? orgVal : 'フリー入力') : '関電工';
+  const orgFreeVal = (orgVal && !orgIsPreset) ? orgVal : '';
+  const orgFreeShow = orgSelectVal === 'フリー入力';
+  const nameVal = f2(data.name);
+
+  return `
+  <div class="pipe-card" data-witness-id="${id}">
+    <span class="pipe-num">#${document.querySelectorAll('#witnessList .pipe-card').length + 1}</span>
+    <div class="pipe-grid">
+      <div>
+        <label>所属</label>
+        <select data-field="org-select" onchange="toggleWitnessOrgFree('${id}')">
+          <option value="関電工" ${orgSelectVal==='関電工'?'selected':''}>関電工</option>
+          <option value="フリー入力" ${orgSelectVal==='フリー入力'?'selected':''}>フリー入力</option>
+        </select>
+        <input type="text" data-field="org-free" value="${f2(orgFreeVal)}" placeholder="所属を入力" style="display:${orgFreeShow?'block':'none'};margin-top:6px;">
+      </div>
+      <div><label>氏名</label><input type="text" data-field="name" value="${nameVal}" placeholder="氏名"></div>
+    </div>
+    <button type="button" class="pipe-remove" onclick="removeWitnessRow('${id}')">− この立会者を削除</button>
+  </div>`;
+}
+function addWitnessRow(data){
+  const id = uid();
+  document.getElementById('witnessList').insertAdjacentHTML('beforeend', witnessRowTemplate(id, data));
+  renumberWitnesses();
+}
+function removeWitnessRow(id){
+  const el = document.querySelector(`.pipe-card[data-witness-id="${id}"]`);
+  if(el) el.remove();
+  renumberWitnesses();
+}
+function renumberWitnesses(){
+  document.querySelectorAll('#witnessList .pipe-card').forEach((el,i)=>{
+    el.querySelector('.pipe-num').textContent = '#' + (i+1);
+  });
+}
+function toggleWitnessOrgFree(id){
+  const card = document.querySelector(`.pipe-card[data-witness-id="${id}"]`);
+  if(!card) return;
+  const sel = card.querySelector('[data-field="org-select"]');
+  const free = card.querySelector('[data-field="org-free"]');
+  free.style.display = (sel.value === 'フリー入力') ? 'block' : 'none';
+}
+function collectWitnesses(){
+  const rows = [];
+  document.querySelectorAll('#witnessList .pipe-card').forEach(card=>{
+    const orgSel = card.querySelector('[data-field="org-select"]').value;
+    const orgFree = card.querySelector('[data-field="org-free"]').value.trim();
+    const org = (orgSel === 'フリー入力') ? orgFree : orgSel;
+    const name = card.querySelector('[data-field="name"]').value.trim();
+    if(org || name) rows.push({org, name});
+  });
+  return rows;
+}
+function addPipeRow(data){
+  const id = uid();
+  document.getElementById('pipeList').insertAdjacentHTML('beforeend', pipeRowTemplate(id, data));
+  renumberPipes();
+}
+function removePipeRow(id){
+  const el = document.querySelector(`.pipe-card[data-pipe-id="${id}"]`);
+  if(el) el.remove();
+  renumberPipes();
+}
+function renumberPipes(){
+  document.querySelectorAll('#pipeList .pipe-card').forEach((el,i)=>{
+    el.querySelector('.pipe-num').textContent = '#' + (i+1);
+  });
+}
+function collectPipes(){
+  const rows = [];
+  document.querySelectorAll('#pipeList .pipe-card').forEach(card=>{
+    const row = {};
+    const typeSel = card.querySelector('[data-field="type-select"]').value;
+    const typeFree = card.querySelector('[data-field="type-free"]').value.trim();
+    row.type = (typeSel === 'フリー入力') ? typeFree : typeSel;
+    row.unit = '本';
+    card.querySelectorAll('input[data-field]:not([data-field="type-free"])').forEach(inp=>{
+      row[inp.dataset.field] = inp.value.trim();
+    });
+    const hasContent = row.type || row.size || row.qty || row.meter || row.dp || row.kanka || row.note;
+    if(hasContent) rows.push(row);
+  });
+  return rows;
+}
+
+/* ---------- select+free-text helper ---------- */
+function toggleFree(selectId, freeId){
+  const sel = document.getElementById(selectId).value;
+  document.getElementById(freeId).style.display = (sel === 'フリー入力') ? 'block' : 'none';
+}
+function getSelectFreeValue(selectId, freeId){
+  const sel = document.getElementById(selectId).value;
+  if(sel === 'フリー入力') return document.getElementById(freeId).value.trim();
+  return sel;
+}
+function setSelectFreeValue(selectId, freeId, value, presetOptions){
+  const sel = document.getElementById(selectId);
+  const free = document.getElementById(freeId);
+  if(value && presetOptions.includes(value)){
+    sel.value = value;
+    free.style.display = 'none';
+    free.value = '';
+  }else{
+    sel.value = 'フリー入力';
+    free.value = value || '';
+    free.style.display = value ? 'block' : 'none';
+  }
+}
+const CHIEF_OPTIONS = ['三枝 裕太','佐藤 嘉秀'];
+const WEATHER_OPTIONS = ['晴れ','曇り','雨','雪','晴れのち曇り','曇りのち雨','荒天'];
+
+/* ---------- dynamic material / dump-truck sections (generic, config-driven) ---------- */
+const DYNAMIC_SECTIONS = [
+  {key:'existingAsphaltOut', title:'既存アスファルト廃材搬出ダンプ台数', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'subgradeWasteOut', title:'路盤廃材搬出ダンプ台数（掘削埋め戻し時）', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'soilOut', title:'発生残土搬出ダンプ台数', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'concreteDebrisOut', title:'コンクリートガラ搬出ダンプ台数', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'recycledSandIn', title:'再生砂搬入量', fields:[
+    {key:'qty',  label:'数量', type:'number', suffix:'m3'},
+    {key:'note', label:'備考', type:'text'},
+  ]},
+  {key:'improvedSoilIn', title:'改良土搬入数量', fields:[
+    {key:'qty',  label:'数量', type:'number', suffix:'m3'},
+    {key:'note', label:'備考', type:'text'},
+  ]},
+  {key:'sandSoilDumpIn', title:'搬入ダンプ台数（再生砂・改良土）', fields:[
+    {key:'target', label:'対象材料', type:'select', options:['再生砂','改良土','フリー入力']},
+    {key:'note',   label:'備考',     type:'text'},
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'subgradeMaterialIn', title:'路盤材搬入数量（RM・RC）', fields:[
+    {key:'type', label:'材料種別', type:'select', options:['RM30','RM40','RC40','既存路盤','フリー入力']},
+    {key:'qty',  label:'数量',     type:'number', suffix:'m3'},
+  ]},
+  {key:'subgradeDumpIn', title:'路盤材搬入ダンプ台数', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+  {key:'asphaltIn', title:'アスファルト搬入量', fields:[
+    {key:'type', label:'種別', type:'select', options:['密粒','粗粒','瀝青安定処理','フリー入力']},
+    {key:'qty',  label:'数量', type:'number', suffix:'t'},
+  ]},
+  {key:'asphaltDumpIn', title:'搬入ダンプ台数（アスファルト系）', fields:[
+    {key:'weight', label:'積載重量', type:'select', options:['4t','8t','10t','フリー入力']},
+    {key:'count',  label:'台数',     type:'counter'},
+  ]},
+];
+
+function buildDynamicSectionsHTML(){
+  const container = document.getElementById('dynamicSections');
+  container.innerHTML = DYNAMIC_SECTIONS.map(cfg => `
+    <div class="section">
+      <div class="section-head"><span>${cfg.title}</span></div>
+      <div class="section-body">
+        <div id="dynlist-${cfg.key}"></div>
+        <button type="button" class="add-pipe-btn" onclick="addDynRow('${cfg.key}')">＋ 行を追加</button>
+      </div>
+    </div>`).join('');
+}
+
+function escAttr(v){ return v ? String(v).replace(/"/g,'&quot;') : ''; }
+
+function dynRowTemplate(sectionKey, rowId, data, fields){
+  data = data || {};
+  const fieldsHtml = fields.map(f=>{
+    if(f.type === 'select'){
+      const val = data[f.key] || '';
+      const presets = f.options.filter(o=>o!=='フリー入力');
+      const isPreset = presets.includes(val);
+      const selectVal = val ? (isPreset ? val : 'フリー入力') : f.options[0];
+      const freeVal = (val && !isPreset) ? val : '';
+      const freeShow = selectVal === 'フリー入力';
+      return `
+        <div>
+          <label>${f.label}</label>
+          <select data-field="${f.key}-select" onchange="toggleDynFree('${sectionKey}','${rowId}','${f.key}')">
+            ${f.options.map(o=>`<option value="${o}" ${o===selectVal?'selected':''}>${o}</option>`).join('')}
+          </select>
+          <input type="text" data-field="${f.key}-free" value="${escAttr(freeVal)}" placeholder="${f.label}を入力" style="display:${freeShow?'block':'none'};margin-top:6px;">
+        </div>`;
+    }
+    if(f.type === 'number' && f.suffix){
+      return `<div><label>${f.label}</label><div class="affix-wrap"><input type="text" data-field="${f.key}" value="${escAttr(data[f.key])}" placeholder="0" inputmode="decimal"><span>${f.suffix}</span></div></div>`;
+    }
+    if(f.type === 'counter'){
+      const val = parseInt(data[f.key], 10) || 0;
+      return `
+        <div>
+          <label>${f.label}</label>
+          <div class="counter-wrap">
+            <button type="button" class="counter-btn" onclick="adjustCounter('${sectionKey}','${rowId}','${f.key}',-1)" aria-label="減らす">−</button>
+            <input type="text" data-field="${f.key}" value="${val}" inputmode="numeric" class="counter-input">
+            <button type="button" class="counter-btn" onclick="adjustCounter('${sectionKey}','${rowId}','${f.key}',1)" aria-label="増やす">＋</button>
+          </div>
+        </div>`;
+    }
+    return `<div><label>${f.label}</label><input type="text" data-field="${f.key}" value="${escAttr(data[f.key])}"></div>`;
+  }).join('');
+
+  return `
+  <div class="pipe-card" data-dyn-id="${rowId}">
+    <span class="pipe-num">#${document.querySelectorAll('#dynlist-'+sectionKey+' .pipe-card').length + 1}</span>
+    <div class="pipe-grid">
+      ${fieldsHtml}
+    </div>
+    <button type="button" class="pipe-remove" onclick="removeDynRow('${sectionKey}','${rowId}')">− この行を削除</button>
+  </div>`;
+}
+function addDynRow(sectionKey, data){
+  const cfg = DYNAMIC_SECTIONS.find(s=>s.key===sectionKey);
+  const id = uid();
+  document.getElementById('dynlist-'+sectionKey).insertAdjacentHTML('beforeend', dynRowTemplate(sectionKey, id, data, cfg.fields));
+  renumberDyn(sectionKey);
+}
+function removeDynRow(sectionKey, id){
+  const el = document.querySelector(`#dynlist-${sectionKey} .pipe-card[data-dyn-id="${id}"]`);
+  if(el) el.remove();
+  renumberDyn(sectionKey);
+}
+function renumberDyn(sectionKey){
+  document.querySelectorAll('#dynlist-'+sectionKey+' .pipe-card').forEach((el,i)=>{
+    el.querySelector('.pipe-num').textContent = '#' + (i+1);
+  });
+}
+function adjustCounter(sectionKey, rowId, fieldKey, delta){
+  const card = document.querySelector(`#dynlist-${sectionKey} .pipe-card[data-dyn-id="${rowId}"]`);
+  if(!card) return;
+  const input = card.querySelector(`[data-field="${fieldKey}"]`);
+  let v = parseInt(input.value, 10);
+  if(isNaN(v)) v = 0;
+  v = Math.max(0, v + delta);
+  input.value = v;
+  scheduleDraftSave();
+}
+function toggleDynFree(sectionKey, rowId, fieldKey){
+  const card = document.querySelector(`#dynlist-${sectionKey} .pipe-card[data-dyn-id="${rowId}"]`);
+  if(!card) return;
+  const sel = card.querySelector(`[data-field="${fieldKey}-select"]`);
+  const free = card.querySelector(`[data-field="${fieldKey}-free"]`);
+  free.style.display = (sel.value === 'フリー入力') ? 'block' : 'none';
+}
+function collectDynSection(sectionKey){
+  const cfg = DYNAMIC_SECTIONS.find(s=>s.key===sectionKey);
+  const rows = [];
+  document.querySelectorAll('#dynlist-'+sectionKey+' .pipe-card').forEach(card=>{
+    const row = {};
+    cfg.fields.forEach(f=>{
+      if(f.type === 'select'){
+        const sel = card.querySelector(`[data-field="${f.key}-select"]`).value;
+        const free = card.querySelector(`[data-field="${f.key}-free"]`).value.trim();
+        row[f.key] = (sel === 'フリー入力') ? free : sel;
+      }else{
+        row[f.key] = card.querySelector(`[data-field="${f.key}"]`).value.trim();
+      }
+    });
+    if(Object.values(row).some(v=>v)) rows.push(row);
+  });
+  return rows;
+}
+function populateDynSection(sectionKey, rowsData){
+  document.getElementById('dynlist-'+sectionKey).innerHTML = '';
+  (rowsData && rowsData.length ? rowsData : [{}]).forEach(d=>addDynRow(sectionKey, d));
+}
+function dynSectionSummary(rows, fields){
+  if(!rows || !rows.length) return '';
+  return rows.map(r=>{
+    const val = fields.map(f=>{
+      const v = r[f.key];
+      if(!v) return '';
+      return (f.type==='number' && f.suffix) ? (v+f.suffix) : v;
+    }).filter(v=>v).join(' ');
+    return val;
+  }).filter(v=>v).join(' / ');
+}
+
+/* ---------- form <-> object ---------- */
+function collectFormData(){
+  const data = {
+    siteName: document.getElementById('siteName').value.trim(),
+    workDate: document.getElementById('workDate').value,
+    chief: getSelectFreeValue('chiefSelect','chiefFree'),
+    worker: document.getElementById('worker').value.trim(),
+    workerCount: document.getElementById('workerCount').value.trim(),
+    weather: getSelectFreeValue('weatherSelect','weatherFree'),
+    temp: document.getElementById('temp').value.trim(),
+    timeStart: document.getElementById('timeStart').value,
+    timeEnd: document.getElementById('timeEnd').value,
+    machinery: document.getElementById('machinery').value.trim(),
+    witnesses: collectWitnesses(),
+    workContent: document.getElementById('workContent').value.trim(),
+    pipes: collectPipes(),
+    irregular: document.getElementById('irregular').value.trim(),
+    safety: document.getElementById('safety').value.trim(),
+    notice: document.getElementById('notice').value.trim(),
+    tomorrow: document.getElementById('tomorrow').value.trim(),
+    creator: document.getElementById('creator').value.trim()
+  };
+  DYNAMIC_SECTIONS.forEach(cfg => { data[cfg.key] = collectDynSection(cfg.key); });
+  return data;
+}
+function normalizeWitnesses(data){
+  // backward compatibility with older single-witness record formats
+  if(data.witnesses && data.witnesses.length) return data.witnesses;
+  if(data.witnessOrg || data.witnessName) return [{org:data.witnessOrg||'', name:data.witnessName||''}];
+  if(data.witness) return [{org:'', name:data.witness}];
+  return [];
+}
+function populateForm(data){
+  document.getElementById('siteName').value = data.siteName || '';
+  document.getElementById('workDate').value = data.workDate || '';
+  setSelectFreeValue('chiefSelect','chiefFree', data.chief || '', CHIEF_OPTIONS);
+  document.getElementById('worker').value = data.worker || '';
+  document.getElementById('workerCount').value = data.workerCount || '';
+  setSelectFreeValue('weatherSelect','weatherFree', data.weather || '', WEATHER_OPTIONS);
+  document.getElementById('temp').value = data.temp || '';
+  document.getElementById('timeStart').value = data.timeStart || '';
+  document.getElementById('timeEnd').value = data.timeEnd || '';
+  document.getElementById('machinery').value = data.machinery || '';
+  document.getElementById('workContent').value = data.workContent || '';
+  document.getElementById('irregular').value = data.irregular || '';
+  document.getElementById('safety').value = data.safety || '';
+  document.getElementById('notice').value = data.notice || '';
+  document.getElementById('tomorrow').value = data.tomorrow || '';
+  document.getElementById('creator').value = data.creator || '';
+  document.getElementById('pipeList').innerHTML = '';
+  (data.pipes && data.pipes.length ? data.pipes : []).forEach(p=>addPipeRow(p));
+  document.getElementById('witnessList').innerHTML = '';
+  const witnesses = normalizeWitnesses(data);
+  (witnesses.length ? witnesses : [{}]).forEach(w=>addWitnessRow(w));
+  DYNAMIC_SECTIONS.forEach(cfg => { populateDynSection(cfg.key, data[cfg.key]); });
+}
+
+function getLastUsedContext(){
+  const list = loadReports();
+  if(!list.length) return null;
+  const sorted = list.slice().sort((a,b)=> (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const r = sorted[0];
+  return {
+    siteName:r.siteName||'', chief:r.chief||'', worker:r.worker||'', workerCount:r.workerCount||'',
+    machinery:r.machinery||'', witnesses:normalizeWitnesses(r), creator:r.creator||''
+  };
+}
+function clearForm(){
+  populateForm({});
+  document.getElementById('workDate').value = todayStr();
+  editingId = null;
+  const ctx = getLastUsedContext();
+  if(ctx){
+    document.getElementById('siteName').value = ctx.siteName;
+    setSelectFreeValue('chiefSelect','chiefFree', ctx.chief, CHIEF_OPTIONS);
+    document.getElementById('worker').value = ctx.worker;
+    document.getElementById('workerCount').value = ctx.workerCount;
+    document.getElementById('machinery').value = ctx.machinery;
+    document.getElementById('witnessList').innerHTML = '';
+    (ctx.witnesses && ctx.witnesses.length ? ctx.witnesses : [{}]).forEach(w=>addWitnessRow(w));
+    document.getElementById('creator').value = ctx.creator;
+    document.getElementById('editingNote').textContent = '現場名・担当者などは前回の内容を自動入力しています（必要に応じて修正してください）';
+  }else{
+    document.getElementById('editingNote').textContent = '';
+  }
+}
+function todayStr(){
+  const d = new Date();
+  const p = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+/* ---------- CRUD ---------- */
+function newReport(){
+  if(!confirm('入力内容をクリアして新規作成しますか？')) return;
+  clearForm();
+  localStorage.removeItem(DRAFT_KEY);
+  showToast('新規入力を開始しました');
+}
+
+
+function saveReport(){
+  const data = collectFormData();
+  if(!data.siteName){ alert('現場名を入力してください'); return; }
+  if(!data.workDate){ alert('作業日を入力してください'); return; }
+
+  const list = loadReports();
+  const now = new Date().toISOString();
+  if(editingId){
+    const idx = list.findIndex(r=>r.id===editingId);
+    if(idx>-1){
+      list[idx] = {...list[idx], ...data, updatedAt: now};
+    }
+  }else{
+    const id = uid();
+    list.unshift({id, ...data, createdAt: now, updatedAt: now});
+    editingId = id;
+  }
+  saveReports(list);
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('editingNote').textContent = '保存済み（' + data.workDate + ' / ' + data.siteName + '）';
+  showToast('保存しました');
+}
+
+function openReport(id){
+  const list = loadReports();
+  const r = list.find(x=>x.id===id);
+  if(!r) return;
+  populateForm(r);
+  editingId = id;
+  document.getElementById('editingNote').textContent = '編集中（' + r.workDate + ' / ' + r.siteName + '）';
+  switchTab('form');
+}
+
+function duplicateReport(id){
+  const list = loadReports();
+  const r = list.find(x=>x.id===id);
+  if(!r) return;
+  populateForm({
+    siteName: r.siteName,
+    workDate: todayStr(),
+    chief: r.chief,
+    worker: r.worker,
+    workerCount: r.workerCount,
+    machinery: r.machinery,
+    witnesses: normalizeWitnesses(r),
+    creator: r.creator
+  });
+  editingId = null;
+  document.getElementById('editingNote').textContent = '「' + r.siteName + '」を複製しました（未保存）';
+  switchTab('form');
+  showToast('複製しました。内容を確認して保存してください');
+}
+
+function deleteReport(id){
+  if(!confirm('この日報を削除しますか？元に戻せません。')) return;
+  let list = loadReports();
+  list = list.filter(r=>r.id!==id);
+  saveReports(list);
+  if(editingId===id){ clearForm(); }
+  renderHistory();
+  showToast('削除しました');
+}
+
+/* ---------- history render ---------- */
+function renderHistory(){
+  const list = loadReports().slice().sort((a,b)=> (b.workDate||'').localeCompare(a.workDate||'') || (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const filtered = q ? list.filter(r=>
+    (r.siteName||'').toLowerCase().includes(q) ||
+    (r.worker||'').toLowerCase().includes(q)
+  ) : list;
+
+  const container = document.getElementById('historyList');
+  if(filtered.length===0){
+    container.innerHTML = `<div class="empty-state"><div class="big">📋</div>まだ日報がありません<br>「入力」タブから作成してください</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(r=>`
+    <div class="card">
+      <div class="date">${r.workDate || '(日付未設定)'}</div>
+      <div class="site">${escapeHtml(r.siteName || '(現場名未設定)')}</div>
+      <div class="meta">${escapeHtml(r.worker||'')} ${r.workerCount ? '・'+escapeHtml(r.workerCount):''} ${r.pipes && r.pipes.length ? '・配管'+r.pipes.length+'件' : ''}</div>
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openReport('${r.id}')">開く・編集</button>
+        <button class="btn btn-ghost btn-sm" onclick="duplicateReport('${r.id}')">翌日用に複製</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSingleCSV('${r.id}')">CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportPDF('${r.id}')">PDF出力</button>
+        <button class="btn btn-danger-ghost btn-sm" onclick="deleteReport('${r.id}')">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- CSV export ---------- */
+function csvEscape(v){
+  v = (v===undefined || v===null) ? '' : String(v);
+  if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+function pipesSummary(pipes){
+  if(!pipes || !pipes.length) return '';
+  return pipes.map(p=>`${p.type||''} ${p.size?'Φ'+p.size:''} ${p.qty||''}${p.unit||''} ${p.meter?p.meter+'m':''} DP:${p.dp||''} 管下H:${p.kanka||''} ${p.note||''}`.trim()).join(' / ');
+}
+function downloadCSV(filename, rows){
+  const bom = '\uFEFF';
+  const content = bom + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+const CSV_HEADERS_BASE1 = ['作業日','現場名','現場責任者','施工班職長名','作業人員','天候','気温','開始','終了','使用機械・重機','立会者','本日の作業内容','安全確認・架空線・既設埋設配管有無'];
+const CSV_HEADERS_BASE2 = ['使用配管数・管種','イレギュラー事項','気づいたこと・今日思ったこと','明日の作業内容','作成者'];
+const CSV_HEADERS = [...CSV_HEADERS_BASE1, ...DYNAMIC_SECTIONS.map(c=>c.title), ...CSV_HEADERS_BASE2];
+function witnessesSummary(r){
+  const list = normalizeWitnesses(r);
+  if(!list.length) return '';
+  return list.map(w=>`${w.org||''} ${w.name||''}`.trim()).join(' / ');
+}
+function reportToRow(r){
+  const dynValues = DYNAMIC_SECTIONS.map(cfg => dynSectionSummary(r[cfg.key], cfg.fields));
+  return [r.workDate, r.siteName, r.chief, r.worker, r.workerCount, r.weather, r.temp, r.timeStart, r.timeEnd, r.machinery, witnessesSummary(r), r.workContent, r.safety,
+    ...dynValues,
+    pipesSummary(r.pipes), r.irregular, r.notice, r.tomorrow, r.creator];
+}
+function exportSingleCSV(id){
+  const r = loadReports().find(x=>x.id===id);
+  if(!r) return;
+  downloadCSV(`作業日報_${r.workDate||'未設定'}_${r.siteName||''}.csv`, [CSV_HEADERS, reportToRow(r)]);
+}
+function exportAllCSV(){
+  const list = loadReports();
+  if(!list.length){ showToast('出力するデータがありません'); return; }
+  const rows = [CSV_HEADERS, ...list.map(reportToRow)];
+  downloadCSV(`作業日報_全件_${todayStr()}.csv`, rows);
+}
+
+/* ---------- draft autosave ---------- */
+let draftTimer = null;
+function scheduleDraftSave(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(()=>{
+    const data = collectFormData();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({data, editingId, savedAt: Date.now()}));
+  }, 500);
+}
+document.addEventListener('input', (e)=>{
+  if(e.target.closest('#view-form')) scheduleDraftSave();
+});
+
+/* ---------- PDF export (via browser print) ---------- */
+function buildDynSectionHTML(cfg, rows){
+  const g = (v)=> v ? escapeHtml(v) : '';
+  const list = (rows && rows.length) ? rows : [{}];
+  const headerCells = cfg.fields.map(f=>`<th>${f.label}${f.suffix?'('+f.suffix+')':''}</th>`).join('');
+  const bodyRows = list.map(row=>{
+    const cells = cfg.fields.map(f=>{
+      const v = row[f.key];
+      if(!v) return '<td></td>';
+      const display = (f.type==='number' && f.suffix) ? (g(v)+f.suffix) : g(v);
+      return `<td>${display}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  return `
+    <div class="p-section">
+      <div class="p-head">${cfg.title}</div>
+      <table class="p-pipe">
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function buildPrintHTML(r){
+  const g = (v)=> v ? escapeHtml(v) : '';
+  const pipes = (r.pipes && r.pipes.length) ? r.pipes : [{}];
+  const pipeRows = pipes.map(p=>`
+    <tr>
+      <td>${g(p.type)}</td><td>${p.size?('Φ'+g(p.size)):''}</td><td>${g(p.qty)}</td><td>${g(p.unit)}</td>
+      <td>${p.meter?(g(p.meter)+'m'):''}</td><td>${g(p.dp)}</td><td>${g(p.kanka)}</td><td>${g(p.note)}</td>
+    </tr>`).join('');
+
+  const witnessList = normalizeWitnesses(r);
+  const witnessRows = (witnessList.length ? witnessList : [{org:'',name:''}]).map((w,i)=>{
+    const num = witnessList.length > 1 ? `${i+1}. ` : '';
+    return `<tr><td class="lbl">${num}立会者所属</td><td class="val">${g(w.org)}</td><td class="lbl">${num}立会者氏名</td><td class="val">${g(w.name)}</td></tr>`;
+  }).join('');
+
+  return `
+    <div class="p-title">土工事配管工 作業日報</div>
+
+    <div class="p-section">
+      <div class="p-head">基本情報</div>
+      <table class="p-grid">
+        <tr><td class="lbl">現場名</td><td class="val" colspan="3">${g(r.siteName)}</td></tr>
+        <tr><td class="lbl">作業日</td><td class="val">${g(r.workDate)}</td><td class="lbl">現場責任者</td><td class="val">${g(r.chief)}</td></tr>
+        <tr><td class="lbl">施工班職長名</td><td class="val">${g(r.worker)}</td><td class="lbl">作業人員</td><td class="val">${g(r.workerCount)}</td></tr>
+        <tr><td class="lbl">天候</td><td class="val">${g(r.weather)}</td><td class="lbl">気温</td><td class="val">${g(r.temp)}</td></tr>
+        <tr><td class="lbl">作業時間</td><td class="val" colspan="3">${g(r.timeStart)} 〜 ${g(r.timeEnd)}</td></tr>
+        <tr><td class="lbl">使用機械・重機</td><td class="val" colspan="3">${g(r.machinery)}</td></tr>
+        ${witnessRows}
+      </table>
+    </div>
+
+    <div class="p-section">
+      <div class="p-head">本日の作業内容</div>
+      <div class="p-box">${g(r.workContent)}</div>
+    </div>
+
+    <div class="p-section">
+      <div class="p-head">安全確認・架空線・既設埋設配管有無</div>
+      <div class="p-box">${g(r.safety)}</div>
+    </div>
+
+    ${DYNAMIC_SECTIONS.map(cfg => buildDynSectionHTML(cfg, r[cfg.key])).join('')}
+
+    <div class="p-section">
+      <div class="p-head">使用配管数・管種</div>
+      <table class="p-pipe">
+        <thead><tr><th>管種</th><th>呼び径</th><th>数量</th><th>単位</th><th>配管延長</th><th>埋設深さ(DP)</th><th>管下H</th><th>備考</th></tr></thead>
+        <tbody>${pipeRows}</tbody>
+      </table>
+    </div>
+
+    <div class="p-section">
+      <div class="p-head">イレギュラー事項</div>
+      <div class="p-box">${g(r.irregular)}</div>
+    </div>
+
+    <div class="p-section">
+      <div class="p-head">気づいたこと・今日思ったこと</div>
+      <div class="p-box">${g(r.notice)}</div>
+    </div>
+
+    <div class="p-section">
+      <div class="p-head">明日の作業内容</div>
+      <div class="p-box">${g(r.tomorrow)}</div>
+    </div>
+
+    <div class="p-section">
+      <table class="p-grid">
+        <tr><td class="lbl" style="width:17%;">作成者</td><td class="val" colspan="3">${g(r.creator)}</td></tr>
+      </table>
+    </div>
+
+    <div class="p-datablock">
+      <div class="p-datalabel">―― この行は本アプリでの記録復元用データです。削除しないでください ――</div>
+      ${DATA_MARK_START}${encodeReportData(r)}${DATA_MARK_END}
+    </div>
+  `;
+}
+
+/* ---- embed / restore data via PDF text layer ---- */
+const DATA_MARK_START = '[[KANRO_DATA_START]]';
+const DATA_MARK_END = '[[KANRO_DATA_END]]';
+function encodeReportData(r){
+  const payload = {
+    siteName:r.siteName, workDate:r.workDate, chief:r.chief, worker:r.worker, workerCount:r.workerCount,
+    weather:r.weather, temp:r.temp, timeStart:r.timeStart, timeEnd:r.timeEnd,
+    machinery:r.machinery, witnesses:normalizeWitnesses(r), workContent:r.workContent, pipes:r.pipes||[],
+    irregular:r.irregular, safety:r.safety, notice:r.notice, tomorrow:r.tomorrow, creator:r.creator
+  };
+  DYNAMIC_SECTIONS.forEach(cfg => { payload[cfg.key] = r[cfg.key] || []; });
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+function decodeReportData(b64){
+  return JSON.parse(decodeURIComponent(escape(atob(b64))));
+}
+
+function runPrint(reportData){
+  document.getElementById('printArea').innerHTML = buildPrintHTML(reportData);
+  window.print();
+}
+
+function exportPDF(id){
+  const r = loadReports().find(x=>x.id===id);
+  if(!r) return;
+  runPrint(r);
+}
+
+function exportPDFFromForm(){
+  const data = collectFormData();
+  if(!data.siteName){ alert('現場名を入力してください'); return; }
+  runPrint(data);
+}
+
+window.addEventListener('afterprint', ()=>{
+  document.getElementById('printArea').innerHTML = '';
+});
+
+/* ---------- PDF import ---------- */
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function importPDFFile(evt){
+  const file = evt.target.files[0];
+  evt.target.value = '';
+  if(!file) return;
+  if(!window.pdfjsLib){
+    alert('PDF読み込み機能の準備ができていません。インターネット接続を確認して再度お試しください。');
+    return;
+  }
+  showToast('PDFを読み込んでいます…');
+  try{
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    let fullText = '';
+    for(let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      fullText += content.items.map(it=>it.str).join(' ') + ' ';
+    }
+    const startIdx = fullText.indexOf(DATA_MARK_START);
+    const endIdx = fullText.indexOf(DATA_MARK_END);
+    if(startIdx===-1 || endIdx===-1 || endIdx<startIdx){
+      alert('このPDFには本アプリの記録データが見つかりませんでした。\n本アプリの「PDF出力」機能で作成されたPDFのみ取り込めます。');
+      return;
+    }
+    let b64 = fullText.slice(startIdx + DATA_MARK_START.length, endIdx);
+    b64 = b64.replace(/\s+/g,'');
+    const data = decodeReportData(b64);
+
+    const list = loadReports();
+    const dup = list.find(r=> r.siteName===data.siteName && r.workDate===data.workDate && r.worker===data.worker);
+    if(dup){
+      if(!confirm(`同じ内容の日報が既にあります（${data.workDate} / ${data.siteName}）。\n上書きしますか？`)) return;
+      Object.assign(dup, data, {updatedAt:new Date().toISOString()});
+    }else{
+      const now = new Date().toISOString();
+      list.unshift({id: uid(), ...data, createdAt: now, updatedAt: now});
+    }
+    saveReports(list);
+    renderHistory();
+    showToast('PDFから日報を取り込みました');
+  }catch(err){
+    console.error(err);
+    alert('PDFの読み込みに失敗しました。ファイルが本アプリで出力されたものかご確認ください。');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+/* ---------- init ---------- */
+(function init(){
+  document.getElementById('headerSub').textContent = 'DAILY SITE REPORT';
+  buildDynamicSectionsHTML();
+  const draftRaw = localStorage.getItem(DRAFT_KEY);
+  if(draftRaw){
+    try{
+      const draft = JSON.parse(draftRaw);
+      const hasContent = draft.data && (draft.data.siteName || draft.data.workContent || (draft.data.pipes && draft.data.pipes.length));
+      if(hasContent && confirm('前回の未保存の入力内容があります。復元しますか？')){
+        populateForm(draft.data);
+        editingId = draft.editingId || null;
+        if(editingId){
+          document.getElementById('editingNote').textContent = '編集中（下書きから復元）';
+        }
+      }else{
+        clearForm();
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }catch(e){
+      clearForm();
+    }
+  }else{
+    clearForm();
+  }
+  if(!document.getElementById('pipeList').children.length){
+    addPipeRow();
+  }
+})();
+</script>
+</body>
+</html>
