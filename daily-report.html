@@ -44,6 +44,14 @@
     z-index:20;
     box-shadow:0 2px 6px rgba(0,0,0,0.15);
   }
+  .app-header .hd-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .app-header .hd-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .hd-btn{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+    color:#e2e8f0;border-radius:6px;padding:4px 9px;font-size:13px;
+    cursor:pointer;text-decoration:none;white-space:nowrap;font-family:inherit;
+  }
+  .hd-btn:hover{background:rgba(255,255,255,.22);}
   .app-header .stripe{
     height:4px;
     width:100%;
@@ -487,8 +495,24 @@
 
 <header class="app-header">
   <div class="stripe"></div>
-  <h1>土工事配管工 作業日報</h1>
-  <div class="sub" id="headerSub">DAILY SITE REPORT</div>
+  <div class="hd-top">
+    <div>
+      <h1>土工事配管工 作業日報</h1>
+      <div class="sub" id="headerSub">DAILY SITE REPORT</div>
+    </div>
+  </div>
+  <div class="hd-btns">
+    <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <a href="roadbed.html" target="_blank" class="hd-btn" title="路盤・旗揚げマスタ">🗺 路盤</a>
+    <a href="order.html" target="_blank" class="hd-btn" title="発注量計算">📊 計算</a>
+    <a href="checklist.html" target="_blank" class="hd-btn" title="施工記録チェックリスト">📋 記録</a>
+    <a href="viewer.html" target="_blank" class="hd-btn" title="図面ビューア">📐 図面</a>
+    <button type="button" class="hd-btn" title="最新版に更新（キャッシュ削除）"
+      onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();
+        if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));})
+          .then(function(){location.replace(u);}).catch(function(){location.replace(u);});}
+        else{location.replace(u);}})()">🔄 更新</button>
+  </div>
 </header>
 
 <nav class="tabs">
