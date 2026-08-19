@@ -525,8 +525,20 @@
   <!-- ===================== 入力 VIEW ===================== -->
   <div class="view active" id="view-form">
 
-    <div class="section">
-      <div class="section-head"><span>基本情報</span><span class="req">必須</span></div>
+    <div id="viewSwitchBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;">
+      <button type="button" id="btnViewDump" class="btn btn-secondary" onclick="setReportView('dump')"
+        style="flex:1;min-width:180px;">🚚 ダンプ・配管のみ表示</button>
+      <button type="button" id="btnViewAll" class="btn btn-secondary" onclick="setReportView('all')"
+        style="flex:1;min-width:140px;">📋 すべて表示</button>
+      <div id="viewNote" style="width:100%;font-size:12px;color:#7a5c00;background:#fff8e1;
+        border:1px solid #ffe082;border-radius:6px;padding:6px 10px;display:none;">
+        🚚 ダンプ台数と使用配管数だけを表示しています。隠れている項目の入力内容は保持されます。
+      </div>
+    </div>
+
+    <div class="section" data-sec="basic">
+      <div class="section-head">
+        <span>基本情報</span><span class="req">必須</span></div>
       <div class="section-body">
         <div class="field">
           <label>現場名</label>
@@ -598,8 +610,9 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>立会者</span></div>
+    <div class="section" data-sec="witness">
+      <div class="section-head">
+        <span>立会者</span></div>
       <div class="section-body">
         <div id="witnessList"></div>
         <button type="button" class="add-pipe-btn" onclick="addWitnessRow()">＋ 立会者を追加</button>
@@ -607,9 +620,10 @@
     </div>
 
 
-    <div class="section">
+    <div class="section" data-sec="work">
 
-      <div class="section-head"><span>本日の作業内容</span></div>
+      <div class="section-head">
+        <span>本日の作業内容</span></div>
       <div class="section-body">
         <div class="field">
           <textarea id="workContent" rows="4" placeholder="作業内容を入力"></textarea>
@@ -617,8 +631,9 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>安全確認・架空線・既設埋設配管有無</span></div>
+    <div class="section" data-sec="safety">
+      <div class="section-head">
+        <span>安全確認・架空線・既設埋設配管有無</span></div>
       <div class="section-body">
         <div class="field">
           <textarea id="safety" rows="2"></textarea>
@@ -627,8 +642,9 @@
     </div>
 
     <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
-    <div class="section">
-      <div class="section-head"><span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
+    <div class="section" data-sec="orderref">
+      <div class="section-head">
+        <span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
       <div class="section-body">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
           <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
@@ -643,16 +659,18 @@
 
     <div id="dynamicSections"></div>
 
-    <div class="section">
-      <div class="section-head"><span>使用配管数・管種</span></div>
+    <div class="section" data-sec="pipes">
+      <div class="section-head">
+        <span>使用配管数・管種</span></div>
       <div class="section-body">
         <div id="pipeList"></div>
         <button type="button" class="add-pipe-btn" onclick="addPipeRow()">＋ 配管を追加</button>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>イレギュラー事項</span></div>
+    <div class="section" data-sec="irregular">
+      <div class="section-head">
+        <span>イレギュラー事項</span></div>
       <div class="section-body">
         <div class="field">
           <textarea id="irregular" rows="3" placeholder="例）想定外の埋設物発見、天候による中断 等"></textarea>
@@ -660,8 +678,9 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>気づいたこと・今日思ったこと</span></div>
+    <div class="section" data-sec="notice">
+      <div class="section-head">
+        <span>気づいたこと・今日思ったこと</span></div>
       <div class="section-body">
         <div class="field">
           <textarea id="notice" rows="3"></textarea>
@@ -669,8 +688,9 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>明日の作業内容</span></div>
+    <div class="section" data-sec="tomorrow">
+      <div class="section-head">
+        <span>明日の作業内容</span></div>
       <div class="section-body">
         <div class="field">
           <textarea id="tomorrow" rows="3"></textarea>
@@ -678,8 +698,9 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head"><span>作成者</span></div>
+    <div class="section" data-sec="creator">
+      <div class="section-head">
+        <span>作成者</span></div>
       <div class="section-body">
         <div class="field">
           <input type="text" id="creator" placeholder="作成者名">
@@ -905,6 +926,39 @@ function setSelectFreeValue(selectId, freeId, value, presetOptions){
 }
 const CHIEF_OPTIONS = ['三枝 裕太','佐藤 嘉秀'];
 const WEATHER_OPTIONS = ['晴れ','曇り','雨','雪','晴れのち曇り','曇りのち雨','荒天'];
+
+/* ---------- 表示切替：ダンプ台数・配管のみ／すべて ---------- */
+// 簡易表示で残すセクション（ダンプ台数まわり＝動的セクション群と、使用配管数・管種）
+const VIEW_KEEP = ['pipes'];
+let _reportView = 'all';
+function setReportView(mode){
+  _reportView = mode;
+  const dump = (mode === 'dump');
+  document.querySelectorAll('.section[data-sec]').forEach(function(el){
+    const key = el.dataset.sec;
+    el.style.display = (!dump || VIEW_KEEP.indexOf(key) >= 0) ? '' : 'none';
+  });
+  // 動的セクション（既存アスファルト廃材搬出ダンプ台数〜）は簡易表示でも常に出す
+  const dyn = document.getElementById('dynamicSections');
+  if (dyn) dyn.style.display = '';
+  // ボタンの見た目
+  const b1 = document.getElementById('btnViewDump');
+  const b2 = document.getElementById('btnViewAll');
+  if (b1 && b2) {
+    b1.classList.toggle('btn-primary', dump);
+    b1.classList.toggle('btn-secondary', !dump);
+    b2.classList.toggle('btn-primary', !dump);
+    b2.classList.toggle('btn-secondary', dump);
+  }
+  const note = document.getElementById('viewNote');
+  if (note) note.style.display = dump ? '' : 'none';
+  try { localStorage.setItem('kanro_reportView', mode); } catch(e) {}
+}
+function restoreReportView(){
+  let m = 'all';
+  try { m = localStorage.getItem('kanro_reportView') || 'all'; } catch(e) {}
+  setReportView(m);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    発注計算（order.html）との連携：参考値の取り込み
@@ -1335,6 +1389,7 @@ function populateForm(data){
   document.getElementById('siteName').value = data.siteName || '';
   ORDER_REF = data.orderRef || null;
   try { buildSiteOptions(); renderOrderRef(); } catch(e) {}
+  try { restoreReportView(); } catch(e) {}
   document.getElementById('workDate').value = data.workDate || '';
   setSelectFreeValue('chiefSelect','chiefFree', data.chief || '', CHIEF_OPTIONS);
   document.getElementById('worker').value = data.worker || '';
