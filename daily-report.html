@@ -526,13 +526,29 @@
   <div class="view active" id="view-form">
 
     <div id="viewSwitchBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;">
+      <button type="button" id="btnViewBasic" class="btn btn-secondary" onclick="setReportView('basic')"
+        style="flex:1;min-width:150px;">📝 基本入力事項表示</button>
       <button type="button" id="btnViewDump" class="btn btn-secondary" onclick="setReportView('dump')"
-        style="flex:1;min-width:180px;">🚚 ダンプ・配管のみ表示</button>
+        style="flex:1;min-width:170px;">🚚 ダンプ・配管のみ表示</button>
       <button type="button" id="btnViewAll" class="btn btn-secondary" onclick="setReportView('all')"
-        style="flex:1;min-width:140px;">📋 すべて表示</button>
+        style="flex:1;min-width:130px;">📋 すべて表示</button>
       <div id="viewNote" style="width:100%;font-size:12px;color:#7a5c00;background:#fff8e1;
-        border:1px solid #ffe082;border-radius:6px;padding:6px 10px;display:none;">
-        🚚 ダンプ台数と使用配管数だけを表示しています。隠れている項目の入力内容は保持されます。
+        border:1px solid #ffe082;border-radius:6px;padding:6px 10px;display:none;"></div>
+    </div>
+
+    <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
+    <div class="section" data-sec="orderref">
+      <div class="section-head">
+        <span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
+      <div class="section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
+          <button type="button" class="btn btn-secondary" onclick="loadOrderRefCloud()">☁ クラウドから取り込む</button>
+          <button type="button" class="btn btn-ghost" onclick="clearOrderRef()">参考値をクリア</button>
+        </div>
+        <div id="orderRefBox" style="font-size:12px;color:#666;">
+          現場名と作業日を入力してから「取り込む」を押してください。
+        </div>
       </div>
     </div>
 
@@ -637,22 +653,6 @@
       <div class="section-body">
         <div class="field">
           <textarea id="safety" rows="2"></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── 発注計算からの参考値（台数欄には反映しません）── -->
-    <div class="section" data-sec="orderref">
-      <div class="section-head">
-        <span>📥 発注計算の参考値</span><span style="font-size:11px;opacity:.8;">実績と見比べる用</span></div>
-      <div class="section-body">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-          <button type="button" class="btn btn-secondary" onclick="loadOrderRef()">この端末の発注記録から取り込む</button>
-          <button type="button" class="btn btn-secondary" onclick="loadOrderRefCloud()">☁ クラウドから取り込む</button>
-          <button type="button" class="btn btn-ghost" onclick="clearOrderRef()">参考値をクリア</button>
-        </div>
-        <div id="orderRefBox" style="font-size:12px;color:#666;">
-          現場名と作業日を入力してから「取り込む」を押してください。
         </div>
       </div>
     </div>
@@ -927,31 +927,47 @@ function setSelectFreeValue(selectId, freeId, value, presetOptions){
 const CHIEF_OPTIONS = ['三枝 裕太','佐藤 嘉秀'];
 const WEATHER_OPTIONS = ['晴れ','曇り','雨','雪','晴れのち曇り','曇りのち雨','荒天'];
 
-/* ---------- 表示切替：ダンプ台数・配管のみ／すべて ---------- */
-// 簡易表示で残すセクション（ダンプ台数まわり＝動的セクション群と、使用配管数・管種）
-const VIEW_KEEP = ['pipes'];
+/* ---------- 表示切替：基本入力事項／ダンプ・配管／すべて ---------- */
+// dump モードで残すセクション（発注計算の参考値＋使用配管数。動的セクション群も表示）
+const VIEW_DUMP_KEEP  = ['orderref','pipes'];
+// basic モードで残すセクション（＝ダンプ・配管・参考値以外のすべて）
+const VIEW_BASIC_KEEP = ['basic','witness','work','safety','irregular','notice','tomorrow','creator'];
 let _reportView = 'all';
 function setReportView(mode){
   _reportView = mode;
-  const dump = (mode === 'dump');
+  const isDump  = (mode === 'dump');
+  const isBasic = (mode === 'basic');
   document.querySelectorAll('.section[data-sec]').forEach(function(el){
     const key = el.dataset.sec;
-    el.style.display = (!dump || VIEW_KEEP.indexOf(key) >= 0) ? '' : 'none';
+    let show = true;
+    if (isDump)  show = VIEW_DUMP_KEEP.indexOf(key) >= 0;
+    if (isBasic) show = VIEW_BASIC_KEEP.indexOf(key) >= 0;
+    el.style.display = show ? '' : 'none';
   });
-  // 動的セクション（既存アスファルト廃材搬出ダンプ台数〜）は簡易表示でも常に出す
+  // 動的セクション（既存アスファルト廃材搬出ダンプ台数〜）は basic では隠す
   const dyn = document.getElementById('dynamicSections');
-  if (dyn) dyn.style.display = '';
-  // ボタンの見た目
-  const b1 = document.getElementById('btnViewDump');
-  const b2 = document.getElementById('btnViewAll');
-  if (b1 && b2) {
-    b1.classList.toggle('btn-primary', dump);
-    b1.classList.toggle('btn-secondary', !dump);
-    b2.classList.toggle('btn-primary', !dump);
-    b2.classList.toggle('btn-secondary', dump);
-  }
+  if (dyn) dyn.style.display = isBasic ? 'none' : '';
+  // ボタンの見た目（選択中を強調）
+  [['btnViewBasic', isBasic], ['btnViewDump', isDump], ['btnViewAll', mode === 'all']]
+    .forEach(function(x){
+      const b = document.getElementById(x[0]);
+      if (!b) return;
+      b.classList.toggle('btn-primary',   x[1]);
+      b.classList.toggle('btn-secondary', !x[1]);
+    });
+  // 注記
   const note = document.getElementById('viewNote');
-  if (note) note.style.display = dump ? '' : 'none';
+  if (note) {
+    if (isDump) {
+      note.style.display = '';
+      note.textContent = '🚚 ダンプ台数と使用配管数だけを表示しています。隠れている項目の入力内容は保持されます。';
+    } else if (isBasic) {
+      note.style.display = '';
+      note.textContent = '📝 ダンプ台数・使用配管数を除いた項目を表示しています。隠れている項目の入力内容は保持されます。';
+    } else {
+      note.style.display = 'none';
+    }
+  }
   try { localStorage.setItem('kanro_reportView', mode); } catch(e) {}
 }
 function restoreReportView(){
