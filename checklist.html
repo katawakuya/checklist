@@ -4474,6 +4474,23 @@ function _wizRender() {
   // Step9はボタン不要（インラインボタンで完結）
   if (btnNext) btnNext.style.display = (s===9) ? 'none' : '';
   if (btnSkipStep) btnSkipStep.style.display = (s===4||s===5||s===7||s===8) ? '' : 'none';
+
+  // Enter（リターン）で「次へ」。タブレットのソフトキーボードの確定キーにも対応。
+  //   ・Step9（インラインボタンで完結）は誤送信を防ぐため除外
+  //   ・IME変換中（旗揚げ番号の日本語入力など）は無視する
+  if (s !== 9) {
+    var _wb = document.getElementById('wizBody');
+    if (_wb) _wb.querySelectorAll('input').forEach(function(inp){
+      inp.setAttribute('enterkeyhint', 'next');   // キーボードの確定キーを「次へ」表示に
+      inp.addEventListener('keydown', function(ev){
+        if (ev.key !== 'Enter') return;
+        if (ev.isComposing || ev.keyCode === 229) return;   // IME変換確定は除外
+        ev.preventDefault();
+        this.blur();                                        // キーボードを閉じてから進む
+        setTimeout(function(){ try { _wizNext(); } catch(e) {} }, 0);
+      });
+    });
+  }
 }
 
 function _wizPickHata(n) {
