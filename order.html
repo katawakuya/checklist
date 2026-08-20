@@ -709,6 +709,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <span style="font-size:12px;color:var(--text3);font-weight:400;">型タブをまたいで、入力済みの箇所をすべて合計します</span>
     </div>
     <div id="allSumBody"></div>
+    <!-- 全型まとめて記録 -->
+    <div id="allSaveBar" style="margin-top:14px;padding:12px 14px;background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.35);border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      <span style="font-size:14px;color:var(--text2);flex:1;min-width:220px;">入力済みの型を<b>1回のタップでまとめて記録</b>します。<span style="color:var(--text3);">記録は型ごとに分けて保存されるので、材料名・型名はそのまま残ります。</span></span>
+      <button class="btn btn-primary" onclick="saveAllDynRecords()">📥 全型まとめて記録</button>
+    </div>
+    <div id="allZmCta" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(15,138,61,0.12);border:1.5px solid rgba(15,138,61,0.4);border-radius:8px;flex-wrap:wrap;gap:8px;align-items:center;">
+      <span id="allZmMsg" style="font-size:13px;color:#34d399;flex:1;">✅ 記録完了！</span>
+      <button id="allZmBtn" class="btn" style="background:#0f8a3d;color:#fff;white-space:nowrap;">📦 まとめて資材管理に登録</button>
+    </div>
   </div>
 
   <!-- 型サブタブナビ -->
@@ -4267,7 +4276,7 @@ function saveRecord(typeKey) {
   if (dupIdx >= 0) {
     showDupModal(h[dupIdx], record, function(choice) {
       if (choice === 'cancel') return;
-      _doSave(choice === 'replace');
+      _doSave(true); // 'overwrite' → 既存を置き換え
     });
   } else {
     _doSave(false);
@@ -4293,7 +4302,8 @@ function getResults(typeKey) {
 // =====================================================================
 // 📦 資材管理アプリ 連携
 // =====================================================================
-var _zmRecord = null; // 現在開いているレコード
+var _zmRecord  = null; // 現在開いているレコード（先頭）
+var _zmRecords = [];   // まとめ登録時の対象レコード配列
 
 // 管材 → 管径ラベル変換テーブル
 var _PIPE_DIAM_MAP = {
@@ -4351,12 +4361,14 @@ function _getPipesFromContainer(containerId) {
   return result;
 }
 
-function zmAddPipeRow(diam, lenPerPipe, pipeCount, useScrap) {
+function zmAddPipeRow(diam, lenPerPipe, pipeCount, useScrap, recIdx) {
   // lenPerPipe: 1スパンの長さ(m), pipeCount: スパン数(本), useScrap: 端材チェック(bool)
+  // recIdx: まとめ登録時にどの発注記録（旗揚げ）に属する行かを示すインデックス
   // 計算方式: ceil(L/5) × N  ← スパン単位で切り上げ（合計で割らない）
   var wrap = document.getElementById('zm-pipeRows');
   var row = document.createElement('div');
   row.className = 'zm-pipe-row';
+  row.dataset.recIdx = String(recIdx != null ? recIdx : 0);
   row.style.cssText = 'display:flex;gap:5px;align-items:center;margin-bottom:8px;flex-wrap:wrap;border-bottom:1px solid #2a3050;padding-bottom:6px;';
   var _L = lenPerPipe != null ? lenPerPipe : '';
   var _N = pipeCount  != null ? pipeCount  : 1;
@@ -4412,9 +4424,11 @@ function zmAddPipeRow(diam, lenPerPipe, pipeCount, useScrap) {
   _update();
 }
 
-function zmAddStandRow(diam, qtyPerPipe, pipeCount) {
+function zmAddStandRow(diam, qtyPerPipe, pipeCount, recIdx) {
   var wrap = document.getElementById('zm-standRows');
   var row = document.createElement('div');
+  row.className = 'zm-stand-row';
+  row.dataset.recIdx = String(recIdx != null ? recIdx : 0);
   row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;';
   var dimSel = _ZM_DIAMS.map(function(d){ return '<option value="'+d+'"'+(d===(diam||'φ130')?' selected':'')+'>'+d+'</option>'; }).join('');
   row.innerHTML =
@@ -4447,52 +4461,72 @@ function zmAddStandRow(diam, qtyPerPipe, pipeCount) {
 }
 
 function openZaimatsuModal(recordId) {
+  openZaimatsuModalMulti([recordId]);
+}
+
+// 複数の発注記録をまとめて資材管理へ登録する
+// 行は旗揚げ（記録）ごとにグループ化され、送信時も記録ごとに分けて登録される
+function openZaimatsuModalMulti(recordIds) {
   var h = getHistory();
-  var r = h.find(function(x){ return x.id === recordId; });
-  if (!r) { alert('記録が見つかりません'); return; }
-  _zmRecord = r;
+  var recs = (recordIds || []).map(function(id){
+    return h.find(function(x){ return x.id === id; });
+  }).filter(Boolean);
+  if (recs.length === 0) { alert('記録が見つかりません'); return; }
+  _zmRecords = recs;
+  _zmRecord  = recs[0];
 
   // プレビュー表示
-  var siteSel = document.getElementById(r.typeKey+'-site');
-  var siteLabel = r.siteName || (siteSel ? (siteSel.selectedOptions[0]?.textContent||r.site||'') : r.site||'');
+  var multi = recs.length > 1;
   document.getElementById('zm-preview').innerHTML =
-    '📅 <b>'+r.date+'</b>　🚩 旗揚げ <b>'+r.hata+'</b>　📍 <b>'+(siteLabel||r.site||'―')+'</b>　型: '+r.typeLabel;
+    recs.map(function(r){
+      var siteSel = document.getElementById(r.typeKey+'-site');
+      var siteLabel = r.siteName || (siteSel ? (siteSel.selectedOptions[0]?.textContent||r.site||'') : r.site||'');
+      return '📅 <b>'+r.date+'</b>　🚩 旗揚げ <b>'+r.hata+'</b>　📍 <b>'+(siteLabel||r.site||'―')+'</b>　型: '+(r.typeLabel||'');
+    }).join('<br>')
+    + (multi ? '<div style="margin-top:6px;color:#7dd3fc;font-size:12px;">※ '+recs.length+'件をまとめて登録します（資材管理には旗揚げごとに分けて登録されます）</div>' : '');
 
   // 人員
-  document.getElementById('zm-crew').value = r.crew || '';
+  document.getElementById('zm-crew').value = recs[0].crew || '';
 
-  // 配管行 初期化
-  document.getElementById('zm-pipeRows').innerHTML = '';
-  var _initDiam = 'φ130';
-  if (r.pipes && r.pipes.length > 0) {
-    // 新形式: L1/N1があればそれを使い、なければtotalLを1本として展開
-    r.pipes.forEach(function(p) {
-      var lenP    = (p.L1 > 0) ? p.L1  : p.totalL;
-      var cntP    = (p.L1 > 0) ? p.N1  : 1;
-      var scrapCk = !!(p.useScrap || p.isScrap);
-      zmAddPipeRow(p.diam, lenP, cntP, scrapCk);
-    });
-    _initDiam = r.pipes[0].diam;
-  } else {
-    // 旧形式フォールバック
-    _initDiam = _PIPE_DIAM_MAP[r.pipeType] || 'φ130';
-    var _fallbackL = (r.pipeL || 0) * Math.max(1, r.pipeN || 1) || r.pipeL || '';
-    zmAddPipeRow(_initDiam, _fallbackL || 1, 1, 0);
-  }
+  var pw = document.getElementById('zm-pipeRows');   pw.innerHTML = '';
+  var sw = document.getElementById('zm-standRows');  sw.innerHTML = '';
 
-  // 管台行 初期化（個/本 × 本数 = 合計 形式）
-  document.getElementById('zm-standRows').innerHTML = '';
-  // 主管の本数を取得（配管テーブル1行目のN1）
-  var _mainN = '';
-  if (r.pipes && r.pipes.length > 0 && r.pipes[0].L1 > 0) {
-    _mainN = r.pipes[0].N1;
-  }
-  // 旧レコードのstandCount引継ぎ（個/本=旧count, 本数=1 で合計を維持）
-  if (!_mainN && r.standCount > 0) {
-    zmAddStandRow(_initDiam, r.standCount, 1);
-  } else {
-    zmAddStandRow(_initDiam, '', _mainN);
-  }
+  recs.forEach(function(r, idx) {
+    if (multi) {
+      var hdCss = 'font-size:12px;font-weight:700;color:#7dd3fc;margin:10px 0 5px;padding:3px 8px;background:rgba(125,211,252,.10);border-radius:5px;';
+      var hd1 = document.createElement('div'); hd1.className='zm-grp-head'; hd1.style.cssText=hdCss;
+      hd1.textContent = '🚩 '+r.hata+'　'+(r.typeLabel||''); pw.appendChild(hd1);
+      var hd2 = document.createElement('div'); hd2.className='zm-grp-head'; hd2.style.cssText=hdCss;
+      hd2.textContent = '🚩 '+r.hata+'　'+(r.typeLabel||''); sw.appendChild(hd2);
+    }
+
+    // 配管行
+    var _initDiam = 'φ130';
+    if (r.pipes && r.pipes.length > 0) {
+      // 新形式: L1/N1があればそれを使い、なければtotalLを1本として展開
+      r.pipes.forEach(function(p) {
+        var lenP    = (p.L1 > 0) ? p.L1  : p.totalL;
+        var cntP    = (p.L1 > 0) ? p.N1  : 1;
+        var scrapCk = !!(p.useScrap || p.isScrap);
+        zmAddPipeRow(p.diam, lenP, cntP, scrapCk, idx);
+      });
+      _initDiam = r.pipes[0].diam;
+    } else {
+      // 旧形式フォールバック
+      _initDiam = _PIPE_DIAM_MAP[r.pipeType] || 'φ130';
+      var _fallbackL = (r.pipeL || 0) * Math.max(1, r.pipeN || 1) || r.pipeL || '';
+      zmAddPipeRow(_initDiam, _fallbackL || 1, 1, 0, idx);
+    }
+
+    // 管台行（個/本 × 本数 = 合計 形式）
+    var _mainN = '';
+    if (r.pipes && r.pipes.length > 0 && r.pipes[0].L1 > 0) _mainN = r.pipes[0].N1;
+    if (!_mainN && r.standCount > 0) {
+      zmAddStandRow(_initDiam, r.standCount, 1, idx);
+    } else {
+      zmAddStandRow(_initDiam, '', _mainN, idx);
+    }
+  });
 
   // 復旧延長
   document.getElementById('zm-restore').value = '';
@@ -4504,109 +4538,144 @@ function openZaimatsuModal(recordId) {
 
 function closeZaimatsuModal() {
   document.getElementById('zaimatsuModal').style.display = 'none';
-  _zmRecord = null;
+  _zmRecord  = null;
+  _zmRecords = [];
+}
+
+// 1行ぶんの配管データ（スパン単位切り上げ方式）
+function _zmPipeItemFromRow(row) {
+  var diam    = row.querySelector('.zm-diam')?.value;
+  var L       = parseFloat(row.querySelector('.zm-len')?.value||'0')||0;
+  var N       = parseInt(row.querySelector('.zm-cnt-in')?.value||'1')||1;
+  var scrapCk = row.querySelector('.zm-scrap')?.checked || false;
+  if (!diam || L <= 0) return null;
+  var full    = Math.floor(L / 5);
+  var rem     = Math.round((L % 5) * 1000) / 1000;
+  var hasRem  = rem > 0.001;
+  var newPipes, scrapPieceLen, scrapPieceCount, wasteLen;
+  if (!hasRem) {
+    newPipes       = full * N;
+    scrapPieceLen  = 0; scrapPieceCount = 0; wasteLen = 0;
+  } else if (scrapCk) {
+    newPipes       = full * N;
+    scrapPieceLen  = rem;
+    scrapPieceCount= N;
+    wasteLen       = 0;
+  } else {
+    newPipes       = (full + 1) * N;
+    scrapPieceLen  = 0; scrapPieceCount = 0;
+    wasteLen       = Math.round((5 - rem) * 1000) / 1000;
+  }
+  return {
+    diameter:        diam,
+    type:            '直管',
+    lenPerSpan:      L,
+    spanCount:       N,
+    totalLengthM:    L * N,
+    useScrap:        scrapCk,
+    qty:             newPipes,       // 真物本数（在庫からマイナスする数）
+    scrapPieceLen:   scrapPieceLen,  // 端材使用時: 1片の長さ(m)
+    scrapPieceCount: scrapPieceCount,// 端材使用時: 使用片数
+    wastePieceLen:   wasteLen,       // 端材発生時: 1片の余り長さ(m)
+  };
+}
+
+// 1行ぶんの管台データ（個/本 × 本数 ＋ 追加 = 合計 形式）
+function _zmStandItemFromRow(row) {
+  var diam  = row.querySelector('.zm-stand-diam')?.value;
+  var qpp   = parseFloat(row.querySelector('.zm-stand-qpp')?.value||'0')||0;
+  var pc    = parseFloat(row.querySelector('.zm-stand-pc')?.value||'0')||0;
+  var extra = parseInt(row.querySelector('.zm-stand-extra')?.value||'0')||0;
+  var base  = (qpp > 0 && pc > 0) ? Math.ceil(qpp * pc) : 0;
+  var qty   = base + extra;
+  if (!diam || qty <= 0) return null;
+  return { diameter:diam, type:'管台', qty:qty, qtyPerPipe:qpp, pipeCount:pc, extraQty:extra };
 }
 
 function sendToZaimatsu() {
-  if (!_zmRecord) return;
-  if (!_fbDb) { document.getElementById('zm-error').textContent = 'Firebase未接続です'; return; }
+  var recs = (_zmRecords && _zmRecords.length) ? _zmRecords : (_zmRecord ? [_zmRecord] : []);
+  if (recs.length === 0) return;
+  var errEl = document.getElementById('zm-error');
+  if (!_fbDb) { errEl.textContent = 'Firebase未接続です'; return; }
 
-  var siteId = _zmRecord.site || '';
-  if (!siteId) {
-    document.getElementById('zm-error').textContent = '現場が選択されていません（発注記録の現場IDが必要です）';
-    return;
+  // 記録（旗揚げ）ごとに行を振り分け
+  var pipeByIdx = {}, standByIdx = {};
+  function _idxOf(row) {
+    var i = parseInt(row.dataset.recIdx||'0');
+    if (isNaN(i) || i < 0 || i >= recs.length) i = 0;
+    return i;
   }
-
-  // 配管行を集計（スパン単位切り上げ方式）
-  var pipeItems = [];
   document.querySelectorAll('#zm-pipeRows .zm-pipe-row').forEach(function(row){
-    var diam    = row.querySelector('.zm-diam').value;
-    var L       = parseFloat(row.querySelector('.zm-len')?.value||'0')||0;
-    var N       = parseInt(row.querySelector('.zm-cnt-in')?.value||'1')||1;
-    var scrapCk = row.querySelector('.zm-scrap')?.checked || false;
-    if (L <= 0) return;
-    var full    = Math.floor(L / 5);
-    var rem     = Math.round((L % 5) * 1000) / 1000;
-    var hasRem  = rem > 0.001;
-    var newPipes, scrapPieceLen, scrapPieceCount, wasteLen;
-    if (!hasRem) {
-      newPipes       = full * N;
-      scrapPieceLen  = 0; scrapPieceCount = 0; wasteLen = 0;
-    } else if (scrapCk) {
-      newPipes       = full * N;
-      scrapPieceLen  = rem;
-      scrapPieceCount= N;
-      wasteLen       = 0;
-    } else {
-      newPipes       = (full + 1) * N;
-      scrapPieceLen  = 0; scrapPieceCount = 0;
-      wasteLen       = Math.round((5 - rem) * 1000) / 1000;
-    }
-    pipeItems.push({
-      diameter:        diam,
-      type:            '直管',
-      lenPerSpan:      L,
-      spanCount:       N,
-      totalLengthM:    L * N,
-      useScrap:        scrapCk,
-      qty:             newPipes,       // 真物本数（在庫からマイナスする数）
-      scrapPieceLen:   scrapPieceLen,  // 端材使用時: 1片の長さ(m)
-      scrapPieceCount: scrapPieceCount,// 端材使用時: 使用片数
-      wastePieceLen:   wasteLen,       // 端材発生時: 1片の余り長さ(m)
+    var it = _zmPipeItemFromRow(row); if (!it) return;
+    var i = _idxOf(row); (pipeByIdx[i] = pipeByIdx[i] || []).push(it);
+  });
+  document.querySelectorAll('#zm-standRows .zm-stand-row').forEach(function(row){
+    var it = _zmStandItemFromRow(row); if (!it) return;
+    var i = _idxOf(row); (standByIdx[i] = standByIdx[i] || []).push(it);
+  });
+
+  var crew    = document.getElementById('zm-crew').value || '';
+  var restore = document.getElementById('zm-restore').value || '';
+  var entries = [], noSite = [];
+
+  recs.forEach(function(r, idx) {
+    var pipeItems  = pipeByIdx[idx]  || [];
+    var standItems = standByIdx[idx] || [];
+    if (pipeItems.length === 0 && standItems.length === 0) return;
+
+    var siteId = r.siteId || r.site || '';
+    if (!siteId) { noSite.push(r.hata); return; }
+
+    var siteSel   = document.getElementById(r.typeKey+'-site');
+    var siteLabel = r.siteName || (siteSel ? (siteSel.selectedOptions[0]?.textContent||'') : '') || r.site || '';
+
+    // items: 資材管理アプリの materialId ではなく diameter+type で記録
+    var allItems = pipeItems.concat(standItems).map(function(i){
+      return { diameter:i.diameter, type:i.type,
+               qty:i.qty,                                  // ★在庫から引く本数（端物使用ぶんは含まない）
+               lengthM:  i.lenPerSpan || i.lengthM || 0,   // スパン1本の長さ(m)
+               spanCount:i.spanCount  || 0,                // スパン数
+               useScrap: !!i.useScrap,
+               scrapPieceLen:   i.scrapPieceLen   || 0,    // 端物使用: 1片の長さ(m)
+               scrapPieceCount: i.scrapPieceCount || 0,    // 端物使用: 使用片数（在庫は減らない）
+               wastePieceLen:   i.wastePieceLen   || 0,    // 新品を切った余り(m)＝新たな端物
+               isScrap:  !!i.isScrap };
+    });
+
+    entries.push({
+      siteId:     siteId,
+      date:       r.date,
+      siteName:   siteLabel,
+      crew:       crew,
+      location:   String(r.hata),
+      restore:    restore,
+      pipeLength: r.pipeL || +(pipeItems.reduce(function(s,i){ return s + (i.totalLengthM||0); },0)).toFixed(3),
+      standCount: standItems.reduce(function(s,i){ return s+i.qty; },0),
+      items:      allItems,
+      fromOrder:  true,
+      author:     r.author || '',
+      createdAt:  new Date().toISOString()
     });
   });
 
-  // 管台行を集計（個/本 × 本数 ＋ 追加 = 合計 形式）
-  var standItems = [];
-  document.querySelectorAll('#zm-standRows div').forEach(function(row){
-    var diam  = row.querySelector('.zm-stand-diam')?.value;
-    var qpp   = parseFloat(row.querySelector('.zm-stand-qpp')?.value||'0')||0;
-    var pc    = parseFloat(row.querySelector('.zm-stand-pc')?.value||'0')||0;
-    var extra = parseInt(row.querySelector('.zm-stand-extra')?.value||'0')||0;
-    var base  = (qpp > 0 && pc > 0) ? Math.ceil(qpp * pc) : 0;
-    var qty   = base + extra;
-    if (diam && qty > 0) standItems.push({ diameter:diam, type:'管台', qty:qty, qtyPerPipe:qpp, pipeCount:pc, extraQty:extra });
-  });
+  if (noSite.length > 0) {
+    errEl.textContent = '現場が特定できない記録があります（旗揚げ '+noSite.join('、')+'）';
+    return;
+  }
+  if (entries.length === 0) {
+    errEl.textContent = '登録できる行がありません（管材の長さ、または管台の個数を入力してください）';
+    return;
+  }
 
-  // items: 資材管理アプリの materialId ではなく diameter+type で記録
-  var allItems = pipeItems.concat(standItems).map(function(i){
-    return { diameter:i.diameter, type:i.type,
-             qty:i.qty,                                  // ★在庫から引く本数（端物使用ぶんは含まない）
-             lengthM:  i.lenPerSpan || i.lengthM || 0,   // スパン1本の長さ(m)
-             spanCount:i.spanCount  || 0,                // スパン数
-             useScrap: !!i.useScrap,
-             scrapPieceLen:   i.scrapPieceLen   || 0,    // 端物使用: 1片の長さ(m)
-             scrapPieceCount: i.scrapPieceCount || 0,    // 端物使用: 使用片数（在庫は減らない）
-             wastePieceLen:   i.wastePieceLen   || 0,    // 新品を切った余り(m)＝新たな端物
-             isScrap:  !!i.isScrap };
-  });
-
-  var siteSel = document.getElementById(_zmRecord.typeKey+'-site');
-  var siteLabel = _zmRecord.siteName || (siteSel ? (siteSel.selectedOptions[0]?.textContent||'') : '') || _zmRecord.site || '';
-
-  var entry = {
-    siteId:     siteId,
-    date:       _zmRecord.date,
-    siteName:   siteLabel,
-    crew:       document.getElementById('zm-crew').value || '',
-    location:   String(_zmRecord.hata),
-    restore:    document.getElementById('zm-restore').value || '',
-    pipeLength: _zmRecord.pipeL || 0,
-    standCount: standItems.reduce(function(s,i){ return s+i.qty; },0),
-    items:      allItems,
-    fromOrder:  true,
-    author:     _zmRecord.author || '',
-    createdAt:  new Date().toISOString()
-  };
-
-  document.getElementById('zm-error').textContent = '登録中…';
-  _fbDb.collection('zaimatsu_usage').add(entry).then(function(){
-    var _h = _zmRecord ? _zmRecord.hata : '';
-    var _d = _zmRecord ? _zmRecord.date : '';
+  errEl.textContent = '登録中…（'+entries.length+'件）';
+  Promise.all(entries.map(function(e){
+    return _fbDb.collection('zaimatsu_usage').add(e);
+  })).then(function(){
+    var msg = entries.map(function(e){ return '旗揚げ '+e.location+' / '+e.date; }).join('\n');
     closeZaimatsuModal();
-    alert('✅ 資材管理に登録しました\n旗揚げ '+_h+' / '+_d);
+    alert('✅ 資材管理に'+entries.length+'件登録しました\n'+msg);
   }).catch(function(e){
-    document.getElementById('zm-error').textContent = '登録エラー: '+e.message;
+    errEl.textContent = '登録エラー: '+e.message;
     console.error('[ZM] send error', e);
   });
 }
@@ -8693,23 +8762,38 @@ function renderDynTotal(tid, typeConf) {
 // =====================================================================
 // 動的タブ用 発注記録・リセット
 // =====================================================================
-function saveDynRecord(tid, typeKey) {
-  const site = getSites().find(s => s.id === document.getElementById('global-site-sel').value);
+// 記録IDが同一ミリ秒で衝突しないようにする
+var _recIdSeq = 0;
+function _nextRecId() {
+  var n = Date.now();
+  if (n <= _recIdSeq) n = _recIdSeq + 1;
+  _recIdSeq = n;
+  return n;
+}
+
+// 動的タブ1件ぶんの記録オブジェクトを組み立てる（保存はしない）
+// 戻り値 { ok:true, tid, label, record } / { ok:false, tid, label, err, focusId }
+function _buildDynRecord(tid, typeKey) {
+  const t  = TYPES[tid];
+  const lb = (t && t.label) || tid;
+  const _selEl  = document.getElementById('global-site-sel');
+  const _siteId = _selEl ? _selEl.value : '';
+  const site   = getSites().find(s => s.id === _siteId);
   const date   = document.getElementById(`${tid}-date`)?.value;
   const hata   = document.getElementById(`${tid}-hata`)?.value;
   const author = document.getElementById(`${tid}-author`)?.value || '';
   const siteName = site?.name || '';
-  if (!date) { showWarningBanner('作業日付を入力してください', `${tid}-date`); return; }
-  if (!author.trim()) { showWarningBanner('作業記録者（氏名）を入力してください', `${tid}-author`); return; }
-  if (!hata) { showWarningBanner('旗揚げ番号を入力してください', `${tid}-hata`); return; }
-  _saveOrderRecorder(author);
+  if (!date)          return { ok:false, tid, label:lb, err:'作業日付を入力してください',            focusId:`${tid}-date` };
+  if (!author.trim()) return { ok:false, tid, label:lb, err:'作業記録者（氏名）を入力してください',  focusId:`${tid}-author` };
+  if (!hata)          return { ok:false, tid, label:lb, err:'旗揚げ番号を入力してください',          focusId:`${tid}-hata` };
 
-  const t = TYPES[tid];
-  const _t = TYPES[tid];
+  // 廃材量を最新化（日報の搬出参考値に使用）
+  try { renderDynTotal(tid, t); } catch (e) { console.warn('[saveDyn] renderDynTotal', e); }
+
   const s = sumResults([
     calcNormal(`${tid}n`, tid),
     calcSpecial(`${tid}ns`, tid),
-    ...(!_t?.noGradient ? [
+    ...(!t?.noGradient ? [
       calcGradient(`${tid}k`, tid),
       calcGradientSpecial(`${tid}ks`, tid),
     ] : []),
@@ -8717,7 +8801,7 @@ function saveDynRecord(tid, typeKey) {
 
   const _pipes = _getPipesFromContainer(`${tid}n-pipes`);
   // 掘削影響範囲AS再舗装 合計
-  const _asRePats = [`${tid}n`, `${tid}ns`, ...(!_t?.noGradient ? [`${tid}k`, `${tid}ks`] : [])];
+  const _asRePats = [`${tid}n`, `${tid}ns`, ...(!t?.noGradient ? [`${tid}k`, `${tid}ks`] : [])];
   let _asReTonTotal = 0;
   _asRePats.forEach(function(p){
     const _arW = parseFloat(document.getElementById(`${p}-asReW`)?.value||'0')||0;
@@ -8725,9 +8809,13 @@ function saveDynRecord(tid, typeKey) {
     const _arT = parseFloat(document.getElementById(`${p}-asReT`)?.value||'0')||0;
     _asReTonTotal += _arW * _arL * (_arT/1000) * AS_DENSITY;
   });
+  const _w = _lastWasteByTid[tid] || {};
+
   const record = {
-    id: Date.now(),
+    id: _nextRecId(),
     date, hata, author, site: siteName, typeKey: tid,
+    siteId: _siteId || '',
+    siteName: siteName,
     company: _myCompany || '',
     team: _myTeam || '',
     pipes: _pipes,
@@ -8742,41 +8830,157 @@ function saveDynRecord(tid, typeKey) {
     isoilOrd:   +s.isoilOrd.toFixed(6),
     sandOrd:    +s.sandOrd.toFixed(6),
     sandSoilSum:+s.sandSoilSum.toFixed(6),
+    // ── 廃材量（作業日報の搬出参考値に使用）──
+    wasteAsTon:    +((_w.asWasteTon || 0)).toFixed(4),
+    wasteRbM3:     +((_w.rbWasteM3  || 0)).toFixed(4),
+    wasteCnM3:     +((_w.cnWasteM3  || 0)).toFixed(4),
+    wasteCongaraM3:+((_w.congaraM3  || 0)).toFixed(4),
   };
+  return { ok:true, tid, label:lb, record, author };
+}
+
+// 記録を履歴に確定保存する（重複は置換）
+function _commitRecord(record) {
+  const h = getHistory();
+  const di = h.findIndex(r =>
+    r.date === record.date && String(r.hata) === String(record.hata) && (r.site||'') === (record.site||''));
+  const replaced = di >= 0;
+  if (replaced) h.splice(di, 1);
+  h.push(record);
+  saveHistory(_sortHistory(h));
+  _autoFbSend(record, replaced);
+  return replaced;
+}
+
+// 型タブ直下の 📦資材管理 CTA を表示
+function _showZmCta(tid, recordId) {
+  var _cta = document.getElementById(tid + '-zm-cta');
+  var _btn = document.getElementById(tid + '-zm-btn');
+  if (_cta && _btn) {
+    _cta.style.display = 'flex';
+    _btn.onclick = function() { openZaimatsuModal(recordId); };
+  }
+}
+
+function saveDynRecord(tid, typeKey) {
+  const b = _buildDynRecord(tid, typeKey);
+  if (!b.ok) { showWarningBanner(b.err, b.focusId); return; }
+  _saveOrderRecorder(b.author);
+  const record = b.record;
 
   const h = getHistory();
-  // 重複チェック：同日付・同旗揚げ・同現場
-  const _dSite = siteName || '';
+  const _dSite = record.site || '';
   const dupIdx = h.findIndex(r =>
-    r.date === date && String(r.hata) === String(hata) && (r.site||'') === _dSite);
-  function _doSaveDyn(replace) {
-    if (replace) h.splice(h.findIndex(r =>
-      r.date === date && String(r.hata) === String(hata) && (r.site||'') === _dSite), 1);
-    h.push(record);
-    saveHistory(_sortHistory(h));
+    r.date === record.date && String(r.hata) === String(record.hata) && (r.site||'') === _dSite);
+  function _doSaveDyn() {
+    _commitRecord(record);
     renderHistory();
     const badge = document.getElementById('saveBadge');
-    badge.style.display = 'block';
-    setTimeout(() => badge.style.display = 'none', 2500);
-    // 自動Firestore送信
-    _autoFbSend(record, replace);
-    // 📦 資材管理ボタンを記録ボタンの直下に表示
-    var _cta = document.getElementById(tid + '-zm-cta');
-    var _btn = document.getElementById(tid + '-zm-btn');
-    if (_cta && _btn) {
-      _cta.style.display = 'flex';
-      _btn.onclick = function() { openZaimatsuModal(record.id); };
-    }
+    if (badge) { badge.style.display = 'block'; setTimeout(() => badge.style.display = 'none', 2500); }
+    _showZmCta(tid, record.id);
   }
   if (dupIdx >= 0) {
     showDupModal(h[dupIdx], record, function(choice) {
       if (choice === 'cancel') return;
-      _doSaveDyn(choice === 'replace');
+      _doSaveDyn(); // 'overwrite' → 既存を置き換え
     });
   } else {
-    _doSaveDyn(false);
-    alert(`✅ 記録しました\n${t.label} / ${date} / 旗揚げ番号 ${hata}${siteName?' / '+siteName:''}`);
+    _doSaveDyn();
+    alert(`✅ 記録しました\n${b.label} / ${record.date} / 旗揚げ番号 ${record.hata}${record.site?' / '+record.site:''}`);
   }
+}
+
+// =====================================================================
+// 全型まとめて記録（記録自体は型ごとに個別保存）
+// =====================================================================
+function _allDynTids() {
+  return Object.keys(TYPES).filter(function(k){
+    return k.indexOf('dyntype_') === 0 && document.getElementById(k + '-total');
+  });
+}
+
+// 入力済み判定：いずれかのパターンが計算可能（W・L・DP・DPH が揃っている）
+function _dynHasInput(tid) {
+  const t = TYPES[tid];
+  if (!t) return false;
+  try {
+    return [
+      calcNormal(`${tid}n`, tid),
+      calcSpecial(`${tid}ns`, tid),
+      ...(!t.noGradient ? [
+        calcGradient(`${tid}k`, tid),
+        calcGradientSpecial(`${tid}ks`, tid),
+      ] : []),
+    ].some(Boolean);
+  } catch (e) { return false; }
+}
+
+function saveAllDynRecords() {
+  const tids = _allDynTids().filter(_dynHasInput);
+  if (tids.length === 0) {
+    alert('入力済みの型がありません。\n幅W・延長L・DP・管下H を入力してから実行してください。');
+    return;
+  }
+
+  const built = [], errs = [];
+  tids.forEach(function(tid){
+    const t = TYPES[tid];
+    const b = _buildDynRecord(tid, (t && t.key) || tid);
+    if (b.ok) built.push(b); else errs.push(b);
+  });
+
+  if (built.length === 0) {
+    alert('記録できる型がありません。\n\n' + errs.map(function(e){ return '・'+e.label+'：'+e.err; }).join('\n'));
+    if (errs[0] && errs[0].focusId) showWarningBanner(errs[0].err, errs[0].focusId);
+    return;
+  }
+
+  // 重複チェック
+  const h = getHistory();
+  const dups = built.filter(function(b){
+    return h.some(function(r){
+      return r.date === b.record.date && String(r.hata) === String(b.record.hata) && (r.site||'') === (b.record.site||'');
+    });
+  });
+
+  let msg = '以下の ' + built.length + ' 件を記録します（型ごとに分けて保存されます）。\n\n'
+    + built.map(function(b){ return '・' + b.label + '（' + b.record.date + ' / 旗揚げ ' + b.record.hata + '）'; }).join('\n');
+  if (errs.length) {
+    msg += '\n\n⚠ 次の型は必須項目が未入力のためスキップします：\n'
+         + errs.map(function(e){ return '・'+e.label+'：'+e.err; }).join('\n');
+  }
+  if (dups.length) {
+    msg += '\n\n⚠ うち ' + dups.length + ' 件は同じ日付・旗揚げ番号・現場の記録が既にあります。上書きします。';
+  }
+  msg += '\n\nよろしいですか？';
+  if (!confirm(msg)) return;
+
+  _saveOrderRecorder(built[0].author);
+
+  const savedIds = [];
+  built.forEach(function(b){
+    _commitRecord(b.record);
+    savedIds.push(b.record.id);
+    _showZmCta(b.tid, b.record.id);
+  });
+  renderHistory();
+
+  const badge = document.getElementById('saveBadge');
+  if (badge) { badge.style.display = 'block'; setTimeout(() => badge.style.display = 'none', 2500); }
+
+  // まとめ資材管理CTA
+  const cta = document.getElementById('allZmCta');
+  const msgEl = document.getElementById('allZmMsg');
+  const btnEl = document.getElementById('allZmBtn');
+  if (cta && msgEl && btnEl) {
+    msgEl.textContent = '✅ ' + savedIds.length + '件を記録しました。資材管理にまとめて登録できます。';
+    cta.style.display = 'flex';
+    btnEl.onclick = function(){ openZaimatsuModalMulti(savedIds); };
+  }
+
+  alert('✅ ' + savedIds.length + '件を記録しました\n\n'
+    + built.map(function(b){ return '・' + b.label + '（旗揚げ ' + b.record.hata + '）'; }).join('\n')
+    + (errs.length ? '\n\n⚠ ' + errs.length + '件スキップ：\n' + errs.map(function(e){ return '・'+e.label+'：'+e.err; }).join('\n') : ''));
 }
 
 function resetDynForm(tid) {
@@ -10646,7 +10850,7 @@ function saveHonpukyuRecord() {
   if (dupIdx >= 0) {
     showDupModal(h[dupIdx], record, function(choice){
       if (choice === 'cancel') return;
-      _doSave(choice === 'replace');
+      _doSave(true); // 'overwrite' → 既存を置き換え
     });
   } else {
     _doSave(false);
