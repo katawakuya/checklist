@@ -10848,14 +10848,35 @@ function _owizNewLoc(){
 }
 
 // ── 起動 / 終了 ────────────────────────────────
+// 入力途中かどうか（1文字でも入れていれば true）
+function _owizHasInput(){
+  if (!_owiz) return false;
+  if (_owiz.locs && _owiz.locs.length) return true;
+  var c = _owiz.cur || {};
+  return !!(c.hata || c.tid || c.W || c.L || c.DP || c.DPH ||
+            (c.pipes && c.pipes.length) || c.kgW || c.masH);
+}
 function openOrderWizard(){
   if (!_owizSiteId()) { alert('先に「計算現場」を選択してください。'); return; }
   if (!_owizTypes().length) { alert('この現場には型（路盤構成）が登録されていません。\n路盤マスタで登録してからお試しください。'); return; }
+  // 前回の入力が残っていれば「続きから」を選べる（誤って閉じた場合の救済）
+  if (_owizHasInput()) {
+    var _n = (_owiz.locs ? _owiz.locs.length : 0) + 1;
+    if (confirm('前回の入力が残っています。\n\n［OK］続きから再開（' + _n + '箇所目・ステップ ' + (_owiz.step + 1) + '）\n［キャンセル］最初からやり直す')) {
+      document.getElementById('owizModal').style.display = 'flex';
+      _owizRender();
+      return;
+    }
+  }
   _owiz = { step:0, locs:[], cur:_owizNewLoc() };
   document.getElementById('owizModal').style.display = 'flex';
   _owizRender();
 }
+// 閉じる（× ボタン）：入力途中なら確認する。状態は破棄せず保持する。
 function closeOrderWizard(){
+  try { _owizReadStep(); } catch(e) {}
+  if (_owizHasInput() &&
+      !confirm('ウィザードを閉じます。\n入力内容は残るので、もう一度開けば続きから再開できます。\n\n閉じますか？')) return;
   document.getElementById('owizModal').style.display = 'none';
 }
 
@@ -11800,7 +11821,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ================================================================
      計算入力ウィザード
      ================================================================ -->
-<div id="owizModal" onclick="if(event.target===this)closeOrderWizard()">
+<div id="owizModal"><!-- 外側タップでは閉じない（タブレットで誤操作しやすいため） -->
   <div class="owiz-card">
     <div class="owiz-header">
       <h2>🧭 計算入力ウィザード</h2>

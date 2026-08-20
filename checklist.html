@@ -4264,13 +4264,33 @@ function _showToast(msg, duration) {
 
 function showWizard() {
   if (!_siteId || !_typeKey) { alert('先に現場と型を選択してください'); return; }
+  // 前回の入力が残っていれば「続きから」を選べる（誤って閉じた場合の救済）
+  if (_wizHasInput()) {
+    var _n = (_wiz.locs ? _wiz.locs.length : 0) + 1;
+    if (confirm('前回の入力が残っています。\n\n［OK］続きから再開（' + _n + '箇所目・ステップ ' + ((_wiz.step || 0) + 1) + '）\n［キャンセル］最初からやり直す')) {
+      _wiz.active = true;
+      var _el = document.getElementById('wizModal'); if (_el) _el.style.display = 'flex';
+      _wizRender();
+      return;
+    }
+  }
   _wiz.active = true; _wiz.step = 0; _wiz.locs = []; _wiz.cur = _wizNewCur();
   // 日付デフォルト
   var t = new Date(); _wiz.date = t.getFullYear()+'-'+(String(t.getMonth()+1).padStart(2,'0'))+'-'+(String(t.getDate()).padStart(2,'0'));
   var el = document.getElementById('wizModal');
   if (el) { el.style.display='flex'; _wizRender(); }
 }
+// 入力途中かどうか（1文字でも入れていれば true）
+function _wizHasInput() {
+  if (!_wiz) return false;
+  if (_wiz.locs && _wiz.locs.length) return true;
+  var c = _wiz.cur || {};
+  return !!(c.hata || c.rbKey || c.dp || c.dph || c.kbn);
+}
+// 閉じる（× ボタン）：入力途中なら確認する。状態は破棄せず保持する。
 function hideWizard() {
+  if (_wizHasInput() &&
+      !confirm('ウィザードを閉じます。\n入力内容は残るので、もう一度開けば続きから再開できます。\n\n閉じますか？')) return;
   _wiz.active = false;
   var el = document.getElementById('wizModal'); if(el) el.style.display='none';
 }
@@ -8021,7 +8041,7 @@ function showWarningBanner(msg, focusId) {
   </div>
 </div>
 <!-- ウィザードモーダル -->
-<div id="wizModal" onclick="if(event.target===this)hideWizard()">
+<div id="wizModal"><!-- 外側タップでは閉じない（タブレットで誤操作しやすいため） -->
   <div class="wiz-card">
     <div class="wiz-header">
       <h2>📋 入力ウィザード</h2>
