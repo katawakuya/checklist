@@ -215,6 +215,12 @@ tr:hover td{background:#f9f8f4;}
           <option value="isoilOrd">改良土 (m³)</option>
           <option value="sandOrd">砂 (m³)</option>
           <option value="sandSoilSum">砂+改良土 合計 (m³)</option>
+          <optgroup label="── 廃材（搬出）──">
+            <option value="wasteAsTon">AS廃材 (t)</option>
+            <option value="wasteRbM3">路盤廃材 (m³)</option>
+            <option value="wasteCnM3">CN廃材 (m³)</option>
+            <option value="wasteCongaraM3">コンガラ (m³)</option>
+          </optgroup>
         </select>
       </div>
       <div class="filter-group">
@@ -319,6 +325,12 @@ tr:hover td{background:#f9f8f4;}
         <option value="rcRmSum">RC+RM 合計 (m³)</option>
         <option value="isoilOrd">改良土 (m³)</option>
         <option value="sandOrd">砂 (m³)</option>
+        <optgroup label="── 廃材（搬出）──">
+          <option value="wasteAsTon">AS廃材 (t)</option>
+          <option value="wasteRbM3">路盤廃材 (m³)</option>
+          <option value="wasteCnM3">CN廃材 (m³)</option>
+          <option value="wasteCongaraM3">コンガラ (m³)</option>
+        </optgroup>
       </select>
     </div>
     <div class="filter-group">
@@ -697,7 +709,7 @@ function renderTeamKpi(oRecs, cRecs, metric) {
 }
 
 function getMetricUnit(m) {
-  var map = {'asTon密粒':'AS密粒(t)','asTon粗粒':'AS粗粒(t)','rmOrd':'RM(m³)','rcOrd':'RC(m³)','rcRmSum':'RC+RM(m³)','isoilOrd':'改良土(m³)','sandOrd':'砂(m³)'};
+  var map = {'asTon密粒':'AS密粒(t)','asTon粗粒':'AS粗粒(t)','rmOrd':'RM(m³)','rcOrd':'RC(m³)','rcRmSum':'RC+RM(m³)','isoilOrd':'改良土(m³)','sandOrd':'砂(m³)','sandSoilSum':'砂+改良土(m³)','wasteAsTon':'AS廃材(t)','wasteRbM3':'路盤廃材(m³)','wasteCnM3':'CN廃材(m³)','wasteCongaraM3':'コンガラ(m³)'};
   return map[m] || m;
 }
 
@@ -938,6 +950,10 @@ function renderOrderTable() {
     + '<th class="num">AS密粒(t)</th><th class="num">AS粗粒(t)</th>'
     + '<th class="num">RM(m³)</th><th class="num">RC(m³)</th><th class="num">RC+RM(m³)</th>'
     + '<th class="num">改良土(m³)</th><th class="num">砂(m³)</th><th class="num">砂+改良(m³)</th>'
+    + '<th class="num" style="color:var(--yellow);">AS廃材(t)</th>'
+    + '<th class="num" style="color:var(--yellow);">路盤廃材(m³)</th>'
+    + '<th class="num" style="color:var(--yellow);">CN廃材(m³)</th>'
+    + '<th class="num" style="color:var(--yellow);">コンガラ(m³)</th>'
     + '</tr></thead><tbody>';
 
   recs.forEach(function(r){
@@ -962,6 +978,10 @@ function renderOrderTable() {
       + '<td class="num">' + fmt(r.isoilOrd) + '</td>'
       + '<td class="num">' + fmt(r.sandOrd) + '</td>'
       + '<td class="num">' + fmt(r.sandSoilSum) + '</td>'
+      + '<td class="num">' + fmt(r.wasteAsTon) + '</td>'
+      + '<td class="num">' + fmt(r.wasteRbM3) + '</td>'
+      + '<td class="num">' + fmt(r.wasteCnM3) + '</td>'
+      + '<td class="num">' + fmt(r.wasteCongaraM3) + '</td>'
       + '</tr>';
   });
   html += '</tbody></table>';
@@ -972,11 +992,12 @@ function renderOrderTable() {
 function exportOrderCSV() {
   var recs = getFilteredOrders();
   if (!recs.length) { alert('データがありません'); return; }
-  var header = ['日付','現場','型','旗揚げ','担当','会社・班','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)'];
+  var header = ['日付','現場','型','旗揚げ','担当','会社・班','モード','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','RC+RM(m³)','改良土(m³)','砂(m³)','砂+改良(m³)','AS廃材(t)','路盤廃材(m³)','CN廃材(m³)','コンガラ(m³)'];
   var rows = recs.map(function(r){
     var team=[r.company,r.team].filter(Boolean).join('/');
     return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,r.calcMode,
-      r.asTon密粒,r.asTon粗粒,r.rmOrd,r.rcOrd,r.rcRmSum,r.isoilOrd,r.sandOrd,r.sandSoilSum
+      r.asTon密粒,r.asTon粗粒,r.rmOrd,r.rcOrd,r.rcRmSum,r.isoilOrd,r.sandOrd,r.sandSoilSum,
+      r.wasteAsTon,r.wasteRbM3,r.wasteCnM3,r.wasteCongaraM3
     ].map(function(v){ var s=String(v||''); return s.includes(',') ? '"'+s+'"' : s; });
   });
   downloadCSV('order_records.csv', [header].concat(rows));
@@ -1102,6 +1123,9 @@ function buildReport() {
   var totalAS = oRecs.reduce(function(s,r){return s+(parseFloat(r.asTon密粒||0)+parseFloat(r.asTon粗粒||0));},0);
   var totalRM = oRecs.reduce(function(s,r){return s+parseFloat(r.rmOrd||0);},0);
   var totalRC = oRecs.reduce(function(s,r){return s+parseFloat(r.rcOrd||0);},0);
+  var wAS = oRecs.reduce(function(s,r){return s+parseFloat(r.wasteAsTon||0);},0);
+  var wRB = oRecs.reduce(function(s,r){return s+parseFloat(r.wasteRbM3||0);},0);
+  var wCN = oRecs.reduce(function(s,r){return s+parseFloat(r.wasteCnM3||0)+parseFloat(r.wasteCongaraM3||0);},0);
   var oSites  = unique(oRecs.map(function(r){return r.site||'';})).filter(Boolean);
   var clDone  = cRecs.reduce(function(s,r){return s+(parseInt(r.done||0));},0);
   var clTotal = cRecs.reduce(function(s,r){return s+(parseInt(r.total||0));},0);
@@ -1122,6 +1146,11 @@ function buildReport() {
   html+=kpiCard(fmt(totalAS)+' t','AS合計','var(--green)');
   html+=kpiCard(fmt(totalRM)+' m³','RM合計','#f59e0b');
   html+=kpiCard(fmt(totalRC)+' m³','RC合計','#8b5cf6');
+  if (wAS>0||wRB>0||wCN>0) {
+    html+=kpiCard(fmt(wAS)+' t','AS廃材 搬出','var(--yellow)');
+    html+=kpiCard(fmt(wRB)+' m³','路盤廃材 搬出','var(--yellow)');
+    html+=kpiCard(fmt(wCN)+' m³','CN・コンガラ 搬出','var(--yellow)');
+  }
   html+=kpiCard(cRecs.length+' 件','チェック記録','var(--text2)');
   html+=kpiCard(clPct+'%','チェック完了率',clPct>=80?'var(--green)':clPct>=50?'#f59e0b':'var(--red)');
   html+='</div>';
@@ -1156,11 +1185,12 @@ function exportReportCSV() {
   var oRecs = (_orderRecords||[]).filter(function(r){
     return (r.date||'').startsWith(ym) && (!site||(r.site||'')===site) && guestCanSee(r);
   });
-  var header=['日付','現場','型','旗揚げ','担当','会社・班','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','改良土(m³)','砂(m³)'];
+  var header=['日付','現場','型','旗揚げ','担当','会社・班','AS密粒(t)','AS粗粒(t)','RM(m³)','RC(m³)','改良土(m³)','砂(m³)','AS廃材(t)','路盤廃材(m³)','CN廃材(m³)','コンガラ(m³)'];
   var rows=oRecs.map(function(r){
     var team=[r.company,r.team].filter(Boolean).join('/');
     return [r.date,r.site,r.typeLabel||r.typeKey,r.hata,r.author,team,
-      r.asTon密粒||0,r.asTon粗粒||0,r.rmOrd||0,r.rcOrd||0,r.isoilOrd||0,r.sandOrd||0]
+      r.asTon密粒||0,r.asTon粗粒||0,r.rmOrd||0,r.rcOrd||0,r.isoilOrd||0,r.sandOrd||0,
+      r.wasteAsTon||0,r.wasteRbM3||0,r.wasteCnM3||0,r.wasteCongaraM3||0]
       .map(function(v){var s=String(v||'');return s.includes(',')? '"'+s+'"':s;});
   });
   downloadCSV('report_'+ym+'.csv', [header].concat(rows));
