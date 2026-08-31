@@ -460,12 +460,13 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
             図面画像①（任意）
             <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;font-size:12px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:5px;padding:2px 8px;text-decoration:none;white-space:nowrap;">✂️ PDFから切り出す</a>
           </label>
-          <div id="h-imgLabel" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
+          <div id="h-imgLabel" data-hata-drop="" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
             onclick="document.getElementById('h-imgFile').click()"
-            ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
-            ondragleave="this.style.borderColor='var(--border)'"
-            ondrop="handleHataImgDrop(event)">
-            📷 タップ or ドラッグ&ドロップ
+            ondragenter="hataDragOver(event)"
+            ondragover="hataDragOver(event)"
+            ondragleave="hataDragLeave(event)"
+            ondrop="handleHataImgDrop(event,'')">
+            📷 タップ / ドラッグ&ドロップ / 貼り付け(Ctrl+V)
           </div>
           <input type="file" id="h-imgFile" accept="image/*,.pdf" style="display:none" onchange="handleHataImgSelect(this)">
           <div id="h-imgPreview" style="display:none;margin-top:8px;">
@@ -479,12 +480,13 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
             図面画像②（任意）
             <a href="Claude/pdf-crop.html" target="_blank" class="pdf-crop-link" style="display:none;font-size:12px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:5px;padding:2px 8px;text-decoration:none;white-space:nowrap;">✂️ PDFから切り出す</a>
           </label>
-          <div id="h-imgLabel2" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
+          <div id="h-imgLabel2" data-hata-drop="2" style="border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;color:var(--text3);font-size:16px;"
             onclick="document.getElementById('h-imgFile2').click()"
-            ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
-            ondragleave="this.style.borderColor='var(--border)'"
-            ondrop="handleHataImgDrop2(event)">
-            📷 タップ or ドラッグ&ドロップ
+            ondragenter="hataDragOver(event)"
+            ondragover="hataDragOver(event)"
+            ondragleave="hataDragLeave(event)"
+            ondrop="handleHataImgDrop(event,'2')">
+            📷 タップ / ドラッグ&ドロップ / 貼り付け(Ctrl+V)
           </div>
           <input type="file" id="h-imgFile2" accept="image/*,.pdf" style="display:none" onchange="handleHataImgSelect2(this)">
           <div id="h-imgPreview2" style="display:none;margin-top:8px;">
@@ -1994,6 +1996,9 @@ function loadHataForSite(id){
 function _compressAndSetHataImg(dataUrl, fileName, sfx){
   sfx=sfx||'';
   var img=new Image();
+  img.onerror=function(){
+    showToast('❌ この画像を表示できませんでした（HEIC等はJPEG/PNGに変換してください）',4000);
+  };
   img.onload=function(){
     var MAX=500;
     var w=img.width, h=img.height;
@@ -2011,33 +2016,102 @@ function _compressAndSetHataImg(dataUrl, fileName, sfx){
   };
   img.src=dataUrl;
 }
-function handleHataImgSelect(input){
-  const file=input.files[0];if(!file)return;
-  const fr=new FileReader();
-  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name,'');
-  fr.readAsDataURL(file);
-}
-function handleHataImgSelect2(input){
-  const file=input.files[0];if(!file)return;
-  const fr=new FileReader();
-  fr.onload=e=>_compressAndSetHataImg(e.target.result,file.name,'2');
+// ファイルを検証して読み込む（ドロップ・選択・貼り付け共通）
+function _readHataImgFile(file, sfx){
+  if(!file){ showToast('⚠️ ファイルを取得できませんでした',3500); return; }
+  var name=file.name||'';
+  if(file.type==='application/pdf' || /\.pdf$/i.test(name)){
+    showToast('⚠️ PDFはそのまま添付できません。「✂️ PDFから切り出す」で画像にしてください',5000);
+    return;
+  }
+  if(file.type && file.type.indexOf('image/')!==0){
+    showToast('⚠️ 画像ファイルではありません（'+(file.type||name)+'）',4000);
+    return;
+  }
+  if(!file.type && !/\.(jpe?g|png|gif|webp|bmp)$/i.test(name)){
+    showToast('⚠️ 画像ファイルを指定してください（JPEG / PNG など）',4000);
+    return;
+  }
+  var fr=new FileReader();
+  fr.onerror=function(){ showToast('❌ ファイルを読み込めませんでした',3500); };
+  fr.onload=function(e){ _compressAndSetHataImg(e.target.result, name||'画像', sfx); };
   fr.readAsDataURL(file);
 }
 
-function handleHataImgDrop(ev){
-  ev.preventDefault();
-  ev.currentTarget.style.borderColor='var(--border)';
-  const file=ev.dataTransfer.files[0];if(!file)return;
-  document.getElementById('h-imgFile').files=ev.dataTransfer.files;
-  handleHataImgSelect(document.getElementById('h-imgFile'));
+function handleHataImgSelect(input){ _readHataImgFile(input.files&&input.files[0], ''); }
+function handleHataImgSelect2(input){ _readHataImgFile(input.files&&input.files[0], '2'); }
+
+// DataTransfer からファイルを取り出す（files が空でも items から拾う）
+function _hataFileFromDT(dt){
+  if(!dt) return null;
+  if(dt.files && dt.files.length) return dt.files[0];
+  if(dt.items){
+    for(var i=0;i<dt.items.length;i++){
+      if(dt.items[i].kind==='file'){ var f=dt.items[i].getAsFile(); if(f) return f; }
+    }
+  }
+  return null;
 }
-function handleHataImgDrop2(ev){
+
+function hataDragOver(ev){
   ev.preventDefault();
-  ev.currentTarget.style.borderColor='var(--border)';
-  const file=ev.dataTransfer.files[0];if(!file)return;
-  document.getElementById('h-imgFile2').files=ev.dataTransfer.files;
-  handleHataImgSelect2(document.getElementById('h-imgFile2'));
+  ev.stopPropagation();
+  try{ ev.dataTransfer.dropEffect='copy'; }catch(e){}
+  var z=ev.currentTarget; if(z&&z.style) z.style.borderColor='var(--blue)';
 }
+function hataDragLeave(ev){
+  // 子要素へ移っただけの dragleave は無視（枠が点滅するのを防ぐ）
+  var z=ev.currentTarget;
+  if(ev.relatedTarget && z.contains && z.contains(ev.relatedTarget)) return;
+  if(z&&z.style) z.style.borderColor='var(--border)';
+}
+
+function handleHataImgDrop(ev, sfx){
+  ev.preventDefault();
+  ev.stopPropagation();
+  var z=ev.currentTarget; if(z&&z.style) z.style.borderColor='var(--border)';
+  var file=_hataFileFromDT(ev.dataTransfer);
+  if(!file){
+    // Webページ上の画像を直接ドラッグした場合はファイルが取得できない
+    showToast('⚠️ 画像を取得できません。いったんファイルに保存してからドロップしてください',5000);
+    return;
+  }
+  _readHataImgFile(file, sfx||'');
+}
+// 旧名互換
+function handleHataImgDrop2(ev){ handleHataImgDrop(ev,'2'); }
+
+// ページ外へのドロップでブラウザが画像を開いてしまうのを防ぐ
+// （枠を少しでも外すと入力中の内容が失われていた）
+['dragover','drop'].forEach(function(evt){
+  window.addEventListener(evt, function(e){
+    if(e.target && e.target.closest && e.target.closest('[data-hata-drop]')) return;
+    e.preventDefault();
+  }, false);
+});
+
+// クリップボード貼り付け（PDFビューアからのスクリーンショット等）
+document.addEventListener('paste', function(ev){
+  var z1=document.getElementById('h-imgLabel');
+  if(!z1 || !z1.offsetParent) return;               // 旗揚げ入力欄が表示されていないときは無視
+  var t=ev.target && ev.target.tagName;
+  if(t==='TEXTAREA' || (t==='INPUT' && ev.target.type==='text')) return; // 文字入力中は無視
+  var items=(ev.clipboardData||window.clipboardData||{}).items;
+  if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(items[i].kind==='file' && items[i].type.indexOf('image/')===0){
+      var f=items[i].getAsFile();
+      if(!f) continue;
+      ev.preventDefault();
+      // ①が未設定なら①、埋まっていれば②へ
+      var used1=document.getElementById('h-imgPreview').style.display!=='none';
+      var sfx=(used1 && document.getElementById('h-imgPreview2')) ? '2' : '';
+      _readHataImgFile(f, sfx);
+      showToast('📋 画像'+(sfx==='2'?'②':'①')+'に貼り付けました');
+      return;
+    }
+  }
+});
 
 function clearHataImg(){
   document.getElementById('h-previewImg').src='';
