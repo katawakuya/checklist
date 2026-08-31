@@ -80,6 +80,22 @@ function forceReload(){
   .crop-info { padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
   .crop-no { font-family: var(--mono); font-size: 15px; font-weight: 900; color: var(--accent); flex: 1; }
   .crop-actions { display: flex; gap: 4px; }
+  /* 回転モーダル */
+  .rot-mask { display:none; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:900; align-items:center; justify-content:center; }
+  .rot-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; width:94%; max-width:520px; box-shadow:0 10px 50px rgba(0,0,0,.55); }
+  .rot-title { font-size:15px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .rot-stage { position:relative; height:300px; background:#0b0d14; border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .rot-stage img { display:block; transform-origin:center center; }
+  .rot-guide { position:absolute; inset:0; pointer-events:none; }
+  .rot-guide::before, .rot-guide::after { content:''; position:absolute; background:rgba(79,142,247,.55); }
+  .rot-guide::before { left:0; right:0; top:50%; height:1px; }
+  .rot-guide::after  { top:0; bottom:0; left:50%; width:1px; }
+  .rot-ctrl { display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .rot-ctrl input[type=range] { flex:1; min-width:160px; accent-color:var(--accent); }
+  .rot-deg { width:78px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:6px 8px; font-family:var(--mono); font-size:14px; text-align:right; }
+  .rot-quick { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .rot-quick .btn { padding:7px 10px; font-size:12px; }
+  .rot-note { font-size:11px; color:var(--text3); margin-top:8px; line-height:1.6; }
   .zoom-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 40px; padding: 6px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100; opacity: 0; transition: opacity 0.2s; }
   .zoom-bar.show { opacity: 1; }
   .zoom-btn { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1; }
@@ -168,6 +184,38 @@ function forceReload(){
   <span class="zoom-label" id="zoomLabel">100%</span>
   <button class="zoom-btn" onclick="zoom(+0.25)">＋</button>
   <button class="zoom-btn" onclick="fitPage()" title="ページにフィット">⊡</button>
+</div>
+
+<!-- 回転モーダル -->
+<div class="rot-mask" id="rotMask">
+  <div class="rot-box">
+    <div class="rot-title">🔄 画像を回転 <span id="rotHata" style="color:var(--accent);font-family:var(--mono);"></span></div>
+    <div class="rot-stage" id="rotStage">
+      <img id="rotPreview" alt="preview">
+      <div class="rot-guide" id="rotGuide"></div>
+    </div>
+    <div class="rot-ctrl">
+      <input type="range" id="rotSlider" min="-180" max="180" step="0.5" value="0" oninput="onRotSlider(this.value)">
+      <input type="number" id="rotDeg" class="rot-deg" step="0.5" value="0" oninput="onRotSlider(this.value)">
+      <span style="color:var(--text3);font-size:13px;">°</span>
+    </div>
+    <div class="rot-quick">
+      <button class="btn btn-ghost" onclick="rotNudge(-90)">↺ 90°</button>
+      <button class="btn btn-ghost" onclick="rotNudge(90)">↻ 90°</button>
+      <button class="btn btn-ghost" onclick="rotNudge(180)">180°</button>
+      <button class="btn btn-ghost" onclick="rotNudge(-0.5)">−0.5°</button>
+      <button class="btn btn-ghost" onclick="rotNudge(0.5)">＋0.5°</button>
+      <button class="btn btn-ghost" onclick="setRotDeg(0)">リセット</button>
+      <label style="display:flex;align-items:center;gap:5px;color:var(--text2);font-size:12px;cursor:pointer;margin-left:auto;">
+        <input type="checkbox" id="rotGuideChk" checked onchange="document.getElementById('rotGuide').style.display=this.checked?'':'none'"> 目安線
+      </label>
+    </div>
+    <div class="rot-note">↺↻90°は画質そのまま。中途半端な角度は余白が白で埋まります。<br>矢印キー ←→ で 0.5°、Shift+←→ で 5° ずつ調整できます。</div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="applyRotModal()">✅ 適用</button>
+      <button class="btn btn-ghost" onclick="closeRotModal()">キャンセル</button>
+    </div>
+  </div>
 </div>
 
 <canvas id="cropCanvas" style="display:none;"></canvas>
@@ -354,7 +402,8 @@ function cropAndSave() {
   cc.getContext('2d').drawImage(viewCanvas, x1, y1, w, h, 0, 0, w, h);
   const dataUrl = cc.toDataURL('image/jpeg', 0.95);
   crops = crops.filter(c => String(c.hata) !== String(hata));
-  crops.push({ hata: String(hata), dataUrl, page: currentPage, w, h });
+  // src = 回転前の原本。回転は毎回 src から作り直すので劣化が累積しない
+  crops.push({ hata: String(hata), dataUrl, src: dataUrl, sw: w, sh: h, rot: 0, page: currentPage, w, h });
   crops.sort((a, b) => +a.hata - +b.hata);
   clearSelection();
   // 末尾の数字を抽出して+1（例: 35→36, HH-1→HH-2, NO.3→NO.4）
@@ -375,7 +424,17 @@ function renderCropList() {
   document.getElementById('stCrops').textContent = crops.length;
   document.getElementById('dlAllBtn').disabled = crops.length === 0;
   if (!crops.length) { el.innerHTML = `<div class="empty-crops"><div class="big">🖼</div>まだ切り出しがありません<br>断面図の範囲を<br>ドラッグで選択してください</div>`; return; }
-  el.innerHTML = crops.map(c => `<div class="crop-card"><img src="${c.dataUrl}" alt="№${c.hata}" onclick="previewCrop('${c.hata}')"><div class="crop-info"><span class="crop-no">№${c.hata}</span><div class="crop-actions"><button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="downloadOne('${c.hata}')">💾</button><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;border-radius:6px;" onclick="deleteCrop('${c.hata}')">✕</button></div></div></div>`).join('');
+  el.innerHTML = crops.map(c => {
+    const rd = c.rot ? (c.rot > 180 ? c.rot - 360 : c.rot) : 0;
+    const rotBadge = rd ? `<span style="font-family:var(--mono);font-size:10px;color:var(--yellow);" title="回転 ${rd}°">${rd}°</span>` : '';
+    return `<div class="crop-card"><img src="${c.dataUrl}" alt="№${c.hata}" onclick="previewCrop('${c.hata}')"><div class="crop-info"><span class="crop-no">№${c.hata}</span>${rotBadge}<div class="crop-actions">`
+      + `<button class="btn btn-ghost" style="padding:4px 7px;font-size:11px;" title="左に90°" onclick="quickRotate('${c.hata}',-90)">↺</button>`
+      + `<button class="btn btn-ghost" style="padding:4px 7px;font-size:11px;" title="右に90°" onclick="quickRotate('${c.hata}',90)">↻</button>`
+      + `<button class="btn btn-ghost" style="padding:4px 7px;font-size:11px;" title="自由回転（傾き補正）" onclick="openRotModal('${c.hata}')">🎚</button>`
+      + `<button class="btn btn-ghost" style="padding:4px 7px;font-size:11px;" title="ダウンロード" onclick="downloadOne('${c.hata}')">💾</button>`
+      + `<button class="btn btn-danger" style="padding:4px 7px;font-size:11px;border-radius:6px;" title="削除" onclick="deleteCrop('${c.hata}')">✕</button>`
+      + `</div></div></div>`;
+  }).join('');
 }
 function deleteCrop(hata) { crops = crops.filter(c => String(c.hata) !== String(hata)); renderCropList(); }
 function clearAll() { if (crops.length && !confirm('切り出し済みの画像をすべてリセットしますか？')) return; crops = []; renderCropList(); }
@@ -400,6 +459,128 @@ async function downloadAll() {
   } catch(e) { alert('ZIPの作成に失敗しました: ' + e.message); }
   finally { dlBtn.disabled = false; dlBtn.textContent = '💾 すべてJPGでダウンロード'; dlBtn.classList.remove('pulsing'); }
 }
+
+// =====================================================================
+// 画像の回転（90°単位 / 自由角度）
+//   回転は常に原本 c.src から作り直す → 何度回しても劣化が累積しない
+// =====================================================================
+function _normDeg(d){ d = Math.round((Number(d)||0) * 10) / 10; d = d % 360; if (d < 0) d += 360; return d; }
+
+function _rotRender(src, deg) {
+  return new Promise(function(resolve, reject){
+    var img = new Image();
+    img.onerror = function(){ reject(new Error('画像を読み込めませんでした')); };
+    img.onload = function(){
+      var rad = _normDeg(deg) * Math.PI / 180;
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var ca = Math.abs(Math.cos(rad)), sa = Math.abs(Math.sin(rad));
+      var W = Math.max(1, Math.round(w * ca + h * sa));
+      var H = Math.max(1, Math.round(w * sa + h * ca));
+      var cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      var ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ffffff';          // JPEGは透過不可 → 回転で生じる余白は白で塗る
+      ctx.fillRect(0, 0, W, H);
+      try { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; } catch(e){}
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -w / 2, -h / 2);
+      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.95), w: W, h: H });
+    };
+    img.src = src;
+  });
+}
+
+function _applyRotTo(c, deg) {
+  var d = _normDeg(deg);
+  if (!c.src) { c.src = c.dataUrl; c.sw = c.w; c.sh = c.h; }   // 旧データ互換
+  c.rot = d;
+  if (d === 0) { c.dataUrl = c.src; c.w = c.sw; c.h = c.sh; renderCropList(); return Promise.resolve(); }
+  return _rotRender(c.src, d).then(function(r){
+    c.dataUrl = r.dataUrl; c.w = r.w; c.h = r.h; renderCropList();
+  }).catch(function(e){ alert('回転に失敗しました: ' + e.message); });
+}
+
+function quickRotate(hata, delta) {
+  var c = crops.find(function(x){ return String(x.hata) === String(hata); });
+  if (!c) return;
+  _applyRotTo(c, (c.rot || 0) + delta);
+}
+
+// ── 自由回転モーダル ──
+var _rotTarget = null, _rotCur = 0, _rotBase = { w: 0, h: 0 };
+
+function openRotModal(hata) {
+  var c = crops.find(function(x){ return String(x.hata) === String(hata); });
+  if (!c) return;
+  if (!c.src) { c.src = c.dataUrl; c.sw = c.w; c.sh = c.h; }
+  _rotTarget = c;
+  _rotCur = c.rot || 0;
+  document.getElementById('rotHata').textContent = '№' + c.hata;
+  var img = document.getElementById('rotPreview');
+  var _fit = function(){
+    if (!img.naturalWidth) return;
+    // ステージ内に収まる基準サイズを決める（回転後のはみ出しは scale で吸収）
+    var BW = 300, BH = 210;
+    var k = Math.min(BW / img.naturalWidth, BH / img.naturalHeight, 1);
+    _rotBase = { w: img.naturalWidth * k, h: img.naturalHeight * k };
+    img.style.width = _rotBase.w + 'px';
+    img.style.height = _rotBase.h + 'px';
+    setRotDeg(_rotCur);
+  };
+  img.onload = _fit;
+  img.src = c.src;
+  // 同じ画像を再度開いた場合は onload が発火しないので直接呼ぶ
+  if (img.complete && img.naturalWidth) _fit();
+  document.getElementById('rotMask').style.display = 'flex';
+}
+
+function _rotPreviewPaint() {
+  var img = document.getElementById('rotPreview');
+  if (!img || !_rotBase.w) return;
+  var rad = _rotCur * Math.PI / 180;
+  var ca = Math.abs(Math.cos(rad)), sa = Math.abs(Math.sin(rad));
+  var W = _rotBase.w * ca + _rotBase.h * sa;
+  var H = _rotBase.w * sa + _rotBase.h * ca;
+  var k = Math.min(1, 380 / W, 270 / H);          // ステージ(=320x290相当)に収める
+  img.style.transform = 'rotate(' + _rotCur + 'deg) scale(' + k.toFixed(4) + ')';
+}
+
+function setRotDeg(v) {
+  _rotCur = _normDeg(v);
+  if (_rotCur > 180) _rotCur -= 360;               // -180〜180 で表示
+  document.getElementById('rotSlider').value = _rotCur;
+  document.getElementById('rotDeg').value = _rotCur;
+  _rotPreviewPaint();
+}
+function onRotSlider(v) { setRotDeg(v); }
+function rotNudge(d) { setRotDeg(_rotCur + d); }
+
+function applyRotModal() {
+  if (!_rotTarget) { closeRotModal(); return; }
+  var c = _rotTarget, d = _rotCur;
+  closeRotModal();
+  _applyRotTo(c, d);
+}
+function closeRotModal() {
+  document.getElementById('rotMask').style.display = 'none';
+  _rotTarget = null;
+}
+
+// モーダル操作: 背景クリックで閉じる / 矢印キーで微調整 / Escで閉じる
+document.getElementById('rotMask').addEventListener('click', function(e){
+  if (e.target === this) closeRotModal();
+});
+document.addEventListener('keydown', function(e){
+  if (document.getElementById('rotMask').style.display !== 'flex') return;
+  if (e.key === 'Escape') { closeRotModal(); return; }
+  if (e.key === 'Enter')  { applyRotModal(); return; }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    var step = e.shiftKey ? 5 : 0.5;
+    rotNudge(e.key === 'ArrowLeft' ? -step : step);
+  }
+});
 
 function previewCrop(hata) {
   const c = crops.find(x => String(x.hata) === String(hata));
