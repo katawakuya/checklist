@@ -77,7 +77,7 @@ function forceReload(){
   .crop-list { overflow-y: auto; flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
   .crop-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; gap: 0; flex-direction: column; }
   .crop-card img { width: 100%; height: 90px; object-fit: contain; background: #1a1a2e; display: block; border-bottom: 1px solid var(--border); }
-  .crop-info { padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+  .crop-info { padding: 8px 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .crop-no { font-family: var(--mono); font-size: 15px; font-weight: 900; color: var(--accent); flex: 1; }
   .crop-actions { display: flex; gap: 4px; }
   /* 回転モーダル */
@@ -180,10 +180,14 @@ function forceReload(){
 </div>
 
 <div class="zoom-bar" id="zoomBar">
-  <button class="zoom-btn" onclick="zoom(-0.25)">−</button>
+  <button class="zoom-btn" onclick="zoom(-0.25)" title="縮小">−</button>
   <span class="zoom-label" id="zoomLabel">100%</span>
-  <button class="zoom-btn" onclick="zoom(+0.25)">＋</button>
+  <button class="zoom-btn" onclick="zoom(+0.25)" title="拡大">＋</button>
   <button class="zoom-btn" onclick="fitPage()" title="ページにフィット">⊡</button>
+  <span style="width:1px;height:18px;background:var(--border);"></span>
+  <button class="zoom-btn" onclick="rotatePage(-90)" title="ページを左に90°回転">↺</button>
+  <span class="zoom-label" id="rotLabel" style="min-width:34px;text-align:center;">0°</span>
+  <button class="zoom-btn" onclick="rotatePage(90)" title="ページを右に90°回転">↻</button>
 </div>
 
 <!-- 回転モーダル -->
@@ -241,6 +245,8 @@ var _workerReady = fetch(WORKER_URL)
   });
 
 let pdfDoc = null, currentPage = 1, totalPages = 0, currentScale = 1.5, pageRenders = {}, crops = [];
+let pageRotation = 0;   // ページ表示の回転角（0/90/180/270）
+let _renderTask = null; // 実行中のPDF描画タスク
 let isDragging = false, selStart = null, selEnd = null, hasSelection = false;
 
 const viewCanvas = document.getElementById('viewCanvas');
@@ -280,6 +286,8 @@ async function loadPDF(file) {
       canvasWrap.style.display = 'inline-block';
       document.getElementById('zoomBar').classList.add('show');
       pageRenders = {};
+      pageRotation = 0;
+      document.getElementById('rotLabel').textContent = '0°';
       buildThumbs();
       renderPage(1);
     } catch(e) { alert('PDFの読み込みに失敗しました: ' + e.message); }
@@ -312,14 +320,34 @@ function setActiveThumb(p) {
 }
 
 async function renderPage(pageNum) {
+  if (!pdfDoc) return;
   currentPage = pageNum;
   clearSelection();
   document.getElementById('pageInfo').textContent = `${pageNum} / ${totalPages}ページ`;
+  // 直前の描画が残っていると「Cannot use the same canvas during multiple render()」になるため中断
+  if (_renderTask) { try { _renderTask.cancel(); } catch(e) {} _renderTask = null; }
   const page = await pdfDoc.getPage(pageNum);
-  const vp = page.getViewport({ scale: currentScale });
+  const rot = (((page.rotate || 0) + pageRotation) % 360 + 360) % 360;
+  const vp = page.getViewport({ scale: currentScale, rotation: rot });
   viewCanvas.width = vp.width; viewCanvas.height = vp.height;
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  document.getElementById('stDpi').textContent = `×${currentScale.toFixed(2)}`;
+  try {
+    _renderTask = page.render({ canvasContext: ctx, viewport: vp });
+    await _renderTask.promise;
+  } catch (e) {
+    if (!e || e.name !== 'RenderingCancelledException') console.warn('[renderPage]', e);
+    return;                       // キャンセルされた描画は後続の描画に任せる
+  } finally {
+    _renderTask = null;
+  }
+  document.getElementById('stDpi').textContent = `×${currentScale.toFixed(2)}` + (pageRotation ? ` / ${pageRotation}°` : '');
+}
+
+// PDFページ自体を90°ずつ回転（横向きの図面を起こしてから切り取れる）
+function rotatePage(delta) {
+  if (!pdfDoc) return;
+  pageRotation = (((pageRotation + delta) % 360) + 360) % 360;
+  document.getElementById('rotLabel').textContent = pageRotation + '°';
+  renderPage(currentPage);
 }
 
 function zoom(delta) {
