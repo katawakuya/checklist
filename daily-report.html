@@ -1973,9 +1973,33 @@ document.addEventListener('input', (e)=>{
 });
 
 /* ---------- PDF export (via browser print) ---------- */
+// データ行が「0行」か（画面側 _dynRowIsZero のデータ版）
+function _dynDataIsZero(row, cfg){
+  let hasNum = false, allZero = true;
+  cfg.fields.forEach(function(f){
+    if(f.type !== 'counter' && f.type !== 'number') return;
+    hasNum = true;
+    const raw = (row && row[f.key] != null) ? String(row[f.key]) : '';
+    const v = parseFloat(raw.replace(/[^0-9.\-]/g,''));
+    if(!isNaN(v) && v !== 0) allZero = false;
+  });
+  return hasNum && allZero;
+}
+
 function buildDynSectionHTML(cfg, rows){
   const g = (v)=> v ? escapeHtml(v) : '';
-  const list = (rows && rows.length) ? rows : [{}];
+  const all = (rows && rows.length) ? rows : [{}];
+  // 画面で「0の行を隠す」にしているときは、PDFも同じ見た目にそろえる
+  // （復元用データは全件そのまま埋め込まれるので、取り込み後にボタンで出し戻せる）
+  const list = _hideZero ? all.filter(function(r){ return !_dynDataIsZero(r, cfg); }) : all;
+  if(_hideZero && list.length === 0){
+    return `
+    <div class="p-section">
+      <div class="p-head">${cfg.title}
+        <span style="float:right;font-weight:400;font-size:8pt;opacity:.75;">入力なし</span></div>
+    </div>`;
+  }
+  const hiddenCount = all.length - list.length;
   const headerCells = cfg.fields.map(f=>`<th>${f.label}${f.suffix?'('+f.suffix+')':''}</th>`).join('');
   const bodyRows = list.map(row=>{
     const cells = cfg.fields.map(f=>{
@@ -1988,7 +2012,8 @@ function buildDynSectionHTML(cfg, rows){
   }).join('');
   return `
     <div class="p-section">
-      <div class="p-head">${cfg.title}</div>
+      <div class="p-head">${cfg.title}${hiddenCount > 0
+        ? `<span style="float:right;font-weight:400;font-size:8pt;opacity:.75;">0の行 ${hiddenCount}件は省略</span>` : ''}</div>
       <table class="p-pipe">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${bodyRows}</tbody>
@@ -2070,6 +2095,7 @@ function buildPrintHTML(r){
 
     <div class="p-datablock">
       ${buildOrderRefPrintHTML(r)}
+      ${_hideZero ? '<div class="p-datalabel">※ 0台・0㎥の行は表示を省略しています。下の復元用データには全件含まれているため、取り込み後にボタンで表示できます。</div>' : ''}
       <div class="p-datalabel">―― この行は本アプリでの記録復元用データです。削除しないでください ――</div>
       ${DATA_MARK_START}${encodeReportData(r)}${DATA_MARK_END}
     </div>
