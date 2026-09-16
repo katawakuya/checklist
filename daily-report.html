@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- LINE共有用（PDFをその場で生成して共有シートに渡す） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --navy:#1D3557;
@@ -500,6 +503,8 @@
       <h1>土工事配管工 作業日報</h1>
       <div class="sub" id="headerSub">DAILY SITE REPORT</div>
     </div>
+    <span id="adminBadge" style="display:none;font-size:13px;padding:2px 8px;background:rgba(255,255,255,.18);border-radius:4px;margin-left:auto;white-space:nowrap;"></span>
+    <button type="button" id="adminBtn" class="hd-btn" style="margin-left:6px;" title="管理者ログイン" onclick="openFbModal()">🔑</button>
   </div>
   <div class="hd-btns">
     <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
@@ -718,6 +723,26 @@
     </div>
     <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="document.getElementById('pdfImportInput').click()">📄 他の人のPDFを取り込む</button>
     <input type="file" id="pdfImportInput" accept="application/pdf" style="display:none;" onchange="importPDFFile(event)">
+
+    <!-- 未同期の警告 -->
+    <div id="syncNote" style="display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px;"></div>
+
+    <!-- クラウド日報（管理者のみ） -->
+    <div id="cloudWrap" style="display:none;background:#eef6ff;border:1px solid #bcd9f7;border-radius:10px;padding:12px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <b style="font-size:14px;">☁ クラウドの日報（全端末）</b>
+        <span style="font-size:11px;color:#5a7ea6;">管理者のみ表示されます</span>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="loadCloudReports()">読み込む</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <label style="font-size:12px;color:#33587d;">期間</label>
+        <input type="date" id="cloudFrom" style="padding:5px;border:1px solid #bcd9f7;border-radius:6px;font-size:13px;">
+        <span style="font-size:12px;color:#33587d;">〜</span>
+        <input type="date" id="cloudTo" style="padding:5px;border:1px solid #bcd9f7;border-radius:6px;font-size:13px;">
+      </div>
+      <div id="cloudList" style="font-size:13px;color:#5a7ea6;">「読み込む」を押すと一覧が出ます。</div>
+    </div>
+
     <div id="historyList"></div>
     <button class="btn btn-secondary" style="margin-top:6px;" onclick="exportAllCSV()">全件をCSVで書き出す</button>
   </div>
@@ -727,7 +752,27 @@
 <div class="action-bar" id="formActionBar">
   <button class="btn btn-ghost" onclick="newReport()">クリア</button>
   <button class="btn btn-secondary" onclick="exportPDFFromForm()">PDF出力</button>
+  <button class="btn btn-secondary" id="shareBtn" onclick="sharePDFFromForm()">📤 LINEに送る</button>
   <button class="btn btn-primary" onclick="saveReport()">保存する</button>
+</div>
+
+<!-- ===== 管理者ログイン モーダル ===== -->
+<div id="fbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;padding:20px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.3);">
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px;">🔑 管理者ログイン</div>
+    <div style="font-size:12px;color:#666;margin-bottom:14px;line-height:1.6;">
+      クラウドに保存された全員の日報を見るには管理者ログインが必要です。<br>
+      日報の作成・保存はログインなしでできます。
+    </div>
+    <input id="fbEmail" type="email" placeholder="メールアドレス" autocomplete="username"
+      style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;margin-bottom:8px;">
+    <input id="fbPass" type="password" placeholder="パスワード" autocomplete="current-password"
+      style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;margin-bottom:14px;">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="fbLogin()">ログイン</button>
+      <button class="btn btn-ghost" onclick="closeFbModal()">閉じる</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1138,15 +1183,184 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "640432772833",
   appId: "1:640432772833:web:ab2aff11980621322809a0"
 };
-let _fbDb = null;
+const ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+const REPORT_COL  = 'work_reports';       // 日報のクラウド保存先
+let _fbDb = null, _fbAuth = null, _isAdmin = false, _isLoggedIn = false;
+
 function _initFb(){
   if (_fbDb) return _fbDb;
   if (typeof firebase === 'undefined') return null;
   try {
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     _fbDb = firebase.firestore();
+    try {
+      _fbAuth = firebase.auth();
+      _fbAuth.onAuthStateChanged(function(user){
+        _isLoggedIn = !!user;
+        _isAdmin = !!(user && user.email === ADMIN_EMAIL);
+        updateAdminBadge();
+        if (_isAdmin) renderHistory();      // 管理者になったらクラウド欄を出す
+      });
+    } catch(e) { console.warn('[FB] auth init', e); }
     return _fbDb;
   } catch(e) { return null; }
+}
+
+/* ---------- 管理者ログイン ---------- */
+function updateAdminBadge(){
+  const b = document.getElementById('adminBadge');
+  const btn = document.getElementById('adminBtn');
+  if (_isAdmin) {
+    if (b) { b.style.display = 'inline-block'; b.textContent = '👑 管理者'; }
+    if (btn) { btn.textContent = '🔓'; btn.title = 'ログアウト'; }
+  } else {
+    if (b) b.style.display = 'none';
+    if (btn) { btn.textContent = '🔑'; btn.title = '管理者ログイン'; }
+  }
+  const cw = document.getElementById('cloudWrap');
+  if (cw) cw.style.display = _isAdmin ? '' : 'none';
+}
+function openFbModal(){
+  _initFb();
+  if (_isAdmin) { if (confirm('管理者ログアウトしますか？')) fbLogout(); return; }
+  const m = document.getElementById('fbModal'); if (m) m.style.display = 'flex';
+}
+function closeFbModal(){
+  const m = document.getElementById('fbModal'); if (m) m.style.display = 'none';
+}
+function fbLogin(){
+  _initFb();
+  const email = (document.getElementById('fbEmail')||{}).value || '';
+  const pass  = (document.getElementById('fbPass') ||{}).value || '';
+  if (!_fbAuth || !email || !pass) { alert('メールアドレスとパスワードを入力してください'); return; }
+  _fbAuth.signInWithEmailAndPassword(email.trim(), pass)
+    .then(function(){ closeFbModal(); showToast('✅ 管理者としてログインしました'); })
+    .catch(function(e){ alert('ログイン失敗: ' + (e.message || e)); });
+}
+function fbLogout(){
+  if (_fbAuth) _fbAuth.signOut().then(function(){ showToast('ログアウトしました'); });
+}
+
+/* ---------- 日報のクラウド保存 ---------- */
+// 認証を確保してから処理を実行（未ログインでも匿名認証で書き込める）
+function _withAuth(fn){
+  if (!_fbAuth) { fn(null); return; }
+  if (_fbAuth.currentUser) { fn(_fbAuth.currentUser); return; }
+  _fbAuth.signInAnonymously()
+    .then(function(r){ fn(r.user || null); })
+    .catch(function(e){ console.warn('[FB] anon auth', e); fn(null); });
+}
+
+// 1件をクラウドへ保存。成功したら true を返す Promise
+function fbSaveReport(rec){
+  const db = _initFb();
+  if (!db) return Promise.resolve(false);
+  return new Promise(function(resolve){
+    _withAuth(function(user){
+      const payload = Object.assign({}, rec, {
+        uid: user ? user.uid : 'anonymous',
+        syncedAt: new Date().toISOString()
+      });
+      db.collection(REPORT_COL).doc(String(rec.id)).set(payload)
+        .then(function(){ resolve(true); })
+        .catch(function(e){ console.warn('[FB] report save', e); resolve(false); });
+    });
+  });
+}
+
+// 未同期の日報をまとめて再送（起動時・保存時に実行）
+function syncPendingReports(silent){
+  const list = loadReports();
+  const pending = list.filter(function(r){ return !r.fbSent; });
+  if (!pending.length) { updateSyncBadge(); return Promise.resolve(0); }
+  if (!navigator.onLine) { updateSyncBadge(); return Promise.resolve(0); }
+  return Promise.all(pending.map(function(r){
+    return fbSaveReport(r).then(function(ok){ return ok ? r.id : null; });
+  })).then(function(ids){
+    const done = ids.filter(Boolean);
+    if (done.length) {
+      const cur = loadReports();
+      done.forEach(function(id){
+        const i = cur.findIndex(function(x){ return x.id === id; });
+        if (i > -1) { cur[i].fbSent = true; cur[i].fbSentAt = new Date().toISOString(); }
+      });
+      saveReports(cur);
+      if (!silent) showToast('☁ ' + done.length + '件をクラウドに同期しました');
+    }
+    updateSyncBadge();
+    return done.length;
+  });
+}
+
+function updateSyncBadge(){
+  const el = document.getElementById('syncNote');
+  if (!el) return;
+  const n = loadReports().filter(function(r){ return !r.fbSent; }).length;
+  if (n > 0) {
+    el.style.display = '';
+    el.innerHTML = '⚠ 未同期 <b>' + n + '件</b>（この端末にのみ保存されています）'
+      + ' <button class="btn btn-ghost btn-sm" style="margin-left:6px;" onclick="syncPendingReports(false)">今すぐ同期</button>';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+/* ---------- クラウド日報の閲覧（管理者のみ） ---------- */
+let _cloudCache = [];
+function loadCloudReports(){
+  if (!_isAdmin) { alert('管理者ログインが必要です'); return; }
+  const db = _initFb();
+  const box = document.getElementById('cloudList');
+  if (!db) { box.textContent = 'クラウドに接続できませんでした。'; return; }
+  box.textContent = '読み込んでいます…';
+  const from = document.getElementById('cloudFrom').value;
+  const to   = document.getElementById('cloudTo').value;
+  let q = db.collection(REPORT_COL);
+  if (from) q = q.where('workDate', '>=', from);
+  if (to)   q = q.where('workDate', '<=', to);
+  q.get().then(function(snap){
+    _cloudCache = [];
+    snap.forEach(function(d){ _cloudCache.push(d.data()); });
+    _cloudCache.sort(function(a,b){ return String(b.workDate||'').localeCompare(String(a.workDate||'')); });
+    renderCloudList();
+  }).catch(function(e){
+    box.textContent = '読み込みに失敗しました: ' + e.message
+      + '（Firestoreのルールで ' + REPORT_COL + ' の読み取りが許可されているかご確認ください）';
+  });
+}
+function renderCloudList(){
+  const box = document.getElementById('cloudList');
+  if (!_cloudCache.length) { box.textContent = '該当する日報がありません。'; return; }
+  const localIds = {};
+  loadReports().forEach(function(r){ localIds[r.id] = true; });
+  box.innerHTML = _cloudCache.map(function(r){
+    const here = !!localIds[r.id];
+    return '<div style="background:#fff;border:1px solid #d7e7f7;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+      + '<div style="font-size:12px;color:#5a7ea6;">' + escapeHtml(r.workDate||'(日付未設定)') + '</div>'
+      + '<div style="font-weight:700;color:#1a1a1a;">' + escapeHtml(r.siteName||'(現場名未設定)') + '</div>'
+      + '<div style="font-size:12px;color:#666;">' + escapeHtml(r.worker||'')
+      + (r.creator ? '　作成: ' + escapeHtml(r.creator) : '') + '</div>'
+      + '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<button class="btn btn-secondary btn-sm" onclick="importCloudReport(\'' + r.id + '\')">'
+      + (here ? 'この端末に上書き取り込み' : 'この端末に取り込む') + '</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="printCloudReport(\'' + r.id + '\')">PDF出力</button>'
+      + '</div></div>';
+  }).join('');
+}
+function importCloudReport(id){
+  const r = _cloudCache.find(function(x){ return String(x.id) === String(id); });
+  if (!r) return;
+  const list = loadReports();
+  const i = list.findIndex(function(x){ return x.id === r.id; });
+  const rec = Object.assign({}, r, { fbSent: true });
+  if (i > -1) { list[i] = rec; } else { list.unshift(rec); }
+  saveReports(list);
+  renderHistory();
+  showToast('この端末に取り込みました');
+}
+function printCloudReport(id){
+  const r = _cloudCache.find(function(x){ return String(x.id) === String(id); });
+  if (r) runPrint(r);
 }
 function loadOrderRefCloud(){
   const siteName = document.getElementById('siteName').value.trim();
@@ -1480,20 +1694,42 @@ function saveReport(){
 
   const list = loadReports();
   const now = new Date().toISOString();
+  let saved = null;
   if(editingId){
     const idx = list.findIndex(r=>r.id===editingId);
     if(idx>-1){
-      list[idx] = {...list[idx], ...data, updatedAt: now};
+      // 内容が変わったのでクラウドへ再送が必要
+      list[idx] = {...list[idx], ...data, updatedAt: now, fbSent: false};
+      saved = list[idx];
     }
-  }else{
+  }
+  if(!saved){
     const id = uid();
-    list.unshift({id, ...data, createdAt: now, updatedAt: now});
+    saved = {id, ...data, createdAt: now, updatedAt: now, fbSent: false};
+    list.unshift(saved);
     editingId = id;
   }
   saveReports(list);
   localStorage.removeItem(DRAFT_KEY);
-  document.getElementById('editingNote').textContent = '保存済み（' + data.workDate + ' / ' + data.siteName + '）';
-  showToast('保存しました');
+
+  const note = document.getElementById('editingNote');
+  note.textContent = '保存済み（' + data.workDate + ' / ' + data.siteName + '）';
+  showToast('保存しました（クラウドへ送信中…）');
+
+  // 保存ボタン1つでローカル＋クラウド両方に保存する
+  fbSaveReport(saved).then(function(ok){
+    if (ok) {
+      const cur = loadReports();
+      const i = cur.findIndex(function(x){ return x.id === saved.id; });
+      if (i > -1) { cur[i].fbSent = true; cur[i].fbSentAt = new Date().toISOString(); saveReports(cur); }
+      note.textContent = '保存済み ☁ クラウド同期済み（' + data.workDate + ' / ' + data.siteName + '）';
+      showToast('✅ 保存しました（クラウド同期済み）');
+    } else {
+      note.textContent = '保存済み ⚠ この端末のみ（' + data.workDate + ' / ' + data.siteName + '）';
+      showToast('保存しました（通信できないためクラウド未同期。電波のある場所で自動再送します）', 4000);
+    }
+    updateSyncBadge();
+  });
 }
 
 function openReport(id){
@@ -1527,17 +1763,27 @@ function duplicateReport(id){
 }
 
 function deleteReport(id){
-  if(!confirm('この日報を削除しますか？元に戻せません。')) return;
+  if(!confirm('この日報をこの端末から削除しますか？')) return;
   let list = loadReports();
   list = list.filter(r=>r.id!==id);
   saveReports(list);
   if(editingId===id){ clearForm(); }
   renderHistory();
-  showToast('削除しました');
+  // クラウド側は管理者のみ削除できる（誤操作でバックアップが消えないようにする）
+  if (_isAdmin && _fbDb && confirm('クラウドからも削除しますか？\n（他の端末からも見えなくなります）')) {
+    _fbDb.collection(REPORT_COL).doc(String(id)).delete()
+      .then(function(){ showToast('クラウドからも削除しました'); })
+      .catch(function(e){ alert('クラウドの削除に失敗しました: ' + e.message); });
+  } else {
+    showToast('この端末から削除しました');
+  }
 }
 
 /* ---------- history render ---------- */
 function renderHistory(){
+  updateSyncBadge();
+  const cw = document.getElementById('cloudWrap');
+  if (cw) cw.style.display = _isAdmin ? '' : 'none';
   const list = loadReports().slice().sort((a,b)=> (b.workDate||'').localeCompare(a.workDate||'') || (b.updatedAt||'').localeCompare(a.updatedAt||''));
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
   const filtered = q ? list.filter(r=>
@@ -1552,7 +1798,9 @@ function renderHistory(){
   }
   container.innerHTML = filtered.map(r=>`
     <div class="card">
-      <div class="date">${r.workDate || '(日付未設定)'}</div>
+      <div class="date">${r.workDate || '(日付未設定)'} ${r.fbSent
+        ? '<span style="font-size:11px;color:#0a7d3c;background:#e7f7ee;border-radius:4px;padding:1px 6px;margin-left:4px;">☁ 同期済み</span>'
+        : '<span style="font-size:11px;color:#9a3412;background:#fff7ed;border-radius:4px;padding:1px 6px;margin-left:4px;">未同期</span>'}</div>
       <div class="site">${escapeHtml(r.siteName || '(現場名未設定)')}</div>
       <div class="meta">${escapeHtml(r.worker||'')} ${r.workerCount ? '・'+escapeHtml(r.workerCount):''} ${r.pipes && r.pipes.length ? '・配管'+r.pipes.length+'件' : ''}</div>
       <div class="card-actions">
@@ -1560,6 +1808,7 @@ function renderHistory(){
         <button class="btn btn-ghost btn-sm" onclick="duplicateReport('${r.id}')">翌日用に複製</button>
         <button class="btn btn-ghost btn-sm" onclick="exportSingleCSV('${r.id}')">CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="exportPDF('${r.id}')">PDF出力</button>
+        <button class="btn btn-secondary btn-sm" onclick="sharePDF('${r.id}')">📤 LINE</button>
         <button class="btn btn-danger-ghost btn-sm" onclick="deleteReport('${r.id}')">削除</button>
       </div>
     </div>
@@ -1792,6 +2041,126 @@ function exportPDFFromForm(){
   runPrint(data);
 }
 
+/* =====================================================================
+   LINE共有：PDFをその場で作って共有シートに渡す
+   - 見た目は印刷用レイアウトをそのまま画像化
+   - 復元用データは「画像の下に隠した本物のテキスト」として埋め込むので
+     受け取った側の「他の人のPDFを取り込む」で復元できる
+   ===================================================================== */
+function _reportFileName(r){
+  const d = (r.workDate || '日付未設定').replace(/-/g,'');
+  const s = (r.siteName || '現場').replace(/[\\/:*?"<>|]/g,'_');
+  return '作業日報_' + d + '_' + s + '.pdf';
+}
+
+async function _buildReportPDF(rec){
+  if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
+    throw new Error('PDF作成の準備ができていません。通信環境を確認して画面を再読み込みしてください。');
+  }
+  const area = document.getElementById('printArea');
+  const prevStyle = area.getAttribute('style') || '';
+  area.innerHTML = buildPrintHTML(rec);
+  // html2canvas はレイアウト済みの要素しか撮れないので、画面外に実体を出す
+  area.setAttribute('style',
+    'display:block;position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;padding:16px;color:#000;');
+  let canvas;
+  try {
+    canvas = await html2canvas(area, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  } finally {
+    area.setAttribute('style', prevStyle);
+    area.innerHTML = '';
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const PW = 210, PH = 297, M = 8;
+  const imgW    = PW - M * 2;
+  const pxPerMm = canvas.width / imgW;
+  const pageHpx = (PH - M * 2) * pxPerMm;
+
+  // ① 復元用データを先に白文字で書く（このあと画像を上に重ねるので見えない）
+  const payload = DATA_MARK_START + encodeReportData(rec) + DATA_MARK_END;
+  doc.setFontSize(1);
+  doc.setTextColor(255, 255, 255);
+  const CH = 200;
+  let ln = 0;
+  for (let i = 0; i < payload.length; i += CH) {
+    doc.text(payload.slice(i, i + CH), M, M + 2 + ln * 1.1);
+    ln++;
+    if (M + 2 + ln * 1.1 > PH - M) break;   // 1ページに収まらない分は下の保険ページへ
+  }
+  const rest = payload.length > CH * ln ? payload.slice(CH * ln) : '';
+
+  // ② 本体（画像）をページ分割して重ねる
+  let y = 0, page = 0;
+  while (y < canvas.height) {
+    const sliceH = Math.min(pageHpx, canvas.height - y);
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width; tmp.height = Math.round(sliceH);
+    const tctx = tmp.getContext('2d');
+    tctx.fillStyle = '#ffffff';
+    tctx.fillRect(0, 0, tmp.width, tmp.height);
+    tctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+    if (page > 0) doc.addPage();
+    doc.addImage(tmp.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, imgW, sliceH / pxPerMm);
+    y += sliceH; page++;
+  }
+
+  // ③ 1ページに入り切らなかった復元データは最終ページに白文字で追記
+  if (rest) {
+    doc.setFontSize(1);
+    doc.setTextColor(255, 255, 255);
+    let ln2 = 0;
+    for (let i = 0; i < rest.length; i += CH) {
+      if (M + 2 + ln2 * 1.1 > PH - M) { doc.addPage(); doc.setFontSize(1); doc.setTextColor(255,255,255); ln2 = 0; }
+      doc.text(rest.slice(i, i + CH), M, M + 2 + ln2 * 1.1);
+      ln2++;
+    }
+  }
+  return doc;
+}
+
+async function _sharePDFCore(rec){
+  const btn = document.getElementById('shareBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '作成中…'; }
+  try {
+    const doc  = await _buildReportPDF(rec);
+    const blob = doc.output('blob');
+    const name = _reportFileName(rec);
+    const file = new File([blob], name, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: name,
+        text: (rec.workDate || '') + ' ' + (rec.siteName || '') + ' 作業日報'
+      });
+      showToast('共有しました');
+    } else {
+      doc.save(name);
+      showToast('この端末は共有に対応していないため、ダウンロードしました', 4000);
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;   // ユーザーが共有シートを閉じただけ
+    console.error('[share]', e);
+    alert('PDFの作成に失敗しました。\n' + (e.message || e) + '\n\n「PDF出力」から印刷機能をお使いください。');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+function sharePDFFromForm(){
+  const data = collectFormData();
+  if(!data.siteName){ alert('現場名を入力してください'); return; }
+  _sharePDFCore(data);
+}
+function sharePDF(id){
+  const r = loadReports().find(x=>x.id===id);
+  if(!r) return;
+  _sharePDFCore(r);
+}
+
 window.addEventListener('afterprint', ()=>{
   document.getElementById('printArea').innerHTML = '';
 });
@@ -1847,12 +2216,12 @@ async function importPDFFile(evt){
   }
 }
 
-function showToast(msg){
+function showToast(msg, ms){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(()=>t.classList.remove('show'), 1800);
+  showToast._timer = setTimeout(()=>t.classList.remove('show'), ms || 1800);
 }
 
 /* ---------- init ---------- */
@@ -1884,6 +2253,15 @@ function showToast(msg){
   if(!document.getElementById('pipeList').children.length){
     addPipeRow();
   }
+
+  // クラウド接続を起動しておく（ログイン状態の復元・未同期分の自動再送）
+  try {
+    _initFb();
+    updateAdminBadge();
+    setTimeout(function(){ syncPendingReports(true); }, 1200);
+  } catch(e) { console.warn('[init] firebase', e); }
+  // オンラインに復帰したら未同期分を送る
+  window.addEventListener('online', function(){ syncPendingReports(false); });
 })();
 </script>
 </body>
