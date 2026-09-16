@@ -537,8 +537,12 @@
         style="flex:1;min-width:170px;">🚚 ダンプ・配管のみ表示</button>
       <button type="button" id="btnViewAll" class="btn btn-secondary" onclick="setReportView('all')"
         style="flex:1;min-width:130px;">📋 すべて表示</button>
+      <button type="button" id="hideZeroBtn" class="btn btn-secondary" onclick="toggleHideZero()"
+        style="flex:1;min-width:170px;">🚫 0台・0㎥の行を隠す</button>
       <div id="viewNote" style="width:100%;font-size:12px;color:#7a5c00;background:#fff8e1;
         border:1px solid #ffe082;border-radius:6px;padding:6px 10px;display:none;"></div>
+      <div id="hideZeroNote" style="width:100%;font-size:12px;color:#8a4b00;background:#fff3e0;
+        border:1px solid #ffcc80;border-radius:6px;padding:6px 10px;display:none;"></div>
     </div>
 
     <div class="section" data-sec="basic">
@@ -1518,13 +1522,103 @@ function dynRowTemplate(sectionKey, rowId, data, fields){
 function addDynRow(sectionKey, data){
   const cfg = DYNAMIC_SECTIONS.find(s=>s.key===sectionKey);
   const id = uid();
-  document.getElementById('dynlist-'+sectionKey).insertAdjacentHTML('beforeend', dynRowTemplate(sectionKey, id, data, cfg.fields));
+  const list = document.getElementById('dynlist-'+sectionKey);
+  list.insertAdjacentHTML('beforeend', dynRowTemplate(sectionKey, id, data, cfg.fields));
+  // 「＋行を追加」で出した行は、0のままでも隠さない（入力できなくなるため）
+  if(data === undefined){
+    const el = list.querySelector('.pipe-card[data-dyn-id="'+id+'"]');
+    if(el){ el.dataset.fresh = '1'; el.style.display = ''; }
+    const sec = list.closest('.section');
+    const body = sec ? sec.querySelector('.section-body') : null;
+    if(body) body.style.display = '';
+  }
   renumberDyn(sectionKey);
 }
 function removeDynRow(sectionKey, id){
   const el = document.querySelector(`#dynlist-${sectionKey} .pipe-card[data-dyn-id="${id}"]`);
   if(el) el.remove();
   renumberDyn(sectionKey);
+  if(_hideZero) applyHideZero();
+}
+
+/* =====================================================================
+   0台・0㎥の行を隠す（名目＝セクション見出しは残す）
+   ===================================================================== */
+let _hideZero = false;
+try { _hideZero = localStorage.getItem('kanro_hideZero') === '1'; } catch(e) {}
+
+function toggleHideZero(){
+  _hideZero = !_hideZero;
+  try { localStorage.setItem('kanro_hideZero', _hideZero ? '1' : '0'); } catch(e) {}
+  // 表示し直すときは「新規行」の扱いをリセットする
+  document.querySelectorAll('#dynamicSections .pipe-card[data-fresh]').forEach(function(el){
+    delete el.dataset.fresh;
+  });
+  applyHideZero();
+}
+
+// 数量系フィールドがすべて0（または空）なら「0行」とみなす
+function _dynRowIsZero(row, cfg){
+  let hasNum = false, allZero = true;
+  cfg.fields.forEach(function(f){
+    if(f.type !== 'counter' && f.type !== 'number') return;
+    hasNum = true;
+    const el = row.querySelector('[data-field="'+f.key+'"]');
+    const v = el ? parseFloat(String(el.value).replace(/[^0-9.\-]/g,'')) : NaN;
+    if(!isNaN(v) && v !== 0) allZero = false;
+  });
+  return hasNum && allZero;
+}
+
+function applyHideZero(){
+  const btn = document.getElementById('hideZeroBtn');
+  if(btn){
+    btn.textContent = _hideZero ? '👁 0の行も表示' : '🚫 0台・0㎥の行を隠す';
+    btn.style.background = _hideZero ? '#fff3e0' : '';
+    btn.style.borderColor = _hideZero ? '#ffb74d' : '';
+  }
+  let hiddenTotal = 0;
+  DYNAMIC_SECTIONS.forEach(function(cfg){
+    const list = document.getElementById('dynlist-'+cfg.key);
+    if(!list) return;
+    const sec  = list.closest('.section');
+    const rows = list.querySelectorAll('.pipe-card');
+    let shown = 0, hidden = 0;
+    rows.forEach(function(row){
+      const hide = _hideZero && !row.dataset.fresh && _dynRowIsZero(row, cfg);
+      row.style.display = hide ? 'none' : '';
+      if(hide) hidden++; else shown++;
+    });
+    hiddenTotal += hidden;
+    if(!sec) return;
+    // 全部隠れたら本体もたたみ、見出し（名目）だけ残す
+    const body = sec.querySelector('.section-body');
+    const collapsed = _hideZero && rows.length > 0 && shown === 0;
+    if(body) body.style.display = collapsed ? 'none' : '';
+    // 見出しの右にバッジ
+    const head = sec.querySelector('.section-head');
+    let chip = sec.querySelector('.zero-chip');
+    if(head && !chip){
+      chip = document.createElement('span');
+      chip.className = 'zero-chip';
+      chip.style.cssText = 'font-size:11px;font-weight:400;opacity:.85;white-space:nowrap;margin-left:8px;';
+      head.appendChild(chip);
+    }
+    if(chip){
+      chip.textContent = collapsed ? '入力なし' : (hidden > 0 ? '0の行 ' + hidden + '件を非表示' : '');
+    }
+  });
+  const note = document.getElementById('hideZeroNote');
+  if(note){
+    if(_hideZero){
+      note.style.display = '';
+      note.textContent = hiddenTotal > 0
+        ? '0台・0㎥の行を ' + hiddenTotal + '件 隠しています。項目名は残してあります。保存・PDF出力の内容は変わりません。'
+        : '0台・0㎥の行はありません。';
+    } else {
+      note.style.display = 'none';
+    }
+  }
 }
 function renumberDyn(sectionKey){
   document.querySelectorAll('#dynlist-'+sectionKey+' .pipe-card').forEach((el,i)=>{
@@ -1641,6 +1735,7 @@ function populateForm(data){
   const witnesses = normalizeWitnesses(data);
   (witnesses.length ? witnesses : [{}]).forEach(w=>addWitnessRow(w));
   DYNAMIC_SECTIONS.forEach(cfg => { populateDynSection(cfg.key, data[cfg.key]); });
+  try { applyHideZero(); } catch(e) {}
 }
 
 function getLastUsedContext(){
@@ -2047,6 +2142,14 @@ function exportPDFFromForm(){
    - 復元用データは「画像の下に隠した本物のテキスト」として埋め込むので
      受け取った側の「他の人のPDFを取り込む」で復元できる
    ===================================================================== */
+// タブレット・スマホかどうか（iPadOS は Mac を名乗るのでタッチ数で判定）
+function _isMobileDevice(){
+  const ua = navigator.userAgent || '';
+  if (/Android|iPhone|iPod|iPad/i.test(ua)) return true;
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
 function _reportFileName(r){
   const d = (r.workDate || '日付未設定').replace(/-/g,'');
   const s = (r.siteName || '現場').replace(/[\\/:*?"<>|]/g,'_');
@@ -2130,7 +2233,20 @@ async function _sharePDFCore(rec){
     const name = _reportFileName(rec);
     const file = new File([blob], name, { type: 'application/pdf' });
 
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    let useShare = canShare;
+
+    // パソコンのLINEアプリはWindowsの共有メニューからファイルを受け取れないことが多い。
+    // その場合は保存 → LINEにドラッグ、のほうが確実なので選んでもらう。
+    if (canShare && !_isMobileDevice()) {
+      useShare = !confirm(
+        'パソコンのLINEは共有メニューからファイルを受け取れないことがあります。\n\n' +
+        '［OK］PDFを保存する（保存後、LINEのトークにドラッグして送れます）\n' +
+        '［キャンセル］このまま共有メニューを開く'
+      );
+    }
+
+    if (useShare) {
       await navigator.share({
         files: [file],
         title: name,
@@ -2139,7 +2255,9 @@ async function _sharePDFCore(rec){
       showToast('共有しました');
     } else {
       doc.save(name);
-      showToast('この端末は共有に対応していないため、ダウンロードしました', 4000);
+      showToast(canShare
+        ? 'PDFを保存しました。LINEのトークにドラッグして送れます'
+        : 'この端末は共有に対応していないため、ダウンロードしました', 4500);
     }
   } catch (e) {
     if (e && e.name === 'AbortError') return;   // ユーザーが共有シートを閉じただけ
@@ -2253,6 +2371,8 @@ function showToast(msg, ms){
   if(!document.getElementById('pipeList').children.length){
     addPipeRow();
   }
+
+  try { applyHideZero(); } catch(e) {}
 
   // クラウド接続を起動しておく（ログイン状態の復元・未同期分の自動再送）
   try {
