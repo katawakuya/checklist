@@ -271,8 +271,14 @@ body{
 <!-- MAIN -->
 <div class="main">
 
+  <!-- 認証の確認中（ログイン状態が読み込まれるまで表示） -->
+  <div id="authLoading" style="text-align:center;padding:60px 20px;">
+    <div class="big-icon">🏗️</div>
+    <p style="opacity:.75;">ログイン状態を確認しています…</p>
+  </div>
+
   <!-- ログイン画面 -->
-  <div id="loginArea">
+  <div id="loginArea" style="display:none;">
     <div class="big-icon">🏗️</div>
     <h2>関電工 現場管理システム</h2>
     <p>所属・氏名を設定してご利用ください</p>
@@ -467,12 +473,27 @@ const ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
 
 let _isAdmin = false;
 let _currentUser = null;
+var _authResolved = false;
+var _reAuthTried  = false;
+// 一度でもログインできたことを覚えておく（iPadでセッションが飛んだときの自動復帰に使う）
+var SEEN_KEY = '_kanri_signed_in_once';
+
+// ログイン状態はこの端末に保存する（タブが破棄されても復元できるように）
+try { _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) { console.warn('[auth] persistence', e); }
+
+function _showAuthLoading(on){
+  var el = document.getElementById('authLoading');
+  if (el) el.style.display = on ? '' : 'none';
+}
 
 // ── 認証監視 ──────────────────────────────────────────
 _fbAuth.onAuthStateChanged(function(user) {
   _currentUser = user;
+  _authResolved = true;
   if (user) {
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch(e) {}
     _isAdmin = (user.email === ADMIN_EMAIL);
+    _showAuthLoading(false);
     document.getElementById('btnAuth').textContent = 'ログアウト';
     document.getElementById('btnAuth').style.display = '';
     document.getElementById('loginArea').style.display = 'none';
@@ -485,17 +506,44 @@ _fbAuth.onAuthStateChanged(function(user) {
     updateHsCard();
     updateGreeting();
     loadData();
-  } else {
-    document.getElementById('btnAuth').style.display = 'none';
-    document.getElementById('loginArea').style.display = '';
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('footer').style.display = 'none';
-    document.getElementById('adminBadge').style.display = 'none';
+    return;
   }
+
+  // 未ログイン。以前ログインできていた端末なら、セッションが切れただけなので黙って入り直す
+  var seenBefore = false;
+  try { seenBefore = localStorage.getItem(SEEN_KEY) === '1'; } catch(e) {}
+  if (seenBefore && !_reAuthTried) {
+    _reAuthTried = true;
+    _showAuthLoading(true);
+    _fbAuth.signInAnonymously().catch(function(e) {
+      console.warn('[auth] re-signin', e);
+      _showAuthLoading(false);
+      document.getElementById('loginArea').style.display = '';
+    });
+    return;   // 成功すれば上の分岐がもう一度走る
+  }
+
+  _showAuthLoading(false);
+  document.getElementById('btnAuth').style.display = 'none';
+  document.getElementById('loginArea').style.display = '';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('footer').style.display = 'none';
+  document.getElementById('adminBadge').style.display = 'none';
 });
+
+// 通信が遅い等で認証がいつまでも返らない場合の保険（10秒でログイン画面を出す）
+setTimeout(function(){
+  if (!_authResolved) {
+    _showAuthLoading(false);
+    document.getElementById('loginArea').style.display = '';
+  }
+}, 10000);
 
 function toggleAuth() {
   if (_currentUser) {
+    // 明示的なログアウトなので自動復帰はさせない
+    try { localStorage.removeItem(SEEN_KEY); } catch(e) {}
+    _reAuthTried = true;
     _fbAuth.signOut().then(function(){ showToast('ログアウトしました'); });
   }
 }

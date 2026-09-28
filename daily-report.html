@@ -718,6 +718,7 @@
     </div>
 
     <p class="note" id="editingNote"></p>
+    <p class="note" id="draftNote" style="color:#2e7d32;"></p>
   </div>
 
   <!-- ===================== 履歴一覧 VIEW ===================== -->
@@ -1199,6 +1200,8 @@ function _initFb(){
     _fbDb = firebase.firestore();
     try {
       _fbAuth = firebase.auth();
+      // ログイン状態をこの端末に保存（タブが破棄されても復元できるように）
+      try { _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) {}
       _fbAuth.onAuthStateChanged(function(user){
         _isLoggedIn = !!user;
         _isAdmin = !!(user && user.email === ADMIN_EMAIL);
@@ -1778,6 +1781,7 @@ function newReport(){
   if(!confirm('入力内容をクリアして新規作成しますか？')) return;
   clearForm();
   localStorage.removeItem(DRAFT_KEY);
+  const dn = document.getElementById('draftNote'); if(dn) dn.textContent = '';
   showToast('新規入力を開始しました');
 }
 
@@ -1806,6 +1810,7 @@ function saveReport(){
   }
   saveReports(list);
   localStorage.removeItem(DRAFT_KEY);
+  const _dn = document.getElementById('draftNote'); if(_dn) _dn.textContent = '';
 
   const note = document.getElementById('editingNote');
   note.textContent = '保存済み（' + data.workDate + ' / ' + data.siteName + '）';
@@ -1959,18 +1964,101 @@ function exportAllCSV(){
   downloadCSV(`作業日報_全件_${todayStr()}.csv`, rows);
 }
 
-/* ---------- draft autosave ---------- */
+/* =====================================================================
+   下書きの自動保存・自動復元
+   他のアプリを開いて戻っても入力が消えないようにする。
+   iPadは裏に回ったタブを丸ごと破棄することがあるので、
+   「離れる直前」に必ず保存しておくのが肝心。
+   ===================================================================== */
 let draftTimer = null;
+
+function saveDraftNow(){
+  try{
+    const data = collectFormData();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      data, editingId, savedAt: Date.now(), day: todayStr()
+    }));
+    const el = document.getElementById('draftNote');
+    if(el){
+      const t = new Date();
+      el.textContent = '自動保存済み ' +
+        String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    }
+  }catch(e){ console.warn('[draft]', e); }
+}
 function scheduleDraftSave(){
   clearTimeout(draftTimer);
-  draftTimer = setTimeout(()=>{
-    const data = collectFormData();
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({data, editingId, savedAt: Date.now()}));
-  }, 500);
+  draftTimer = setTimeout(saveDraftNow, 400);
 }
-document.addEventListener('input', (e)=>{
-  if(e.target.closest('#view-form')) scheduleDraftSave();
-});
+
+document.addEventListener('input',  (e)=>{ if(e.target.closest('#view-form')) scheduleDraftSave(); });
+document.addEventListener('change', (e)=>{ if(e.target.closest('#view-form')) saveDraftNow(); });
+// 他のアプリ・ページへ移る直前に確実に書き出す
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') saveDraftNow(); });
+window.addEventListener('pagehide', saveDraftNow);
+window.addEventListener('blur',     saveDraftNow);
+// ヘッダーのリンクで別アプリへ飛ぶときも取りこぼさない
+document.addEventListener('click', (e)=>{ if(e.target.closest('a[href]')) saveDraftNow(); }, true);
+
+// 下書きに中身があるか（ダンプ台数だけの入力も「あり」と判定する）
+function _draftHasContent(d){
+  if(!d) return false;
+  const textKeys = ['siteName','chief','worker','workerCount','weather','temp',
+                    'timeStart','timeEnd','machinery','workContent','irregular',
+                    'safety','notice','tomorrow','creator'];
+  if(textKeys.some(k => String(d[k] || '').trim())) return true;
+  const anyFilled = (arr)=> Array.isArray(arr) && arr.some(o =>
+    Object.values(o || {}).some(v => String(v == null ? '' : v).trim()));
+  if(anyFilled(d.pipes)) return true;
+  if(anyFilled(d.witnesses)) return true;
+  // 動的セクション: 数量が0以外、または備考などに文字が入っていれば「あり」
+  // （積載重量などの選択欄は初期値が入っているので判定から外す）
+  for(const cfg of DYNAMIC_SECTIONS){
+    const rows = d[cfg.key];
+    if(!Array.isArray(rows)) continue;
+    for(const row of rows){
+      for(const f of cfg.fields){
+        if(f.type === 'select') continue;
+        const v = String((row || {})[f.key] == null ? '' : (row || {})[f.key]).trim();
+        if(!v) continue;
+        if(f.type === 'counter' || f.type === 'number'){
+          const n = parseFloat(v.replace(/[^0-9.\-]/g,''));
+          if(!isNaN(n) && n !== 0) return true;
+        } else {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function restoreDraftOnBoot(){
+  let draft = null;
+  try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(e) { draft = null; }
+  if(!draft || !_draftHasContent(draft.data)){ clearForm(); return; }
+
+  const sameDay = draft.day ? (draft.day === todayStr())
+                            : (draft.savedAt && (Date.now() - draft.savedAt) < 12 * 3600 * 1000);
+  if(!sameDay){
+    // 日をまたいだ下書きは確認する（前日の内容を今日の日報に混ぜないため）
+    const when = draft.day || new Date(draft.savedAt || Date.now()).toLocaleDateString('ja-JP');
+    if(!confirm(when + ' の未保存の入力が残っています。\n復元しますか？\n\n［キャンセル］を選ぶとこの下書きは破棄されます。')){
+      localStorage.removeItem(DRAFT_KEY);
+      clearForm();
+      return;
+    }
+  }
+  populateForm(draft.data);
+  editingId = draft.editingId || null;
+  const note = document.getElementById('editingNote');
+  if(note){
+    note.textContent = editingId
+      ? '編集中（自動保存から復元しました）'
+      : '入力中（自動保存から復元しました）';
+  }
+  if(sameDay) showToast('前回の入力を復元しました', 2600);
+}
 
 /* ---------- PDF export (via browser print) ---------- */
 // データ行が「0行」か（画面側 _dynRowIsZero のデータ版）
@@ -2373,27 +2461,7 @@ function showToast(msg, ms){
   document.getElementById('headerSub').textContent = 'DAILY SITE REPORT';
   buildDynamicSectionsHTML();
   try { buildSiteOptions(); renderOrderRef(); } catch(e) {}
-  const draftRaw = localStorage.getItem(DRAFT_KEY);
-  if(draftRaw){
-    try{
-      const draft = JSON.parse(draftRaw);
-      const hasContent = draft.data && (draft.data.siteName || draft.data.workContent || (draft.data.pipes && draft.data.pipes.length));
-      if(hasContent && confirm('前回の未保存の入力内容があります。復元しますか？')){
-        populateForm(draft.data);
-        editingId = draft.editingId || null;
-        if(editingId){
-          document.getElementById('editingNote').textContent = '編集中（下書きから復元）';
-        }
-      }else{
-        clearForm();
-        localStorage.removeItem(DRAFT_KEY);
-      }
-    }catch(e){
-      clearForm();
-    }
-  }else{
-    clearForm();
-  }
+  restoreDraftOnBoot();
   if(!document.getElementById('pipeList').children.length){
     addPipeRow();
   }
