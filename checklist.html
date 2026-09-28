@@ -4108,6 +4108,32 @@ function onTypeChange(silent){
 // 状態保存・復元
 // =====================================================
 
+// この型（現場×型）の入力をまとめて消す
+function resetCurrentType(){
+  if(!_siteId || !_typeKey){ alert('現場と型を選んでください'); return; }
+  if(!confirm('この型の入力をすべて消します。\n\n・チェック状態\n・旗揚げ番号\n・DP／管下H\n・箇所の登録\n\n元に戻せません。よろしいですか？')) return;
+  var base='cl_state_'+(_siteId||'x')+'_'+(_presetTypeKey||_typeKey||'x');
+  // base 本体と箇所別(_hXXX)をまとめて削除
+  var del=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k===base || (k && k.indexOf(base+'_h')===0)) del.push(k);
+  }
+  del.forEach(function(k){ localStorage.removeItem(k); });
+  try{ localStorage.removeItem(_locsKey()); localStorage.removeItem(_locIdxKey()); }catch(e){}
+
+  _checks={}; _naItems={}; _subChecks={};
+  _locList=['']; _locIdx=0; _locData=[];
+  _hataEntry=null;
+  ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra','hataInput','inMgmtNo'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var an=document.getElementById('autoSavedNote'); if(an) an.textContent='';
+  try{ closeDiagram(); }catch(e){}
+  renderMain();
+  alert('✅ この型の入力をリセットしました');
+}
+
 function storeKey(){
   var base='cl_state_'+(_siteId||'x')+'_'+(_presetTypeKey||_typeKey||'x');
   if(_locList.length>0 && _locIdx<_locList.length && _locList[_locIdx]){
@@ -5028,10 +5054,42 @@ function saveState(){
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
-    hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn,kussKbn:_kussuri_kbn
+    hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn,kussKbn:_kussuri_kbn,
+    savedAt: Date.now()
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
+  _showAutoSaved();
 }
+
+// 下書きを「そのまま使ってよい」とみなす時間。
+// 日付ではなく経過時間で見るのは、夜勤で0時をまたいでも消さないため。
+var DRAFT_TTL_MS = 20 * 60 * 60 * 1000;   // 20時間
+
+function _showAutoSaved(){
+  var el = document.getElementById('autoSavedNote');
+  if(!el) return;
+  var t = new Date();
+  el.textContent = '自動保存済み ' +
+    String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+}
+
+// 他のアプリ・ページへ移る直前に確実に書き出す（iPadはタブを破棄するため）
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden'){ try{ saveState(); }catch(e){} }
+});
+window.addEventListener('pagehide', function(){ try{ saveState(); }catch(e){} });
+window.addEventListener('blur',     function(){ try{ saveState(); }catch(e){} });
+document.addEventListener('click', function(e){
+  if(e.target.closest && e.target.closest('a[href]')){ try{ saveState(); }catch(e2){} }
+}, true);
+// DP・管下H など input 系の取りこぼし対策
+var _ckDraftTimer = null;
+document.addEventListener('input', function(e){
+  if(!e.target.closest) return;
+  if(!e.target.closest('#mainArea, .input-area, body')) return;
+  clearTimeout(_ckDraftTimer);
+  _ckDraftTimer = setTimeout(function(){ try{ saveState(); }catch(e2){} }, 500);
+});
 function restoreState(){
   var raw = localStorage.getItem(storeKey());
   if(!raw) return;
@@ -5051,14 +5109,34 @@ function restoreState(){
       inDP3s:d.dp3s||'', inDPH3s:d.dph3s||'',
       inDP4s:d.dp4s||'', inDPH4s:d.dph4s||''
     };
-    // GL計算欄・旗揚げ番号は起動時にクリア（前回の情報を引き継がない）
-    ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra'].forEach(function(id){
-      var el=document.getElementById(id); if(el) el.value='';
-    });
-    var hataEl = document.getElementById('hataInput');
-    if(hataEl) hataEl.value = '';
-    _hataEntry = null;
-    closeDiagram();
+    // GL計算欄・旗揚げ番号の扱い
+    //   作業中（前回入力から20時間以内）なら復元する。
+    //   ページを移動しただけ・夜勤で日をまたいだだけで消えないようにするため、
+    //   カレンダーの日付ではなく経過時間で判定している。
+    var _age = d.savedAt ? (Date.now() - d.savedAt) : Infinity;
+    var _fresh = _age <= DRAFT_TTL_MS;
+    if(!_fresh && d.savedAt){
+      var _dt = new Date(d.savedAt);
+      var _stamp = (_dt.getMonth()+1) + '月' + _dt.getDate() + '日 ' +
+                   String(_dt.getHours()).padStart(2,'0') + ':' + String(_dt.getMinutes()).padStart(2,'0');
+      _fresh = confirm(_stamp + ' に入力した内容が残っています。\n' +
+                       (d.date ? '作業日：' + d.date + '\n' : '') +
+                       '\n［OK］続きから入力する\n［キャンセル］旗揚げ番号・DPを空にして始める');
+    }
+    if(_fresh){
+      sv('inDP1',d.dp1); sv('inDP2',d.dp2); sv('inDPH',d.dph); sv('inDPH2',d.dph2);
+      sv('inBH',d.bh);   sv('inExtra',d.extra);
+      var hataEl0 = document.getElementById('hataInput');
+      if(hataEl0 && d.hata) hataEl0.value = d.hata;
+    } else {
+      ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra'].forEach(function(id){
+        var el=document.getElementById(id); if(el) el.value='';
+      });
+      var hataEl = document.getElementById('hataInput');
+      if(hataEl) hataEl.value = '';
+      _hataEntry = null;
+      closeDiagram();
+    }
     _checks = d.checks||{}; _naItems = d.na||{}; _subChecks = d.subChecks||{};
     if(d.kojiKbn)  _kojiKbn     = d.kojiKbn;
     if(d.kussKbn)  _kussuri_kbn = d.kussKbn;
@@ -5241,6 +5319,12 @@ function renderMain(){
     '</div>' +
     '<div class="field-row c2">' +
       '<div class="field"><label>記録者</label><input type="text" id="inRecorder" placeholder="氏名" onchange="saveState();_saveRecorderName(this.value)"></div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">' +
+      '<span id="autoSavedNote" style="font-size:12px;color:#2e7d32;"></span>' +
+      '<button type="button" onclick="resetCurrentType()" style="margin-left:auto;font-size:12px;padding:5px 10px;' +
+        'background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.45);color:#c0392b;' +
+        'border-radius:6px;cursor:pointer;">🗑 この型の入力をリセット</button>' +
     '</div>' +
   '</div>';
 

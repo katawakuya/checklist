@@ -713,6 +713,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <div id="allSaveBar" style="margin-top:14px;padding:12px 14px;background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.35);border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
       <span style="font-size:14px;color:var(--text2);flex:1;min-width:220px;">入力済みの型を<b>1回のタップでまとめて記録</b>します。<span style="color:var(--text3);">記録は型ごとに分けて保存されるので、材料名・型名はそのまま残ります。</span></span>
       <button class="btn btn-primary" onclick="saveAllDynRecords()">📥 全型まとめて記録</button>
+      <button class="btn btn-danger" onclick="resetAllDynForms()">🗑 全型まとめてリセット</button>
+      <span id="odDraftNote" style="width:100%;font-size:12px;color:#4ade80;"></span>
     </div>
     <div id="allZmCta" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(15,138,61,0.12);border:1.5px solid rgba(15,138,61,0.4);border-radius:8px;flex-wrap:wrap;gap:8px;align-items:center;">
       <span id="allZmMsg" style="font-size:13px;color:#34d399;flex:1;">✅ 記録完了！</span>
@@ -5361,6 +5363,8 @@ function refreshAllPatternFilters(){
 if (typeof window !== 'undefined') {
   window.addEventListener('load', function(){
     [300, 900, 2000].forEach(function(ms){ setTimeout(refreshAllPatternFilters, ms); });
+    // 作業中の入力（下書き）の復元。現場・マスタの読込が終わる頃に走らせる
+    setTimeout(function(){ try { _odBoot(); } catch(e) { console.warn('[draft boot]', e); } }, 1200);
   });
 }
 
@@ -7658,6 +7662,172 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
   [200, 700, 1500].forEach(function(ms){
     setTimeout(function(){ try { refreshAllPatternFilters(); } catch(e) {} }, ms);
   });
+  // 下書き（作業中の入力）の復元。タブが出来てからでないと入れられない
+  setTimeout(function(){ try { _odRestoreIntoTabs(); } catch(e) {} }, 250);
+}
+
+/* =====================================================================
+   作業中の入力を自動保存する（下書き）
+   他のアプリに移っても消えないようにする。日付ではなく経過時間で判定するので
+   夜勤で0時をまたいでも保持される。
+   ===================================================================== */
+var ORDER_DRAFT_KEY = 'order_draft_v1';
+var ORDER_DRAFT_TTL_MS = 20 * 60 * 60 * 1000;   // 20時間
+var _odRestored = false;
+var _odPending  = null;
+var _odTimer    = null;
+
+function _odCollect(){
+  var d = { savedAt: Date.now(), site:'', tab:'', fields:{}, pipes:{}, modes:{} };
+  var ss = document.getElementById('global-site-sel');
+  if (ss) d.site = ss.value || '';
+  var ab = document.querySelector('#type-subnav .type-subbtn.active');
+  if (ab && ab.dataset) d.tab = ab.dataset.typetab || '';
+  document.querySelectorAll('#dynamic-calc-tabs input[id], #dynamic-calc-tabs select[id]').forEach(function(el){
+    if (el.type === 'checkbox' || el.type === 'radio') { if (el.checked) d.fields[el.id] = 1; }
+    else if (el.value !== '' && el.value != null) d.fields[el.id] = el.value;
+  });
+  document.querySelectorAll('#dynamic-calc-tabs .pa-wrap[id]').forEach(function(wrap){
+    var rows = [];
+    wrap.querySelectorAll('.pa-row').forEach(function(r){
+      var q = function(c){ var e = r.querySelector(c); return e ? e.value : ''; };
+      var o = { key:q('.pa-type'), kind:q('.pa-kind'), L:q('.pa-len'), N:q('.pa-num'), src:q('.pa-src') };
+      if (o.key) rows.push(o);
+    });
+    if (rows.length) d.pipes[wrap.id] = rows;
+  });
+  try { Object.keys(_dynCalcModes).forEach(function(k){ d.modes[k] = _dynCalcModes[k]; }); } catch(e) {}
+  return d;
+}
+
+function _odHasContent(d){
+  if (!d) return false;
+  if (d.pipes && Object.keys(d.pipes).length) return true;
+  var f = d.fields || {};
+  return Object.keys(f).some(function(id){
+    // 日付や記録者だけの状態は「入力あり」とみなさない
+    if (/-date$/.test(id) || /-author$/.test(id)) return false;
+    var v = String(f[id]);
+    if (!v.trim()) return false;
+    if (/^0+(\.0+)?$/.test(v)) return false;
+    return true;
+  });
+}
+
+function _odSaveNow(){
+  try {
+    if (!_odRestored) return;                 // 復元前に空の状態で上書きしない
+    var d = _odCollect();
+    if (!_odHasContent(d)) return;
+    localStorage.setItem(ORDER_DRAFT_KEY, JSON.stringify(d));
+    var el = document.getElementById('odDraftNote');
+    if (el) {
+      var t = new Date();
+      el.textContent = '💾 自動保存済み ' +
+        String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    }
+  } catch(e) { console.warn('[draft]', e); }
+}
+function _odSaveSoon(){ clearTimeout(_odTimer); _odTimer = setTimeout(_odSaveNow, 400); }
+
+document.addEventListener('input',  function(e){ if (e.target.closest && e.target.closest('#dynamic-calc-tabs')) _odSaveSoon(); });
+document.addEventListener('change', function(e){ if (e.target.closest && e.target.closest('#dynamic-calc-tabs')) _odSaveNow(); });
+document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') _odSaveNow(); });
+window.addEventListener('pagehide', _odSaveNow);
+window.addEventListener('blur',     _odSaveNow);
+document.addEventListener('click', function(e){ if (e.target.closest && e.target.closest('a[href]')) _odSaveNow(); }, true);
+
+// タブが組み上がったあとに値を流し込む
+function _odRestoreIntoTabs(){
+  if (_odRestored) { return; }
+  var d = _odPending;
+  if (!d) {
+    _odRestored = true;                       // 下書きなし。以後は保存だけ行う
+    return;
+  }
+  if (!document.querySelector('#dynamic-calc-tabs .type-panel')) return;  // まだタブが無い
+
+  Object.keys(d.fields || {}).forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!d.fields[id];
+    else el.value = d.fields[id];
+  });
+  Object.keys(d.pipes || {}).forEach(function(wrapId){
+    var wrap = document.getElementById(wrapId);
+    if (!wrap) return;
+    var containerId = wrapId.replace(/-rows$/, '');
+    wrap.innerHTML = '';
+    d.pipes[wrapId].forEach(function(o){
+      try { _addPipeInputRow(containerId, o.key, o.kind, o.L, o.N, o.src); } catch(e) {}
+    });
+  });
+  Object.keys(d.modes || {}).forEach(function(k){
+    try { if (d.modes[k] && _dynCalcModes[k] !== d.modes[k]) switchDynMode(k, d.modes[k]); } catch(e) {}
+  });
+  if (d.tab) { try { activateTypeTab(d.tab); } catch(e) {} }
+
+  _odRestored = true;
+  _odPending  = null;
+  try { recalcAll(); } catch(e) {}
+  try { refreshAllPatternFilters(); } catch(e) {}
+  try { renderAllTypesSummary(); } catch(e) {}
+  var el2 = document.getElementById('odDraftNote');
+  if (el2) el2.textContent = '💾 前回の入力を復元しました';
+}
+
+// 起動時: 下書きを読み、必要なら現場を選び直してタブを作らせる
+function _odBoot(){
+  var d = null;
+  try { d = JSON.parse(localStorage.getItem(ORDER_DRAFT_KEY) || 'null'); } catch(e) { d = null; }
+  if (!d || !_odHasContent(d)) { _odRestored = true; return; }
+
+  var age = d.savedAt ? (Date.now() - d.savedAt) : Infinity;
+  if (age > ORDER_DRAFT_TTL_MS) {
+    var dt = new Date(d.savedAt || Date.now());
+    var stamp = (dt.getMonth()+1) + '月' + dt.getDate() + '日 ' +
+                String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+    if (!confirm(stamp + ' に入力した内容が残っています。\n\n［OK］続きから入力する\n［キャンセル］破棄して新規入力')) {
+      localStorage.removeItem(ORDER_DRAFT_KEY);
+      _odRestored = true;
+      return;
+    }
+  }
+  _odPending = d;
+  // 現場が未選択なら下書きの現場に合わせる（これでタブが組まれる）
+  var ss = document.getElementById('global-site-sel');
+  if (ss && d.site && ss.value !== d.site) {
+    ss.value = d.site;
+    try { ss.dispatchEvent(new Event('change')); } catch(e) {}
+  }
+  [400, 1200, 2500, 4000].forEach(function(ms){
+    setTimeout(function(){ try { _odRestoreIntoTabs(); } catch(e) {} }, ms);
+  });
+}
+
+// 下書きを消す（入力リセットから呼ぶ）
+function _odClearDraft(){
+  try { localStorage.removeItem(ORDER_DRAFT_KEY); } catch(e) {}
+  var el = document.getElementById('odDraftNote');
+  if (el) el.textContent = '';
+}
+
+// 全型まとめてリセット
+function resetAllDynForms(){
+  if (!confirm('すべての型の入力を消します。\n\n・幅W／延長L／DP／管下H\n・配管の行\n・作業日／旗揚げ番号／記録者\n\n保存済みの発注記録は消えません。よろしいですか？')) return;
+  _odClearDraft();
+  Object.keys(TYPES).forEach(function(tid){
+    if (tid.indexOf('dyntype_') !== 0) return;
+    var panel = document.getElementById('typepanel-' + tid);
+    if (!panel) return;
+    panel.querySelectorAll('input[type=number]').forEach(function(i){ i.value = ''; });
+    panel.querySelectorAll('input[type=text]').forEach(function(i){ if (!i.readOnly) i.value = ''; });
+    panel.querySelectorAll('input').forEach(function(i){ i.dispatchEvent(new Event('input')); });
+    try { showAllPatterns(tid); } catch(e) {}
+  });
+  try { recalcAll(); } catch(e) {}
+  try { renderAllTypesSummary(); } catch(e) {}
+  alert('✅ すべての型の入力をリセットしました');
 }
 
 function setTodayDate(id) {
@@ -8984,7 +9154,8 @@ function saveAllDynRecords() {
 }
 
 function resetDynForm(tid) {
-  if (!confirm('入力をリセットします。よろしいですか？')) return;
+  if (!confirm('この型の入力をリセットします。よろしいですか？')) return;
+  try { _odClearDraft(); } catch(e) {}
   // tid は "dyntype_xxx" 形式
   const fullKey = tid.startsWith('dyntype_') ? tid : `dyntype_${tid}`;
   const panel   = document.getElementById(`typepanel-${fullKey}`);
