@@ -149,14 +149,46 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
     <span class="admin-badge" id="adminBadge" style="font-size:13px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);border-radius:4px;color:var(--blue);display:none;">👑 管理者</span>
     <button id="migrateBtn" onclick="migrateToFirebase()" style="display:none;" class="hd-btn" title="既存データをFirebaseへ移行">📤 移行</button>
     <button id="btnCopySite" class="admin-only hd-btn" onclick="openCopyModal()" style="display:none;" title="現場間コピー">📋 コピー</button>
-    <a href="order.html" class="hd-btn" title="発注シートを開く">📋 発注</a>
-    <a href="checklist.html" class="hd-btn" title="チェックリストを開く">✅ チェック</a>
-    <a href="pdf-crop.html" target="_blank" class="hd-btn" title="断面図切り出しツール">✂️ 断面図</a>
-    <a href="index.html" class="hd-btn" title="ホームへ戻る">🏠 ホーム</a>
+    <span id="appNav" style="display:contents"></span>
     <button class="hd-btn" id="btnAdmin" onclick="onAdminBtn()">🔑</button>
       <button onclick="(function(){var u=location.href.split('?')[0]+'?v='+Date.now();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.map(function(n){return caches.delete(n);}));}).then(function(){location.replace(u);}).catch(function(){location.replace(u);});}else{location.replace(u);}})()" class="hd-btn" title="最新版に更新（キャッシュ消去）" style="font-size:15px;">🔄 更新</button>
   </div>
 </header>
+
+<!-- ===== 共通アプリナビ（全アプリ共通・並びと表記をそろえる） ===== -->
+<script>
+(function(){
+  var APPS = [
+    ['index.html',        '🏠', 'ホーム'],
+    ['roadbed.html',      '🗺', '路盤'],
+    ['viewer.html',       '📐', '図面'],
+    ['pdf-crop.html',     '✂️', '切出し'],
+    ['order.html',        '📊', '計算'],
+    ['checklist.html',    '📋', '記録'],
+    ['daily-report.html', '📝', '日報'],
+    ['zaimatsu.html',     '📦', '資材'],
+    ['manage.html',       '📈', '集計']
+  ];
+  function build(){
+    var slot = document.getElementById('appNav');
+    if (!slot) return;
+    var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    slot.style.display = 'contents';
+    slot.innerHTML = APPS.map(function(a){
+      var cur = (a[0].toLowerCase() === here);
+      var st = cur ? ' style="font-weight:700;box-shadow:inset 0 0 0 1.5px currentColor;"' : '';
+      return '<a href="' + a[0] + '" class="hd-btn"' + st + (cur ? ' aria-current="page"' : '')
+           + ' title="' + a[2] + '">' + a[1] + ' ' + a[2] + '</a>';
+    }).join('');
+    var v = slot.querySelector('a[href^="viewer.html"]');
+    if (v && typeof updateViewerLink === 'function') {
+      v.addEventListener('click', function(){ try { updateViewerLink(v); } catch(e) {} });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
+  else build();
+})();
+</script>
 
 <div class="main">
 
