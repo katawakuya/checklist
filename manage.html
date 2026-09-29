@@ -191,23 +191,32 @@ tr:hover td{background:#f9f8f4;}
 <!-- ===== 共通アプリナビ（全アプリ共通・並びと表記をそろえる） ===== -->
 <script>
 (function(){
+  // [ファイル, アイコン, 表記, ゲストにも出すか]
   var APPS = [
-    ['index.html',        '🏠', 'ホーム'],
-    ['roadbed.html',      '🗺', '路盤'],
-    ['viewer.html',       '📐', '図面'],
-    ['pdf-crop.html',     '✂️', '切出し'],
-    ['order.html',        '📊', '計算'],
-    ['checklist.html',    '📋', '記録'],
-    ['daily-report.html', '📝', '日報'],
-    ['zaimatsu.html',     '📦', '資材'],
-    ['manage.html',       '📈', '集計']
+    ['index.html',        '🏠', 'ホーム',         1],
+    ['order.html',        '📊', '発注計算',       1],
+    ['checklist.html',    '📋', 'チェックリスト', 1],
+    ['viewer.html',       '📐', '図面',           1],
+    ['manage.html',       '📈', '班別集計',       1],
+    ['zaimatsu.html',     '📦', '資材管理',       1],
+    ['daily-report.html', '📝', '作業日報',       1],
+    ['roadbed.html',      '🗺', '路盤マスタ',     0],
+    ['pdf-crop.html',     '✂️', '断面図切出し',   0]
   ];
+  // 匿名認証＝ゲスト。メールでログインした人だけフル表示にする
+  function _navFull(here){
+    var me = APPS.filter(function(a){ return a[0].toLowerCase() === here; })[0];
+    if (me && !me[3]) return true;
+    try { var u = firebase.auth().currentUser; return !!(u && !u.isAnonymous); }
+    catch(e) { return false; }
+  }
   function build(){
     var slot = document.getElementById('appNav');
     if (!slot) return;
     var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    var full = _navFull(here);
     slot.style.display = 'contents';
-    slot.innerHTML = APPS.map(function(a){
+    slot.innerHTML = APPS.filter(function(a){ return a[3] || full; }).map(function(a){
       var cur = (a[0].toLowerCase() === here);
       var st = cur ? ' style="font-weight:700;box-shadow:inset 0 0 0 1.5px currentColor;text-decoration:none;"'
                    : ' style="text-decoration:none;"';
@@ -215,8 +224,13 @@ tr:hover td{background:#f9f8f4;}
            + ' title="' + a[2] + '">' + a[1] + ' ' + a[2] + '</a>';
     }).join('');
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
-  else build();
+  function _navSub(n){
+    try { firebase.auth().onAuthStateChanged(build); }
+    catch(e) { if (n > 0) setTimeout(function(){ _navSub(n - 1); }, 600); }
+  }
+  function boot(){ build(); _navSub(8); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 </script>
 
