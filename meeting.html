@@ -1172,17 +1172,10 @@ function fbSaveMeeting(rec){
       return _cloudDoc(rec).set(_cloudPayload(rec, 'draft', 0, []))
         .then(function(){ return true; });
     }
-    // 確定後: 確定版と比べて違えば新しい版を積む
-    var base = rec.confirmedSnapshot || null;
-    var changes = base ? diffRecords(base, rec) : [];
-    if (!changes.length) return Promise.resolve(true);        // 中身が同じなら何もしない
-    var v = (rec.cloudVersion || 1) + 1;
-    rec.cloudVersion = v;
-    return _cloudDoc(rec, '__v' + v).set(_cloudPayload(rec, 'revised', v, changes))
-      .then(function(){
-        setCloudStatus('⚠ 確定後の変更として ' + changes.length + '件を記録しました');
-        return true;
-      });
+    // 確定後は自動で版を作らない。
+    // 入力のたびに版が増えると履歴が埋まってしまうので、
+    // クラウドへ残すのは「☁ 変更を記録」を押したときだけにする。
+    return Promise.resolve(true);
   };
   return _ensureAuth().then(doIt).catch(function(e){ _cloudFail(e, 'save'); return false; });
 }
@@ -1211,7 +1204,9 @@ function confirmRecord(manual){
 }
 
 // 確定後に手を入れた分を、新しい版としてクラウドへ記録する
+var _pushing = false;
 function pushRevision(){
+  if (_pushing) return;
   if (!currentRecord.confirmedAt){ alert('先に「✅ 確定」を押してください'); return; }
   persist(false);
   var base = currentRecord.confirmedSnapshot || null;
@@ -1226,6 +1221,7 @@ function pushRevision(){
     + (changes.length > 5 ? '\n…ほか ' + (changes.length-5) + '件' : '')
     + '\n\nよろしいですか？')) return;
   var v = (currentRecord.cloudVersion || 1) + 1;
+  _pushing = true;
   setCloudStatus('変更をクラウドへ送信中…');
   _ensureAuth()
     .then(function(){ return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'revised', v, changes)); })
@@ -1236,7 +1232,8 @@ function pushRevision(){
       setCloudStatus('⚠ 確定後の変更 ' + changes.length + '件を第' + v + '版として記録しました');
       doToast();
     })
-    .catch(function(e){ alert('クラウドに記録できませんでした。\n\n' + _cloudFail(e, 'revision')); });
+    .catch(function(e){ alert('クラウドに記録できませんでした。\n\n' + _cloudFail(e, 'revision')); })
+    .then(function(){ _pushing = false; }, function(){ _pushing = false; });
 }
 
 // いまの内容を新しい確定版にし直す（打合せで変更を承認したとき）
@@ -1533,23 +1530,72 @@ function _who(v){
   return n + '（' + (v.authorRole === 'admin' ? '管理者' : 'ゲスト') + '）';
 }
 
+// 同じ議事録の修正版はひとまとめにして出す（版ごとに並べると埋まってしまう）
+function _groupAlerts(){
+  var g = {};
+  _alerts.forEach(function(v){
+    var k = v.recKey || (v.recSite + '|' + v.recDate);
+    if (!g[k]) g[k] = { key:k, site:v.recSite, date:v.recDate, docIds:[], total:0, latest:v };
+    g[k].docIds.push(v._docId);
+    g[k].total += (v.changes||[]).length;
+    if (String(v.savedAt||'') > String(g[k].latest.savedAt||'')) g[k].latest = v;
+  });
+  return Object.keys(g).map(function(k){ return g[k]; })
+    .sort(function(a,b){ return String(b.latest.savedAt||'').localeCompare(String(a.latest.savedAt||'')); });
+}
+
 function renderAlertBanner(){
   var box = document.getElementById('alertBanner');
   if (!box) return;
-  if (!_alerts.length){ box.style.display='none'; box.innerHTML=''; return; }
+  var groups = _groupAlerts();
+  if (!groups.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.style.display = '';
   box.innerHTML =
-    '<div style="font-weight:700;margin-bottom:6px;">⚠ 確定後に変更された議事録が ' + _alerts.length + '件あります</div>'
-    + _alerts.map(function(v){
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">'
+    + '<span style="font-weight:700;">⚠ 確定後に変更された議事録が ' + groups.length + '件あります</span>'
+    + (groups.length > 1 ? '<button class="tb-btn" style="margin-left:auto;" onclick="ackAll()">すべて確認済みにする</button>' : '')
+    + '</div>'
+    + groups.map(function(g){
+        var v = g.latest;
         return '<div style="background:#fff;border:1px solid #f0b3b3;border-radius:8px;padding:8px 10px;margin-top:6px;">'
-          + '<div style="font-weight:700;">' + esc(v.recSite) + '　' + esc(v.recDate) + ' の議事録</div>'
+          + '<div style="font-weight:700;">' + esc(g.site) + '　' + esc(g.date) + ' の議事録</div>'
           + '<div style="font-size:12px;color:#8a1c1c;">' + _fmtDT(v.savedAt) + ' に ' + esc(_who(v)) + ' が '
-          + (v.changes||[]).length + 'か所 変更</div>'
+          + g.total + 'か所 変更'
+          + (g.docIds.length > 1 ? '（' + g.docIds.length + '回にわたって修正）' : '') + '</div>'
           + '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">'
           + '<button class="tb-btn" onclick="showChanges(\'' + v._docId + '\')">変更箇所を見る</button>'
-          + '<button class="tb-btn" onclick="ackChange(\'' + v._docId + '\')">確認済みにする</button>'
+          + '<button class="tb-btn" onclick="ackGroup(\'' + g.key + '\')">確認済みにする</button>'
           + '</div></div>';
       }).join('');
+}
+
+// 同じ議事録の修正版をまとめて確認済みにする
+function ackGroup(key){
+  var g = _groupAlerts().filter(function(x){ return x.key === key; })[0];
+  if (!g) return;
+  Promise.all(g.docIds.map(_ackOne)).then(function(){
+    _alerts = _alerts.filter(function(x){ return g.docIds.indexOf(x._docId) < 0; });
+    renderAlertBanner();
+    document.getElementById('cloudModal').classList.remove('show');
+    setCloudStatus('確認済みにしました');
+  }).catch(function(e){ alert('確認済みにできませんでした: ' + (e.message || e)); });
+}
+function ackAll(){
+  if (!confirm('表示中の変更をすべて確認済みにします。よろしいですか？')) return;
+  var ids = _alerts.map(function(x){ return x._docId; });
+  Promise.all(ids.map(_ackOne)).then(function(){
+    _alerts = [];
+    renderAlertBanner();
+    setCloudStatus('すべて確認済みにしました');
+  }).catch(function(e){ alert('確認済みにできませんでした: ' + (e.message || e)); });
+}
+function _ackOne(docId){
+  var db = _initFb();
+  if (!db) return Promise.reject(new Error('未接続'));
+  var a = _authorInfo();
+  return db.collection(MEETING_COL).doc(docId).update({
+    ack: true, ackBy: (a.authorName || a.authorRole), ackAt: new Date().toISOString()
+  });
 }
 
 function showChanges(docId){
@@ -1572,17 +1618,14 @@ function showChanges(docId){
 }
 
 function ackChange(docId){
-  var db = _initFb();
-  if (!db) return;
-  var a = _authorInfo();
-  db.collection(MEETING_COL).doc(docId).update({
-    ack: true, ackBy: (a.authorName || a.authorRole), ackAt: new Date().toISOString()
-  }).then(function(){
+  var v = _alerts.filter(function(x){ return x._docId === docId; })[0];
+  if (v) { ackGroup(v.recKey || (v.recSite + '|' + v.recDate)); return; }
+  _ackOne(docId).then(function(){
     _alerts = _alerts.filter(function(x){ return x._docId !== docId; });
     renderAlertBanner();
     document.getElementById('cloudModal').classList.remove('show');
     setCloudStatus('確認済みにしました');
-  }).catch(function(e){ alert('確認済みにできませんでした: ' + e.message); });
+  }).catch(function(e){ alert('確認済みにできませんでした: ' + (e.message || e)); });
 }
 
 /* =====================================================================
