@@ -953,12 +953,12 @@ function _initFb(){
       _fbAuth = firebase.auth();
       try { _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e){}
       _fbAuth.onAuthStateChanged(function(u){
+        _authResolved = true;
         _isAdmin = !!(u && !u.isAnonymous);
         updateAdminBadge();
         if (u) { loadChangeAlerts(); loadPrevMeeting(); }
       });
-      // 読み書きに認証が要るので、ゲストはこの時点で匿名サインインしておく
-      if (!_fbAuth.currentUser) _fbAuth.signInAnonymously().catch(function(e){ console.warn('[FB] anon', e); });
+
     }catch(e){ console.warn('[FB] auth', e); }
     return _fbDb;
   }catch(e){ return null; }
@@ -1128,19 +1128,35 @@ function _cloudPayload(rec, status, version, changes){
 
 // 認証が済むまで待つ（ルールが isLoggedIn() を要求するため、
 // ここを待たずに書き込むと permission-denied で黙って失敗する）
+var _authResolved = false;
 function _ensureAuth(){
   if (!_fbAuth) _initFb();
   if (!_fbAuth) return Promise.reject(new Error('Firebaseに接続できません'));
   if (_fbAuth.currentUser) return Promise.resolve(_fbAuth.currentUser);
-  return _fbAuth.signInAnonymously().then(function(r){ return r.user; });
+  // 保存済みのログインが復元されるのを待つ。
+  // 待たずに匿名サインインすると、管理者のログインを匿名で上書きしてしまう
+  return new Promise(function(resolve, reject){
+    var un = _fbAuth.onAuthStateChanged(function(u){
+      un();
+      if (u) return resolve(u);
+      _fbAuth.signInAnonymously().then(function(r){ resolve(r.user); }).catch(reject);
+    });
+  });
 }
 
 // クラウド保存の失敗を必ず画面に出す（黙って消えないようにする）
 function _cloudFail(e, where){
   console.error('[FB] ' + where, e);
-  var msg = (e && e.code === 'permission-denied')
-    ? 'Firestoreのルールで拒否されました。meeting_records のルールが公開されているかご確認ください。'
-    : (e && e.message) || String(e);
+  var code = (e && e.code) || '';
+  var msg;
+  if (code === 'permission-denied') {
+    msg = 'Firestoreのルールで拒否されました。meeting_records のルールが公開されているかご確認ください。';
+  } else if (code === 'auth/admin-restricted-operation' || code === 'auth/operation-not-allowed') {
+    msg = 'Firebaseの「匿名認証」が無効です。Authentication → Sign-in method → 匿名 を有効にしてください。'
+        + '（管理者としてログインすれば、この設定なしでも保存できます）';
+  } else {
+    msg = (e && e.message) || String(e);
+  }
   setCloudStatus('⚠ クラウド保存に失敗：' + msg);
   return msg;
 }
