@@ -1017,7 +1017,8 @@ function _authorInfo(){
     authorUid:  u ? u.uid : '',
     authorRole: _isAdmin ? 'admin' : 'guest',
     authorName: localStorage.getItem('order_recorder')
-             || localStorage.getItem('checklist_recorder') || '',
+             || localStorage.getItem('checklist_recorder')
+             || (currentRecord && currentRecord.tantosha) || '',
     authorCompany: localStorage.getItem('myCompany') || '',
     authorTeam:    localStorage.getItem('myTeam') || ''
   };
@@ -1179,6 +1180,19 @@ function fbSaveMeeting(rec){
   return _ensureAuth().then(doIt).catch(function(e){ _cloudFail(e, 'save'); return false; });
 }
 
+// この議事録（現場＋打合せ日）でまだ使われていない版番号をとる。
+// 端末ごとに数えると別の端末と番号がぶつかるため、必ずクラウドを見てから決める
+function _nextVersion(rec){
+  var db = _initFb();
+  var key = _recKey(rec);
+  if (!db) return Promise.resolve((rec.cloudVersion || 0) + 1);
+  return db.collection(MEETING_COL).where('recKey', '==', key).get().then(function(snap){
+    var max = 0;
+    snap.forEach(function(d){ var v = d.data(); if ((v.version || 0) > max) max = v.version || 0; });
+    return max + 1;
+  }).catch(function(){ return (rec.cloudVersion || 0) + 1; });
+}
+
 // 確定（手動／自動 共通）
 function confirmRecord(manual){
   if (!_norm(currentRecord.siteName)){ if(manual) alert('現場名を入力してください'); return; }
@@ -1187,12 +1201,17 @@ function confirmRecord(manual){
   currentRecord.confirmedAt = new Date().toISOString();
   currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
     Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
-  currentRecord.cloudVersion = 1;
   persist(false);
   setCloudStatus('確定版をクラウドへ送信中…');
   _ensureAuth()
-    .then(function(){ return _cloudDoc(currentRecord, '__v1').set(_cloudPayload(currentRecord, 'confirmed', 1, [])); })
-    .then(function(){ setCloudStatus('✅ 確定版をクラウドに保存しました（第1版）'); })
+    .then(function(){ return _nextVersion(currentRecord); })
+    .then(function(v){
+      currentRecord.cloudVersion = v;
+      persist(false);
+      renderConfirmState();
+      return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'confirmed', v, []))
+        .then(function(){ setCloudStatus('✅ 確定版をクラウドに保存しました（第' + v + '版）'); });
+    })
     .catch(function(e){
       var msg = _cloudFail(e, 'confirm');
       if (manual) alert('確定しましたが、クラウドに保存できませんでした。\n\n' + msg
@@ -1219,17 +1238,19 @@ function pushRevision(){
     + changes.slice(0,5).map(function(c){ return '・' + c.label; }).join('\n')
     + (changes.length > 5 ? '\n…ほか ' + (changes.length-5) + '件' : '')
     + '\n\nよろしいですか？')) return;
-  var v = (currentRecord.cloudVersion || 1) + 1;
   _pushing = true;
   setCloudStatus('変更をクラウドへ送信中…');
   _ensureAuth()
-    .then(function(){ return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'revised', v, changes)); })
-    .then(function(){
-      currentRecord.cloudVersion = v;
-      persist(false);
-      renderConfirmState();
-      setCloudStatus('⚠ 確定後の変更 ' + changes.length + '件を第' + v + '版として記録しました');
-      doToast();
+    .then(function(){ return _nextVersion(currentRecord); })
+    .then(function(v){
+      return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'revised', v, changes))
+        .then(function(){
+          currentRecord.cloudVersion = v;
+          persist(false);
+          renderConfirmState();
+          setCloudStatus('⚠ 確定後の変更 ' + changes.length + '件を第' + v + '版として記録しました');
+          doToast();
+        });
     })
     .catch(function(e){ alert('クラウドに記録できませんでした。\n\n' + _cloudFail(e, 'revision')); })
     .then(function(){ _pushing = false; }, function(){ _pushing = false; });
@@ -1244,16 +1265,20 @@ function reconfirmRecord(){
     + (changes.length ? '確定版からの変更 ' + changes.length + '件を承認した扱いになり、\n以降はこの内容が比較の基準になります。'
                       : '確定版からの変更はありません。')
     + '\n\nよろしいですか？')) return;
-  var v = (currentRecord.cloudVersion || 1) + 1;
   currentRecord.confirmedAt = new Date().toISOString();
   currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
     Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
-  currentRecord.cloudVersion = v;
   persist(false);
   setCloudStatus('再確定版をクラウドへ送信中…');
   _ensureAuth()
-    .then(function(){ return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'confirmed', v, changes)); })
-    .then(function(){ setCloudStatus('✅ 第' + v + '版として再確定しました'); doToast(); })
+    .then(function(){ return _nextVersion(currentRecord); })
+    .then(function(v){
+      currentRecord.cloudVersion = v;
+      persist(false);
+      renderConfirmState();
+      return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'confirmed', v, changes))
+        .then(function(){ setCloudStatus('✅ 第' + v + '版として再確定しました'); doToast(); });
+    })
     .catch(function(e){ alert('クラウドに保存できませんでした。\n\n' + _cloudFail(e, 'reconfirm')); });
   renderConfirmState();
 }
@@ -1267,11 +1292,17 @@ function autoConfirmSweep(){
     if (Date.now() - (r.updatedAt||0) < CONFIRM_MS) return;
     r.confirmedAt = new Date().toISOString();
     r.confirmedSnapshot = JSON.parse(JSON.stringify(Object.assign({}, r, {confirmedSnapshot:undefined})));
-    r.cloudVersion = 1;
     changed = true;
     (function(rec){
       _ensureAuth()
-        .then(function(){ return _cloudDoc(rec, '__v1').set(_cloudPayload(rec, 'confirmed', 1, [])); })
+        .then(function(){ return _nextVersion(rec); })
+        .then(function(v){
+          rec.cloudVersion = v;
+          var all = loadAllRecords();
+          var i = all.findIndex(function(x){ return x.id === rec.id; });
+          if (i > -1) { all[i].cloudVersion = v; saveAllRecords(all); }
+          return _cloudDoc(rec, '__v' + v).set(_cloudPayload(rec, 'confirmed', v, []));
+        })
         .catch(function(e){ _cloudFail(e, 'autoConfirm'); });
     })(r);
   });
@@ -1345,7 +1376,8 @@ function renderCloudList(){
     .sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
 
   box.innerHTML = groups.map(function(gr){
-    gr.rows.sort(function(a,b){ return (b.version||0) - (a.version||0); });
+    // 版番号ではなく時刻順。端末をまたいでも実際の前後関係が分かる
+    gr.rows.sort(function(a,b){ return String(b.savedAt||'').localeCompare(String(a.savedAt||'')); });
     var latest = gr.rows.filter(function(r){ return r.status !== 'draft'; })[0] || gr.rows[0];
     var vers = gr.rows.filter(function(r){ return r.status !== 'draft'; });
     return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
