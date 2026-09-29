@@ -404,6 +404,12 @@ body{
         <div class="card-desc">土工事配管工 日々の作業記録</div>
       </a>
 
+      <a class="app-card card-indigo" onclick="return goApp('meeting.html')">
+        <div class="card-icon">🗒</div>
+        <div class="card-name">打ち合わせ議事録</div>
+        <div class="card-desc">打合せ記録・PDF出力・共有</div>
+      </a>
+
       <a class="app-card card-red" href="manage.html">
         <div class="card-icon">📊</div>
         <div class="card-name">集計</div>
@@ -708,6 +714,7 @@ function openQrModal() {
     {name:'✅ チェックリスト', url: base + '/checklist.html'},
     {name:'📂 図面ビューア',  url: base + '/viewer.html'},
     {name:'📝 作業日報',  url: base + '/daily-report.html'},
+    {name:'🗒 議事録',    url: base + '/meeting.html'},
     {name:'📊 集計',      url: base + '/manage.html'},
   ];
   var siteId = document.getElementById('siteSelect').value;

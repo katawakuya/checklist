@@ -1,6 +1,6 @@
 // Service Worker - 現場管理システム
 // キャッシュバージョン（更新時はここを変える）
-const CACHE_VERSION = 'v4.45';
+const CACHE_VERSION = 'v4.46';
 const CACHE_NAME = 'kanri-' + CACHE_VERSION;
 
 // キャッシュするファイル一覧
@@ -14,6 +14,7 @@ const CACHE_FILES = [
   './manage.html',
   './zaimatsu.html',
   './daily-report.html',
+  './meeting.html',
   './pdf-crop.html',
   './heatstroke.html',
   './heatstroke-settings.html',
