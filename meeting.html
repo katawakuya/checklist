@@ -147,6 +147,8 @@ button{cursor:pointer;min-height:44px;border-radius:8px;border:none;}
   <input type="file" id="pdfImportInput" accept="application/pdf" style="display:none">
   <button class="tb-btn navy" id="btnExcel">📊 Excel出力</button>
   <button class="tb-btn" id="btnCloud" style="display:none;">☁ クラウド一覧</button>
+  <button class="tb-btn primary" id="btnConfirm" onclick="confirmRecord(true)">✅ 確定</button>
+  <span id="confirmState" style="font-size:12px;color:#667;"></span>
   <span id="saveStatus">—</span>
   <span id="cloudStatus" style="font-size:12px;color:#2e7d32;"></span>
 </div>
@@ -226,6 +228,9 @@ button{cursor:pointer;min-height:44px;border-radius:8px;border:none;}
 </script>
 
 <div id="appWrap">
+
+  <div id="alertBanner" style="display:none;background:#fdecec;border:1.5px solid #e5a3a3;color:#8a1c1c;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;"></div>
+  <div id="prevPanel" style="display:none;background:var(--navy-bg);border:1.5px solid var(--navy-light);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;"></div>
 
   <div class="headerCard">
     <h2>基本情報</h2>
@@ -903,7 +908,7 @@ async function exportToExcel(){
 document.getElementById('btnNew').addEventListener('click', ()=>{
   if(!confirm('新しい記録を作成します。現在の内容は履歴に保存されます。よろしいですか？')) return;
   persist(false);
-  currentRecord = buildDefaultRecord();
+  currentRecord = prefillBasicInfo(buildDefaultRecord());
   let list = loadAllRecords();
   list.push(currentRecord);
   saveAllRecords(list);
@@ -948,8 +953,10 @@ function _initFb(){
       _fbAuth.onAuthStateChanged(function(u){
         _isAdmin = !!(u && !u.isAnonymous);
         updateAdminBadge();
-        if (_isAdmin) syncPendingMeetings(true);
+        if (u) { loadChangeAlerts(); loadPrevMeeting(); }
       });
+      // 読み書きに認証が要るので、ゲストはこの時点で匿名サインインしておく
+      if (!_fbAuth.currentUser) _fbAuth.signInAnonymously().catch(function(e){ console.warn('[FB] anon', e); });
     }catch(e){ console.warn('[FB] auth', e); }
     return _fbDb;
   }catch(e){ return null; }
@@ -991,42 +998,213 @@ function setCloudStatus(msg){
   if(el) el.textContent = msg || '';
 }
 
-// 管理者のときだけクラウドへ保存する
-function fbSaveMeeting(rec){
-  if (!_isAdmin) return Promise.resolve(false);
-  var db=_initFb();
-  if(!db) return Promise.resolve(false);
-  var payload = Object.assign({}, rec, {
-    uid: (_fbAuth && _fbAuth.currentUser) ? _fbAuth.currentUser.uid : '',
-    syncedAt: new Date().toISOString()
-  });
-  return db.collection(MEETING_COL).doc(String(rec.id)).set(payload)
-    .then(function(){ return true; })
-    .catch(function(e){ console.warn('[FB] meeting save', e); return false; });
+/* =====================================================================
+   版管理（確定版と修正版）
+     下書き   … 打合せ当日。上書きしながら育てる
+     確定版   … 最終編集から20時間、または「確定」ボタンで固定
+     修正版   … 確定後に手を入れたもの。差分とアラートの対象
+   ===================================================================== */
+var CONFIRM_MS = 20 * 60 * 60 * 1000;   // 20時間で自動確定
+
+function _norm(v){ return String(v==null?'':v).trim(); }
+function _recKey(r){ return _norm(r.siteName) + '|' + _norm(r.meetingDate); }
+
+// 保存した人の情報。表示欄とは別に記録し、後から書き換えられないようにする
+function _authorInfo(){
+  var u = (_fbAuth && _fbAuth.currentUser) ? _fbAuth.currentUser : null;
+  return {
+    authorUid:  u ? u.uid : '',
+    authorRole: _isAdmin ? 'admin' : 'guest',
+    authorName: localStorage.getItem('order_recorder')
+             || localStorage.getItem('checklist_recorder') || '',
+    authorCompany: localStorage.getItem('myCompany') || '',
+    authorTeam:    localStorage.getItem('myTeam') || ''
+  };
 }
 
-// 圏外などで送れなかった分をまとめて再送
-function syncPendingMeetings(silent){
-  if (!_isAdmin) return Promise.resolve(0);
-  var list = loadAllRecords();
-  var pending = list.filter(function(r){ return !r.fbSent; });
-  if (!pending.length || !navigator.onLine) return Promise.resolve(0);
-  return Promise.all(pending.map(function(r){
-    return fbSaveMeeting(r).then(function(ok){ return ok ? r.id : null; });
-  })).then(function(ids){
-    var done = ids.filter(Boolean);
-    if (done.length){
-      var cur = loadAllRecords();
-      done.forEach(function(id){
-        var i = cur.findIndex(function(x){ return x.id===id; });
-        if (i>-1) cur[i].fbSent = true;
-      });
-      saveAllRecords(cur);
-      if (currentRecord && done.indexOf(currentRecord.id)>-1) currentRecord.fbSent = true;
-      if (!silent) setCloudStatus('☁ '+done.length+'件を同期しました');
+// 新規作成時に基本情報をログイン者の所属で埋める（入力欄は編集可のまま）
+function prefillBasicInfo(rec){
+  var a = _authorInfo();
+  if (!_norm(rec.contractor) && a.authorCompany) rec.contractor = a.authorCompany;
+  if (!_norm(rec.shikoHan)   && a.authorTeam)    rec.shikoHan   = a.authorTeam;
+  if (!_norm(rec.tantosha)   && a.authorName)    rec.tantosha   = a.authorName;
+  return rec;
+}
+
+/* ---- 差分（どの項目が変わったか） ---- */
+function _labelOf(kind, gid, key){
+  var i, g, it;
+  if (kind === 'sec'){
+    for (i=0;i<sectionsData.length;i++){
+      g = sectionsData[i]; if (g.id !== gid) continue;
+      var all = (g.items||[]).concat(g.itemsAfter||[]);
+      for (var j=0;j<all.length;j++) if (all[j].id === key) return g.title.replace('▶ ','') + ' ＞ ' + all[j].label;
+      return g.title.replace('▶ ','') + ' ＞ ' + key;
     }
-    return done.length;
+  } else {
+    for (i=0;i<checklistData.length;i++){
+      g = checklistData[i]; if (g.id !== gid) continue;
+      for (var k=0;k<g.items.length;k++) if (String(g.items[k].no) === String(key))
+        return 'チェック No.' + key + ' ' + g.items[k].label;
+      return 'チェック No.' + key;
+    }
+  }
+  return gid + ' ＞ ' + key;
+}
+var _FLD = {content:'内容', confirm:'確認', assign:'担当', check:'チェック', note:'備考'};
+
+// レコードを「項目ラベル → 値」の平らな形にする
+function _flatten(r){
+  var out = {};
+  if (!r) return out;
+  ['siteName','meetingDate','contractor','shikoHan','tantosha'].forEach(function(k){
+    var lbl = {siteName:'現場名',meetingDate:'打合せ日',contractor:'施工業者',shikoHan:'施工班',tantosha:'担当者'}[k];
+    out['基本情報 ＞ ' + lbl] = _norm(r[k]);
   });
+  Object.keys(r.sections||{}).forEach(function(gid){
+    var sec = r.sections[gid] || {};
+    Object.keys(sec.items||{}).forEach(function(key){
+      var it = sec.items[key] || {};
+      Object.keys(_FLD).forEach(function(f){
+        if (it[f] === undefined) return;
+        out[_labelOf('sec', gid, key) + '（' + _FLD[f] + '）'] = _norm(it[f]);
+      });
+    });
+    (sec.custom||[]).forEach(function(c, i){
+      out[_labelOf('sec', gid, '追加項目' + (i+1))] = _norm(c && (c.label||'') ) + ' / ' + _norm(c && (c.content||''));
+    });
+    (sec.workers||[]).forEach(function(w, i){
+      out['作業員 ' + (i+1)] = [_norm(w.name), _norm(w.role), _norm(w.note)].filter(Boolean).join(' / ');
+    });
+  });
+  Object.keys(r.checklist||{}).forEach(function(gid){
+    var g = r.checklist[gid] || {};
+    Object.keys(g.items||{}).forEach(function(no){
+      var it = g.items[no] || {};
+      Object.keys(_FLD).forEach(function(f){
+        if (it[f] === undefined) return;
+        out[_labelOf('chk', gid, no) + '（' + _FLD[f] + '）'] = _norm(it[f]);
+      });
+    });
+    (g.custom||[]).forEach(function(c, i){
+      out['チェック ' + gid + ' 追加' + (i+1)] = _norm(c && (c.label||'')) + ' / ' + _norm(c && (c.note||''));
+    });
+  });
+  return out;
+}
+
+function diffRecords(oldRec, newRec){
+  var A = _flatten(oldRec), B = _flatten(newRec), keys = {}, out = [];
+  Object.keys(A).forEach(function(k){ keys[k]=1; });
+  Object.keys(B).forEach(function(k){ keys[k]=1; });
+  Object.keys(keys).forEach(function(k){
+    var a = A[k] === undefined ? '' : A[k];
+    var b = B[k] === undefined ? '' : B[k];
+    if (a !== b) out.push({ label:k, before:a, after:b });
+  });
+  return out;
+}
+
+/* ---- クラウドへの保存（下書きは上書き・確定後は版を積む） ---- */
+function _cloudDoc(rec, suffix){
+  return _initFb().collection(MEETING_COL).doc(String(rec.id) + (suffix||''));
+}
+function _cloudPayload(rec, status, version, changes){
+  return Object.assign({}, _authorInfo(), {
+    id: rec.id, recKey: _recKey(rec), recSite: _norm(rec.siteName), recDate: _norm(rec.meetingDate),
+    status: status, version: version,
+    confirmedAt: rec.confirmedAt || null,
+    data: rec,
+    changes: changes || [],
+    ack: false, ackBy: '', ackAt: null,
+    savedAt: new Date().toISOString()
+  });
+}
+
+// ゲストも会社に保存する。ただし自分が作ったものだけ更新できる（ルールで担保）
+function fbSaveMeeting(rec){
+  var db = _initFb();
+  if (!db) return Promise.resolve(false);
+  if (!_norm(rec.siteName)) return Promise.resolve(false);   // 現場名が無いうちは送らない
+  var doIt = function(){
+    if (!rec.confirmedAt){
+      // 下書き: 同じドキュメントを上書き
+      return _cloudDoc(rec).set(_cloudPayload(rec, 'draft', 0, []))
+        .then(function(){ return true; });
+    }
+    // 確定後: 確定版と比べて違えば新しい版を積む
+    var base = rec.confirmedSnapshot || null;
+    var changes = base ? diffRecords(base, rec) : [];
+    if (!changes.length) return Promise.resolve(true);        // 中身が同じなら何もしない
+    var v = (rec.cloudVersion || 1) + 1;
+    rec.cloudVersion = v;
+    return _cloudDoc(rec, '__v' + v).set(_cloudPayload(rec, 'revised', v, changes))
+      .then(function(){
+        setCloudStatus('⚠ 確定後の変更として ' + changes.length + '件を記録しました');
+        return true;
+      });
+  };
+  if (_fbAuth && _fbAuth.currentUser) return doIt().catch(function(e){ console.warn('[FB] save', e); return false; });
+  if (_fbAuth) return _fbAuth.signInAnonymously().then(doIt).catch(function(e){ console.warn('[FB] anon', e); return false; });
+  return Promise.resolve(false);
+}
+
+// 確定（手動／自動 共通）
+function confirmRecord(manual){
+  if (!_norm(currentRecord.siteName)){ if(manual) alert('現場名を入力してください'); return; }
+  if (currentRecord.confirmedAt){ if(manual) alert('この議事録はすでに確定済みです'); return; }
+  if (manual && !confirm('この内容で確定しますか？\n\n確定後の変更はすべて「修正版」として記録され、\nホーム画面に変更ありの警告が出ます。')) return;
+  currentRecord.confirmedAt = new Date().toISOString();
+  currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
+    Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
+  currentRecord.cloudVersion = 1;
+  persist(false);
+  var db = _initFb();
+  if (db){
+    _cloudDoc(currentRecord, '__v1').set(_cloudPayload(currentRecord, 'confirmed', 1, []))
+      .then(function(){ setCloudStatus('✅ 確定版を保存しました'); })
+      .catch(function(e){ console.warn('[FB] confirm', e); });
+  }
+  renderConfirmState();
+  if (manual) doToast();
+}
+
+// 20時間たった下書きを自動で確定する
+function autoConfirmSweep(){
+  var list = loadAllRecords(), changed = false;
+  list.forEach(function(r){
+    if (r.confirmedAt) return;
+    if (!_norm(r.siteName)) return;
+    if (Date.now() - (r.updatedAt||0) < CONFIRM_MS) return;
+    r.confirmedAt = new Date().toISOString();
+    r.confirmedSnapshot = JSON.parse(JSON.stringify(Object.assign({}, r, {confirmedSnapshot:undefined})));
+    r.cloudVersion = 1;
+    changed = true;
+    var db = _initFb();
+    if (db) _cloudDoc(r, '__v1').set(_cloudPayload(r, 'confirmed', 1, [])).catch(function(){});
+  });
+  if (changed){
+    saveAllRecords(list);
+    var cur = list.find(function(x){ return x.id === currentRecord.id; });
+    if (cur) currentRecord = cur;
+    renderConfirmState();
+  }
+}
+
+function renderConfirmState(){
+  var btn = document.getElementById('btnConfirm');
+  var st  = document.getElementById('confirmState');
+  if (!btn || !st) return;
+  if (currentRecord.confirmedAt){
+    btn.style.display = 'none';
+    var d = new Date(currentRecord.confirmedAt);
+    st.innerHTML = '<span style="color:#2E7D32;font-weight:700;">✅ 確定済み '
+      + (d.getMonth()+1) + '/' + d.getDate() + '</span>'
+      + (currentRecord.cloudVersion > 1 ? ' <span style="color:#c62828;font-weight:700;">⚠ 確定後に変更あり</span>' : '');
+  } else {
+    btn.style.display = '';
+    st.textContent = '下書き（最終編集から20時間で自動確定）';
+  }
 }
 
 /* ---- クラウド一覧（管理者のみ） ---- */
@@ -1212,7 +1390,6 @@ async function importMeetingPDF(evt){
     renderAll();
     setCloudStatus('📄 PDFから復元しました');
     doToast();
-    if(_isAdmin) syncPendingMeetings(true);
   }catch(err){
     console.error(err);
     alert('PDFの読み込みに失敗しました。ファイルをご確認ください。');
@@ -1221,20 +1398,140 @@ async function importMeetingPDF(evt){
 }
 
 /* ---- 保存時にクラウドへも送る（管理者のみ） ---- */
+/* =====================================================================
+   変更アラート（確定後に書き換えられた議事録を知らせる）
+   ===================================================================== */
+var _alerts = [];
+function loadChangeAlerts(){
+  var db = _initFb();
+  if (!db) return;
+  db.collection(MEETING_COL).where('status','==','revised').get().then(function(snap){
+    _alerts = [];
+    snap.forEach(function(d){
+      var v = d.data();
+      if (!v.ack) _alerts.push(Object.assign({_docId:d.id}, v));
+    });
+    _alerts.sort(function(a,b){ return String(b.savedAt||'').localeCompare(String(a.savedAt||'')); });
+    renderAlertBanner();
+  }).catch(function(e){ console.warn('[alert]', e); });
+}
+
+function _fmtDT(iso){
+  if (!iso) return '';
+  var d = new Date(iso);
+  return (d.getMonth()+1) + '月' + d.getDate() + '日 ' +
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function _who(v){
+  var n = v.authorName || '(名前未設定)';
+  return n + '（' + (v.authorRole === 'admin' ? '管理者' : 'ゲスト') + '）';
+}
+
+function renderAlertBanner(){
+  var box = document.getElementById('alertBanner');
+  if (!box) return;
+  if (!_alerts.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display = '';
+  box.innerHTML =
+    '<div style="font-weight:700;margin-bottom:6px;">⚠ 確定後に変更された議事録が ' + _alerts.length + '件あります</div>'
+    + _alerts.map(function(v){
+        return '<div style="background:#fff;border:1px solid #f0b3b3;border-radius:8px;padding:8px 10px;margin-top:6px;">'
+          + '<div style="font-weight:700;">' + esc(v.recSite) + '　' + esc(v.recDate) + ' の議事録</div>'
+          + '<div style="font-size:12px;color:#8a1c1c;">' + _fmtDT(v.savedAt) + ' に ' + esc(_who(v)) + ' が '
+          + (v.changes||[]).length + 'か所 変更</div>'
+          + '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">'
+          + '<button class="tb-btn" onclick="showChanges(\'' + v._docId + '\')">変更箇所を見る</button>'
+          + '<button class="tb-btn" onclick="ackChange(\'' + v._docId + '\')">確認済みにする</button>'
+          + '</div></div>';
+      }).join('');
+}
+
+function showChanges(docId){
+  var v = _alerts.filter(function(x){ return x._docId === docId; })[0];
+  if (!v) return;
+  var box = document.getElementById('cloudList');
+  document.getElementById('cloudModal').classList.add('show');
+  box.innerHTML =
+    '<div style="font-weight:700;margin-bottom:4px;">' + esc(v.recSite) + '　' + esc(v.recDate) + ' の議事録</div>'
+    + '<div style="font-size:12px;color:#667;margin-bottom:10px;">'
+      + _fmtDT(v.savedAt) + '　' + esc(_who(v)) + '　第' + v.version + '版</div>'
+    + (v.changes||[]).map(function(c){
+        return '<div style="border-left:3px solid #c62828;background:#fff6f6;padding:8px 10px;margin-bottom:8px;border-radius:0 8px 8px 0;">'
+          + '<div style="font-weight:700;font-size:13px;">' + esc(c.label) + '</div>'
+          + '<div style="font-size:12px;color:#777;margin-top:4px;">確定版：' + (esc(c.before) || '（空欄）') + '</div>'
+          + '<div style="font-size:13px;color:#c62828;font-weight:700;">現在　：' + (esc(c.after) || '（空欄）') + '</div>'
+          + '</div>';
+      }).join('')
+    + '<button class="tb-btn primary" style="width:100%;margin-top:6px;" onclick="ackChange(\'' + docId + '\')">この変更を確認済みにする</button>';
+}
+
+function ackChange(docId){
+  var db = _initFb();
+  if (!db) return;
+  var a = _authorInfo();
+  db.collection(MEETING_COL).doc(docId).update({
+    ack: true, ackBy: (a.authorName || a.authorRole), ackAt: new Date().toISOString()
+  }).then(function(){
+    _alerts = _alerts.filter(function(x){ return x._docId !== docId; });
+    renderAlertBanner();
+    document.getElementById('cloudModal').classList.remove('show');
+    setCloudStatus('確認済みにしました');
+  }).catch(function(e){ alert('確認済みにできませんでした: ' + e.message); });
+}
+
+/* =====================================================================
+   前回の打合せ議事録パネル（同じ現場の直前の打合せ日）
+   ===================================================================== */
+function loadPrevMeeting(){
+  var box = document.getElementById('prevPanel');
+  if (!box) return;
+  var site = _norm(currentRecord.siteName), date = _norm(currentRecord.meetingDate);
+  if (!site || !date){ box.style.display='none'; return; }
+  var db = _initFb();
+  if (!db){ box.style.display='none'; return; }
+  db.collection(MEETING_COL).where('recSite','==',site).get().then(function(snap){
+    var rows = [];
+    snap.forEach(function(d){ var v=d.data(); if (v.recDate && v.recDate < date) rows.push(Object.assign({_docId:d.id}, v)); });
+    if (!rows.length){ box.style.display='none'; return; }
+    // 直前の打合せ日
+    var lastDate = rows.map(function(r){ return r.recDate; }).sort().pop();
+    var sameDay = rows.filter(function(r){ return r.recDate === lastDate; })
+                      .sort(function(a,b){ return (a.version||0) - (b.version||0); });
+    var revised = sameDay.filter(function(r){ return r.status === 'revised'; });
+    box.style.display = '';
+    var html = '<div style="font-weight:700;">📌 前回の打合せ：' + esc(site) + '　' + esc(lastDate) + '</div>';
+    if (!revised.length){
+      html += '<div style="font-size:12px;color:#2E7D32;margin-top:4px;">確定版のまま変更はありません</div>';
+    } else {
+      var all = [];
+      revised.forEach(function(r){ (r.changes||[]).forEach(function(c){ all.push(Object.assign({_r:r}, c)); }); });
+      html += '<div style="font-size:13px;color:#c62828;font-weight:700;margin-top:4px;">⚠ 確定後に ' + all.length + 'か所 変更されています</div>'
+        + all.map(function(c){
+            return '<div style="border-left:3px solid #c62828;background:#fff6f6;padding:6px 10px;margin-top:6px;border-radius:0 8px 8px 0;">'
+              + '<div style="font-weight:700;font-size:13px;">' + esc(c.label) + '</div>'
+              + '<div style="font-size:12px;color:#777;">確定版：' + (esc(c.before)||'（空欄）') + '</div>'
+              + '<div style="font-size:13px;color:#c62828;">現在　：' + (esc(c.after)||'（空欄）') + '</div>'
+              + '<div style="font-size:11px;color:#8a1c1c;margin-top:2px;">' + _fmtDT(c._r.savedAt) + '　' + esc(_who(c._r)) + '</div>'
+              + '</div>';
+          }).join('')
+        + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'
+        + revised.filter(function(r){ return !r.ack; }).map(function(r){
+            return '<button class="tb-btn primary" onclick="ackChange(\'' + r._docId + '\')">この変更を確認済みにする</button>';
+          }).join('')
+        + '</div>';
+    }
+    box.innerHTML = html;
+  }).catch(function(e){ console.warn('[prev]', e); box.style.display='none'; });
+}
+
+/* ---- 保存フック：ローカル保存 → クラウドへ ---- */
 var _persistOrig = persist;
 persist = function(showToast){
   _persistOrig(showToast);
-  currentRecord.fbSent = false;
-  if (_isAdmin){
-    fbSaveMeeting(currentRecord).then(function(ok){
-      if(!ok) return;
-      var list=loadAllRecords();
-      var i=list.findIndex(function(x){ return x.id===currentRecord.id; });
-      if(i>-1){ list[i].fbSent=true; saveAllRecords(list); }
-      currentRecord.fbSent=true;
-      setCloudStatus('☁ クラウド同期済み');
-    });
-  }
+  fbSaveMeeting(currentRecord).then(function(ok){
+    if (ok && !currentRecord.confirmedAt) setCloudStatus('☁ クラウド保存済み');
+  });
+  renderConfirmState();
 };
 
 /* ========================= 初期化 ========================= */
@@ -1253,10 +1550,18 @@ document.getElementById('fbModal').addEventListener('click', function(e){ if(e.t
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') persist(false); });
 window.addEventListener('pagehide', function(){ persist(false); });
 document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('a[href]')) persist(false); }, true);
-window.addEventListener('online', function(){ syncPendingMeetings(false); });
+window.addEventListener('online', function(){ fbSaveMeeting(currentRecord); });
+
+document.getElementById('f_siteName').addEventListener('change', loadPrevMeeting);
+document.getElementById('f_meetingDate').addEventListener('change', loadPrevMeeting);
 
 _initFb();
 updateAdminBadge();
+prefillBasicInfo(currentRecord);
+renderHeaderFields();
+autoConfirmSweep();
+renderConfirmState();
+setTimeout(function(){ loadChangeAlerts(); loadPrevMeeting(); }, 1500);
 </script>
 </body>
 </html>
