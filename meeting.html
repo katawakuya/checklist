@@ -965,6 +965,7 @@ function _initFb(){
         _authResolved = true;
         _isAdmin = !!(u && !u.isAnonymous);
         updateAdminBadge();
+        try { renderConfirmState(); } catch(e) {}
         if (u) { loadChangeAlerts(); loadPrevMeeting(); }
       });
 
@@ -1225,7 +1226,16 @@ function _ensureAuthorName(){
 // 確定（手動／自動 共通）
 function confirmRecord(manual){
   if (!_norm(currentRecord.siteName)){ if(manual) alert('現場名を入力してください'); return; }
-  if (currentRecord.confirmedAt){ if(manual) reconfirmRecord(); return; }
+  if (currentRecord.confirmedAt){
+    if (manual){
+      if (!_isAdmin){
+        alert('この議事録はすでに確定済みです。\n\n変更したときは「☁ 変更を記録」を押してください。\n確定しなおす（承認する）操作は管理者のみが行えます。');
+        return;
+      }
+      reconfirmRecord();
+    }
+    return;
+  }
   if (manual && !_ensureAuthorName()) return;
   if (manual && !confirm('この内容で確定しますか？\n\n確定後の変更はすべて「修正版」として記録され、\n起動時に変更ありの警告が出ます。')) return;
   currentRecord.confirmedAt = new Date().toISOString();
@@ -1292,6 +1302,11 @@ function pushRevision(){
 
 // いまの内容を新しい確定版にし直す（打合せで変更を承認したとき）
 function reconfirmRecord(){
+  // 再確定＝承認。基準がここに移り警告も出なくなるため、管理者だけに許可する
+  if (!_isAdmin){
+    alert('再確定（承認）は管理者のみが行えます。\n\n変更を残す場合は「☁ 変更を記録」を押してください。');
+    return;
+  }
   if (!currentRecord.confirmedAt){ confirmRecord(true); return; }
   if (!_ensureAuthorName()) return;
   var base = currentRecord.confirmedSnapshot || null;
@@ -1364,7 +1379,7 @@ function renderConfirmState(){
   if (currentRecord.confirmedAt){
     btn.style.display  = 'none';
     if (btnR) btnR.style.display = '';
-    if (btnC) btnC.style.display = '';
+    if (btnC) btnC.style.display = _isAdmin ? '' : 'none';   // 再確定は管理者のみ
     var d = new Date(currentRecord.confirmedAt);
     var v = currentRecord.cloudVersion || 1;
     // まだクラウドに送っていない変更の数
