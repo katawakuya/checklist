@@ -148,6 +148,8 @@ button{cursor:pointer;min-height:44px;border-radius:8px;border:none;}
   <button class="tb-btn navy" id="btnExcel">📊 Excel出力</button>
   <button class="tb-btn" id="btnCloud" style="display:none;">☁ クラウド一覧</button>
   <button class="tb-btn primary" id="btnConfirm" onclick="confirmRecord(true)">✅ 確定</button>
+  <button class="tb-btn" id="btnRevision" style="display:none;" onclick="pushRevision()">☁ 変更を記録</button>
+  <button class="tb-btn" id="btnReconfirm" style="display:none;" onclick="reconfirmRecord()">🔁 再確定</button>
   <span id="confirmState" style="font-size:12px;color:#667;"></span>
   <span id="saveStatus">—</span>
   <span id="cloudStatus" style="font-size:12px;color:#2e7d32;"></span>
@@ -1110,15 +1112,37 @@ function _cloudDoc(rec, suffix){
   return _initFb().collection(MEETING_COL).doc(String(rec.id) + (suffix||''));
 }
 function _cloudPayload(rec, status, version, changes){
+  // 確定スナップショットは端末側だけで持つ。クラウドに入れると容量が倍になるうえ、
+  // JSON化で undefined を除いておかないと Firestore が書き込みを拒否する
+  var clean = JSON.parse(JSON.stringify(Object.assign({}, rec, { confirmedSnapshot: undefined })));
   return Object.assign({}, _authorInfo(), {
     id: rec.id, recKey: _recKey(rec), recSite: _norm(rec.siteName), recDate: _norm(rec.meetingDate),
     status: status, version: version,
     confirmedAt: rec.confirmedAt || null,
-    data: rec,
+    data: clean,
     changes: changes || [],
     ack: false, ackBy: '', ackAt: null,
     savedAt: new Date().toISOString()
   });
+}
+
+// 認証が済むまで待つ（ルールが isLoggedIn() を要求するため、
+// ここを待たずに書き込むと permission-denied で黙って失敗する）
+function _ensureAuth(){
+  if (!_fbAuth) _initFb();
+  if (!_fbAuth) return Promise.reject(new Error('Firebaseに接続できません'));
+  if (_fbAuth.currentUser) return Promise.resolve(_fbAuth.currentUser);
+  return _fbAuth.signInAnonymously().then(function(r){ return r.user; });
+}
+
+// クラウド保存の失敗を必ず画面に出す（黙って消えないようにする）
+function _cloudFail(e, where){
+  console.error('[FB] ' + where, e);
+  var msg = (e && e.code === 'permission-denied')
+    ? 'Firestoreのルールで拒否されました。meeting_records のルールが公開されているかご確認ください。'
+    : (e && e.message) || String(e);
+  setCloudStatus('⚠ クラウド保存に失敗：' + msg);
+  return msg;
 }
 
 // ゲストも会社に保存する。ただし自分が作ったものだけ更新できる（ルールで担保）
@@ -1144,29 +1168,82 @@ function fbSaveMeeting(rec){
         return true;
       });
   };
-  if (_fbAuth && _fbAuth.currentUser) return doIt().catch(function(e){ console.warn('[FB] save', e); return false; });
-  if (_fbAuth) return _fbAuth.signInAnonymously().then(doIt).catch(function(e){ console.warn('[FB] anon', e); return false; });
-  return Promise.resolve(false);
+  return _ensureAuth().then(doIt).catch(function(e){ _cloudFail(e, 'save'); return false; });
 }
 
 // 確定（手動／自動 共通）
 function confirmRecord(manual){
   if (!_norm(currentRecord.siteName)){ if(manual) alert('現場名を入力してください'); return; }
-  if (currentRecord.confirmedAt){ if(manual) alert('この議事録はすでに確定済みです'); return; }
-  if (manual && !confirm('この内容で確定しますか？\n\n確定後の変更はすべて「修正版」として記録され、\nホーム画面に変更ありの警告が出ます。')) return;
+  if (currentRecord.confirmedAt){ if(manual) reconfirmRecord(); return; }
+  if (manual && !confirm('この内容で確定しますか？\n\n確定後の変更はすべて「修正版」として記録され、\n起動時に変更ありの警告が出ます。')) return;
   currentRecord.confirmedAt = new Date().toISOString();
   currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
     Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
   currentRecord.cloudVersion = 1;
   persist(false);
-  var db = _initFb();
-  if (db){
-    _cloudDoc(currentRecord, '__v1').set(_cloudPayload(currentRecord, 'confirmed', 1, []))
-      .then(function(){ setCloudStatus('✅ 確定版を保存しました'); })
-      .catch(function(e){ console.warn('[FB] confirm', e); });
-  }
+  setCloudStatus('確定版をクラウドへ送信中…');
+  _ensureAuth()
+    .then(function(){ return _cloudDoc(currentRecord, '__v1').set(_cloudPayload(currentRecord, 'confirmed', 1, [])); })
+    .then(function(){ setCloudStatus('✅ 確定版をクラウドに保存しました（第1版）'); })
+    .catch(function(e){
+      var msg = _cloudFail(e, 'confirm');
+      if (manual) alert('確定しましたが、クラウドに保存できませんでした。\n\n' + msg
+        + '\n\nこの端末には保存されています。通信が戻ったら「☁ 変更を記録」で送れます。');
+    });
   renderConfirmState();
   if (manual) doToast();
+}
+
+// 確定後に手を入れた分を、新しい版としてクラウドへ記録する
+function pushRevision(){
+  if (!currentRecord.confirmedAt){ alert('先に「✅ 確定」を押してください'); return; }
+  persist(false);
+  var base = currentRecord.confirmedSnapshot || null;
+  var changes = base ? diffRecords(base, currentRecord) : [];
+  if (!changes.length){
+    alert('確定版からの変更はありません。');
+    setCloudStatus('変更なし');
+    return;
+  }
+  if (!confirm(changes.length + 'か所の変更を記録します。\n\n'
+    + changes.slice(0,5).map(function(c){ return '・' + c.label; }).join('\n')
+    + (changes.length > 5 ? '\n…ほか ' + (changes.length-5) + '件' : '')
+    + '\n\nよろしいですか？')) return;
+  var v = (currentRecord.cloudVersion || 1) + 1;
+  setCloudStatus('変更をクラウドへ送信中…');
+  _ensureAuth()
+    .then(function(){ return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'revised', v, changes)); })
+    .then(function(){
+      currentRecord.cloudVersion = v;
+      persist(false);
+      renderConfirmState();
+      setCloudStatus('⚠ 確定後の変更 ' + changes.length + '件を第' + v + '版として記録しました');
+      doToast();
+    })
+    .catch(function(e){ alert('クラウドに記録できませんでした。\n\n' + _cloudFail(e, 'revision')); });
+}
+
+// いまの内容を新しい確定版にし直す（打合せで変更を承認したとき）
+function reconfirmRecord(){
+  if (!currentRecord.confirmedAt){ confirmRecord(true); return; }
+  var base = currentRecord.confirmedSnapshot || null;
+  var changes = base ? diffRecords(base, currentRecord) : [];
+  if (!confirm('いまの内容を新しい確定版にします。\n\n'
+    + (changes.length ? '確定版からの変更 ' + changes.length + '件を承認した扱いになり、\n以降はこの内容が比較の基準になります。'
+                      : '確定版からの変更はありません。')
+    + '\n\nよろしいですか？')) return;
+  var v = (currentRecord.cloudVersion || 1) + 1;
+  currentRecord.confirmedAt = new Date().toISOString();
+  currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
+    Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
+  currentRecord.cloudVersion = v;
+  persist(false);
+  setCloudStatus('再確定版をクラウドへ送信中…');
+  _ensureAuth()
+    .then(function(){ return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'confirmed', v, changes)); })
+    .then(function(){ setCloudStatus('✅ 第' + v + '版として再確定しました'); doToast(); })
+    .catch(function(e){ alert('クラウドに保存できませんでした。\n\n' + _cloudFail(e, 'reconfirm')); });
+  renderConfirmState();
 }
 
 // 20時間たった下書きを自動で確定する
@@ -1180,8 +1257,11 @@ function autoConfirmSweep(){
     r.confirmedSnapshot = JSON.parse(JSON.stringify(Object.assign({}, r, {confirmedSnapshot:undefined})));
     r.cloudVersion = 1;
     changed = true;
-    var db = _initFb();
-    if (db) _cloudDoc(r, '__v1').set(_cloudPayload(r, 'confirmed', 1, [])).catch(function(){});
+    (function(rec){
+      _ensureAuth()
+        .then(function(){ return _cloudDoc(rec, '__v1').set(_cloudPayload(rec, 'confirmed', 1, [])); })
+        .catch(function(e){ _cloudFail(e, 'autoConfirm'); });
+    })(r);
   });
   if (changed){
     saveAllRecords(list);
@@ -1192,17 +1272,27 @@ function autoConfirmSweep(){
 }
 
 function renderConfirmState(){
-  var btn = document.getElementById('btnConfirm');
-  var st  = document.getElementById('confirmState');
+  var btn  = document.getElementById('btnConfirm');
+  var btnR = document.getElementById('btnRevision');
+  var btnC = document.getElementById('btnReconfirm');
+  var st   = document.getElementById('confirmState');
   if (!btn || !st) return;
   if (currentRecord.confirmedAt){
-    btn.style.display = 'none';
+    btn.style.display  = 'none';
+    if (btnR) btnR.style.display = '';
+    if (btnC) btnC.style.display = '';
     var d = new Date(currentRecord.confirmedAt);
+    var v = currentRecord.cloudVersion || 1;
+    // 未送信の変更が残っていないか毎回みる
+    var base = currentRecord.confirmedSnapshot || null;
+    var n = base ? diffRecords(base, currentRecord).length : 0;
     st.innerHTML = '<span style="color:#2E7D32;font-weight:700;">✅ 確定済み '
-      + (d.getMonth()+1) + '/' + d.getDate() + '</span>'
-      + (currentRecord.cloudVersion > 1 ? ' <span style="color:#c62828;font-weight:700;">⚠ 確定後に変更あり</span>' : '');
+      + (d.getMonth()+1) + '/' + d.getDate() + '（第' + v + '版）</span>'
+      + (n ? ' <span style="color:#c62828;font-weight:700;">⚠ 未記録の変更 ' + n + '件</span>' : '');
   } else {
     btn.style.display = '';
+    if (btnR) btnR.style.display = 'none';
+    if (btnC) btnC.style.display = 'none';
     st.textContent = '下書き（最終編集から20時間で自動確定）';
   }
 }
@@ -1562,6 +1652,15 @@ renderHeaderFields();
 autoConfirmSweep();
 renderConfirmState();
 setTimeout(function(){ loadChangeAlerts(); loadPrevMeeting(); }, 1500);
+
+// 起動時にクラウドへ実際につながるか確かめ、だめなら理由を画面に出す
+setTimeout(function(){
+  _ensureAuth().then(function(u){
+    return _initFb().collection(MEETING_COL).limit(1).get().then(function(){
+      setCloudStatus('☁ クラウド接続OK' + (_isAdmin ? '（管理者）' : '（ゲスト）'));
+    });
+  }).catch(function(e){ _cloudFail(e, 'connect'); });
+}, 2200);
 </script>
 </body>
 </html>
