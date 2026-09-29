@@ -1114,7 +1114,7 @@ function _cloudDoc(rec, suffix){
 function _cloudPayload(rec, status, version, changes){
   // 確定スナップショットは端末側だけで持つ。クラウドに入れると容量が倍になるうえ、
   // JSON化で undefined を除いておかないと Firestore が書き込みを拒否する
-  var clean = JSON.parse(JSON.stringify(Object.assign({}, rec, { confirmedSnapshot: undefined })));
+  var clean = JSON.parse(JSON.stringify(Object.assign({}, rec, { confirmedSnapshot: undefined, pushedSnapshot: undefined })));
   return Object.assign({}, _authorInfo(), {
     id: rec.id, recKey: _recKey(rec), recSite: _norm(rec.siteName), recDate: _norm(rec.meetingDate),
     status: status, version: version,
@@ -1193,14 +1193,36 @@ function _nextVersion(rec){
   }).catch(function(){ return (rec.cloudVersion || 0) + 1; });
 }
 
+// 記録者名が無いままだと「誰が変えたか」が残らないので、保存前に一度だけ聞く
+function _ensureAuthorName(){
+  var n = localStorage.getItem('order_recorder')
+       || localStorage.getItem('checklist_recorder')
+       || (currentRecord && currentRecord.tantosha) || '';
+  if (_norm(n)) return true;
+  var v = prompt('記録者のお名前を入力してください。\n（議事録の変更履歴に残ります。次回から聞きません）', '');
+  if (!_norm(v)) {
+    alert('記録者名が無いと、誰が変更したか履歴に残りません。\n入力してからもう一度お試しください。');
+    return false;
+  }
+  localStorage.setItem('order_recorder', _norm(v));
+  if (currentRecord && !_norm(currentRecord.tantosha)) {
+    currentRecord.tantosha = _norm(v);
+    renderHeaderFields();
+    persist(false);
+  }
+  return true;
+}
+
 // 確定（手動／自動 共通）
 function confirmRecord(manual){
   if (!_norm(currentRecord.siteName)){ if(manual) alert('現場名を入力してください'); return; }
   if (currentRecord.confirmedAt){ if(manual) reconfirmRecord(); return; }
+  if (manual && !_ensureAuthorName()) return;
   if (manual && !confirm('この内容で確定しますか？\n\n確定後の変更はすべて「修正版」として記録され、\n起動時に変更ありの警告が出ます。')) return;
   currentRecord.confirmedAt = new Date().toISOString();
   currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
-    Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
+    Object.assign({}, currentRecord, {confirmedSnapshot:undefined, pushedSnapshot:undefined})));
+  currentRecord.pushedSnapshot = null;
   persist(false);
   setCloudStatus('確定版をクラウドへ送信中…');
   _ensureAuth()
@@ -1226,11 +1248,12 @@ var _pushing = false;
 function pushRevision(){
   if (_pushing) return;
   if (!currentRecord.confirmedAt){ alert('先に「✅ 確定」を押してください'); return; }
+  if (!_ensureAuthorName()) return;
   persist(false);
-  var base = currentRecord.confirmedSnapshot || null;
+  var base = _pushedBase();
   var changes = base ? diffRecords(base, currentRecord) : [];
   if (!changes.length){
-    alert('確定版からの変更はありません。');
+    alert('前回の記録から変わっているところはありません。');
     setCloudStatus('変更なし');
     return;
   }
@@ -1246,6 +1269,8 @@ function pushRevision(){
       return _cloudDoc(currentRecord, '__v' + v).set(_cloudPayload(currentRecord, 'revised', v, changes))
         .then(function(){
           currentRecord.cloudVersion = v;
+          currentRecord.pushedSnapshot = JSON.parse(JSON.stringify(Object.assign({}, currentRecord,
+            { confirmedSnapshot: undefined, pushedSnapshot: undefined })));
           persist(false);
           renderConfirmState();
           setCloudStatus('⚠ 確定後の変更 ' + changes.length + '件を第' + v + '版として記録しました');
@@ -1259,6 +1284,7 @@ function pushRevision(){
 // いまの内容を新しい確定版にし直す（打合せで変更を承認したとき）
 function reconfirmRecord(){
   if (!currentRecord.confirmedAt){ confirmRecord(true); return; }
+  if (!_ensureAuthorName()) return;
   var base = currentRecord.confirmedSnapshot || null;
   var changes = base ? diffRecords(base, currentRecord) : [];
   if (!confirm('いまの内容を新しい確定版にします。\n\n'
@@ -1267,7 +1293,8 @@ function reconfirmRecord(){
     + '\n\nよろしいですか？')) return;
   currentRecord.confirmedAt = new Date().toISOString();
   currentRecord.confirmedSnapshot = JSON.parse(JSON.stringify(
-    Object.assign({}, currentRecord, {confirmedSnapshot:undefined})));
+    Object.assign({}, currentRecord, {confirmedSnapshot:undefined, pushedSnapshot:undefined})));
+  currentRecord.pushedSnapshot = null;
   persist(false);
   setCloudStatus('再確定版をクラウドへ送信中…');
   _ensureAuth()
@@ -1314,6 +1341,11 @@ function autoConfirmSweep(){
   }
 }
 
+// 最後にクラウドへ送った内容（これと今を比べたものが「未記録の変更」）
+function _pushedBase(){
+  return currentRecord.pushedSnapshot || currentRecord.confirmedSnapshot || null;
+}
+
 function renderConfirmState(){
   var btn  = document.getElementById('btnConfirm');
   var btnR = document.getElementById('btnRevision');
@@ -1326,12 +1358,16 @@ function renderConfirmState(){
     if (btnC) btnC.style.display = '';
     var d = new Date(currentRecord.confirmedAt);
     var v = currentRecord.cloudVersion || 1;
-    // 未送信の変更が残っていないか毎回みる
-    var base = currentRecord.confirmedSnapshot || null;
-    var n = base ? diffRecords(base, currentRecord).length : 0;
+    // まだクラウドに送っていない変更の数
+    var pb = _pushedBase();
+    var n  = pb ? diffRecords(pb, currentRecord).length : 0;
+    // 確定版から通算で何か所変わっているか
+    var cb = currentRecord.confirmedSnapshot || null;
+    var m  = cb ? diffRecords(cb, currentRecord).length : 0;
     st.innerHTML = '<span style="color:#2E7D32;font-weight:700;">✅ 確定済み '
       + (d.getMonth()+1) + '/' + d.getDate() + '（第' + v + '版）</span>'
-      + (n ? ' <span style="color:#c62828;font-weight:700;">⚠ 未記録の変更 ' + n + '件</span>' : '');
+      + (n ? ' <span style="color:#c62828;font-weight:700;">⚠ 未記録の変更 ' + n + '件</span>'
+           : (m ? ' <span style="color:#667;">確定版から ' + m + 'か所変更（記録済み）</span>' : ''));
   } else {
     btn.style.display = '';
     if (btnR) btnR.style.display = 'none';
