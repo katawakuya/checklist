@@ -146,7 +146,7 @@ button{cursor:pointer;min-height:44px;border-radius:8px;border:none;}
   <button class="tb-btn" id="btnImportPdf">📄 PDFから復元</button>
   <input type="file" id="pdfImportInput" accept="application/pdf" style="display:none">
   <button class="tb-btn navy" id="btnExcel">📊 Excel出力</button>
-  <button class="tb-btn" id="btnCloud" style="display:none;">☁ クラウド一覧</button>
+  <button class="tb-btn" id="btnCloud">☁ 版の履歴</button>
   <button class="tb-btn primary" id="btnConfirm" onclick="confirmRecord(true)">✅ 確定</button>
   <button class="tb-btn" id="btnRevision" style="display:none;" onclick="pushRevision()">☁ 変更を記録</button>
   <button class="tb-btn" id="btnReconfirm" style="display:none;" onclick="reconfirmRecord()">🔁 再確定</button>
@@ -967,15 +967,14 @@ function _initFb(){
 function updateAdminBadge(){
   var b = document.getElementById('adminBadge');
   var btn = document.getElementById('adminBtn');
-  var cb = document.getElementById('btnCloud');
   if (_isAdmin){
     if (b){ b.style.display=''; b.textContent='👑 管理者'; }
     if (btn){ btn.textContent='🔓'; btn.title='ログアウト'; }
-    if (cb) cb.style.display='';
+
   } else {
     if (b) b.style.display='none';
     if (btn){ btn.textContent='🔑'; btn.title='管理者ログイン'; }
-    if (cb) cb.style.display='none';
+
   }
 }
 function openFbModal(){
@@ -1310,33 +1309,95 @@ function renderConfirmState(){
   }
 }
 
-/* ---- クラウド一覧（管理者のみ） ---- */
+/* ---- クラウド一覧（議事録ごとに版を並べる） ---- */
 var _cloudCache = [];
 function openCloudList(){
-  if(!_isAdmin){ alert('管理者ログインが必要です'); return; }
-  var db=_initFb();
-  var box=document.getElementById('cloudList');
+  var db = _initFb();
+  var box = document.getElementById('cloudList');
   document.getElementById('cloudModal').classList.add('show');
-  if(!db){ box.textContent='クラウドに接続できませんでした。'; return; }
-  box.textContent='読み込んでいます…';
-  db.collection(MEETING_COL).get().then(function(snap){
-    _cloudCache=[];
-    snap.forEach(function(d){ _cloudCache.push(d.data()); });
-    _cloudCache.sort(function(a,b){ return String(b.meetingDate||'').localeCompare(String(a.meetingDate||'')); });
-    if(!_cloudCache.length){ box.textContent='クラウドに議事録がありません。'; return; }
-    box.innerHTML = _cloudCache.map(function(r){
-      return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
-        + '<div style="font-size:12px;color:#667;">'+esc(r.meetingDate||'(日付未設定)')+'</div>'
-        + '<div style="font-weight:700;">'+esc(r.siteName||'(現場名未設定)')+'</div>'
-        + '<div style="font-size:12px;color:#667;">'+esc(r.contractor||'')+' '+esc(r.tantosha||'')+'</div>'
-        + '<button class="tb-btn" style="margin-top:6px;" onclick="importCloudMeeting(\''+r.id+'\')">この端末で開く</button>'
-        + '</div>';
-    }).join('');
-  }).catch(function(e){
-    box.textContent='読み込みに失敗しました: '+e.message
-      +'（Firestoreのルールで '+MEETING_COL+' の読み取りが許可されているかご確認ください）';
-  });
+  if (!db){ box.textContent = 'クラウドに接続できませんでした。'; return; }
+  box.textContent = '読み込んでいます…';
+  _ensureAuth()
+    .then(function(){ return db.collection(MEETING_COL).get(); })
+    .then(function(snap){
+      _cloudCache = [];
+      snap.forEach(function(d){ _cloudCache.push(Object.assign({_docId:d.id}, d.data())); });
+      renderCloudList();
+    })
+    .catch(function(e){
+      box.textContent = '読み込みに失敗しました: ' + ((e && e.message) || e);
+    });
 }
+
+var _STATUS_LABEL = { draft:'下書き', confirmed:'確定版', revised:'修正版' };
+
+function renderCloudList(){
+  var box = document.getElementById('cloudList');
+  if (!_cloudCache.length){ box.textContent = 'クラウドに議事録がありません。'; return; }
+  // 議事録（現場＋打合せ日）ごとにまとめ、版を新しい順に並べる
+  var g = {};
+  _cloudCache.forEach(function(v){
+    var k = v.recKey || ((v.recSite||'') + '|' + (v.recDate||''));
+    if (!g[k]) g[k] = { site:v.recSite||'(現場名未設定)', date:v.recDate||'(日付未設定)', rows:[] };
+    g[k].rows.push(v);
+  });
+  var groups = Object.keys(g).map(function(k){ return g[k]; })
+    .sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+
+  box.innerHTML = groups.map(function(gr){
+    gr.rows.sort(function(a,b){ return (b.version||0) - (a.version||0); });
+    var latest = gr.rows.filter(function(r){ return r.status !== 'draft'; })[0] || gr.rows[0];
+    var vers = gr.rows.filter(function(r){ return r.status !== 'draft'; });
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
+      + '<div style="font-weight:700;font-size:14px;">' + esc(gr.site) + '　' + esc(gr.date) + '</div>'
+      + '<div style="font-size:12px;color:#667;margin-bottom:6px;">版の数：' + vers.length + '</div>'
+      + (vers.length ? '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          + '<tr style="background:var(--gray-bg);"><th style="text-align:left;padding:4px 6px;">版</th>'
+          + '<th style="text-align:left;padding:4px 6px;">種別</th>'
+          + '<th style="text-align:left;padding:4px 6px;">日時</th>'
+          + '<th style="text-align:left;padding:4px 6px;">記録者</th>'
+          + '<th style="text-align:left;padding:4px 6px;">変更</th></tr>'
+          + vers.map(function(r){
+              var isRev = (r.status === 'revised');
+              return '<tr style="border-top:1px solid var(--border);' + (isRev ? 'background:#fff6f6;' : '') + '">'
+                + '<td style="padding:4px 6px;font-weight:700;">第' + (r.version||1) + '版</td>'
+                + '<td style="padding:4px 6px;' + (isRev ? 'color:#c62828;font-weight:700;' : 'color:#2E7D32;') + '">'
+                + (_STATUS_LABEL[r.status] || r.status) + '</td>'
+                + '<td style="padding:4px 6px;">' + _fmtDT(r.savedAt) + '</td>'
+                + '<td style="padding:4px 6px;">' + esc(_who(r)) + '</td>'
+                + '<td style="padding:4px 6px;">'
+                + ((r.changes||[]).length
+                    ? '<a href="#" onclick="showChanges(\'' + r._docId + '\');return false;">' + r.changes.length + 'か所</a>'
+                    : '—')
+                + (r.ack ? ' <span style="color:#2E7D32;">✓確認済</span>' : '') + '</td></tr>';
+            }).join('')
+          + '</table>' : '<div style="font-size:12px;color:#999;">まだ確定されていません（下書きのみ）</div>')
+      + '<div style="margin-top:8px;">'
+      + '<button class="tb-btn" onclick="importCloudMeeting(\'' + latest._docId + '\')">最新版をこの端末で開く</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+function importCloudMeeting(docId){
+  var v = _cloudCache.filter(function(x){ return x._docId === docId; })[0];
+  if (!v) return;
+  var rec = v.data || v;            // 新形式は data の中に議事録本体が入っている
+  if (!rec || !rec.id){ alert('この版には議事録データが入っていません'); return; }
+  var list = loadAllRecords();
+  var i = list.findIndex(function(x){ return x.id === rec.id; });
+  var copy = JSON.parse(JSON.stringify(rec));
+  if (i > -1) list[i] = copy; else list.unshift(copy);
+  saveAllRecords(list);
+  setCurrentId(copy.id);
+  currentRecord = copy;
+  renderAll();
+  prefillBasicInfo(currentRecord);
+  renderHeaderFields();
+  renderConfirmState();
+  document.getElementById('cloudModal').classList.remove('show');
+  doToast();
+}
+
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){
   return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 
@@ -1508,7 +1569,9 @@ var _alerts = [];
 function loadChangeAlerts(){
   var db = _initFb();
   if (!db) return;
-  db.collection(MEETING_COL).where('status','==','revised').get().then(function(snap){
+  // 認証が済む前に読むと permission-denied になるので必ず待つ
+  _ensureAuth().then(function(){
+  return db.collection(MEETING_COL).where('status','==','revised').get(); }).then(function(snap){
     _alerts = [];
     snap.forEach(function(d){
       var v = d.data();
@@ -1638,7 +1701,8 @@ function loadPrevMeeting(){
   if (!site || !date){ box.style.display='none'; return; }
   var db = _initFb();
   if (!db){ box.style.display='none'; return; }
-  db.collection(MEETING_COL).where('recSite','==',site).get().then(function(snap){
+  _ensureAuth().then(function(){
+  return db.collection(MEETING_COL).where('recSite','==',site).get(); }).then(function(snap){
     var rows = [];
     snap.forEach(function(d){ var v=d.data(); if (v.recDate && v.recDate < date) rows.push(Object.assign({_docId:d.id}, v)); });
     if (!rows.length){ box.style.display='none'; return; }
