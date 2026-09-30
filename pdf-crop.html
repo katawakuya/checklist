@@ -115,6 +115,46 @@ function forceReload(){
 </style>
 </head>
 <body>
+
+<!-- 管理者以外は操作させない（断面図切出しは管理者専用） -->
+<div id="pcGate" style="position:fixed;inset:0;z-index:99998;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--sans);">
+  <div style="max-width:440px;text-align:center;color:var(--text);">
+    <div id="pcGateIcon" style="font-size:54px;margin-bottom:14px;">✂️</div>
+    <h2 id="pcGateTitle" style="font-size:20px;margin:0 0 10px;">ログイン状態を確認しています…</h2>
+    <p id="pcGateMsg" style="font-size:14px;color:var(--text2);line-height:1.8;margin:0 0 18px;"></p>
+    <div id="pcGateBtns" style="display:none;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="pcOpenLogin()" style="background:var(--accent);border:none;color:#fff;
+        border-radius:8px;padding:10px 18px;font-size:15px;font-weight:700;cursor:pointer;
+        font-family:var(--sans);">🔑 管理者ログイン</button>
+      <a href="index.html" style="background:var(--surface2);border:1px solid var(--border);
+        color:var(--text);border-radius:8px;padding:10px 18px;font-size:15px;text-decoration:none;">🏠 ホームへ戻る</a>
+    </div>
+  </div>
+</div>
+
+<!-- 管理者ログイン -->
+<div id="pcLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:99999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px;width:100%;max-width:360px;color:var(--text);font-family:var(--sans);">
+    <div style="font-size:17px;font-weight:700;margin-bottom:12px;">🔑 管理者ログイン</div>
+    <input id="pcEmail" type="email" placeholder="メールアドレス" autocomplete="username"
+      style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;
+      background:var(--surface2);color:var(--text);font-size:16px;margin-bottom:8px;">
+    <input id="pcPass" type="password" placeholder="パスワード" autocomplete="current-password"
+      style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;
+      background:var(--surface2);color:var(--text);font-size:16px;margin-bottom:10px;">
+    <div id="pcLoginErr" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="pcDoLogin()" style="flex:1;background:var(--accent);border:none;color:#fff;
+        border-radius:8px;padding:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);">ログイン</button>
+      <button onclick="document.getElementById('pcLoginModal').style.display='none'"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);
+        border-radius:8px;padding:10px 14px;font-size:15px;cursor:pointer;font-family:var(--sans);">閉じる</button>
+    </div>
+  </div>
+</div>
 <header>
   <div class="hd-top">
     <div class="logo">✂️</div>
@@ -269,9 +309,66 @@ function forceReload(){
 
 <canvas id="cropCanvas" style="display:none;"></canvas>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+/* =====================================================================
+   断面図切出しは管理者専用。路盤マスタと同じ扱いにそろえる
+   ===================================================================== */
+var PC_FIREBASE = {
+  apiKey: "AIzaSyCuSWsmOZhseuBV7dJt6-iSYA1MCYzDF9o",
+  authDomain: "alrit-kandenkou.firebaseapp.com",
+  projectId: "alrit-kandenkou",
+  storageBucket: "alrit-kandenkou.firebasestorage.app",
+  messagingSenderId: "640432772833",
+  appId: "1:640432772833:web:ab2aff11980621322809a0"
+};
+var PC_ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
+var _pcAuth = null, _pcIsAdmin = false, _pcResolved = false;
+
+function pcApplyGate(){
+  var g = document.getElementById('pcGate'); if (!g) return;
+  if (_pcIsAdmin){ g.style.display = 'none'; return; }
+  g.style.display = 'flex';
+  document.getElementById('pcGateIcon').textContent = '🔒';
+  document.getElementById('pcGateTitle').textContent = '断面図切出しは管理者専用です';
+  document.getElementById('pcGateMsg').innerHTML =
+    '切り出した断面図は路盤マスタの旗揚げ番号に登録して使います。<br>'
+    + '路盤マスタと同じく、管理者だけが開ける設定にしています。';
+  document.getElementById('pcGateBtns').style.display = 'flex';
+}
+function pcOpenLogin(){
+  if (_pcIsAdmin){ if (confirm('ログアウトしますか？')) _pcAuth.signOut(); return; }
+  document.getElementById('pcLoginModal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('pcEmail').focus(); }, 100);
+}
+function pcDoLogin(){
+  var e = document.getElementById('pcEmail').value.trim();
+  var p = document.getElementById('pcPass').value;
+  var err = document.getElementById('pcLoginErr');
+  err.textContent = '';
+  if (!_pcAuth || !e || !p){ err.textContent = 'メールアドレスとパスワードを入力してください'; return; }
+  _pcAuth.signInWithEmailAndPassword(e, p)
+    .then(function(){ document.getElementById('pcLoginModal').style.display = 'none'; })
+    .catch(function(x){ err.textContent = 'ログイン失敗: ' + (x.message || x); });
+}
+try {
+  if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(PC_FIREBASE);
+  _pcAuth = firebase.auth();
+  try { _pcAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) {}
+  _pcAuth.onAuthStateChanged(function(u){
+    _pcResolved = true;
+    _pcIsAdmin = !!(u && u.email === PC_ADMIN_EMAIL);
+    pcApplyGate();
+  });
+} catch(e) { console.warn('[FB]', e); }
+// 通信不良などで認証が返らないときは10秒で開ける（出先で締め出されないように）
+setTimeout(function(){
+  if (!_pcResolved){ var g = document.getElementById('pcGate'); if (g) g.style.display = 'none'; }
+}, 10000);
+
 // =====================================================================
 // PDF.js worker
 // file:// から importScripts() は Chrome がブロックするため

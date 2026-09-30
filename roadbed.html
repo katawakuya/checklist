@@ -135,6 +135,22 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
 </head>
 <body>
 
+<!-- 管理者以外は操作させない（路盤マスタは管理者専用） -->
+<div id="rbGate" style="position:fixed;inset:0;z-index:99998;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="max-width:440px;text-align:center;color:var(--text);">
+    <div id="rbGateIcon" style="font-size:54px;margin-bottom:14px;">🗺</div>
+    <h2 id="rbGateTitle" style="font-size:20px;margin:0 0 10px;">ログイン状態を確認しています…</h2>
+    <p id="rbGateMsg" style="font-size:14px;color:var(--text2);line-height:1.8;margin:0 0 18px;"></p>
+    <div id="rbGateBtns" style="display:none;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="onAdminBtn()" style="background:var(--blue);border:none;color:#fff;
+        border-radius:8px;padding:10px 18px;font-size:15px;font-weight:700;cursor:pointer;">🔑 管理者ログイン</button>
+      <a href="index.html" style="background:var(--surface2);border:1px solid var(--border);
+        color:var(--text);border-radius:8px;padding:10px 18px;font-size:15px;text-decoration:none;">🏠 ホームへ戻る</a>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="hd-top">
     <div class="logo" style="font-size:22px;line-height:1;">🏗️</div>
@@ -852,7 +868,9 @@ function initFirebase(){
     _currentUser=u||null;
     _isLoggedIn=!!u;
     _isAdmin=!!(u&&u.email===ADMIN_EMAIL);
+    _rbGateResolved=true;
     updateAdminUI();
+    applyRbGate();
     if(_isAdmin&&!localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
   });
     loadSitesFromFirebase();
@@ -2607,6 +2625,28 @@ function migrateToFirebase(){
   }catch(e){results.push('路盤マスタ: エラー '+e);}
   setTimeout(function(){alert('✅ Firebaseへのアップロード完了\n\n'+results.join('\n'));_markSynced();},800);
 }
+
+// 路盤マスタは管理者専用。確認中は中身を見せず、確定したら開くか施錠する
+var _rbGateResolved=false;
+function applyRbGate(){
+  var g=document.getElementById('rbGate'); if(!g) return;
+  if(_isAdmin){ g.style.display='none'; return; }
+  g.style.display='flex';
+  document.getElementById('rbGateIcon').textContent='🔒';
+  document.getElementById('rbGateTitle').textContent='路盤マスタは管理者専用です';
+  document.getElementById('rbGateMsg').innerHTML =
+    '路盤構成・旗揚げ番号・図面の登録内容は、誤って変わると<br>'
+    + '発注計算とチェックリストの結果がすべてずれてしまいます。<br>'
+    + 'そのため管理者だけが開ける設定にしています。';
+  document.getElementById('rbGateBtns').style.display='flex';
+}
+// 通信不良などで認証が返らないときは、10秒で開けて既存の個別ガードに任せる
+setTimeout(function(){
+  if(!_rbGateResolved){
+    var g=document.getElementById('rbGate');
+    if(g) g.style.display='none';
+  }
+}, 10000);
 
 function onAdminBtn(){if(_isAdmin){if(confirm('ログアウトしますか？'))_fbAuth.signOut();}else document.getElementById('loginModal').classList.add('open');}
 function doLogin(){
