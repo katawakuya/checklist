@@ -2032,6 +2032,16 @@ function loadHataFromFb(id){
     });
 }
 
+// クラウド保存の失敗を画面に出す（黙って消えないようにする）
+function _fbNotify(msg, e){
+  var detail = e ? ((e.code === 'permission-denied')
+      ? 'Firestoreのルールで拒否されました'
+      : ((e.message || e) + '')) : '';
+  console.warn('[FB]', msg, e || '');
+  try { showToast('\u26a0 ' + msg + (detail ? '\uff1a' + detail : ''), 6000); }
+  catch(x) { alert('\u26a0 ' + msg + (detail ? '\n' + detail : '')); }
+}
+
 function loadHataForSite(id){
   if(!id){document.getElementById('hataList').innerHTML='<div class="empty-state">現場を選択してください</div>';return;}
   loadHataFromFb(id);
@@ -2312,7 +2322,7 @@ function deleteSelectedHata(){
       .then(function(){
         _fbDb.collection('masters').doc('hata_master').get()
           .then(function(doc2){var all=(doc2.exists&&doc2.data().data)?doc2.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
-          .catch(function(e){console.warn('[FB hata mono save]',e);});
+          .catch(function(e){ _fbNotify('\u65d7\u63da\u3052\u30de\u30b9\u30bf\u3092\u30af\u30e9\u30a6\u30c9\u306b\u4fdd\u5b58\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f', e); });
       })
       .catch(function(e){
         console.warn('[FB hata multi-delete save]',e);
@@ -2342,7 +2352,7 @@ function deleteHata(key){
         // モノリシック形式にも保存（後方互換）
         _fbDb.collection('masters').doc('hata_master').get()
           .then(function(doc2){var all=(doc2.exists&&doc2.data().data)?doc2.data().data:{};all[id]=safeList;return _fbDb.collection('masters').doc('hata_master').set({data:all,updatedAt:new Date().toISOString()});})
-          .catch(function(e){console.warn('[FB hata mono save]',e);});
+          .catch(function(e){ _fbNotify('\u65d7\u63da\u3052\u30de\u30b9\u30bf\u3092\u30af\u30e9\u30a6\u30c9\u306b\u4fdd\u5b58\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f', e); });
       })
       .catch(function(e){
         console.warn('[FB hata delete save]',e);

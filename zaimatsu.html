@@ -401,7 +401,9 @@ _fbAuth = firebase.auth();
 
 _fbAuth.onAuthStateChanged(function(user){
   _fbUser    = user;
-  _isLoggedIn = !!user;
+  // 匿名（ゲスト）は社員ログインに含めない。
+  // 含めると入荷・発注・マスタの編集画面がゲストに開いてしまう
+  _isLoggedIn = !!(user && !user.isAnonymous);
   _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
   updateAuthUI();
   applyAccessControl();

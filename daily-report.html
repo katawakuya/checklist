@@ -1299,9 +1299,17 @@ function fbLogout(){
 function _withAuth(fn){
   if (!_fbAuth) { fn(null); return; }
   if (_fbAuth.currentUser) { fn(_fbAuth.currentUser); return; }
-  _fbAuth.signInAnonymously()
-    .then(function(r){ fn(r.user || null); })
-    .catch(function(e){ console.warn('[FB] anon auth', e); fn(null); });
+  // 保存済みログインの復元を待つ。待たずに匿名サインインすると
+  // 管理者のログインを匿名で上書きしてしまう
+  var done = false;
+  var un = _fbAuth.onAuthStateChanged(function(u){
+    if (done) return; done = true;
+    try { un(); } catch(e) {}
+    if (u) { fn(u); return; }
+    _fbAuth.signInAnonymously()
+      .then(function(r){ fn(r.user || null); })
+      .catch(function(e){ console.warn('[FB] anon auth', e); fn(null); });
+  });
 }
 
 // 1件をクラウドへ保存。成功したら true を返す Promise
@@ -1316,7 +1324,13 @@ function fbSaveReport(rec){
       });
       db.collection(REPORT_COL).doc(String(rec.id)).set(payload)
         .then(function(){ resolve(true); })
-        .catch(function(e){ console.warn('[FB] report save', e); resolve(false); });
+        .catch(function(e){
+          var d = (e && e.code === 'permission-denied')
+            ? 'Firestoreのルールで拒否されました' : ((e && e.message) || e);
+          console.warn('[FB] report save', e);
+          showToast('\u26a0 \u65e5\u5831\u3092\u30af\u30e9\u30a6\u30c9\u306b\u4fdd\u5b58\u3067\u304d\u307e\u305b\u3093\uff1a' + d, 6000);
+          resolve(false);
+        });
     });
   });
 }

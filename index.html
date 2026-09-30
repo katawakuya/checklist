@@ -308,6 +308,10 @@ body{
   <!-- メインコンテンツ（ログイン後） -->
   <div id="mainContent" style="display:none;">
 
+    <div id="guestNotice" style="display:none;background:rgba(251,191,36,.12);
+      border:1px solid rgba(251,191,36,.45);color:#fde68a;border-radius:10px;
+      padding:10px 14px;font-size:13px;margin-bottom:14px;line-height:1.7;"></div>
+
     <!-- グリーティング -->
     <div class="greeting">
       <div class="g-icon">👷</div>
@@ -500,6 +504,19 @@ _fbAuth.onAuthStateChanged(function(user) {
     try { localStorage.setItem(SEEN_KEY, '1'); } catch(e) {}
     _isAdmin = (user.email === ADMIN_EMAIL);
     _showAuthLoading(false);
+    // セッションが切れて匿名で入り直した場合は、その旨を知らせる
+    var gn = document.getElementById('guestNotice');
+    if (gn) {
+      if (user.isAnonymous) {
+        gn.style.display = '';
+        gn.innerHTML = 'ゲストとして表示しています。管理者の機能を使うには '
+          + '<button onclick="toggleAdminForm();document.getElementById(\'loginArea\').style.display=\'\';" '
+          + 'style="background:none;border:none;color:#fbbf24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;">'
+          + '🔑 管理者ログイン</button> してください。';
+      } else {
+        gn.style.display = 'none';
+      }
+    }
     document.getElementById('btnAuth').textContent = 'ログアウト';
     document.getElementById('btnAuth').style.display = '';
     document.getElementById('loginArea').style.display = 'none';

@@ -1988,6 +1988,44 @@ var FIREBASE_CONFIG = {
 var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
 var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false, _isLoggedIn = false;
 
+// 保存済みログインの復元を待ってから uid を返す。
+// 待たずに匿名サインインすると、管理者のログインを匿名で上書きしてしまう
+function _withUid(fn){
+  if (!_fbAuth) { fn('anonymous'); return; }
+  if (_fbAuth.currentUser) { fn(_fbAuth.currentUser.uid); return; }
+  var done = false;
+  var un = _fbAuth.onAuthStateChanged(function(u){
+    if (done) return; done = true;
+    try { un(); } catch(e) {}
+    if (u) { fn(u.uid); return; }
+    _fbAuth.signInAnonymously()
+      .then(function(r){ fn(r.user ? r.user.uid : 'anon'); })
+      .catch(function(e){ _fbNotify('ログインできなかったため匿名で送信します', e); fn('anonymous'); });
+  });
+}
+
+// ── C) クラウド保存の失敗を画面に出す（黙って消えないようにする） ──
+function _fbNotify(msg, e){
+  var detail = e ? ((e.code === 'permission-denied')
+      ? 'Firestoreのルールで拒否されました'
+      : ((e.message || e) + '')) : '';
+  console.warn('[FB]', msg, e || '');
+  var el = document.getElementById('fbNotice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'fbNotice';
+    el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;'
+      + 'background:#7f1d1d;color:#fff;border:1px solid #f87171;border-radius:8px;'
+      + 'padding:10px 16px;font-size:14px;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.4);cursor:pointer;';
+    el.onclick = function(){ el.style.display = 'none'; };
+    document.body.appendChild(el);
+  }
+  el.textContent = '⚠ ' + msg + (detail ? '：' + detail : '') + '（タップで閉じる）';
+  el.style.display = '';
+  clearTimeout(_fbNotify._t);
+  _fbNotify._t = setTimeout(function(){ el.style.display = 'none'; }, 8000);
+}
+
 function initFirebase() {
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -1995,7 +2033,9 @@ function initFirebase() {
     _fbAuth = firebase.auth();
     _fbAuth.onAuthStateChanged(function(user) {
       _fbUser    = user;
-      _isLoggedIn = !!user;
+      // 匿名（ゲスト）は社員ログインに含めない。
+      // 匿名認証を有効にしたため !!user だけだとゲストも true になってしまう
+      _isLoggedIn = !!(user && !user.isAnonymous);
       _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
       if (_isAdmin) {
@@ -2430,22 +2470,8 @@ function guestSendToFirebase() {
     });
   }
 
-  // すでにサインイン済みなら直接送信
-  if (_fbAuth && _fbAuth.currentUser) {
-    _doSend(_fbAuth.currentUser.uid);
-    return;
-  }
-  // 匿名サインインしてから送信
-  if (_fbAuth) {
-    _fbAuth.signInAnonymously()
-      .then(function(result) { _doSend(result.user ? result.user.uid : 'anon'); })
-      .catch(function(e) {
-        console.warn('[FB] anonymous auth err', e);
-        _doSend('anonymous');
-      });
-  } else {
-    _doSend('anonymous');
-  }
+  // 認証の確定を待ってから送る（管理者ログインを匿名で潰さないため）
+  _withUid(_doSend);
 }
 
 function migrateToFirebase() {
@@ -4220,17 +4246,9 @@ function _autoFbSend(record, isEdit) {
           updateHistBadge();
         }
       })
-      .catch(function(e){ console.warn('[FB] auto-send err', e); });
+      .catch(function(e){ _fbNotify('発注記録をクラウドに送信できませんでした', e); });
   }
-  if (_fbAuth && _fbAuth.currentUser) {
-    _execSend(_fbAuth.currentUser.uid);
-  } else if (_fbAuth) {
-    _fbAuth.signInAnonymously()
-      .then(function(r){ _execSend(r.user ? r.user.uid : 'anon'); })
-      .catch(function(){ _execSend('anonymous'); });
-  } else {
-    _execSend('anonymous');
-  }
+  _withUid(_execSend);
 }
 
 function updateHistBadge() {

@@ -477,6 +477,27 @@ var FIREBASE_CONFIG = {
 };
 var ADMIN_EMAIL = 'sato.k.katawakuya@gmail.com';
 var _fbDb = null, _fbAuth = null, _fbUser = null, _isAdmin = false, _isLoggedIn = false;
+// クラウド保存の失敗を画面に出す（黙って消えないようにする）
+function _fbNotify(msg, e){
+  var detail = e ? ((e.code === 'permission-denied')
+      ? 'Firestoreのルールで拒否されました'
+      : ((e.message || e) + '')) : '';
+  console.warn('[FB]', msg, e || '');
+  var el = document.getElementById('fbNotice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'fbNotice';
+    el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;'
+      + 'background:#7f1d1d;color:#fff;border:1px solid #f87171;border-radius:8px;'
+      + 'padding:10px 16px;font-size:14px;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.4);cursor:pointer;';
+    el.onclick = function(){ el.style.display = 'none'; };
+    document.body.appendChild(el);
+  }
+  el.textContent = '⚠ ' + msg + (detail ? '：' + detail : '') + '（タップで閉じる）';
+  el.style.display = '';
+  clearTimeout(_fbNotify._t);
+  _fbNotify._t = setTimeout(function(){ el.style.display = 'none'; }, 8000);
+}
 
 function initFirebase() {
   try {
@@ -485,7 +506,8 @@ function initFirebase() {
     _fbAuth = firebase.auth();
     _fbAuth.onAuthStateChanged(function(user) {
       _fbUser    = user;
-      _isLoggedIn = !!user;
+      // 匿名（ゲスト）は社員ログインに含めない
+      _isLoggedIn = !!(user && !user.isAnonymous);
       _isAdmin   = !!(user && user.email === ADMIN_EMAIL);
       updateAdminBadge();
       if (_isAdmin && !localStorage.getItem(_SYNC_AT_KEY)) _markLocalModified();
@@ -644,7 +666,7 @@ function fbSyncRoadbedMasterForSite(siteId, callback) {
 function fbSaveMaster(key, data) {
   if (!_fbDb || !_isAdmin) return;
   _fbDb.collection('masters').doc(key).set({ data: data, updatedAt: new Date().toISOString() })
-    .catch(function(e){ console.warn('[FB] saveMaster err:', e); });
+    .catch(function(e){ _fbNotify('マスタをクラウドに保存できませんでした', e); });
 }
 
 function fbSaveRecord(collectionName, record) {
@@ -655,7 +677,7 @@ function fbSaveRecord(collectionName, record) {
       _fbDb.collection('backups').doc(collectionName + '_' + docId).set(record)
         .catch(function(e){ console.warn('[FB] backup err', e); });
     })
-    .catch(function(e){ console.warn('[FB] record save err', e); });
+    .catch(function(e){ _fbNotify('チェックリスト記録をクラウドに送信できませんでした', e); });
 }
 
 function fbLogin() {
