@@ -135,6 +135,12 @@ main{padding:10px 14px 90px;}
 .check-items{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;}
 .check-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border2);background:#fff;cursor:pointer;user-select:none;transition:.1s;}
 .check-item:last-child{border-bottom:none;}
+/* イレギュラー備考（規定値と異なる場合のみ記入） */
+.irr-wrap{margin-top:4px;cursor:default;}
+.irr-btn{background:#f9fafb;border:1px solid #d1d5db;color:#6b7280;border-radius:6px;font-size:12px;padding:2px 8px;cursor:pointer;}
+.irr-btn.on{background:#fff7ed;border-color:#f97316;color:#c2410c;font-weight:700;}
+.irr-ta{width:100%;box-sizing:border-box;margin-top:4px;min-height:44px;font-size:13px;padding:6px 8px;border:1px solid #f97316;border-radius:6px;background:#fffbf5;resize:vertical;font-family:inherit;}
+.irr-show{margin-top:3px;font-size:12px;color:#c2410c;background:#fff7ed;border-left:3px solid #f97316;padding:3px 6px;border-radius:0 4px 4px 0;white-space:pre-wrap;}
 .check-item.checked{background:#f0fdf4;}
 .check-item.na{opacity:.5;}
 .check-box{width:22px;height:22px;min-width:22px;border:2px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:17px;transition:.15s;margin-top:1px;}
@@ -3821,6 +3827,268 @@ var _history = [];
 function itemKey(secIdx, itemIdx){ return 's'+secIdx+'i'+itemIdx; }
 
 // =====================================================
+// 試掘モード
+//   配管を行わず試掘（埋設物確認）だけを行う日のためのモード。
+//   ・配管関係のチェック項目を隠す
+//   ・掘削出来形／舗装厚／埋設物／オフセットの「検測値」を記録する
+//   施工区分（仮復旧/本復旧）とは独立したフラグにしてある。
+//   試掘でも埋戻し・仮復旧は行うため、区分ロジックは触らない。
+// =====================================================
+var _skMode = false;
+var SK_BASE_OPTIONS = ['民官境界','マンホール中心点','排水溝（側溝）角','縁石（道路端）','電柱','既設構造物','道路中心線','その他'];
+
+// 試掘では行わない（＝隠す）配管系の項目名
+var SK_PIPE_HIDE = [
+  'ダミー管','中間転圧','埋設シート','鞘管','さや管','構造物への埋め込み',
+  '布設管土被り','オフセット確認','土被り確認','管台測定','配管延長確認',
+  '管端部','管接合','通線','呼線','立上り管','管据付','管布設'
+];
+function _skIsPipeItem(item){
+  var n = (item && item.n) || '';
+  if(!n) return false;
+  for(var i=0;i<SK_PIPE_HIDE.length;i++){ if(n.indexOf(SK_PIPE_HIDE[i]) >= 0) return true; }
+  // 管スロット項目（通信管／電力管 …）も配管作業
+  if(typeof _PIPE_SLOT_TYPES !== 'undefined'){
+    for(var p=0;p<_PIPE_SLOT_TYPES.length;p++){
+      if(n.indexOf(_PIPE_SLOT_TYPES[p]+'　')===0 || n.indexOf(_PIPE_SLOT_TYPES[p]+' ')===0) return true;
+    }
+  }
+  return false;
+}
+
+function _skOffBlank(){ return { base:'', other:'', dist:'', dp:'' }; }
+function _skBuriedBlank(){ return { kind:'', dia:'', mat:'', cover:'', sep:'' }; }
+function _skPitBlank(){
+  return {
+    no:'', pos:'',
+    W:'', L:'', H:'',          // 掘削出来形 実測（m）
+    pave:'', rb:'',            // 舗装厚・路盤厚 実測（mm）
+    offsets:[ _skOffBlank(), _skOffBlank(), _skOffBlank() ],
+    buried:[ _skBuriedBlank() ],
+    witness:'', memo:''
+  };
+}
+function _skBlank(){ return { on:false, pits:[ _skPitBlank() ] }; }
+var _skData = _skBlank();
+
+function _skCollect(){ _skData.on = _skMode; return _skData; }
+var _skLoadedKey = '';
+function _skPreload(){
+  if(!_siteId || !_typeKey) return;
+  var key;
+  try{ key = storeKey(); }catch(e){ return; }
+  if(_skLoadedKey === key) return;   // 同じ型なら画面内の状態を優先
+  _skLoadedKey = key;
+  _skMode = false; _skData = _skBlank(); _irrNotes = {};
+  try{
+    var d = JSON.parse(localStorage.getItem(key) || '{}');
+    if(d.shikutsu){ _skData = d.shikutsu; _skMode = !!d.shikutsu.on; }
+    if(d.irrNotes) _irrNotes = d.irrNotes;
+  }catch(e){}
+  _skNorm();
+  _skData.on = _skMode;
+}
+function _skNorm(){
+  if(!_skData || typeof _skData !== 'object') _skData = _skBlank();
+  if(!Array.isArray(_skData.pits) || !_skData.pits.length) _skData.pits = [ _skPitBlank() ];
+  _skData.pits.forEach(function(p){
+    if(!Array.isArray(p.offsets)) p.offsets = [ _skOffBlank(), _skOffBlank(), _skOffBlank() ];
+    while(p.offsets.length < 3) p.offsets.push(_skOffBlank());
+    if(!Array.isArray(p.buried) || !p.buried.length) p.buried = [ _skBuriedBlank() ];
+  });
+}
+
+function toggleSkMode(on){
+  _skMode = !!on;
+  _skData.on = _skMode;
+  var _ids = ['inDP1','inDPH','inDP2','inDPH2','inDP3','inDPH3','inDP4','inDPH4','inBH','inExtra'];
+  var _sv = {}; _ids.forEach(function(id){ _sv[id] = $v(id); });
+  var _hata = ($v('hataInput')||'').trim();
+  renderMain();
+  if(_hata){ var e0 = document.getElementById('hataInput'); if(e0){ e0.value = _hata; loadHata(); } }
+  _ids.forEach(function(id){ sv(id, _sv[id]); });
+  if(_sv['inDP1'] || _sv['inDPH'] || _sv['inBH']) recalcGL();
+  saveState();
+}
+
+// 値の書き込み（再描画せずに _skData を更新 → 入力中にフォーカスが飛ばない）
+function skSet(pi, field, v){
+  _skNorm();
+  if(_skData.pits[pi]) _skData.pits[pi][field] = v;
+  _skSaveSoon();
+}
+function skSetOff(pi, oi, field, v){
+  _skNorm();
+  var p = _skData.pits[pi]; if(!p) return;
+  if(!p.offsets[oi]) p.offsets[oi] = _skOffBlank();
+  p.offsets[oi][field] = v;
+  if(field === 'base'){
+    var ot = document.getElementById('skOff_'+pi+'_'+oi+'_other');
+    if(ot) ot.style.display = (v === 'その他') ? '' : 'none';
+  }
+  _skSaveSoon();
+}
+function skSetBur(pi, bi, field, v){
+  _skNorm();
+  var p = _skData.pits[pi]; if(!p) return;
+  if(!p.buried[bi]) p.buried[bi] = _skBuriedBlank();
+  p.buried[bi][field] = v;
+  _skSaveSoon();
+}
+var _skTimer = null;
+function _skSaveSoon(){ clearTimeout(_skTimer); _skTimer = setTimeout(function(){ try{ saveState(); }catch(e){} }, 400); }
+
+function skAddPit(){ _skNorm(); _skData.pits.push(_skPitBlank()); renderSkPanel(); _skSaveSoon(); }
+function skDelPit(pi){
+  _skNorm();
+  if(_skData.pits.length <= 1){ alert('試掘箇所は1つ以上必要です'); return; }
+  if(!confirm('試掘箇所 '+(pi+1)+' を削除しますか？')) return;
+  _skData.pits.splice(pi,1); renderSkPanel(); _skSaveSoon();
+}
+function skAddBur(pi){ _skNorm(); if(_skData.pits[pi]){ _skData.pits[pi].buried.push(_skBuriedBlank()); renderSkPanel(); _skSaveSoon(); } }
+function skDelBur(pi, bi){
+  _skNorm();
+  var p = _skData.pits[pi]; if(!p || p.buried.length <= 1) return;
+  p.buried.splice(bi,1); renderSkPanel(); _skSaveSoon();
+}
+
+function _skInp(id, val, ph, oninput, step){
+  return '<input type="'+(step?'number':'text')+'" id="'+id+'"'+(step?' step="'+step+'" inputmode="decimal"':'')
+       + ' value="'+_irrEsc(val||'')+'" placeholder="'+_irrEsc(ph||'')+'" oninput="'+oninput+'"'
+       + ' style="width:100%;box-sizing:border-box;font-size:15px;padding:6px 7px;border:1px solid #cbd5e1;border-radius:5px;">';
+}
+function _skLab(t){ return '<div style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:2px;">'+t+'</div>'; }
+
+function renderSkPanel(){
+  var el = document.getElementById('skPanel');
+  if(!el) return;
+  if(!_skMode){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  _skNorm();
+  el.style.display = '';
+  var h = '<div style="border:2px solid #d97706;border-radius:8px;background:#fffbeb;padding:10px 12px;margin:10px 0;">'
+    + '<div style="font-size:16px;font-weight:700;color:#92400e;margin-bottom:4px;">⛏ 試掘 検測値記録</div>'
+    + '<div style="font-size:12px;color:#92400e;margin-bottom:10px;line-height:1.5;">実測値をそのまま記入してください。オフセットは基準を選んで3点まで記録できます。</div>';
+
+  _skData.pits.forEach(function(p, pi){
+    h += '<div style="background:#fff;border:1px solid #fcd34d;border-radius:7px;padding:10px;margin-bottom:10px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+      +   '<span style="background:#d97706;color:#fff;border-radius:5px;font-size:13px;font-weight:700;padding:3px 9px;">試掘 '+(pi+1)+'</span>'
+      +   '<div style="flex:1;">'+_skInp('skNo_'+pi, p.no, '箇所No.（例:T-1）', 'skSet('+pi+',\'no\',this.value)')+'</div>'
+      +   '<div style="flex:2;">'+_skInp('skPos_'+pi, p.pos, '位置・目標物（例:○○前 歩道）', 'skSet('+pi+',\'pos\',this.value)')+'</div>'
+      +   '<button type="button" onclick="skDelPit('+pi+')" style="background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;border-radius:5px;font-size:13px;padding:4px 8px;cursor:pointer;">✕</button>'
+      + '</div>';
+
+    // 掘削出来形
+    h += '<div style="font-size:13px;font-weight:700;color:#475569;margin:8px 0 4px;">掘削出来形（実測 m）</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'
+      +   '<div>'+_skLab('幅 W')  +_skInp('skW_'+pi, p.W, '0.00', 'skSet('+pi+',\'W\',this.value)', '0.01')+'</div>'
+      +   '<div>'+_skLab('長 L')  +_skInp('skL_'+pi, p.L, '0.00', 'skSet('+pi+',\'L\',this.value)', '0.01')+'</div>'
+      +   '<div>'+_skLab('深 H')  +_skInp('skH_'+pi, p.H, '0.00', 'skSet('+pi+',\'H\',this.value)', '0.01')+'</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px;">'
+      +   '<div>'+_skLab('舗装厚 実測 (mm)')+_skInp('skPave_'+pi, p.pave, '例:50', 'skSet('+pi+',\'pave\',this.value)', '1')+'</div>'
+      +   '<div>'+_skLab('路盤厚 実測 (mm)')+_skInp('skRb_'+pi, p.rb, '例:100', 'skSet('+pi+',\'rb\',this.value)', '1')+'</div>'
+      + '</div>';
+
+    // オフセット（3点）
+    h += '<div style="font-size:13px;font-weight:700;color:#475569;margin:12px 0 4px;">オフセット（基準から 最大3点）</div>';
+    p.offsets.forEach(function(o, oi){
+      h += '<div style="display:grid;grid-template-columns:28px 1.6fr 1fr 1fr;gap:6px;align-items:end;margin-bottom:6px;">'
+        + '<div style="font-size:13px;font-weight:700;color:#64748b;padding-bottom:7px;">'+['①','②','③'][oi]+'</div>'
+        + '<div>'+(oi===0?_skLab('基準種別'):'')
+        +   '<select id="skOffB_'+pi+'_'+oi+'" onchange="skSetOff('+pi+','+oi+',\'base\',this.value)" style="width:100%;box-sizing:border-box;font-size:14px;padding:6px 5px;border:1px solid #cbd5e1;border-radius:5px;">'
+        +     '<option value="">—</option>'
+        +     SK_BASE_OPTIONS.map(function(b){ return '<option value="'+b+'"'+(o.base===b?' selected':'')+'>'+b+'</option>'; }).join('')
+        +   '</select>'
+        +   '<input type="text" id="skOff_'+pi+'_'+oi+'_other" value="'+_irrEsc(o.other||'')+'" placeholder="基準の内容を記入"'
+        +     ' oninput="skSetOff('+pi+','+oi+',\'other\',this.value)"'
+        +     ' style="width:100%;box-sizing:border-box;margin-top:4px;font-size:14px;padding:5px 7px;border:1px solid #cbd5e1;border-radius:5px;display:'+(o.base==='その他'?'':'none')+';">'
+        + '</div>'
+        + '<div>'+(oi===0?_skLab('離れ (m)'):'')+_skInp('skOffD_'+pi+'_'+oi, o.dist, '0.00', 'skSetOff('+pi+','+oi+',\'dist\',this.value)', '0.01')+'</div>'
+        + '<div>'+(oi===0?_skLab('DP (m)'):'')+_skInp('skOffP_'+pi+'_'+oi, o.dp, '0.00', 'skSetOff('+pi+','+oi+',\'dp\',this.value)', '0.01')+'</div>'
+        + '</div>';
+    });
+
+    // 埋設物
+    h += '<div style="font-size:13px;font-weight:700;color:#475569;margin:12px 0 4px;">確認した埋設物</div>';
+    p.buried.forEach(function(b, bi){
+      h += '<div style="display:grid;grid-template-columns:1.4fr .8fr .9fr .9fr .9fr 28px;gap:6px;align-items:end;margin-bottom:6px;">'
+        + '<div>'+(bi===0?_skLab('種類'):'')+_skInp('skBK_'+pi+'_'+bi, b.kind, '例:水道', 'skSetBur('+pi+','+bi+',\'kind\',this.value)')+'</div>'
+        + '<div>'+(bi===0?_skLab('口径'):'')+_skInp('skBD_'+pi+'_'+bi, b.dia, 'φ150', 'skSetBur('+pi+','+bi+',\'dia\',this.value)')+'</div>'
+        + '<div>'+(bi===0?_skLab('材質'):'')+_skInp('skBM_'+pi+'_'+bi, b.mat, 'VP', 'skSetBur('+pi+','+bi+',\'mat\',this.value)')+'</div>'
+        + '<div>'+(bi===0?_skLab('土被り(m)'):'')+_skInp('skBC_'+pi+'_'+bi, b.cover, '0.00', 'skSetBur('+pi+','+bi+',\'cover\',this.value)', '0.01')+'</div>'
+        + '<div>'+(bi===0?_skLab('離隔(mm)'):'')+_skInp('skBS_'+pi+'_'+bi, b.sep, '例:300', 'skSetBur('+pi+','+bi+',\'sep\',this.value)', '1')+'</div>'
+        + '<button type="button" onclick="skDelBur('+pi+','+bi+')" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;border-radius:5px;font-size:13px;padding:5px 0;cursor:pointer;">✕</button>'
+        + '</div>';
+    });
+    h += '<button type="button" onclick="skAddBur('+pi+')" style="background:#eff6ff;border:1px solid #93c5fd;color:#1d4ed8;border-radius:5px;font-size:13px;padding:5px 10px;cursor:pointer;">＋ 埋設物を追加</button>';
+
+    h += '<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-top:10px;">'
+      +   '<div>'+_skLab('立会者（管理者）')+_skInp('skWit_'+pi, p.witness, '例:○○水道局 ○○', 'skSet('+pi+',\'witness\',this.value)')+'</div>'
+      +   '<div>'+_skLab('備考')+_skInp('skMemo_'+pi, p.memo, '想定と違った点など', 'skSet('+pi+',\'memo\',this.value)')+'</div>'
+      + '</div>';
+
+    h += '</div>';
+  });
+
+  h += '<button type="button" onclick="skAddPit()" style="background:#d97706;border:none;color:#fff;border-radius:6px;font-size:14px;font-weight:700;padding:8px 14px;cursor:pointer;">＋ 試掘箇所を追加</button>'
+    + '</div>';
+  el.innerHTML = h;
+}
+
+// =====================================================
+// イレギュラー備考
+//   検測値は規定値に合わせるのが原則なので入力欄は設けず、
+//   「規定どおりにできなかった」ときだけ理由を残せるようにする。
+// =====================================================
+var _irrNotes = {};   // itemKey -> 備考テキスト
+function _irrEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _irrNoteHTML(k){
+  var v = _irrNotes[k] || '';
+  var open = !!v;
+  return '<div class="irr-wrap" onclick="event.stopPropagation()">'
+    + '<button type="button" class="irr-btn'+(open?' on':'')+'" data-ik="'+k+'" onclick="toggleIrr(event)">'
+    + (open ? '📝 備考あり' : '📝 備考') + '</button>'
+    + '<textarea class="irr-ta" data-ik="'+k+'" placeholder="規定値どおりにできなかった場合だけ記入（例：既設水道管により離隔150mmで施工・監督員承諾済）"'
+    + ' style="display:'+(open?'block':'none')+'" oninput="setIrr(this.dataset.ik, this.value)">'
+    + _irrEsc(v) + '</textarea>'
+    + '</div>';
+}
+function toggleIrr(ev){
+  ev.stopPropagation();
+  var w = ev.target.parentNode;
+  var ta = w ? w.querySelector('.irr-ta') : null;
+  if(!ta) return;
+  var show = (ta.style.display === 'none');
+  ta.style.display = show ? 'block' : 'none';
+  if(show){ try{ ta.focus(); }catch(e){} }
+}
+function setIrr(k, v){
+  v = (v==null?'':String(v)).trim();
+  if(v) _irrNotes[k] = v; else delete _irrNotes[k];
+  var ta = document.querySelector('.irr-ta[data-ik="'+k+'"]');
+  if(ta && ta.parentNode){
+    var b = ta.parentNode.querySelector('.irr-btn');
+    if(b){ b.textContent = v ? '📝 備考あり' : '📝 備考'; b.classList.toggle('on', !!v); }
+  }
+  try{ saveState(); }catch(e){}
+}
+// 備考が入っている項目の一覧（保存・確認用）
+function irrNoteList(){
+  var out = [];
+  var ck = TYPE_CHECKLISTS[_typeKey];
+  if(!ck) return out;
+  var secs = getEffectiveSections(ck, _typeKey);
+  secs.forEach(function(sec,si){
+    sec.items.forEach(function(item,ii){
+      var k = itemKey(si,ii);
+      if(_irrNotes[k]) out.push({ key:k, section:sec.title||'', item:item.n||'', note:_irrNotes[k] });
+    });
+  });
+  return out;
+}
+
+// =====================================================
 // 初期化
 // =====================================================
 window.onload = function(){
@@ -4192,6 +4460,7 @@ function resetCurrentType(){
   try{ localStorage.removeItem(_locsKey()); localStorage.removeItem(_locIdxKey()); }catch(e){}
 
   _checks={}; _naItems={}; _subChecks={};
+  _irrNotes={}; _skMode=false; _skData=_skBlank(); _skLoadedKey='';
   _locList=['']; _locIdx=0; _locData=[];
   _hataEntry=null;
   ['inDP1','inDP2','inDPH','inDPH2','inBH','inExtra','hataInput','inMgmtNo'].forEach(function(id){
@@ -5124,6 +5393,7 @@ function saveState(){
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
     hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn,kussKbn:_kussuri_kbn,
+    irrNotes:_irrNotes, shikutsu:_skCollect(),
     savedAt: Date.now()
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
@@ -5207,6 +5477,9 @@ function restoreState(){
       closeDiagram();
     }
     _checks = d.checks||{}; _naItems = d.na||{}; _subChecks = d.subChecks||{};
+    _irrNotes = d.irrNotes||{};
+    // 試掘の検測値は常に復元（作業日と紐づく実測値なので、古くても捨てない）
+    _skData = d.shikutsu || _skBlank();
     if(d.kojiKbn)  _kojiKbn     = d.kojiKbn;
     if(d.kussKbn)  _kussuri_kbn = d.kussKbn;
   }catch(e){}
@@ -5218,6 +5491,9 @@ function sv(id,v){ var el=document.getElementById(id); if(el&&v!==undefined&&v!=
 // メイン描画
 // =====================================================
 function renderMain(){
+  // 試掘モードは項目の表示／非表示に関わるため、HTML組立前に読み出しておく
+  // （restoreState はこの関数の最後で走るので、それを待つと間に合わない）
+  _skPreload();
   // 多箇所モード: 箇所別kbnから施工区分(_kojiKbn)と掘削路盤確認(_kussuri_kbn)を計算
   // ※ _locData は前回renderMainのloadAllLocDataで更新済み（or setLocKbnで直接更新済み）
   if (_locData.length >= 2) {
@@ -5426,7 +5702,12 @@ function renderMain(){
             '<button class="seg-btn' + (_ck==='kari'?' active kari':'') + '" style="font-size:14px;padding:6px 4px;" onclick="setLocKbn(\'kari\')">仮復旧</button>' +
             '<button class="seg-btn' + (_ck==='hon'?' active hon':'') + '" style="font-size:14px;padding:6px 4px;" onclick="setLocKbn(\'hon\')">本復旧</button>' +
           '</div>' +
-        '</div>';
+        '</div>' +
+        // 試掘モード: 配管を行わない日。配管系の項目を隠して検測値欄を出す
+        '<label style="margin-top:6px;display:flex;align-items:center;gap:6px;font-size:13px;color:'+(_skMode?'#92400e':'var(--text2)')+';font-weight:'+(_skMode?'700':'400')+';cursor:pointer;background:'+(_skMode?'#fffbeb':'transparent')+';border:1px solid '+(_skMode?'#d97706':'transparent')+';border-radius:6px;padding:4px 7px;">' +
+          '<input type="checkbox" id="chkSkMode" onchange="toggleSkMode(this.checked)"'+(_skMode?' checked':'')+' style="width:15px;height:15px;accent-color:#d97706;">' +
+          '<span>⛏ 試掘モード（配管なし・検測値を記録）</span>' +
+        '</label>';
       })() +
       '<button class="btn-sm" id="debugBtn" style="display:none;background:#555;font-size:14px;margin-top:4px" onclick="debugHataEntry()">🔍 DEBUG</button>' +
       '<div id="debugOut" style="font-size:14px;color:#0f0;background:#111;padding:6px;border-radius:4px;word-break:break-all;white-space:pre-wrap;display:none;margin-top:4px"></div>' +
@@ -5592,6 +5873,9 @@ function renderMain(){
     }
   }
 
+  // 試掘 検測値パネル
+  html += '<div id="skPanel" style="display:none;"></div>';
+
   // 進捗
   html += '<div class="progress-wrap">' +
     '<div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>' +
@@ -5627,6 +5911,7 @@ function renderMain(){
   // 状態復元（ここでloadHata→imgBtn操作が走る）
   _hataEntry = null; // 一旦クリアしてloadHataで再セット
   restoreState();
+  renderSkPanel();
 
   // 日付は常に今日に設定（restoreState で古い日付が入る場合があるため後から上書き）
   var dateEl = document.getElementById('inDate');
@@ -5825,7 +6110,8 @@ function renderSection(sec, si, isHon){
         _singleLocBg = ['#fffbeb','#f0f9ff','#f0fdf4'][Math.min(_activeLocs[0], 2)];
       }
     }
-    var _isHidden = _allLocsMasked || (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) || (_isOdawaraItem && !_showOdawara);
+    var _isHidden = _allLocsMasked || (_isDummyItem && !_showDummy) || (_isCutterItem && !_showCutter) || (_isOdawaraItem && !_showOdawara)
+      || (_skMode && _skIsPipeItem(item));
     var _combinedStyle = _isHidden ? ' style="display:none;"' : (_singleLocBg ? ' style="background:'+_singleLocBg+';"' : '');
     var _guideN = _comboPair ? '埋設シート敷設' : item.n;
     var _hasGuide = !!_findGuide(_guideN);
@@ -5985,6 +6271,7 @@ function renderSection(sec, si, isHon){
           (item.dim && !item._rbExpanded && !item._locMask ? '<div class="cdim"'+(_isExpandItem?' style="padding-left:'+_expPL+'"':'')+'>'+item.dim+'</div>':'') +
           tags + ((_isExpandItem && item._rbExpanded && noteHtml) ? noteHtml.replace(/^<div /,'<div style="padding-left:'+_expPL+'" ') : noteHtml) + (_isExpandItem ? '' : _sheetNotes) + (_isExpandItem ? '' : _gl1Notes) + _rbStepNotes +
           (_comboPair ? '<div class="combo-mid-note"></div>' : '') +
+          _irrNoteHTML(k) +
         '</div>' +
       '</div>';
     } else {
@@ -6013,6 +6300,7 @@ function renderSection(sec, si, isHon){
           (_isHonRbChip ? _honRbChipHtml : tags) +
           noteHtml +
           (_comboPair ? '<div class="combo-mid-note"></div>' : '') +
+          _irrNoteHTML(k) +
         '</div>' +
         (item.na?'<button class="btn-na" onclick="toggleNA(event,'+si+','+ii+')">'+(isNA?'対象に戻す':'対象外')+'</button>':'') +
       '</div>';
@@ -7878,7 +8166,9 @@ function saveRecord(){
     mgmt:$v('inMgmtNo'), recorder:$v('inRecorder'), hata:$v('hataInput'),
     done:done, total:total,
     checks:JSON.parse(JSON.stringify(_checks)),
-    na:JSON.parse(JSON.stringify(_naItems))
+    na:JSON.parse(JSON.stringify(_naItems)),
+    shikutsu: _skMode ? JSON.parse(JSON.stringify(_skCollect())) : null,
+    irrNotes: irrNoteList()
   });
   if(_history.length>200) _history.pop();
   saveHistory();

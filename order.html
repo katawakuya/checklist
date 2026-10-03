@@ -2802,9 +2802,19 @@ const WASTE_AS_BULK    = 1.15;  // 廃AS嵩増率（破砕後も密度高いた�
 const WASTE_RB_BULK    = 1.25;  // 廃路盤材嵩増率（RM/RC 掘削膨れ1.25）
 const CONCRETE_DENSITY = 2.3;   // t/m³ コンクリート密度（廃材重量計算用）
 
+// ── AS 発注数量の単位係数（社内ルール）──────────────────────────
+//   AS厚 5cm のとき 1㎡ あたり 0.123t で発注する。
+//   厚みが変わっても比例させるため 1m³ 換算で持つ：
+//     0.123 t/㎡ ÷ 0.05m ＝ 2.46 t/m³
+//   ※この係数には既に嵩増し分が含まれているので、AS嵩増率は別掛けしない。
+//   ※廃材（既設ASを捲る側）は実体積の重さなので従来の AS_DENSITY を使う。
+const AS_ORDER_PER_M2_50MM = 0.123;
+const AS_ORDER_PER_M3      = AS_ORDER_PER_M2_50MM / 0.05;   // = 2.46 t/m³
+
 const CALC_DEFAULTS = {
-  asDensity:   2.35,  // AS密度 t/m³
-  bulkRatioAS: 1.25,  // AS発注嵩増率 1.25（発注量計算用）
+  asRate50:    AS_ORDER_PER_M2_50MM, // AS発注係数 t/㎡（厚5cm基準）
+  asDensity:   2.35,  // AS密度 t/m³（旧式・廃材側と互換用）
+  bulkRatioAS: 1.25,  // AS発注嵩増率（旧式・互換用）
   bulkRatioRC: 1.25,  // RC嵩増率
   bulkRatioRM: 1.25,  // RM嵩増率
   bulkRatioSand:  1.25, // 再生砂嵩増率
@@ -2812,17 +2822,64 @@ const CALC_DEFAULTS = {
   congaraDensity: 2.30, // コンガラ（コンクリート殻）比重 t/m³
 };
 
+// =====================================================================
+// オペレーター係数（計算画面から誰でも入れられる係数）
+//   型設定（管理者向け）を触らずに、その場で嵩増率・冬季係数を変えられる。
+//   空欄なら従来どおり 型プリセット → 既定値(1.25) の順で決まる。
+// =====================================================================
+const OP_COEF_KEY = 'order_op_coef_v1';
+let _opCoefs = {};
+try { _opCoefs = JSON.parse(localStorage.getItem(OP_COEF_KEY) || '{}') || {}; } catch(e) { _opCoefs = {}; }
+function _opCoef(typeKey){ return _opCoefs[typeKey] || {}; }
+function _opCoefSave(){
+  try { localStorage.setItem(OP_COEF_KEY, JSON.stringify(_opCoefs)); } catch(e) {}
+}
+function setOpCoef(tid, field, raw){
+  const v = parseFloat(raw);
+  if (!_opCoefs[tid]) _opCoefs[tid] = {};
+  if (isFinite(v) && v > 0) _opCoefs[tid][field] = v;
+  else delete _opCoefs[tid][field];
+  if (!Object.keys(_opCoefs[tid]).length) delete _opCoefs[tid];
+  _opCoefSave();
+  try { renderOpCoefNote(tid); } catch(e) {}
+  try { recalcAll(); } catch(e) {}
+}
+
 // typeKeyから現場プリセットの嵩増率を取得（なければデフォルト）
 function getCalcRatios(typeKey) {
   const t = TYPES[typeKey];
   const br = t?.bulkRatios || {};
+  const op = _opCoef(typeKey);
+  const _pick = (opKey, brKey) => {
+    const o = op[opKey];
+    if (o != null && o > 0) return o;
+    return br[brKey] ?? CALC_DEFAULTS[brKey];
+  };
   return {
     asDensity:      br.asDensity   ?? CALC_DEFAULTS.asDensity,
     bulkRatioAS:    br.bulkRatioAS ?? CALC_DEFAULTS.bulkRatioAS,
-    bulkRatioRC:    br.bulkRatioRC ?? CALC_DEFAULTS.bulkRatioRC,
-    bulkRatioRM:    br.bulkRatioRM ?? CALC_DEFAULTS.bulkRatioRM,
-    bulkRatioSand:  br.bulkRatioSand ?? CALC_DEFAULTS.bulkRatioSand,
-    bulkRatioSoil:  br.bulkRatioSoil ?? CALC_DEFAULTS.bulkRatioSoil,
+    // AS発注の t/m³ 係数。既定は 2.46（＝厚5cmで0.123t/㎡・厚みに比例）
+    // ASには嵩増率を掛けない。冬季係数だけ任意で掛けられる。
+    asOrderPerM3:   (function(){
+      let base;
+      if (br.asRate50 != null && br.asRate50 > 0) base = br.asRate50 / 0.05;
+      else {
+        // 旧データ互換：AS密度／嵩増率を既定値から変えてある現場はその設定を尊重する
+        const _d = br.asDensity, _b = br.bulkRatioAS;
+        const _dCustom = (_d != null && Math.abs(_d - 2.35) > 1e-9);
+        const _bCustom = (_b != null && Math.abs(_b - 1.25) > 1e-9);
+        base = (_dCustom || _bCustom) ? (_d ?? 2.35) * (_b ?? 1.25) : AS_ORDER_PER_M3;
+      }
+      const w = op.winterAS;
+      return base * ((w != null && w > 0) ? w : 1);
+    })(),
+    winterAS:       (op.winterAS != null && op.winterAS > 0) ? op.winterAS : 1,
+    bulkRatioRC:    _pick('rc',   'bulkRatioRC'),
+    bulkRatioRM:    _pick('rm',   'bulkRatioRM'),
+    bulkRatioSand:  _pick('sand', 'bulkRatioSand'),
+    bulkRatioSoil:  _pick('soil', 'bulkRatioSoil'),
+    // 桝（特殊部）控除の係数。空欄なら本体と同じ係数を使う（＝従来どおり）
+    masCoef:        (op.mas != null && op.mas > 0) ? op.mas : null,
     congaraDensity: br.congaraDensity ?? CALC_DEFAULTS.congaraDensity,
   };
 }
@@ -2984,6 +3041,11 @@ function splitExcess(dp, dph, typeKey) {
   const t = TYPES[typeKey];
   const useIsoil = (t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey];
   if (!t || !useIsoil) return { excessSandH: 0, soilH: 0 };
+  // 試掘は配管がないため管上100mmの砂は不要。超過分はすべて改良土にする。
+  if (typeof _dynSkMode !== 'undefined' && _dynSkMode[typeKey]) {
+    const _refSk = (t.kariTotalH != null && t.kariTotalH > 0) ? t.kariTotalH : t.totalH;
+    return { excessSandH: 0, soilH: Math.max(0, dp - _refSk) };
+  }
   const floor  = dp + dph;
   // 改良土ルールの路盤変更点は仮復旧 kariTotalH を基準とする
   // 本復旧モードでは t.totalH が honTotalH に書き換わるため kariTotalH を優先参照
@@ -3162,8 +3224,8 @@ function calcKongara(prefix, typeKey, r) {
   var h4 = Math.min(rest, rcH);     rest -= h4;
 
   var area = loW * loL;
-  res.addAs密粒 = h1 * area * r.asDensity * r.bulkRatioAS;
-  res.addAs粗粒 = h2 * area * r.asDensity * r.bulkRatioAS;
+  res.addAs密粒 = h1 * area * r.asOrderPerM3;
+  res.addAs粗粒 = h2 * area * r.asOrderPerM3;
   res.addRm     = h3 * area * r.bulkRatioRM;
   res.addRc     = h4 * area * r.bulkRatioRC;
   return res;
@@ -3174,8 +3236,11 @@ function calcNormal(prefix, typeKey) {
   const W   = getNum(`${prefix}-W`);
   const L   = getNum(`${prefix}-L`);
   const DP  = getNum(`${prefix}-DP`);
-  const DPH = getNum(`${prefix}-DPH`);
-  if (!W || !L || !DP || !DPH) return null;
+  // 試掘モードは配管がないので管下Hを要求しない（DP＝掘削深さ）
+  const _isSk = (typeof _dynSkMode !== 'undefined') && !!_dynSkMode[typeKey];
+  const DPH = _isSk ? 0 : getNum(`${prefix}-DPH`);
+  if (!W || !L || !DP) return null;
+  if (!_isSk && !DPH) return null;
 
   const t = TYPES[typeKey];
   const r = getCalcRatios(typeKey);
@@ -3189,8 +3254,8 @@ function calcNormal(prefix, typeKey) {
   const w3 = getW3(prefix, W);
   const kg = calcKongara(prefix, typeKey, r);
 
-  const asTon密粒 = asH密粒 * w3.asW * L * r.asDensity * r.bulkRatioAS + kg.addAs密粒;
-  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asDensity * r.bulkRatioAS : 0) + kg.addAs粗粒;
+  const asTon密粒 = asH密粒 * w3.asW * L * r.asOrderPerM3 + kg.addAs密粒;
+  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asOrderPerM3 : 0) + kg.addAs粗粒;
   const rcOrd = rcH * w3.rbW * L * r.bulkRatioRC + kg.addRc;
   const rmOrd = rmH * w3.rbW * L * r.bulkRatioRM + kg.addRm;
 
@@ -3200,7 +3265,10 @@ function calcNormal(prefix, typeKey) {
   const pipeVol   = getPipeVolume(`${prefix}-pipes`);
   const hasExcess = excessSandH > 0;
   const _floor    = DP + DPH;  // 床付け深さ
-  const sandH     = hasExcess ? excessSandH : Math.max(0, _floor - t.totalH);  // 床付け基準（路盤変更点より下～床付け）
+  // 試掘で改良土を使う場合は超過分すべてが改良土（excessSandH=0）なので、
+  // 再生砂を二重に拾わないよう 0 にする。
+  const sandH     = (_isSk && soilH > 0) ? 0
+                  : hasExcess ? excessSandH : Math.max(0, _floor - t.totalH);  // 床付け基準（路盤変更点より下～床付け）
   // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
   const sandOrd   = Math.max(0, (sandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
 
@@ -3243,13 +3311,19 @@ function calcSpecial(prefix, typeKey) {
   const masSand   = masTotalSandH * masW * masL;
 
   // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
-  const rcOrd    = Math.max(0, base.rcOrd  - masRC * r.bulkRatioRC);
-  const rmOrd    = Math.max(0, base.rmOrd  - masRM * r.bulkRatioRM);
-  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * r.bulkRatioSoil);
-  const sandOrd  = Math.max(0, base.sandOrd  - masSand * r.bulkRatioSand);
+  // 桝係数（オペ入力）があればそれを使い、空欄なら本体と同じ係数（＝従来どおり）
+  const _mc     = r.masCoef;
+  const _mcRC   = _mc != null ? _mc : r.bulkRatioRC;
+  const _mcRM   = _mc != null ? _mc : r.bulkRatioRM;
+  const _mcSoil = _mc != null ? _mc : r.bulkRatioSoil;
+  const _mcSand = _mc != null ? _mc : r.bulkRatioSand;
+  const rcOrd    = Math.max(0, base.rcOrd  - masRC * _mcRC);
+  const rmOrd    = Math.max(0, base.rmOrd  - masRM * _mcRM);
+  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * _mcSoil);
+  const sandOrd  = Math.max(0, base.sandOrd  - masSand * _mcSand);
   return {
-    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asDensity * r.bulkRatioAS),
-    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asDensity * r.bulkRatioAS),
+    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asOrderPerM3),
+    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asOrderPerM3),
     rcOrd,
     rmOrd,
     isoilOrd,
@@ -3285,8 +3359,8 @@ function calcGradient(prefix, typeKey) {
   const w3 = getW3(prefix, W);
   const kg = calcKongara(prefix, typeKey, r);
 
-  const asTon密粒 = asH密粒 * w3.asW * L * r.asDensity * r.bulkRatioAS + kg.addAs密粒;
-  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asDensity * r.bulkRatioAS : 0) + kg.addAs粗粒;
+  const asTon密粒 = asH密粒 * w3.asW * L * r.asOrderPerM3 + kg.addAs密粒;
+  const asTon粗粒 = (asH粗粒 > 0 ? asH粗粒 * w3.asW * L * r.asOrderPerM3 : 0) + kg.addAs粗粒;
   const rcOrd    = rcH * w3.rbW * L * r.bulkRatioRC + kg.addRc;
   const rmOrd    = rmH * w3.rbW * L * r.bulkRatioRM + kg.addRm;
 
@@ -3338,13 +3412,19 @@ function calcGradientSpecial(prefix, typeKey) {
   const masSand   = ksTotalSandH   * masW * masL;
 
   // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
-  const rcOrd    = Math.max(0, base.rcOrd - masRC * r.bulkRatioRC);
-  const rmOrd    = Math.max(0, base.rmOrd - masRM * r.bulkRatioRM);
-  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * r.bulkRatioSoil);
-  const sandOrd  = Math.max(0, base.sandOrd  - masSand * r.bulkRatioSand);
+  // 桝係数（オペ入力）があればそれを使い、空欄なら本体と同じ係数（＝従来どおり）
+  const _mc     = r.masCoef;
+  const _mcRC   = _mc != null ? _mc : r.bulkRatioRC;
+  const _mcRM   = _mc != null ? _mc : r.bulkRatioRM;
+  const _mcSoil = _mc != null ? _mc : r.bulkRatioSoil;
+  const _mcSand = _mc != null ? _mc : r.bulkRatioSand;
+  const rcOrd    = Math.max(0, base.rcOrd - masRC * _mcRC);
+  const rmOrd    = Math.max(0, base.rmOrd - masRM * _mcRM);
+  const isoilOrd = Math.max(0, base.isoilOrd - masSoil * _mcSoil);
+  const sandOrd  = Math.max(0, base.sandOrd  - masSand * _mcSand);
   return {
-    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asDensity * r.bulkRatioAS),
-    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asDensity * r.bulkRatioAS),
+    asTon密粒:   Math.max(0, base.asTon密粒 - masAS密粒 * r.asOrderPerM3),
+    asTon粗粒:   Math.max(0, base.asTon粗粒 - masAS粗粒 * r.asOrderPerM3),
     rcOrd,
     rmOrd,
     isoilOrd,
@@ -3678,7 +3758,7 @@ function renderChips(containerId, result, typeKey) {
     const _asReT = parseFloat(document.getElementById(_asPrefix+'-asReT')?.value||'0')||0;
     if (_asReW > 0 && _asReL > 0 && _asReT > 0) {
       const _asReVol = _asReW * _asReL * (_asReT / 1000);
-      const _asReTon = _asReVol * AS_DENSITY;
+      const _asReTon = _asReVol * AS_ORDER_PER_M3;   // 新規に打つASなので発注係数（5cm=0.123t/㎡）
       html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:#10b981;padding:4px 2px 2px;margin-top:4px;">🔵 掘削影響範囲AS再舗装</div>';
       html += chip('AS再舗装量（密粒）', fmt(_asReTon), 't');
       html += chip('AS撤去廃材', fmt(_asReTon), 't');
@@ -6313,12 +6393,14 @@ function renderPresetTypeEditor() {
         <!-- 嵩増率設定 -->
         <div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px;">
           <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:8px;">
-            📦 嵩増率・密度（空欄 = デフォルト 1.25 を使用）
+            📦 嵩増率・AS発注係数（空欄 = 既定値を使用）
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.6;">
+            AS発注量は「厚5cm ＝ 1㎡あたり 0.123t」で計算します（厚みに比例）。この係数には嵩増し分が含まれるためAS嵩増率は掛けません。
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
             ${[
-              ['AS（密度 t/m³）','asDensity', 2.35, 0.01],
-              ['AS 嵩増率',     'bulkRatioAS',  1.25, 0.01],
+              ['AS 発注係数（t/㎡ @厚5cm）','asRate50', AS_ORDER_PER_M2_50MM, 0.001],
               ['RC 嵩増率',     'bulkRatioRC',  1.25, 0.01],
               ['RM 嵩増率',     'bulkRatioRM',  1.25, 0.01],
               ['再生砂 嵩増率', 'bulkRatioSand',1.25, 0.01],
@@ -8075,6 +8157,58 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
     </button>
   </div>
 
+  <!-- 係数（オペ入力） -->
+  <div class="card" id="${tid}-coef-card" style="border:1px solid rgba(96,165,250,.45);background:rgba(96,165,250,.06);margin:0 0 10px;">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <span>⚙ 発注係数（この型だけ・空欄なら既定値）</span>
+      <button onclick="resetOpCoef('${tid}')" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(148,163,184,.4);background:rgba(148,163,184,.10);color:var(--text2);cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">既定に戻す</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:4px;">
+      ${[
+        ['❄ 冬季係数（AS）','winterAS', '1.00', 'AS合材のみに掛かります。空欄＝1.00（掛けない）'],
+        ['RC 嵩増率','rc',   '1.25', '空欄＝1.25'],
+        ['RM 嵩増率','rm',   '1.25', '空欄＝1.25'],
+        ['再生砂 嵩増率','sand', '1.25', '空欄＝1.25'],
+        ['改良土 嵩増率','soil', '1.25', '空欄＝1.25'],
+        ['桝（特殊部）控除 係数','mas', '本体と同じ', '空欄＝上の各材料の係数と同じ（従来どおり）'],
+      ].map(([lbl, key, ph, tip]) => `<div class="field">
+        <label style="font-size:13px;" title="${tip}">${lbl}</label>
+        <input type="number" min="0.01" step="0.01" id="${tid}-coef-${key}" placeholder="${ph}" title="${tip}"
+          onchange="setOpCoef('${tid}','${key}',this.value)"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:16px;width:100%;">
+      </div>`).join('')}
+    </div>
+    <div id="${tid}-coef-note" style="margin-top:8px;font-size:13px;color:var(--text3);line-height:1.6;"></div>
+  </div>
+
+  <!-- 試掘モード -->
+  <div class="card" id="${tid}-sk-card" style="border:1px solid rgba(217,119,6,.55);background:rgba(217,119,6,.07);margin:0 0 10px;">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;color:#fbbf24;font-size:15px;">
+      <input type="checkbox" id="${tid}-skMode" onchange="toggleSkOrder('${tid}', this.checked)" style="width:17px;height:17px;accent-color:#d97706;cursor:pointer;">
+      <span>⛏ 試掘モード（配管なし・埋設物確認のみ）</span>
+    </label>
+    <div id="${tid}-sk-body" style="display:none;margin-top:10px;">
+      <div style="color:var(--text3);font-size:13px;line-height:1.6;margin-bottom:8px;">
+        配管しないため <b>DP下配管H＝0</b>（DP＝掘削深さ）で計算し、配管入力と管下Hは隠します。<br>
+        同じ寸法の小穴を何箇所も掘る場合は、下の箇所数から延長Lを計算して各パターンのLへ入れてください。
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;">
+        <div><div style="color:var(--text3);font-size:13px;margin-bottom:2px;">1箇所 W（m）</div>
+          <input type="number" step="0.01" id="${tid}-skW" placeholder="0.60" oninput="calcSkPits('${tid}')" style="width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:16px;"></div>
+        <div><div style="color:var(--text3);font-size:13px;margin-bottom:2px;">1箇所 L（m）</div>
+          <input type="number" step="0.01" id="${tid}-skL" placeholder="0.60" oninput="calcSkPits('${tid}')" style="width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:16px;"></div>
+        <div style="color:var(--text3);font-size:18px;padding-bottom:5px;">×</div>
+        <div><div style="color:var(--text3);font-size:13px;margin-bottom:2px;">箇所数</div>
+          <input type="number" step="1" min="1" id="${tid}-skN" placeholder="5" oninput="calcSkPits('${tid}')" style="width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:16px;"></div>
+        <div id="${tid}-skOut" style="color:#fbbf24;font-size:15px;font-weight:700;padding-bottom:6px;"></div>
+        <button onclick="applySkPits('${tid}')" style="font-size:14px;padding:6px 12px;border-radius:6px;border:1px solid rgba(217,119,6,.5);background:rgba(217,119,6,.18);color:#fbbf24;cursor:pointer;font-family:var(--sans);font-weight:700;">通常パターンのW・Lへ入れる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 桁違い（入力ミス）警告 -->
+  <div id="${tid}-digitWarn" style="display:none;"></div>
+
   <!-- パターン表示フィルタ -->
   <div style="margin:0 0 10px;">
     <button id="${tid}-patfilter-btn" onclick="togglePatternFilter('${tid}')"
@@ -8359,6 +8493,212 @@ const _typeUpdateFns = {};
 // 型ごとの発注量計算モード: 'kari'（仮復旧）または 'hon'（本復旧）
 // kariHonDiffers が true の型のみ有効
 const _dynCalcModes = {};
+
+// =====================================================================
+// 試掘モード（配管なし）
+//   DP下配管H を 0 とみなして計算し、管下H・配管入力を隠す。
+// =====================================================================
+const _dynSkMode = {};
+function _skOrderSave(){
+  try { localStorage.setItem('order_sk_modes', JSON.stringify(_dynSkMode)); } catch(e) {}
+}
+function _skOrderLoad(){
+  try {
+    const m = JSON.parse(localStorage.getItem('order_sk_modes') || '{}');
+    Object.keys(m).forEach(function(k){ _dynSkMode[k] = !!m[k]; });
+  } catch(e) {}
+}
+_skOrderLoad();
+
+// この型のタブ内で、管下H欄・配管欄の表示を切り替える
+function applySkOrderUI(tid){
+  const on = !!_dynSkMode[tid];
+  const chk = document.getElementById(tid + '-skMode');
+  if (chk) chk.checked = on;
+  const body = document.getElementById(tid + '-sk-body');
+  if (body) body.style.display = on ? '' : 'none';
+  const _fk = String(tid).startsWith('dyntype_') ? tid : ('dyntype_' + tid);
+  const scope = document.getElementById('typepanel-' + _fk) || document;
+  // 管下H（-DPH で終わる input）の field を隠し、値を 0 にする
+  scope.querySelectorAll('input[id$="-DPH"]').forEach(function(inp){
+    if (inp.id.indexOf(tid) !== 0) return;
+    const fld = inp.closest('.field') || inp.parentNode;
+    if (fld) fld.style.display = on ? 'none' : '';
+    if (on) inp.value = '';
+  });
+  // DP のラベルを掘削深さに読み替える
+  scope.querySelectorAll('input[id$="-DP"]').forEach(function(inp){
+    if (inp.id.indexOf(tid) !== 0) return;
+    const fld = inp.closest('.field');
+    const lab = fld ? fld.querySelector('label') : null;
+    if (lab) lab.textContent = on ? '掘削深さ DP（m）' : 'DP（m）';
+  });
+  // 埋設配管セクションを隠す
+  scope.querySelectorAll('.pipe-section').forEach(function(sec){
+    const box = sec.querySelector('[id$="-pipes"]');
+    if (!box || box.id.indexOf(tid) !== 0) return;
+    sec.style.display = on ? 'none' : '';
+  });
+}
+
+// 係数欄に保存値を流し込み、AS発注量の内訳（5cm単位）を表示する
+function renderOpCoefNote(tid){
+  const op = _opCoef(tid);
+  ['winterAS','rc','rm','sand','soil','mas'].forEach(function(k){
+    const el = document.getElementById(tid + '-coef-' + k);
+    if (!el || el === document.activeElement) return;   // 入力中の欄は書き換えない
+    el.value = (op[k] != null ? op[k] : '');
+  });
+  const note = document.getElementById(tid + '-coef-note');
+  if (!note) return;
+  const t = TYPES[tid];
+  if (!t){ note.innerHTML = ''; return; }
+  const r = getCalcRatios(tid);
+  const rate50 = r.asOrderPerM3 * 0.05;   // 厚5cm 1㎡あたりの t（冬季係数込み）
+  const mk = function(label, mm){
+    if (!mm || mm <= 0) return '';
+    const u = mm / 50;                       // 5cm を 1 単位とした厚み
+    return '<div>' + label + ' t＝' + mm + 'mm → 0.123 × '
+         + (u % 1 === 0 ? u.toFixed(0) : u.toFixed(2)) + '（5cm単位）'
+         + (r.winterAS !== 1 ? ' × 冬季' + r.winterAS : '')
+         + ' ＝ <b style="color:#93c5fd;">' + (rate50 * u).toFixed(4) + ' t/㎡</b></div>';
+  };
+  const mm密 = Math.round(t.asT密粒 || 0);
+  const mm粗 = Math.round(t.asT粗粒 || 0);
+  let h = '<div style="color:var(--text2);font-weight:700;margin-bottom:2px;">AS発注の内訳（路盤構成の厚みに連動）</div>'
+        + mk('表層（密粒）', mm密) + mk('基層（粗粒）', mm粗);
+  const tot = mm密 + mm粗;
+  if (tot > 0) h += '<div style="margin-top:3px;">合計 t＝' + tot + 'mm → <b style="color:#93c5fd;">'
+    + (rate50 * (tot/50)).toFixed(4) + ' t/㎡</b>（10cmなら0.123×2、20cmなら0.123×4）</div>';
+  const cust = [];
+  if (r.winterAS !== 1) cust.push('冬季' + r.winterAS);
+  if (op.rc) cust.push('RC ' + op.rc);
+  if (op.rm) cust.push('RM ' + op.rm);
+  if (op.sand) cust.push('再生砂 ' + op.sand);
+  if (op.soil) cust.push('改良土 ' + op.soil);
+  if (op.mas) cust.push('桝 ' + op.mas);
+  if (cust.length) h += '<div style="margin-top:5px;color:var(--yellow);">✎ 係数を変更中： ' + cust.join('　／　') + '</div>';
+  note.innerHTML = h;
+}
+
+function resetOpCoef(tid){
+  if (!_opCoefs[tid]) { renderOpCoefNote(tid); return; }
+  if (!confirm('この型の係数をすべて既定値に戻します。よろしいですか？')) return;
+  delete _opCoefs[tid];
+  _opCoefSave();
+  renderOpCoefNote(tid);
+  try { recalcAll(); } catch(e) {}
+}
+
+function toggleSkOrder(tid, on){
+  _dynSkMode[tid] = !!on;
+  _skOrderSave();
+  applySkOrderUI(tid);
+  try { recalcAll(); } catch(e) {}
+}
+
+// =====================================================================
+// 桁違い（入力ミス）警告
+//   計算は止めない。「おかしいかも」と知らせるだけ。
+//   m を mm で打ち込む（0.9 → 900）、小数点位置を間違える、といった
+//   現場でいちばん多いミスを拾う。
+// =====================================================================
+const DIGIT_RANGE = {
+  W:    { lo:0.2,  hi:5,   label:'幅 W' },
+  L:    { lo:0.3,  hi:300, label:'延長 L' },
+  DP:   { lo:0.1,  hi:3,   label:'DP（掘削深さ）' },
+  DPH:  { lo:0.02, hi:1.5, label:'DP下配管H' },
+  masH: { lo:0.05, hi:5,   label:'桝H' },
+  masW: { lo:0.02, hi:5,   label:'桝W' },
+  masL: { lo:0.05, hi:10,  label:'桝L' },
+  genW: { lo:0.1,  hi:5,   label:'現況廃材 W' },
+  genL: { lo:0.1,  hi:300, label:'現況廃材 L' },
+  asW:  { lo:0.2,  hi:5,   label:'AS幅' },
+  rbW:  { lo:0.2,  hi:5,   label:'路盤幅' },
+  loW:  { lo:0.05, hi:5,   label:'コンガラ W' },
+  loL:  { lo:0.05, hi:300, label:'コンガラ L' },
+  asReW:{ lo:0.1,  hi:5,   label:'AS再舗装 W' },
+  asReL:{ lo:0.1,  hi:300, label:'AS再舗装 L' }
+};
+const PAT_LABEL = { n:'通常', ns:'通常・特殊部', k:'勾配あり', ks:'勾配あり・特殊部' };
+
+function _digitIssues(tid){
+  const out = [];
+  const pats = ['n','ns','k','ks'];
+  const isSk = !!(typeof _dynSkMode !== 'undefined' && _dynSkMode[tid]);
+  pats.forEach(function(pat){
+    Object.keys(DIGIT_RANGE).forEach(function(f){
+      if (isSk && f === 'DPH') return;             // 試掘では使わない
+      const el = document.getElementById(tid + pat + '-' + f);
+      if (!el || el.value === '' || el.value == null) return;
+      const v = parseFloat(el.value);
+      if (!isFinite(v)) return;
+      const r = DIGIT_RANGE[f];
+      let msg = '';
+      if (v > r.hi) {
+        msg = (v >= r.hi * 100) ? 'mm で入力していませんか？（' + (v/1000).toFixed(3) + 'm のつもり？）'
+            : (v >= r.hi * 10)  ? '桁が1つ多いようです（' + (v/10).toFixed(3) + 'm のつもり？）'
+            : '通常より大きい値です（目安 ' + r.hi + 'm 以下）';
+      } else if (v > 0 && v < r.lo) {
+        msg = '通常より小さい値です（目安 ' + r.lo + 'm 以上）';
+      } else if (v < 0) {
+        msg = 'マイナスの値が入っています';
+      }
+      if (msg) out.push({ id: el.id, pat: PAT_LABEL[pat] || pat, label: r.label, val: el.value, msg: msg });
+    });
+    // DP と 管下H の関係チェック（試掘以外）
+    if (!isSk) {
+      const dp  = parseFloat((document.getElementById(tid+pat+'-DP')  ||{}).value);
+      const dph = parseFloat((document.getElementById(tid+pat+'-DPH') ||{}).value);
+      if (isFinite(dp) && isFinite(dph) && dp > 0 && dph > 0 && dph > dp) {
+        out.push({ id: tid+pat+'-DPH', pat: PAT_LABEL[pat]||pat, label:'DP と DP下配管H',
+                   val: dp+' / '+dph, msg:'管下HがDPより深くなっています。入れ違いではありませんか？' });
+      }
+    }
+  });
+  return out;
+}
+
+function renderDigitWarn(tid){
+  const box = document.getElementById(tid + '-digitWarn');
+  if (!box) return;
+  let issues = [];
+  try { issues = _digitIssues(tid); } catch(e) { return; }
+  if (!issues.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML =
+    '<div style="border:1px solid rgba(239,68,68,.55);background:rgba(239,68,68,.10);border-radius:8px;padding:9px 12px;margin:0 0 10px;">'
+    + '<div style="color:#fca5a5;font-weight:700;font-size:15px;margin-bottom:5px;">⚠ 入力値の確認（' + issues.length + '件）</div>'
+    + '<div style="color:var(--text3);font-size:12px;margin-bottom:6px;">計算は止めていません。問題なければそのまま進めてください。</div>'
+    + issues.map(function(it){
+        return '<div style="font-size:14px;line-height:1.6;color:#fecaca;cursor:pointer;" onclick="(function(e){if(e){e.focus();e.select&&e.select();}})(document.getElementById(\''+it.id+'\'))">'
+             + '<span style="color:#f87171;">['+it.pat+']</span> ' + it.label + ' = <b>' + it.val + '</b> … ' + it.msg + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+function calcSkPits(tid){
+  const w = parseFloat((document.getElementById(tid+'-skW')||{}).value) || 0;
+  const l = parseFloat((document.getElementById(tid+'-skL')||{}).value) || 0;
+  const n = parseInt((document.getElementById(tid+'-skN')||{}).value, 10) || 0;
+  const out = document.getElementById(tid+'-skOut');
+  if (!out) return;
+  if (!w || !l || !n){ out.textContent = ''; return; }
+  out.textContent = '→ W ' + w.toFixed(2) + 'm × 合計L ' + (l*n).toFixed(2) + 'm（' + (w*l*n).toFixed(2) + '㎡）';
+}
+
+function applySkPits(tid){
+  const w = parseFloat((document.getElementById(tid+'-skW')||{}).value) || 0;
+  const l = parseFloat((document.getElementById(tid+'-skL')||{}).value) || 0;
+  const n = parseInt((document.getElementById(tid+'-skN')||{}).value, 10) || 0;
+  if (!w || !l || !n){ alert('1箇所のW・Lと箇所数を入力してください'); return; }
+  const wEl = document.getElementById(tid+'n-W');
+  const lEl = document.getElementById(tid+'n-L');
+  if (!wEl || !lEl){ alert('通常パターンの入力欄が見つかりません'); return; }
+  wEl.value = w.toFixed(2);
+  lEl.value = (l*n).toFixed(2);
+  try { recalcAll(); } catch(e) {}
+}
 // 型ごとの廃材量（日報アプリへの参考値連携に使用）
 const _lastWasteByTid = {};
 
@@ -8391,6 +8731,8 @@ function bindDynamicCalc(tid, typeConf) {
     update();
     try { renderAllTypesSummary(); } catch(e) {}
     try { applyPatternFilter(tid); } catch(e) {}
+    try { renderDigitWarn(tid); } catch(e) {}
+    try { renderOpCoefNote(tid); } catch(e) {}
   };
   _typeUpdateFns[tid] = updateAndSum;
 
@@ -8401,6 +8743,7 @@ function bindDynamicCalc(tid, typeConf) {
     panel.querySelectorAll('input').forEach(inp => inp.addEventListener('input', updateAndSum));
     panel.querySelectorAll('select').forEach(sel => sel.addEventListener('change', updateAndSum));
   }
+  try { applySkOrderUI(tid); } catch(e) {}
   updateAndSum();
 }
 
@@ -8975,7 +9318,7 @@ function renderDynTotal(tid, typeConf) {
     totalAsReVol += asW * asL * (asT / 1000);
   });
   if (totalAsReVol > 0) {
-    const totalAsReTon = totalAsReVol * AS_DENSITY;
+    const totalAsReTon = totalAsReVol * AS_ORDER_PER_M3;   // 新規AS → 発注係数
     html += sep('🔵 掘削影響範囲AS再舗装・撤去', 'rgba(16,185,129,0.75)');
     html += add('AS再舗装量（密粒度）', totalAsReTon, 't', '#34d399');
     html += add('AS撤去廃材 重量', totalAsReTon, 't', '#6ee7b7');
@@ -9043,7 +9386,7 @@ function _buildDynRecord(tid, typeKey) {
     const _arW = parseFloat(document.getElementById(`${p}-asReW`)?.value||'0')||0;
     const _arL = parseFloat(document.getElementById(`${p}-asReL`)?.value||'0')||0;
     const _arT = parseFloat(document.getElementById(`${p}-asReT`)?.value||'0')||0;
-    _asReTonTotal += _arW * _arL * (_arT/1000) * AS_DENSITY;
+    _asReTonTotal += _arW * _arL * (_arT/1000) * AS_ORDER_PER_M3;   // 新規AS → 発注係数
   });
   const _w = _lastWasteByTid[tid] || {};
 
@@ -9057,6 +9400,15 @@ function _buildDynRecord(tid, typeKey) {
     pipes: _pipes,
     typeLabel: t.label,
     calcMode: _dynCalcModes[tid] || 'kari',
+    shikutsu: !!_dynSkMode[tid],
+    coef: (function(){
+      try {
+        const r = getCalcRatios(tid);
+        return { asPerM2At50: +(r.asOrderPerM3 * 0.05).toFixed(5), winterAS: r.winterAS,
+                 rc: r.bulkRatioRC, rm: r.bulkRatioRM, sand: r.bulkRatioSand,
+                 soil: r.bulkRatioSoil, mas: r.masCoef };
+      } catch(e) { return null; }
+    })(),
     asTon密粒:   +s.asTon密粒.toFixed(6),
     asTon粗粒:   +s.asTon粗粒.toFixed(6),
     asReTon:     +_asReTonTotal.toFixed(6),
@@ -10948,8 +11300,8 @@ function calcHonpukyu() {
   var A_base = W_base * L;
 
   // 発注数量
-  var hyoso_ton  = A_full * 0.05 * AS_DENSITY;         // 表層 5cm
-  var kiso_ton   = A_full * 0.05 * AS_DENSITY;         // 基層 5cm
+  var hyoso_ton  = A_full * 0.05 * AS_ORDER_PER_M3;    // 表層 5cm（0.123t/㎡）
+  var kiso_ton   = A_full * 0.05 * AS_ORDER_PER_M3;    // 基層 5cm（0.123t/㎡）
   var antei_m3   = A_full * 0.10 * WASTE_RB_BULK;      // 安定処理 10cm（嵩増1.25）
   var rm30_m3    = A_base * 0.15 * WASTE_RB_BULK;      // RM-30 15cm（嵩増1.25）
   var rc40_m3    = A_base * 0.25 * WASTE_RB_BULK;      // RC-40 25cm（嵩増1.25）
@@ -11001,7 +11353,7 @@ function calcHonpukyu() {
   html += add('廃路盤材合計（安定+RM+RC）', haizaiRoad_m3, 'm³', true);
 
   html += '</div>';
-  html += '<div style="margin-top:8px;font-size:12px;color:var(--text2);">※ AS：密度'+AS_DENSITY+'t/m³ × 嵩増'+WASTE_AS_BULK+'　路盤材：嵩増'+WASTE_RB_BULK+'</div>';
+  html += '<div style="margin-top:8px;font-size:12px;color:var(--text2);">※ AS発注：5cm＝0.123t/㎡（'+AS_ORDER_PER_M3+'t/m³）　AS廃材：密度'+AS_DENSITY+'t/m³ × 嵩増'+WASTE_AS_BULK+'　路盤材：嵩増'+WASTE_RB_BULK+'</div>';
 
   container.innerHTML = html;
 }
@@ -11045,8 +11397,8 @@ function saveHonpukyuRecord() {
     // 寸法
     hp_L: L, hp_W: W, hp_D: D, hp_H: H, hp_AS: AS,
     // 発注数量（専用フィールド）
-    hp_hyoso_ton:      +( A_full * 0.05 * AS_DENSITY              ).toFixed(4),
-    hp_kiso_ton:       +( A_full * 0.05 * AS_DENSITY              ).toFixed(4),
+    hp_hyoso_ton:      +( A_full * 0.05 * AS_ORDER_PER_M3         ).toFixed(4),
+    hp_kiso_ton:       +( A_full * 0.05 * AS_ORDER_PER_M3         ).toFixed(4),
     hp_antei_m3:       +( A_full * 0.10 * WASTE_RB_BULK           ).toFixed(4),
     hp_rm30_m3:        +( A_base * 0.15 * WASTE_RB_BULK           ).toFixed(4),
     hp_rc40_m3:        +( A_base * 0.25 * WASTE_RB_BULK           ).toFixed(4),
@@ -11056,8 +11408,8 @@ function saveHonpukyuRecord() {
     hp_haizaiRM30_m3:  +( A_base * 0.15 * WASTE_RB_BULK             ).toFixed(4),
     hp_haizaiRC40_m3:  +( A_base * 0.25 * WASTE_RB_BULK             ).toFixed(4),
     // 発注履歴テーブル共通フィールドに流用
-    asTon密粒:  +( A_full * 0.05 * AS_DENSITY ).toFixed(6),  // 表層
-    asTon粗粒:  +( A_full * 0.05 * AS_DENSITY ).toFixed(6),  // 基層
+    asTon密粒:  +( A_full * 0.05 * AS_ORDER_PER_M3 ).toFixed(6),  // 表層
+    asTon粗粒:  +( A_full * 0.05 * AS_ORDER_PER_M3 ).toFixed(6),  // 基層
     rmOrd:      +( A_base * 0.15 * WASTE_RB_BULK ).toFixed(6),  // RM-30
     rcOrd:      +( A_base * 0.25 * WASTE_RB_BULK ).toFixed(6),  // RC-40
     rcRmSum:    +( A_base *(0.15+0.25)* WASTE_RB_BULK ).toFixed(6),  // RM+RC合計
