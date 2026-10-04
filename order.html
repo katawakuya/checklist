@@ -2824,24 +2824,126 @@ const CALC_DEFAULTS = {
 
 // =====================================================================
 // オペレーター係数（計算画面から誰でも入れられる係数）
-//   型設定（管理者向け）を触らずに、その場で嵩増率・冬季係数を変えられる。
+//   路盤・砂の嵩増率は「その日の掘削床の状況」で変わる判断値なので、
+//   作業日付が変わったら自動で外す。前日のぬかるみ係数が翌日の
+//   締まった床にそのまま掛かると、黙って過剰発注になるため。
+//   冬季係数（AS）は季節で決める値なので、日付をまたいでも残す。
 //   空欄なら従来どおり 型プリセット → 既定値(1.25) の順で決まる。
 // =====================================================================
-const OP_COEF_KEY = 'order_op_coef_v1';
-let _opCoefs = {};
-try { _opCoefs = JSON.parse(localStorage.getItem(OP_COEF_KEY) || '{}') || {}; } catch(e) { _opCoefs = {}; }
-function _opCoef(typeKey){ return _opCoefs[typeKey] || {}; }
-function _opCoefSave(){
-  try { localStorage.setItem(OP_COEF_KEY, JSON.stringify(_opCoefs)); } catch(e) {}
+const OP_COEF_KEY   = 'order_op_coef_v2';    // 当日限り {tid:{date,cond,rc,rm,sand,soil,mas}}
+const OP_WINTER_KEY = 'order_winter_as_v1';  // 期間で使う {tid:winterAS}
+const OP_COND_MEM   = 'order_coef_cond_v1';  // 状況ごとの前回値 {tid:{cond:{rc,rm,sand,soil}}}
+
+const OP_DAILY_FIELDS = ['rc','rm','sand','soil','mas'];
+const OP_CONDS = [
+  ['firm',   '締まっている', '乾いて固い床付け'],
+  ['normal', '普通',         'いつもどおり'],
+  ['wet',    'ぬかるみ',     '湧水・軟弱で砂が食われる']
+];
+function _opCondLabel(c){
+  for (var i=0;i<OP_CONDS.length;i++) if (OP_CONDS[i][0] === c) return OP_CONDS[i][1];
+  return '';
 }
-function setOpCoef(tid, field, raw){
-  const v = parseFloat(raw);
-  if (!_opCoefs[tid]) _opCoefs[tid] = {};
-  if (isFinite(v) && v > 0) _opCoefs[tid][field] = v;
-  else delete _opCoefs[tid][field];
-  if (!Object.keys(_opCoefs[tid]).length) delete _opCoefs[tid];
+
+let _opCoefs  = {};
+let _opWinter = {};
+let _opCondMem = {};
+try { _opCoefs   = JSON.parse(localStorage.getItem(OP_COEF_KEY)   || '{}') || {}; } catch(e) { _opCoefs = {}; }
+try { _opWinter  = JSON.parse(localStorage.getItem(OP_WINTER_KEY) || '{}') || {}; } catch(e) { _opWinter = {}; }
+try { _opCondMem = JSON.parse(localStorage.getItem(OP_COND_MEM)   || '{}') || {}; } catch(e) { _opCondMem = {}; }
+
+// ウィザードは 'dyntype_85' 形式、計算画面は '85' 形式で型を呼ぶため正規化する
+function _opKey(typeKey){ return String(typeKey == null ? '' : typeKey).replace(/^dyntype_/, ''); }
+
+function _todayISO(){ return new Date().toISOString().slice(0,10); }
+// その型の「作業日付」。未入力なら今日とみなす（前日の係数を残さないため）
+function _opWorkDate(k){
+  var el = document.getElementById(k + '-date');
+  var v  = el ? (el.value || '') : '';
+  return v || _todayISO();
+}
+
+function _opCoefSave(){
+  try { localStorage.setItem(OP_COEF_KEY,   JSON.stringify(_opCoefs));   } catch(e) {}
+  try { localStorage.setItem(OP_WINTER_KEY, JSON.stringify(_opWinter));  } catch(e) {}
+  try { localStorage.setItem(OP_COND_MEM,   JSON.stringify(_opCondMem)); } catch(e) {}
+}
+
+// 作業日が変わっていたら当日係数を破棄する。破棄したら true を返す。
+function _opPurgeStale(k){
+  var rec = _opCoefs[k];
+  if (!rec) return false;
+  var today = _opWorkDate(k);
+  if (rec.date && rec.date === today) return false;
+  // 当日ぶんの中身が無い（＝既に外してある）なら、お知らせ用の履歴を消さない
+  var hasDaily = !!rec.cond || OP_DAILY_FIELDS.some(function(f){ return rec[f] != null; });
+  if (!hasDaily) return false;
+  _opCoefs[k] = { _prevDate: rec.date || '', _prevCond: rec.cond || '' };
   _opCoefSave();
-  try { renderOpCoefNote(tid); } catch(e) {}
+  return true;
+}
+
+function _opCoef(typeKey){
+  var k = _opKey(typeKey);
+  if (!k) return {};
+  _opPurgeStale(k);
+  var out = {};
+  var w = _opWinter[k];
+  if (w != null && w > 0) out.winterAS = w;          // 冬季係数は日付をまたいでも残す
+  var rec = _opCoefs[k] || {};
+  OP_DAILY_FIELDS.forEach(function(f){ if (rec[f] != null && rec[f] > 0) out[f] = rec[f]; });
+  if (rec.cond) out.cond = rec.cond;
+  if (rec.date) out.date = rec.date;
+  out._prevDate = rec._prevDate || '';
+  out._prevCond = rec._prevCond || '';
+  return out;
+}
+
+function setOpCoef(tid, field, raw){
+  var k = _opKey(tid);
+  if (!k) return;
+  var v = parseFloat(raw);
+  var ok = isFinite(v) && v > 0;
+
+  if (field === 'winterAS') {
+    if (ok) _opWinter[k] = v; else delete _opWinter[k];
+  } else {
+    _opPurgeStale(k);
+    if (!_opCoefs[k]) _opCoefs[k] = {};
+    if (ok) _opCoefs[k][field] = v; else delete _opCoefs[k][field];
+    _opCoefs[k].date = _opWorkDate(k);
+    delete _opCoefs[k]._prevDate; delete _opCoefs[k]._prevCond;   // 今日ぶんを入れたので注意書きを消す
+    // 状況を選んでいれば、その状況の値として覚える（次回ワンタップで戻せる）
+    var cond = _opCoefs[k].cond;
+    if (cond && OP_DAILY_FIELDS.indexOf(field) >= 0 && field !== 'mas') {
+      if (!_opCondMem[k]) _opCondMem[k] = {};
+      if (!_opCondMem[k][cond]) _opCondMem[k][cond] = {};
+      if (ok) _opCondMem[k][cond][field] = v; else delete _opCondMem[k][cond][field];
+    }
+  }
+  _opCoefSave();
+  try { renderOpCoefNote(k); } catch(e) {}
+  try { recalcAll(); } catch(e) {}
+}
+
+// 掘削床の状況を選ぶ。覚えている値があれば流し込む。
+function setOpCond(tid, cond){
+  var k = _opKey(tid);
+  if (!k) return;
+  _opPurgeStale(k);
+  if (!_opCoefs[k]) _opCoefs[k] = {};
+  if (_opCoefs[k].cond === cond) { delete _opCoefs[k].cond; }
+  else {
+    _opCoefs[k].cond = cond;
+    var mem = (_opCondMem[k] || {})[cond] || {};
+    ['rc','rm','sand','soil'].forEach(function(f){
+      if (mem[f] != null && mem[f] > 0) _opCoefs[k][f] = mem[f];
+    });
+  }
+  _opCoefs[k].date = _opWorkDate(k);
+  delete _opCoefs[k]._prevDate; delete _opCoefs[k]._prevCond;
+  _opCoefSave();
+  try { renderOpCoefNote(k); } catch(e) {}
   try { recalcAll(); } catch(e) {}
 }
 
@@ -8163,14 +8265,25 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
       <span>⚙ 発注係数（この型だけ・空欄なら既定値）</span>
       <button onclick="resetOpCoef('${tid}')" style="font-size:12px;padding:3px 10px;border-radius:5px;border:1px solid rgba(148,163,184,.4);background:rgba(148,163,184,.10);color:var(--text2);cursor:pointer;font-family:var(--sans);font-weight:700;flex-shrink:0;">既定に戻す</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:4px;">
+    <!-- 掘削床の状況（その日のオペ判断） -->
+    <div style="margin-top:6px;">
+      <div style="font-size:13px;color:var(--text3);margin-bottom:4px;">🕳 掘削床の状況（その日の判断。砂・路盤材の入り方が変わります）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${[['firm','締まっている','乾いて固い床付け'],['normal','普通','いつもどおり'],['wet','ぬかるみ','湧水・軟弱で砂が食われる']]
+          .map(([cv,cl,ct]) => `<button id="${tid}-cond-${cv}" onclick="setOpCond('${tid}','${cv}')" title="${ct}"
+            style="font-size:14px;padding:6px 13px;border-radius:18px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:var(--sans);font-weight:700;">${cl}</button>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">状況を選んでから係数を入れると、その状況の値として覚えます。次回は選び直すだけで同じ係数が入ります。</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px;">
       ${[
-        ['❄ 冬季係数（AS）','winterAS', '1.00', 'AS合材のみに掛かります。空欄＝1.00（掛けない）'],
-        ['RC 嵩増率','rc',   '1.25', '空欄＝1.25'],
-        ['RM 嵩増率','rm',   '1.25', '空欄＝1.25'],
-        ['再生砂 嵩増率','sand', '1.25', '空欄＝1.25'],
-        ['改良土 嵩増率','soil', '1.25', '空欄＝1.25'],
-        ['桝（特殊部）控除 係数','mas', '本体と同じ', '空欄＝上の各材料の係数と同じ（従来どおり）'],
+        ['❄ 冬季係数（AS）','winterAS', '1.00', 'AS合材のみ。季節で決める値なので日付をまたいでも残ります。空欄＝1.00（掛けない）'],
+        ['RC 嵩増率','rc',   '1.25', 'その日限り。空欄＝1.25'],
+        ['RM 嵩増率','rm',   '1.25', 'その日限り。空欄＝1.25'],
+        ['再生砂 嵩増率','sand', '1.25', 'その日限り。ぬかるみなら大きめに。空欄＝1.25'],
+        ['改良土 嵩増率','soil', '1.25', 'その日限り。空欄＝1.25'],
+        ['桝（特殊部）控除 係数','mas', '本体と同じ', 'その日限り。空欄＝上の各材料の係数と同じ（従来どおり）'],
       ].map(([lbl, key, ph, tip]) => `<div class="field">
         <label style="font-size:13px;" title="${tip}">${lbl}</label>
         <input type="number" min="0.01" step="0.01" id="${tid}-coef-${key}" placeholder="${ph}" title="${tip}"
@@ -8578,15 +8691,35 @@ function renderOpCoefNote(tid){
   if (op.soil) cust.push('改良土 ' + op.soil);
   if (op.mas) cust.push('桝 ' + op.mas);
   if (cust.length) h += '<div style="margin-top:5px;color:var(--yellow);">✎ 係数を変更中： ' + cust.join('　／　') + '</div>';
+  if (op.date) h += '<div style="margin-top:3px;color:var(--text3);">適用日 ' + op.date
+    + (op.cond ? '　／　掘削床：' + _opCondLabel(op.cond) : '') + '（作業日付を変えると外れます）</div>';
+  // 前日の係数を自動で外したことを必ず伝える（黙って過剰発注にならないように）
+  if (op._prevDate) {
+    h += '<div style="margin-top:6px;padding:6px 9px;border-radius:6px;border:1px solid rgba(234,179,8,.45);background:rgba(234,179,8,.10);color:var(--yellow);">'
+       + '⚠ ' + op._prevDate + (op._prevCond ? '（' + _opCondLabel(op._prevCond) + '）' : '')
+       + ' に入れた係数は作業日が変わったため外しました。今日の掘削床を見て入れ直してください。</div>';
+  }
   note.innerHTML = h;
+
+  // 状況チップの選択表示
+  OP_CONDS.forEach(function(a){
+    const b = document.getElementById(tid + '-cond-' + a[0]);
+    if (!b) return;
+    const on = (op.cond === a[0]);
+    b.style.background  = on ? 'rgba(96,165,250,.25)' : 'var(--surface2)';
+    b.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+    b.style.color       = on ? '#bfdbfe' : 'var(--text2)';
+  });
 }
 
 function resetOpCoef(tid){
-  if (!_opCoefs[tid]) { renderOpCoefNote(tid); return; }
-  if (!confirm('この型の係数をすべて既定値に戻します。よろしいですか？')) return;
-  delete _opCoefs[tid];
+  const k = _opKey(tid);
+  if (!_opCoefs[k] && _opWinter[k] == null) { renderOpCoefNote(k); return; }
+  if (!confirm('この型の係数（掘削床の状況・路盤／砂の嵩増率・冬季係数）をすべて既定値に戻します。\nよろしいですか？')) return;
+  delete _opCoefs[k];
+  delete _opWinter[k];
   _opCoefSave();
-  renderOpCoefNote(tid);
+  renderOpCoefNote(k);
   try { recalcAll(); } catch(e) {}
 }
 
@@ -9406,7 +9539,8 @@ function _buildDynRecord(tid, typeKey) {
         const r = getCalcRatios(tid);
         return { asPerM2At50: +(r.asOrderPerM3 * 0.05).toFixed(5), winterAS: r.winterAS,
                  rc: r.bulkRatioRC, rm: r.bulkRatioRM, sand: r.bulkRatioSand,
-                 soil: r.bulkRatioSoil, mas: r.masCoef };
+                 soil: r.bulkRatioSoil, mas: r.masCoef,
+                 bedCond: _opCoef(tid).cond || '', bedCondLabel: _opCondLabel(_opCoef(tid).cond) };
       } catch(e) { return null; }
     })(),
     asTon密粒:   +s.asTon密粒.toFixed(6),
@@ -11621,6 +11755,8 @@ function _owizSteps(){
   if (c.hasSpecial) s.push('mas');
   s.push('kongara');
   if (c.hasKongara) s.push('kongaraDim');
+  // 発注係数（冬季係数・路盤／砂／桝の嵩増率）は型単位なので1箇所目だけ聞く
+  if (_owiz.locs.length === 0) s.push('coef');
   s.push('pipes', 'more');
   return s;
 }
@@ -11993,6 +12129,67 @@ function _owizRender(){
     html += '<div class="owiz-label">桝 L（長さ m）</div>' + numInput('owizMasL', c.masL, '2.000');
   }
 
+  else if (st === 'coef') {
+    var _ct2 = _owizTypeByTid(c.tid) || {};
+    var _ckey = _opKey(c.tid);
+    var _op   = _opCoef(_ckey);
+    var _r    = {};
+    try { _r = getCalcRatios(_ckey); } catch(e) { _r = {}; }
+    var _mm密 = Math.round((_ct2.conf && _ct2.conf.asT密粒) || 0);
+    var _mm粗 = Math.round((_ct2.conf && _ct2.conf.asT粗粒) || 0);
+    var _mmTot = _mm密 + _mm粗;
+    var _rate50 = (_r.asOrderPerM3 || 0) * 0.05;
+
+    html += '<div class="owiz-q">発注係数を確認してください<small>いつもと同じでよければ何も入れずに「次へ」。入れた値はこの型に保存され、次回も同じ係数が使われます。</small></div>';
+
+    // AS（冬季係数のみ）
+    html += '<div class="owiz-soil-fig" style="margin-bottom:10px;">'
+          + '<div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;">AS（合材）発注量</div>'
+          + '<div style="font-size:15px;color:var(--text3);line-height:1.7;">厚5cm ＝ 1㎡あたり 0.123t（厚みに比例）<br>'
+          + (_mmTot > 0
+              ? 'この型の構成 t＝' + _mmTot + 'mm'
+                + (_mm密 && _mm粗 ? '（表層' + _mm密 + '＋基層' + _mm粗 + '）' : '')
+                + ' → 0.123 × ' + ((_mmTot/50) % 1 === 0 ? (_mmTot/50).toFixed(0) : (_mmTot/50).toFixed(2))
+                + ' ＝ <b style="color:#93c5fd;">' + (_rate50 * (_mmTot/50)).toFixed(4) + ' t/㎡</b>'
+              : '型を選ぶと構成厚から自動計算します')
+          + '</div></div>';
+    html += '<div class="owiz-label">❄ 冬季係数（ASのみ）</div>';
+    html += '<input type="number" id="owizCoefWinter" class="owiz-input owiz-input-num" inputmode="decimal" step="0.01" min="0.01"'
+          + ' value="' + (_op.winterAS != null ? _op.winterAS : '') + '" placeholder="1.00（空欄＝掛けない）">';
+    html += '<div class="owiz-hint">気温が低い時期だけ 1.05 などを入れてください。路盤材・砂・改良土には掛かりません。これは季節で決める値なので日付をまたいでも残ります。</div>';
+
+    // 掘削床の状況（その日のオペ判断）
+    html += '<div class="owiz-label" style="margin-top:16px;">🕳 今日の掘削床の状況</div>';
+    html += '<div class="owiz-chips">'
+          + OP_CONDS.map(function(a){
+              return '<div class="owiz-chip' + (_op.cond === a[0] ? ' sel' : '') + '"'
+                   + ' onclick="_owizReadStep();setOpCond(' + _esc0(JSON.stringify(_ckey)) + ',' + _esc0(JSON.stringify(a[0])) + ');_owizRender()">'
+                   + esc(a[1]) + '</div>';
+            }).join('')
+          + '</div>';
+    html += '<div class="owiz-hint">床がぬかるんでいるほど砂が食われます。状況を選んでから下の係数を入れると、その状況の値として覚えます。</div>';
+    if (_op._prevDate) {
+      html += '<div class="owiz-hint" style="color:var(--yellow);">⚠ ' + esc(_op._prevDate)
+            + (_op._prevCond ? '（' + esc(_opCondLabel(_op._prevCond)) + '）' : '')
+            + ' に入れた係数は作業日が変わったため外れています。今日の床を見て入れ直してください。</div>';
+    }
+
+    // 路盤・砂・桝
+    html += '<div class="owiz-label" style="margin-top:16px;">路盤材・砂の嵩増率（空欄＝1.25・その日限り）</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+          + [['RC','rc','owizCoefRc'],['RM','rm','owizCoefRm'],['再生砂','sand','owizCoefSand'],['改良土','soil','owizCoefSoil']]
+              .map(function(a){
+                return '<div><div style="font-size:14px;color:var(--text3);margin-bottom:3px;">' + a[0] + '</div>'
+                     + '<input type="number" id="' + a[2] + '" class="owiz-input owiz-input-num" inputmode="decimal" step="0.01" min="0.01"'
+                     + ' value="' + (_op[a[1]] != null ? _op[a[1]] : '') + '" placeholder="1.25" style="margin-bottom:0;"></div>';
+              }).join('')
+          + '</div>';
+    html += '<div class="owiz-label" style="margin-top:16px;">桝（特殊部）控除の係数</div>';
+    html += '<input type="number" id="owizCoefMas" class="owiz-input owiz-input-num" inputmode="decimal" step="0.01" min="0.01"'
+          + ' value="' + (_op.mas != null ? _op.mas : '') + '" placeholder="空欄＝上の各材料と同じ">';
+    html += '<div class="owiz-hint">空欄なら本体と同じ係数で桝ぶんを控除します（従来どおり）。桝だけ別の係数で控除したいときだけ入力してください。</div>';
+  }
+
   else if (st === 'pipes') {
     html += '<div class="owiz-q">埋設配管を入力してください<small>不要なら何も入れずに「次へ」</small></div>';
     html += '<div class="owiz-pipe-head"><div>管種</div><div>品種</div><div>延長m</div><div>本数</div><div>調達</div><div></div></div>';
@@ -12024,7 +12221,7 @@ function _owizRender(){
   next.style.display = (st === 'more') ? 'none' : '';
   next.textContent  = '次へ →';
   // 任意入力のステップは「後で入力」を出す
-  skip.style.display = (st === 'pipes' || st === 'DPH2' || st === 'mas' || st === 'w3') ? '' : 'none';
+  skip.style.display = (st === 'pipes' || st === 'DPH2' || st === 'mas' || st === 'w3' || st === 'coef') ? '' : 'none';
 
   // Enter（リターン）で「次へ」。タブレットのソフトキーボードの確定キーにも対応。
   //   ・確認画面(more)と配管入力(pipes)は誤送信を防ぐため除外
@@ -12122,6 +12319,16 @@ function _owizReadStep(){
     }
   }
   if (st === 'sheet') { var _sm=g('owizSheetMm'); if(_sm!=null) c.sheetMm=_sm; var _sc=g('owizSheetCols'); if(_sc!=null) c.sheetCols=_sc; }
+  if (st === 'coef') {
+    var _ck = _opKey(c.tid);
+    if (_ck) {
+      [['winterAS','owizCoefWinter'],['rc','owizCoefRc'],['rm','owizCoefRm'],
+       ['sand','owizCoefSand'],['soil','owizCoefSoil'],['mas','owizCoefMas']].forEach(function(a){
+        var e = document.getElementById(a[1]);
+        if (e) setOpCoef(_ck, a[0], e.value);
+      });
+    }
+  }
 }
 function _owizNext(){
   _owizReadStep();
