@@ -423,10 +423,17 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
         </div>
         <div class="field">
           <label>ローカルファイル（PDF・画像）</label>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn-cancel" style="padding:6px 14px;margin:0;flex-shrink:0;" onclick="document.getElementById('dwgFileInput').click()">📁 ファイルを選択</button>
-            <span id="dwgFileName" style="font-size:16px;color:var(--text3);">未選択</span>
-            <button type="button" id="btnClearDwgFile" onclick="clearDwgFile()" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;font-size:21px;line-height:1;">✕</button>
+          <div id="dwgDropZone"
+               ondragover="dwgDragOver(event)" ondragenter="dwgDragOver(event)"
+               ondragleave="dwgDragLeave(event)" ondrop="handleDwgDrop(event)"
+               style="border:2px dashed var(--border);border-radius:10px;padding:12px;transition:.15s;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn-cancel" style="padding:6px 14px;margin:0;flex-shrink:0;" onclick="document.getElementById('dwgFileInput').click()">📁 ファイルを選択</button>
+              <button type="button" id="btnUseViewerFile" onclick="useViewerFileForDwg()" style="display:none;padding:6px 14px;margin:0;flex-shrink:0;background:rgba(79,142,247,.15);border:1px solid var(--blue);color:var(--blue);border-radius:7px;cursor:pointer;font-size:15px;font-weight:700;">⬅ 左で開いた図面を取り込む</button>
+              <span id="dwgFileName" style="font-size:16px;color:var(--text3);">未選択</span>
+              <button type="button" id="btnClearDwgFile" onclick="clearDwgFile()" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;font-size:21px;line-height:1;">✕</button>
+            </div>
+            <div id="dwgDropHint" style="font-size:13px;color:var(--text3);margin-top:7px;">ここに PDF・画像をドラッグ＆ドロップできます（図面名はファイル名が入ります）</div>
           </div>
           <input type="file" id="dwgFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onDwgFileSelect(this)">
         </div>
@@ -693,6 +700,8 @@ let _kariRbRows=[],_honRbRows=[];
 let _kariFreeMode=false,_honFreeMode=false;
 let _kariFreeRows=[],_honFreeRows=[];
 let _pdfDoc=null,_pdfPage=1,_pdfTotal=0;
+// 左のビューアで開いている File（図面管理タブへの取り込み用）
+let _viewerFile=null;
 let _currentMode='roadbed';
 
 if(typeof pdfjsLib!=='undefined'){
@@ -1717,6 +1726,8 @@ function viewDwg(key){
   _showDwgInViewer(d);
 }
 async function _showDwgInViewer(d){
+  // 登録済み図面の表示はローカルファイルではないので「取り込む」対象から外す
+  _viewerFile=null; try{ updateUseViewerBtn(); }catch(e){}
   document.getElementById('viewerTitle').textContent=d.name;
   document.getElementById('btnClearViewer').style.display='';
   _zoomCtrlShow(true);viewerZoomReset();
@@ -1753,6 +1764,9 @@ async function _showDwgInViewer(d){
 async function handleFile(file){
   if(!file)return;
   _pdfDoc=null;
+  // 図面管理タブから「取り込む」ために、開いたファイルそのものを覚えておく
+  _viewerFile=file;
+  try{ updateUseViewerBtn(); }catch(e){}
   document.getElementById('viewerTitle').textContent=file.name;
   document.getElementById('btnClearViewer').style.display='';
   _zoomCtrlShow(true);viewerZoomReset();
@@ -1761,24 +1775,83 @@ async function handleFile(file){
 }
 // ── 図面管理 ローカルファイル ──
 var _dwgPendingFileData=null, _dwgPendingFileType=null;
-function onDwgFileSelect(input){
-  const file=input.files[0];if(!file)return;
+
+// 拡張子を落としたファイル名（図面名の初期値に使う）
+function _dwgBaseName(fn){
+  return String(fn||'').replace(/\.[^.]+$/,'').trim();
+}
+// 図面名をファイル名で埋める。
+// 編集中（既存図面の差し替え）は、入力済みの名前を勝手に書き換えない。
+function _dwgFillName(fn){
+  var el=document.getElementById('dwgName'); if(!el) return;
+  var base=_dwgBaseName(fn); if(!base) return;
+  var editing=!!(document.getElementById('dwgEditKey')||{}).value;
+  if(editing && el.value.trim()) return;
+  el.value=base;
+}
+function _dwgAccepted(file){
+  var n=(file&&file.name||'').toLowerCase();
+  return /\.(pdf|jpg|jpeg|png)$/.test(n) || /^(image\/|application\/pdf)/.test(file&&file.type||'');
+}
+// File を読み込んで登録フォームにセットする（選択・ドロップ・ビューア取込で共通）
+function _dwgAcceptFile(file){
+  if(!file) return;
+  if(!_dwgAccepted(file)){ showToast('⚠️ PDF か画像（JPG/PNG）を指定してください'); return; }
   const MB=file.size/1024/1024;
   if(MB>5){showToast('⚠️ ファイルが大きすぎます（'+MB.toFixed(1)+'MB）。5MB以下を推奨します');return;}
   const fr=new FileReader();
+  fr.onerror=function(){ showToast('⚠️ ファイルを読み込めませんでした'); };
   fr.onload=function(e){
     _dwgPendingFileData=e.target.result;
     _dwgPendingFileType=file.type||(file.name.toLowerCase().endsWith('.pdf')?'application/pdf':'image/jpeg');
     document.getElementById('dwgFileName').textContent=file.name+(MB>2?' ⚠️'+MB.toFixed(1)+'MB':'');
     document.getElementById('btnClearDwgFile').style.display='';
+    _dwgFillName(file.name);
+    showToast('📄 '+file.name+' を読み込みました');
   };
   fr.readAsDataURL(file);
+}
+function onDwgFileSelect(input){
+  const file=input.files[0];if(!file)return;
+  _dwgAcceptFile(file);
 }
 function clearDwgFile(){
   _dwgPendingFileData=null; _dwgPendingFileType=null;
   document.getElementById('dwgFileName').textContent='未選択';
   document.getElementById('btnClearDwgFile').style.display='none';
   const fi=document.getElementById('dwgFileInput');if(fi)fi.value='';
+}
+
+// ── ドラッグ＆ドロップ ──
+function _dwgZone(){ return document.getElementById('dwgDropZone'); }
+function dwgDragOver(ev){
+  ev.preventDefault(); ev.stopPropagation();
+  try{ ev.dataTransfer.dropEffect='copy'; }catch(e){}
+  var z=_dwgZone(); if(z){ z.style.borderColor='var(--blue)'; z.style.background='rgba(79,142,247,.08)'; }
+}
+function dwgDragLeave(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  var z=_dwgZone(); if(z){ z.style.borderColor='var(--border)'; z.style.background=''; }
+}
+function handleDwgDrop(ev){
+  ev.preventDefault(); ev.stopPropagation();
+  dwgDragLeave();
+  var file=_hataFileFromDT(ev.dataTransfer);
+  if(!file){ showToast('⚠️ ファイルを読み取れませんでした'); return; }
+  _dwgAcceptFile(file);
+}
+
+// ── 左のビューアで開いている図面を取り込む ──
+function useViewerFileForDwg(){
+  if(!_viewerFile){ showToast('⚠️ 左にファイルが開かれていません'); return; }
+  _dwgAcceptFile(_viewerFile);
+}
+// ビューアの状態に合わせて取込ボタンの表示を切り替える
+function updateUseViewerBtn(){
+  var b=document.getElementById('btnUseViewerFile');
+  if(!b) return;
+  b.style.display=_viewerFile?'':'none';
+  if(_viewerFile) b.title='左で開いている「'+_viewerFile.name+'」を登録フォームに取り込みます';
 }
 
 async function loadPdf(file){
@@ -1862,6 +1935,8 @@ function clearViewer(){
   document.getElementById('btnClearViewer').style.display='none';
   _zoomCtrlShow(false);viewerZoomReset();
   _pdfDoc=null;
+  _viewerFile=null;
+  try{ updateUseViewerBtn(); }catch(e){}
   document.getElementById('fileInput').value='';
 }
 
@@ -1934,6 +2009,7 @@ function onFilterHataChange(hataKey){
   if(imgSrc){
     var va=document.getElementById('viewerArea');
     va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    _viewerFile=null; try{ updateUseViewerBtn(); }catch(e){}
     document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
     document.getElementById('btnClearViewer').style.display='';
     document.getElementById('pageNav').style.display='none';
@@ -2158,9 +2234,11 @@ function handleHataImgDrop2(ev){ handleHataImgDrop(ev,'2'); }
 
 // ページ外へのドロップでブラウザが画像を開いてしまうのを防ぐ
 // （枠を少しでも外すと入力中の内容が失われていた）
+try{ updateUseViewerBtn(); }catch(e){}
+
 ['dragover','drop'].forEach(function(evt){
   window.addEventListener(evt, function(e){
-    if(e.target && e.target.closest && e.target.closest('[data-hata-drop]')) return;
+    if(e.target && e.target.closest && (e.target.closest('[data-hata-drop]') || e.target.closest('#dwgDropZone'))) return;
     e.preventDefault();
   }, false);
 });
@@ -2727,6 +2805,7 @@ function onFilterHataChange(hataKey){
   if(imgSrc){
     var va=document.getElementById('viewerArea');
     va.innerHTML='<img src="'+imgSrc+'" alt="旗揚げ No.'+(r.num||r.hata||'')+'" style="max-width:100%;height:auto;">';
+    _viewerFile=null; try{ updateUseViewerBtn(); }catch(e){}
     document.getElementById('viewerTitle').textContent='旗揚げ No.'+(r.num||r.hata||'')+(r.name?' — '+r.name:'');
     document.getElementById('btnClearViewer').style.display='';
     document.getElementById('pageNav').style.display='none';
