@@ -433,9 +433,10 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
               <span id="dwgFileName" style="font-size:16px;color:var(--text3);">未選択</span>
               <button type="button" id="btnClearDwgFile" onclick="clearDwgFile()" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;font-size:21px;line-height:1;">✕</button>
             </div>
-            <div id="dwgDropHint" style="font-size:13px;color:var(--text3);margin-top:7px;">ここに PDF・画像をドラッグ＆ドロップできます（図面名はファイル名が入ります）</div>
+            <div id="dwgQueueBox" style="display:none;margin-top:8px;"></div>
+            <div id="dwgDropHint" style="font-size:13px;color:var(--text3);margin-top:7px;">ここに PDF・画像をドラッグ＆ドロップできます。複数まとめてドロップすると、ファイル名ごとに1件ずつ登録します。</div>
           </div>
-          <input type="file" id="dwgFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onDwgFileSelect(this)">
+          <input type="file" id="dwgFileInput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none" onchange="onDwgFileSelect(this)">
         </div>
         <div class="field">
           <label>または Google Drive 共有URL <span style="color:var(--text3);font-size:14px;">（ファイル未選択時）</span></label>
@@ -447,6 +448,37 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
         </div>
         <button class="btn-save" onclick="saveDwg()">💾 図面を登録</button>
         <button class="btn-cancel" id="btnCancelDwg" onclick="cancelDwg()">キャンセル</button>
+
+        <!-- 一括インポート（Google Drive 共有URL） -->
+        <details id="dwgBulkWrap" style="margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+          <summary style="background:var(--surface2);padding:10px 14px;font-size:16px;font-weight:700;color:var(--text2);cursor:pointer;">
+            📋 一括インポート（Google Drive 共有URL）
+          </summary>
+          <div style="padding:12px 14px;">
+            <div style="font-size:14px;color:var(--text3);line-height:1.7;margin-bottom:8px;">
+              1行＝1図面で貼り付けてください。タブ区切り（スプレッドシートからのコピー）に対応しています。<br>
+              <b>図面名 [Tab] URL [Tab] 種別（任意）</b>　見出し行はそのままで構いません。<br>
+              ファイル本体ではなくURLを持つので、何百件でも容量を圧迫しません。
+            </div>
+            <textarea id="dwgBulkText" rows="7" placeholder="図面名	URL	種別&#10;26.08.28【PFI磯子①－１】 路盤構成	https://drive.google.com/file/d/xxxx/view	断面図"
+              style="width:100%;box-sizing:border-box;font-size:14px;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-family:monospace;resize:vertical;"></textarea>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">
+              <button type="button" class="btn-cancel" style="margin:0;padding:7px 14px;" onclick="dwgBulkPreview()">🔍 確認する</button>
+              <label style="font-size:14px;color:var(--text3);display:flex;align-items:center;gap:5px;">
+                種別：
+                <select id="dwgBulkType" style="font-size:14px;padding:4px 8px;">
+                  <option value="">貼り付けた値／ファイル名から自動</option>
+                  <option>断面図</option><option>平面図</option><option>縦断図</option><option>詳細図</option><option>その他</option>
+                </select>
+              </label>
+              <label style="font-size:14px;color:var(--text3);display:flex;align-items:center;gap:5px;">
+                <input type="checkbox" id="dwgBulkSkipDup" checked style="width:15px;height:15px;">
+                同じ図面名は飛ばす
+              </label>
+            </div>
+            <div id="dwgBulkResult" style="margin-top:10px;"></div>
+          </div>
+        </details>
       </div>
 
       <div class="list-area">
@@ -1582,7 +1614,11 @@ function saveDwgsForSite(id,list){
   if(!_fbDb||!_isAdmin)return;
   _fbDb.collection('masters').doc('drawings').get()
     .then(doc=>{const all=(doc.exists&&doc.data().data)?doc.data().data:{};all[id]=list;return _fbDb.collection('masters').doc('drawings').set({data:all,updatedAt:new Date().toISOString()});})
-    .catch(e=>console.warn('[FB dwg]',e));
+    .catch(e=>{
+      console.warn('[FB dwg]',e);
+      // 失敗を黙って飲み込むと、他の端末から見えないことに気づけない
+      showToast('⚠️ クラウド保存に失敗しました（この端末にのみ保存）：'+((e&&e.message)||e));
+    });
 }
 
 function toDriveEmbedUrl(url){
@@ -1597,6 +1633,7 @@ function toDriveEmbedUrl(url){
 function saveDwg(){
   if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
   if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  if(_dwgQueue.length){ saveDwgBatch(); return; }
   const name=document.getElementById('dwgName').value.trim();
   if(!name){showToast('⚠️ 図面名を入力してください');return;}
   const url=document.getElementById('dwgUrl').value.trim();
@@ -1619,11 +1656,181 @@ function saveDwg(){
   const list=getLocalDwg(_selectedSiteId);
   const idx=list.findIndex(d=>d.key===entry.key);
   if(idx>=0) list[idx]=entry; else list.push(entry);
+  if(!_dwgCloudSizeOk(list)) return;
   saveDwgsForSite(_selectedSiteId,list);
   renderDwgList(list);
   clearDwgForm();
   showToast('✅「'+name+'」を登録しました');
   _auditLog('dwg_save','図面登録「'+name+'」['+_selectedSiteId+']');
+}
+
+// まとめて登録（図面名＝ファイル名、種別・路盤・メモは共通）
+function saveDwgBatch(){
+  if(document.getElementById('dwgEditKey').value){
+    showToast('⚠️ 編集中はまとめて登録できません。キャンセルしてからどうぞ');return;
+  }
+  const type=_getDwgType();
+  const rbKey=document.getElementById('dwgRbKey').value;
+  const memo=document.getElementById('dwgMemo').value.trim();
+  const today=new Date().toISOString().slice(0,10);
+  const list=getLocalDwg(_selectedSiteId);
+  const added=[];
+  _dwgQueue.forEach(function(f,i){
+    const nm=_dwgBaseName(f.name)||f.name;
+    list.push({
+      key:'dwg_'+Date.now()+'_'+i,
+      name:nm, type:type, rbKey:rbKey, url:'', embedUrl:'', memo:memo,
+      fileData:f.data, fileType:f.type, updatedAt:today
+    });
+    added.push(nm);
+  });
+  if(!_dwgCloudSizeOk(list)) return;
+  saveDwgsForSite(_selectedSiteId,list);
+  renderDwgList(list);
+  const n=added.length;
+  clearDwgForm();
+  showToast('✅ '+n+' 件を登録しました');
+  _auditLog('dwg_save','図面まとめ登録 '+n+'件 ['+_selectedSiteId+'] '+added.join(' / '));
+}
+
+// 図面は全現場ぶんが Firestore の1ドキュメントに入る。
+// Firestore の上限は 1MB なので、超えそうなら保存前に止める。
+// （従来は書き込み失敗が console.warn だけで、端末にしか残らないまま
+//   「登録しました」と出ていた）
+function _dwgCloudSizeOk(list){
+  if(!_fbDb||!_isAdmin) return true;
+  var bytes=0;
+  try{ bytes=new Blob([JSON.stringify(list)]).size; }catch(e){ return true; }
+  const MB=bytes/1024/1024;
+  if(MB<0.85) return true;
+  showToast('⚠️ この現場の図面が '+MB.toFixed(2)+'MB になり、クラウド保存の上限(1MB)を超えます');
+  return confirm(
+    'この現場の図面データが ' + MB.toFixed(2) + 'MB になります。\n' +
+    'クラウド（Firestore）の1件あたりの上限は 1MB なので、保存に失敗し\n' +
+    'この端末にしか残らない可能性が高いです。\n\n' +
+    'ファイルを直接入れるのではなく Google Drive 共有URL で登録することをおすすめします。\n\n' +
+    'このまま続けますか？'
+  );
+}
+
+// ===== 一括インポート（Drive共有URL） =====
+// ファイル本体ではなくURLだけ持つので、100件単位でも数十KBで収まる。
+var _dwgBulkParsed=[];
+
+function _dwgGuessType(name){
+  var n=String(name||'');
+  if(/平面/.test(n)) return '平面図';
+  if(/縦断/.test(n)) return '縦断図';
+  if(/横断|断面/.test(n)) return '断面図';
+  if(/路盤構成/.test(n)) return '路盤構成図';
+  if(/工程/.test(n)) return '工程表';
+  if(/詳細/.test(n)) return '詳細図';
+  return 'その他';
+}
+function _dwgIsUrl(t){ return /^https?:\/\//i.test(String(t||'').trim()); }
+
+function dwgBulkParse(){
+  var raw=(document.getElementById('dwgBulkText').value||'');
+  var lines=raw.split(/\r?\n/);
+  var out=[], bad=[];
+  lines.forEach(function(ln,i){
+    if(!ln.trim()) return;
+    // タブ区切り優先。タブが無ければカンマ、それも無ければ空白で最後のURLを拾う
+    var cols=ln.indexOf('\t')>=0 ? ln.split('\t') : (ln.indexOf(',')>=0 ? ln.split(',') : [ln]);
+    cols=cols.map(function(c){ return String(c).trim(); });
+    var url='', name='', type='';
+    cols.forEach(function(c){ if(!url && _dwgIsUrl(c)) url=c; });
+    if(!url){
+      // 1列にURLだけが混ざっている場合を拾う
+      var m=ln.match(/https?:\/\/\S+/);
+      if(m) url=m[0];
+    }
+    if(!url){
+      if(i===0 || /^図面名/.test(cols[0])) return;   // 見出し行は黙って飛ばす
+      bad.push((i+1)+'行目：URLが見つかりません');
+      return;
+    }
+    var rest=cols.filter(function(c){ return c && c!==url; });
+    name=rest[0]||'';
+    type=rest[1]||'';
+    if(!name){
+      var dm=url.match(/\/file\/d\/([^/?\s]+)/);
+      name=dm?('図面 '+dm[1].slice(0,8)):'名称未設定';
+    }
+    name=name.replace(/\.(pdf|jpe?g|png)$/i,'');
+    out.push({ name:name, url:url, type:type });
+  });
+  return { rows:out, bad:bad };
+}
+
+function dwgBulkPreview(){
+  var box=document.getElementById('dwgBulkResult');
+  var r=dwgBulkParse();
+  _dwgBulkParsed=r.rows;
+  if(!r.rows.length){
+    box.innerHTML='<div style="color:var(--orange);font-size:14px;">読み取れる行がありませんでした。'
+      +(r.bad.length?'<br>'+r.bad.slice(0,5).map(_esc0dwg).join('<br>'):'')+'</div>';
+    return;
+  }
+  var fixed=document.getElementById('dwgBulkType').value;
+  var existing=_selectedSiteId?getLocalDwg(_selectedSiteId):[];
+  var names={}; existing.forEach(function(d){ names[d.name]=true; });
+  var dup=0;
+  var h='<div style="font-size:15px;font-weight:700;color:var(--blue);margin-bottom:6px;">'+r.rows.length+' 件を読み取りました</div>';
+  h+='<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:7px;">';
+  r.rows.forEach(function(x,i){
+    var t=fixed||x.type||_dwgGuessType(x.name);
+    x._type=t;
+    var isDup=!!names[x.name]; if(isDup) dup++;
+    h+='<div style="display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 8px;border-bottom:1px solid var(--border);'+(isDup?'opacity:.5;':'')+'">'
+      +'<span style="color:var(--text3);flex-shrink:0;width:32px;">'+(i+1)+'</span>'
+      +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc0dwg(x.name)+'</span>'
+      +'<span style="flex-shrink:0;color:var(--blue);">'+_esc0dwg(t)+'</span>'
+      +(isDup?'<span style="flex-shrink:0;color:var(--orange);">既存</span>':'')
+      +'</div>';
+  });
+  h+='</div>';
+  if(dup) h+='<div style="font-size:13px;color:var(--orange);margin-top:5px;">同じ図面名が既に '+dup+' 件あります</div>';
+  if(r.bad.length) h+='<div style="font-size:13px;color:var(--orange);margin-top:5px;">読み飛ばし：'+r.bad.length+' 行<br>'+r.bad.slice(0,5).map(_esc0dwg).join('<br>')+'</div>';
+  h+='<button type="button" class="btn-save" style="margin-top:10px;" onclick="dwgBulkImport()">💾 この内容で一括登録</button>';
+  box.innerHTML=h;
+}
+
+function dwgBulkImport(){
+  if(!_selectedSiteId){showToast('⚠️ 現場を選択してください');return;}
+  if(!_isAdmin){showToast('⚠️ 管理者ログインが必要です');return;}
+  if(!_dwgBulkParsed.length){showToast('⚠️ 先に「確認する」を押してください');return;}
+  var skipDup=document.getElementById('dwgBulkSkipDup').checked;
+  var rbKey=document.getElementById('dwgRbKey').value;
+  var today=new Date().toISOString().slice(0,10);
+  var list=getLocalDwg(_selectedSiteId);
+  var names={}; list.forEach(function(d){ names[d.name]=true; });
+  var added=0, skipped=0;
+  _dwgBulkParsed.forEach(function(x,i){
+    if(skipDup && names[x.name]){ skipped++; return; }
+    list.push({
+      key:'dwg_'+Date.now()+'_b'+i,
+      name:x.name,
+      type:x._type||_dwgGuessType(x.name),
+      rbKey:rbKey,
+      url:x.url,
+      embedUrl:toDriveEmbedUrl(x.url),
+      memo:'',
+      updatedAt:today
+    });
+    names[x.name]=true;
+    added++;
+  });
+  if(!added){showToast('⚠️ 追加できる行がありませんでした（すべて既存）');return;}
+  if(!confirm(added+' 件を登録します。'+(skipped?'\n（既存と同名の '+skipped+' 件は飛ばします）':'')+'\n\nよろしいですか？')) return;
+  if(!_dwgCloudSizeOk(list)) return;
+  saveDwgsForSite(_selectedSiteId,list);
+  renderDwgList(list);
+  document.getElementById('dwgBulkText').value='';
+  document.getElementById('dwgBulkResult').innerHTML='';
+  _dwgBulkParsed=[];
+  showToast('✅ '+added+' 件を一括登録しました'+(skipped?'（'+skipped+' 件は既存のため飛ばしました）':''));
+  _auditLog('dwg_bulk','図面一括登録 '+added+'件 ['+_selectedSiteId+']');
 }
 
 function editDwg(key){
@@ -1812,11 +2019,79 @@ function _dwgAcceptFile(file){
   fr.readAsDataURL(file);
 }
 function onDwgFileSelect(input){
-  const file=input.files[0];if(!file)return;
-  _dwgAcceptFile(file);
+  if(!input.files||!input.files.length)return;
+  _dwgAcceptFiles(input.files);
+}
+
+// ── 複数ファイルのまとめ登録 ──
+// 図面名はファイルごとに変わるが、種別・関連路盤構成・メモはフォームの値を全件に使う。
+var _dwgQueue=[];   // [{name,data,type,mb}]
+function _dwgRenderQueue(){
+  var box=document.getElementById('dwgQueueBox');
+  if(!box) return;
+  if(!_dwgQueue.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  var total=_dwgQueue.reduce(function(a,f){return a+f.mb;},0);
+  var h='<div style="font-size:14px;font-weight:700;color:var(--blue);margin-bottom:5px;">'
+      + 'まとめて登録：'+_dwgQueue.length+' 件（合計 '+total.toFixed(1)+'MB）</div>';
+  _dwgQueue.forEach(function(f,i){
+    h+='<div style="display:flex;align-items:center;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid var(--border);">'
+      +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(i+1)+'. '+_esc0dwg(f.name)+'</span>'
+      +'<span style="color:var(--text3);flex-shrink:0;">'+f.mb.toFixed(1)+'MB</span>'
+      +'<button type="button" onclick="dwgQueueRemove('+i+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;flex-shrink:0;">✕</button>'
+      +'</div>';
+  });
+  h+='<div style="font-size:13px;color:var(--text3);margin-top:6px;">図面名は各ファイル名になります。種別・関連路盤構成・メモは上の設定を全件に使います。</div>';
+  box.innerHTML=h;
+}
+function _esc0dwg(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function dwgQueueRemove(i){
+  _dwgQueue.splice(i,1);
+  if(_dwgQueue.length===1){
+    // 1件に戻ったら通常の単一登録に戻す
+    var f=_dwgQueue[0]; _dwgQueue=[];
+    _dwgPendingFileData=f.data; _dwgPendingFileType=f.type;
+    document.getElementById('dwgFileName').textContent=f.name;
+    document.getElementById('btnClearDwgFile').style.display='';
+    _dwgFillName(f.name);
+  }
+  _dwgRenderQueue();
+}
+function _dwgReadOne(file){
+  return new Promise(function(res){
+    var fr=new FileReader();
+    fr.onerror=function(){ res(null); };
+    fr.onload=function(e){
+      res({ name:file.name, data:e.target.result, mb:file.size/1024/1024,
+            type:file.type||(file.name.toLowerCase().endsWith('.pdf')?'application/pdf':'image/jpeg') });
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function _dwgAcceptFiles(fileList){
+  var files=[].slice.call(fileList||[]);
+  var ok=[], skipped=[];
+  files.forEach(function(f){
+    if(!_dwgAccepted(f)){ skipped.push(f.name+'（形式）'); return; }
+    if(f.size/1024/1024>5){ skipped.push(f.name+'（5MB超）'); return; }
+    ok.push(f);
+  });
+  if(skipped.length) showToast('⚠️ 除外：'+skipped.join('、'));
+  if(!ok.length) return;
+  if(ok.length===1){ _dwgQueue=[]; _dwgRenderQueue(); _dwgAcceptFile(ok[0]); return; }
+  Promise.all(ok.map(_dwgReadOne)).then(function(rs){
+    _dwgQueue=rs.filter(Boolean);
+    // 複数モードでは単一ぶんの保留をクリアする
+    _dwgPendingFileData=null; _dwgPendingFileType=null;
+    document.getElementById('dwgFileName').textContent=_dwgQueue.length+' 件を選択中';
+    document.getElementById('btnClearDwgFile').style.display='';
+    _dwgRenderQueue();
+    showToast('📄 '+_dwgQueue.length+' 件を読み込みました');
+  });
 }
 function clearDwgFile(){
   _dwgPendingFileData=null; _dwgPendingFileType=null;
+  _dwgQueue=[]; try{ _dwgRenderQueue(); }catch(e){}
   document.getElementById('dwgFileName').textContent='未選択';
   document.getElementById('btnClearDwgFile').style.display='none';
   const fi=document.getElementById('dwgFileInput');if(fi)fi.value='';
@@ -1836,9 +2111,14 @@ function dwgDragLeave(ev){
 function handleDwgDrop(ev){
   ev.preventDefault(); ev.stopPropagation();
   dwgDragLeave();
-  var file=_hataFileFromDT(ev.dataTransfer);
-  if(!file){ showToast('⚠️ ファイルを読み取れませんでした'); return; }
-  _dwgAcceptFile(file);
+  var dt=ev.dataTransfer;
+  var files=(dt&&dt.files&&dt.files.length)?dt.files:null;
+  if(!files){
+    var one=_hataFileFromDT(dt);
+    if(!one){ showToast('⚠️ ファイルを読み取れませんでした'); return; }
+    files=[one];
+  }
+  _dwgAcceptFiles(files);
 }
 
 // ── 左のビューアで開いている図面を取り込む ──
