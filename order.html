@@ -5635,7 +5635,22 @@ updateHistBadge();
 // グローバル現場セレクトを初期化
 populateGlobalSiteDropdown();
 // 初期状態：現場未選択画面を表示
-activateTab('no-site');
+// ただし ?tab=sites のように指定されていればそのタブを開く
+// （ホームの「現場マスタ」カードから現場管理タブへ直行させるため）
+(function(){
+  var _want = '';
+  try { _want = new URLSearchParams(location.search).get('tab') || ''; } catch(e) {}
+  var _ok = ['calc','honpukyu','history','sites'];
+  var _btn = (_want && _ok.indexOf(_want) >= 0)
+    ? document.querySelector('.tab-btn[data-tab="' + _want + '"]') : null;
+  if (_btn) {
+    // 実際のタブクリックと同じ処理を通す（一覧の再描画などを取りこぼさないため）
+    _btn.click();
+    if (_want === 'sites') { try { switchSitesTab('site'); } catch(e) {} }
+  } else {
+    activateTab('no-site');
+  }
+})();
 
 // Firebase・各マスタ初期化
 initFirebase();
