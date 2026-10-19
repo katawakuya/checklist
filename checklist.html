@@ -3856,6 +3856,11 @@ function _skIsPipeItem(item){
   return false;
 }
 
+// 進捗・保存の母数から外す項目（試掘モードで隠している配管系）
+// 画面から消えているのに「未チェック」として数えると、
+// 進捗が永久に100%にならず「全完了」も出ないため。
+function _skExcluded(item){ return _skMode && _skIsPipeItem(item); }
+
 function _skOffBlank(){ return { base:'', other:'', dist:'', dp:'' }; }
 function _skBuriedBlank(){ return { kind:'', dia:'', mat:'', cover:'', sep:'' }; }
 function _skPitBlank(){
@@ -4043,26 +4048,45 @@ function renderSkPanel(){
 // =====================================================
 var _irrNotes = {};   // itemKey -> 備考テキスト
 function _irrEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var IRR_PLACEHOLDER = '規定値どおりにできなかった場合だけ記入（例：既設水道管により離隔150mmで施工・監督員承諾済）';
+// textarea は「備考が入っている項目」だけ先に描く。
+// 項目は300件近くあるので、全項目に textarea を置くとiPadで描画が重くなる。
+// 未記入の項目はボタンだけ置き、押されたときに textarea を作る。
+function _irrTaHTML(k, v){
+  return '<textarea class="irr-ta" data-ik="'+k+'" placeholder="'+IRR_PLACEHOLDER+'"'
+       + ' oninput="setIrr(this.dataset.ik, this.value)">' + _irrEsc(v||'') + '</textarea>';
+}
 function _irrNoteHTML(k){
   var v = _irrNotes[k] || '';
-  var open = !!v;
   return '<div class="irr-wrap" onclick="event.stopPropagation()">'
-    + '<button type="button" class="irr-btn'+(open?' on':'')+'" data-ik="'+k+'" onclick="toggleIrr(event)">'
-    + (open ? '📝 備考あり' : '📝 備考') + '</button>'
-    + '<textarea class="irr-ta" data-ik="'+k+'" placeholder="規定値どおりにできなかった場合だけ記入（例：既設水道管により離隔150mmで施工・監督員承諾済）"'
-    + ' style="display:'+(open?'block':'none')+'" oninput="setIrr(this.dataset.ik, this.value)">'
-    + _irrEsc(v) + '</textarea>'
+    + '<button type="button" class="irr-btn'+(v?' on':'')+'" data-ik="'+k+'" onclick="toggleIrr(event)">'
+    + (v ? '📝 備考あり' : '📝 備考') + '</button>'
+    + (v ? _irrTaHTML(k, v) : '')
     + '</div>';
 }
 function toggleIrr(ev){
   ev.stopPropagation();
-  var w = ev.target.parentNode;
-  var ta = w ? w.querySelector('.irr-ta') : null;
-  if(!ta) return;
+  var btn = ev.target;
+  var w = btn.parentNode;
+  if(!w) return;
+  var ta = w.querySelector('.irr-ta');
+  if(!ta){
+    // 初回タップで生成する
+    var k = btn.dataset ? btn.dataset.ik : '';
+    if(!k) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = _irrTaHTML(k, _irrNotes[k] || '');
+    ta = tmp.firstChild;
+    w.appendChild(ta);
+    try{ ta.focus(); }catch(e){}
+    return;
+  }
   var show = (ta.style.display === 'none');
-  ta.style.display = show ? 'block' : 'none';
+  ta.style.display = show ? '' : 'none';
   if(show){ try{ ta.focus(); }catch(e){} }
 }
+// 1打鍵ごとに state 全体を localStorage へ書くと重いのでまとめて書く
+var _irrSaveTimer = null;
 function setIrr(k, v){
   v = (v==null?'':String(v)).trim();
   if(v) _irrNotes[k] = v; else delete _irrNotes[k];
@@ -4071,7 +4095,8 @@ function setIrr(k, v){
     var b = ta.parentNode.querySelector('.irr-btn');
     if(b){ b.textContent = v ? '📝 備考あり' : '📝 備考'; b.classList.toggle('on', !!v); }
   }
-  try{ saveState(); }catch(e){}
+  clearTimeout(_irrSaveTimer);
+  _irrSaveTimer = setTimeout(function(){ try{ saveState(); }catch(e){} }, 500);
 }
 // 備考が入っている項目の一覧（保存・確認用）
 function irrNoteList(){
@@ -7765,6 +7790,7 @@ function updateProgress(){
       if(sec._locked) return;
       sec.items.forEach(function(item,ii){
         if(item.glType==='midList'&&ii>0&&sec.items[ii-1]&&sec.items[ii-1].glType==='sheet') return;
+        if(_skExcluded(item)) return;
         _keys.push(itemKey(si,ii));
         _totalItems++;
       });
@@ -7794,6 +7820,7 @@ function updateProgress(){
       if(sec._locked) return;
       sec.items.forEach(function(item,ii){
         if(item.glType === 'midList' && ii>0 && sec.items[ii-1] && sec.items[ii-1].glType === 'sheet') return;
+        if(_skExcluded(item)) return;
         var k=itemKey(si,ii);
         if(_naItems[k]) return;
         total++;
@@ -8150,7 +8177,7 @@ function saveRecord(){
   var total=0, done=0;
   if(ck){
     var recSecs = getEffectiveSections(ck, _typeKey);
-    recSecs.forEach(function(sec,si){ if(sec._locked) return; sec.items.forEach(function(item,ii){ if(item.glType==='midList'&&ii>0&&sec.items[ii-1]&&sec.items[ii-1].glType==='sheet') return; var k=itemKey(si,ii); if(!_naItems[k]){total++;if(_checks[k])done++;} }); });
+    recSecs.forEach(function(sec,si){ if(sec._locked) return; sec.items.forEach(function(item,ii){ if(item.glType==='midList'&&ii>0&&sec.items[ii-1]&&sec.items[ii-1].glType==='sheet') return; if(_skExcluded(item)) return; var k=itemKey(si,ii); if(!_naItems[k]){total++;if(_checks[k])done++;} }); });
   }
 
   var siteName=''; var typeName='';

@@ -2856,11 +2856,19 @@ try { _opCondMem = JSON.parse(localStorage.getItem(OP_COND_MEM)   || '{}') || {}
 function _opKey(typeKey){ return String(typeKey == null ? '' : typeKey).replace(/^dyntype_/, ''); }
 
 function _todayISO(){ return new Date().toISOString().slice(0,10); }
-// その型の「作業日付」。未入力なら今日とみなす（前日の係数を残さないため）
+// 係数キーは 'dyntype_' を外した形で持つが、DOM の id は 'dyntype_85-...' のまま。
+// 動的タブ側を先に探し、無ければ素のidにフォールバックする。
+function _opDomId(k, suffix){
+  var a = 'dyntype_' + k + suffix;
+  if (document.getElementById(a)) return a;
+  return k + suffix;
+}
+// その型の「作業日付」。未入力なら '' を返す。
+// 端末の時計ではなく作業日付で判定するのは、夜勤で0時をまたいでも
+// 作業途中に係数が外れないようにするため。
 function _opWorkDate(k){
-  var el = document.getElementById(k + '-date');
-  var v  = el ? (el.value || '') : '';
-  return v || _todayISO();
+  var el = document.getElementById(_opDomId(k, '-date'));
+  return (el && el.value) ? el.value : '';
 }
 
 function _opCoefSave(){
@@ -2874,7 +2882,8 @@ function _opPurgeStale(k){
   var rec = _opCoefs[k];
   if (!rec) return false;
   var today = _opWorkDate(k);
-  if (rec.date && rec.date === today) return false;
+  if (!today) return false;                      // 作業日付が未入力なら判定しない
+  if (!rec.date || rec.date === today) return false;
   // 当日ぶんの中身が無い（＝既に外してある）なら、お知らせ用の履歴を消さない
   var hasDaily = !!rec.cond || OP_DAILY_FIELDS.some(function(f){ return rec[f] != null; });
   if (!hasDaily) return false;
@@ -2911,7 +2920,7 @@ function setOpCoef(tid, field, raw){
     _opPurgeStale(k);
     if (!_opCoefs[k]) _opCoefs[k] = {};
     if (ok) _opCoefs[k][field] = v; else delete _opCoefs[k][field];
-    _opCoefs[k].date = _opWorkDate(k);
+    _opCoefs[k].date = _opWorkDate(k) || _todayISO();
     delete _opCoefs[k]._prevDate; delete _opCoefs[k]._prevCond;   // 今日ぶんを入れたので注意書きを消す
     // 状況を選んでいれば、その状況の値として覚える（次回ワンタップで戻せる）
     var cond = _opCoefs[k].cond;
@@ -2940,7 +2949,7 @@ function setOpCond(tid, cond){
       if (mem[f] != null && mem[f] > 0) _opCoefs[k][f] = mem[f];
     });
   }
-  _opCoefs[k].date = _opWorkDate(k);
+  _opCoefs[k].date = _opWorkDate(k) || _todayISO();
   delete _opCoefs[k]._prevDate; delete _opCoefs[k]._prevCond;
   _opCoefSave();
   try { renderOpCoefNote(k); } catch(e) {}
@@ -3443,9 +3452,12 @@ function calcGradient(prefix, typeKey) {
   const L    = getNum(`${prefix}-L`);
   const DP1  = getNum(`${prefix}-DP1`);
   const DP2  = getNum(`${prefix}-DP2`) || DP1;
-  const DPH1 = getNum(`${prefix}-DPH1`);
-  const DPH2 = getNum(`${prefix}-DPH2`) || DPH1;
-  if (!W || !L || !DP1 || !DPH1) return null;
+  // 試掘モードは配管がないので管下Hを要求しない（DP＝掘削深さ）
+  const _isSk = (typeof _dynSkMode !== 'undefined') && !!_dynSkMode[typeKey];
+  const DPH1 = _isSk ? 0 : getNum(`${prefix}-DPH1`);
+  const DPH2 = _isSk ? 0 : (getNum(`${prefix}-DPH2`) || DPH1);
+  if (!W || !L || !DP1) return null;
+  if (!_isSk && !DPH1) return null;
 
   const avgDP  = (DP1 + DP2) / 2;
 
@@ -3472,7 +3484,9 @@ function calcGradient(prefix, typeKey) {
 
   const pipeVol    = getPipeVolume(`${prefix}-pipes`);
   const gHasExcess = gExSandH > 0;
-  const gSandH     = gHasExcess ? gExSandH : Math.max(0, (avgDP + avgDPH) - t.totalH);  // 床付け基準
+  // 試掘で改良土を使う場合は超過分すべてが改良土なので、再生砂を二重に拾わない
+  const gSandH     = (_isSk && gSoilH > 0) ? 0
+                   : gHasExcess ? gExSandH : Math.max(0, (avgDP + avgDPH) - t.totalH);  // 床付け基準
   // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
   const sandOrd    = Math.max(0, (gSandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
 
@@ -6139,6 +6153,16 @@ function movePresetType(idx, dir) {
   renderPresetTypeEditor();
 }
 
+// 旧方式のAS設定（AS密度・AS嵩増率）を消して 0.123 の発注係数に戻す
+function clearLegacyAs(idx){
+  const t = _editingTypes[idx];
+  if (!t || !t.bulkRatios) return;
+  if (!confirm('この型に残っている旧方式のAS設定（AS密度・AS嵩増率）を削除します。\n以後「AS 発注係数（既定 0.123 t/㎡ @厚5cm）」で計算されます。\n\nよろしいですか？')) return;
+  delete t.bulkRatios.asDensity;
+  delete t.bulkRatios.bulkRatioAS;
+  renderPresetTypeEditor();
+}
+
 function renderPresetTypeEditor() {
   const el = document.getElementById('preset-types-list');
   if (!el) return;
@@ -6515,6 +6539,24 @@ function renderPresetTypeEditor() {
           <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.6;">
             AS発注量は「厚5cm ＝ 1㎡あたり 0.123t」で計算します（厚みに比例）。この係数には嵩増し分が含まれるためAS嵩増率は掛けません。
           </div>
+          ${(() => {
+            // 旧方式（AS密度 × AS嵩増率）の設定が残っていると 0.123 より優先される。
+            // 画面から見えないと原因不明の数量差になるので、ここで必ず知らせる。
+            const _od = t.bulkRatios?.asDensity, _ob = t.bulkRatios?.bulkRatioAS;
+            const _odC = (_od != null && Math.abs(_od - 2.35) > 1e-9);
+            const _obC = (_ob != null && Math.abs(_ob - 1.25) > 1e-9);
+            if (!_odC && !_obC) return '';
+            const _eff = ((_od ?? 2.35) * (_ob ?? 1.25));
+            return `<div style="margin-bottom:10px;font-size:13px;color:var(--yellow);background:rgba(234,179,8,0.10);border:1px solid rgba(234,179,8,0.45);border-radius:6px;padding:8px 10px;line-height:1.6;">
+              ⚠️ この型には<b>旧方式のAS設定</b>が残っています（AS密度 ${_od ?? 2.35} × AS嵩増率 ${_ob ?? 1.25}）。<br>
+              こちらが優先されるため、上の「AS 発注係数」は<b>使われていません</b>。
+              現在の実効値は <b>${(_eff * 0.05).toFixed(4)} t/㎡</b>（厚5cm換算・標準は 0.1230）です。
+              <button onclick="clearLegacyAs(${i})"
+                style="margin-top:7px;font-size:13px;padding:5px 12px;border-radius:6px;border:1px solid rgba(234,179,8,.6);background:rgba(234,179,8,.18);color:#fde047;cursor:pointer;font-family:var(--sans);font-weight:700;">
+                旧設定を削除して 0.123 を使う
+              </button>
+            </div>`;
+          })()}
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
             ${[
               ['AS 発注係数（t/㎡ @厚5cm）','asRate50', AS_ORDER_PER_M2_50MM, 0.001],
@@ -8648,18 +8690,21 @@ function applySkOrderUI(tid){
   const _fk = String(tid).startsWith('dyntype_') ? tid : ('dyntype_' + tid);
   const scope = document.getElementById('typepanel-' + _fk) || document;
   // 管下H（-DPH で終わる input）の field を隠し、値を 0 にする
-  scope.querySelectorAll('input[id$="-DPH"]').forEach(function(inp){
+  // 通常パターンは -DPH、勾配パターンは -DPH1 / -DPH2
+  scope.querySelectorAll('input[id$="-DPH"],input[id$="-DPH1"],input[id$="-DPH2"]').forEach(function(inp){
     if (inp.id.indexOf(tid) !== 0) return;
     const fld = inp.closest('.field') || inp.parentNode;
     if (fld) fld.style.display = on ? 'none' : '';
     if (on) inp.value = '';
   });
-  // DP のラベルを掘削深さに読み替える
-  scope.querySelectorAll('input[id$="-DP"]').forEach(function(inp){
+  // DP のラベルを掘削深さに読み替える（勾配は DP1 / DP2）
+  const _dpLab = { '-DP':'DP（m）', '-DP1':'起点側 DP（m）', '-DP2':'終点側 DP（m）' };
+  scope.querySelectorAll('input[id$="-DP"],input[id$="-DP1"],input[id$="-DP2"]').forEach(function(inp){
     if (inp.id.indexOf(tid) !== 0) return;
+    const sfx = inp.id.endsWith('-DP1') ? '-DP1' : (inp.id.endsWith('-DP2') ? '-DP2' : '-DP');
     const fld = inp.closest('.field');
     const lab = fld ? fld.querySelector('label') : null;
-    if (lab) lab.textContent = on ? '掘削深さ DP（m）' : 'DP（m）';
+    if (lab) lab.textContent = on ? _dpLab[sfx].replace('DP（m）','掘削深さ DP（m）') : _dpLab[sfx];
   });
   // 埋設配管セクションを隠す
   scope.querySelectorAll('.pipe-section').forEach(function(sec){
@@ -8671,17 +8716,20 @@ function applySkOrderUI(tid){
 
 // 係数欄に保存値を流し込み、AS発注量の内訳（5cm単位）を表示する
 function renderOpCoefNote(tid){
-  const op = _opCoef(tid);
+  // tid は 'dyntype_85' でも '85' でも呼ばれる。DOM は 'dyntype_85-coef-*'。
+  const key = _opKey(tid);
+  const op  = _opCoef(key);
   ['winterAS','rc','rm','sand','soil','mas'].forEach(function(k){
-    const el = document.getElementById(tid + '-coef-' + k);
+    const el = document.getElementById(_opDomId(key, '-coef-' + k));
     if (!el || el === document.activeElement) return;   // 入力中の欄は書き換えない
     el.value = (op[k] != null ? op[k] : '');
   });
-  const note = document.getElementById(tid + '-coef-note');
+  const note = document.getElementById(_opDomId(key, '-coef-note'));
   if (!note) return;
-  const t = TYPES[tid];
+  const t = TYPES[tid] || TYPES['dyntype_' + key] || TYPES[key];
   if (!t){ note.innerHTML = ''; return; }
-  const r = getCalcRatios(tid);
+  const _rKey  = (TYPES[tid] ? tid : (TYPES['dyntype_' + key] ? 'dyntype_' + key : key));
+  const r = getCalcRatios(_rKey);
   const rate50 = r.asOrderPerM3 * 0.05;   // 厚5cm 1㎡あたりの t（冬季係数込み）
   const mk = function(label, mm){
     if (!mm || mm <= 0) return '';
@@ -8706,6 +8754,15 @@ function renderOpCoefNote(tid){
   if (op.soil) cust.push('改良土 ' + op.soil);
   if (op.mas) cust.push('桝 ' + op.mas);
   if (cust.length) h += '<div style="margin-top:5px;color:var(--yellow);">✎ 係数を変更中： ' + cust.join('　／　') + '</div>';
+  // 旧方式のAS設定が効いていると 0.123 が使われない。オペ側にも見えるようにする。
+  const _br = (t && t.bulkRatios) || {};
+  const _odC = (_br.asDensity   != null && Math.abs(_br.asDensity   - 2.35) > 1e-9);
+  const _obC = (_br.bulkRatioAS != null && Math.abs(_br.bulkRatioAS - 1.25) > 1e-9);
+  if (_odC || _obC) {
+    h += '<div style="margin-top:6px;padding:6px 9px;border-radius:6px;border:1px solid rgba(234,179,8,.45);background:rgba(234,179,8,.10);color:var(--yellow);">'
+       + '⚠ この型は旧方式のAS設定（密度×嵩増率）が優先されています。実効 ' + rate50.toFixed(4)
+       + ' t/㎡（標準0.1230）。型設定で解除できます。</div>';
+  }
   if (op.date) h += '<div style="margin-top:3px;color:var(--text3);">適用日 ' + op.date
     + (op.cond ? '　／　掘削床：' + _opCondLabel(op.cond) : '') + '（作業日付を変えると外れます）</div>';
   // 前日の係数を自動で外したことを必ず伝える（黙って過剰発注にならないように）
@@ -8718,7 +8775,7 @@ function renderOpCoefNote(tid){
 
   // 状況チップの選択表示
   OP_CONDS.forEach(function(a){
-    const b = document.getElementById(tid + '-cond-' + a[0]);
+    const b = document.getElementById(_opDomId(key, '-cond-' + a[0]));
     if (!b) return;
     const on = (op.cond === a[0]);
     b.style.background  = on ? 'rgba(96,165,250,.25)' : 'var(--surface2)';
@@ -8758,6 +8815,10 @@ const DIGIT_RANGE = {
   DPH:  { lo:0.02, hi:1.5, label:'DP下配管H' },
   masH: { lo:0.05, hi:5,   label:'桝H' },
   masW: { lo:0.02, hi:5,   label:'桝W' },
+  DP1:  { lo:0.1,  hi:3,   label:'起点側DP' },
+  DP2:  { lo:0.1,  hi:3,   label:'終点側DP' },
+  DPH1: { lo:0.02, hi:1.5, label:'起点側 DP下配管H' },
+  DPH2: { lo:0.02, hi:1.5, label:'終点側 DP下配管H' },
   masL: { lo:0.05, hi:10,  label:'桝L' },
   genW: { lo:0.1,  hi:5,   label:'現況廃材 W' },
   genL: { lo:0.1,  hi:300, label:'現況廃材 L' },
@@ -8776,7 +8837,7 @@ function _digitIssues(tid){
   const isSk = !!(typeof _dynSkMode !== 'undefined' && _dynSkMode[tid]);
   pats.forEach(function(pat){
     Object.keys(DIGIT_RANGE).forEach(function(f){
-      if (isSk && f === 'DPH') return;             // 試掘では使わない
+      if (isSk && (f === 'DPH' || f === 'DPH1' || f === 'DPH2')) return;  // 試掘では使わない
       const el = document.getElementById(tid + pat + '-' + f);
       if (!el || el.value === '' || el.value == null) return;
       const v = parseFloat(el.value);
@@ -8796,12 +8857,16 @@ function _digitIssues(tid){
     });
     // DP と 管下H の関係チェック（試掘以外）
     if (!isSk) {
-      const dp  = parseFloat((document.getElementById(tid+pat+'-DP')  ||{}).value);
-      const dph = parseFloat((document.getElementById(tid+pat+'-DPH') ||{}).value);
-      if (isFinite(dp) && isFinite(dph) && dp > 0 && dph > 0 && dph > dp) {
-        out.push({ id: tid+pat+'-DPH', pat: PAT_LABEL[pat]||pat, label:'DP と DP下配管H',
-                   val: dp+' / '+dph, msg:'管下HがDPより深くなっています。入れ違いではありませんか？' });
-      }
+      [['-DP','-DPH','DP と DP下配管H'],
+       ['-DP1','-DPH1','起点側の DP と 管下H'],
+       ['-DP2','-DPH2','終点側の DP と 管下H']].forEach(function(a){
+        const dp  = parseFloat((document.getElementById(tid+pat+a[0]) ||{}).value);
+        const dph = parseFloat((document.getElementById(tid+pat+a[1]) ||{}).value);
+        if (isFinite(dp) && isFinite(dph) && dp > 0 && dph > 0 && dph > dp) {
+          out.push({ id: tid+pat+a[1], pat: PAT_LABEL[pat]||pat, label:a[2],
+                     val: dp+' / '+dph, msg:'管下HがDPより深くなっています。入れ違いではありませんか？' });
+        }
+      });
     }
   });
   return out;
