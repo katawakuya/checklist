@@ -478,12 +478,12 @@ function loadDrawings() {
   _fbDb.collection('masters').doc('drawings').get()
     .then(function(doc) {
       if (mySeq !== _dwgLoadSeq) return;        // 既に別の現場へ切り替わっている
-      var list = [];
-      if (doc.exists && doc.data().data) {
-        var all = doc.data().data;
-        if (Array.isArray(all[mySiteId])) list = all[mySiteId];
-      }
-      // 0件でも反映する。キャッシュも空で上書きして古い図面を残さない。
+      // ドキュメント自体が無い・壊れている場合は「0件」と断定できないので
+      // キャッシュを消さずに、取れているぶんをそのまま表示する
+      if (!doc.exists || !doc.data().data) { buildRbFilter(); renderCards(); return; }
+      var all  = doc.data().data;
+      var list = Array.isArray(all[mySiteId]) ? all[mySiteId] : [];
+      // この現場のデータが無ければ 0件。キャッシュも空にして古い図面を残さない。
       _allDrawings = list;
       try { localStorage.setItem('drawings_' + mySiteId, JSON.stringify(list)); } catch(e) {}
       buildRbFilter();
