@@ -450,8 +450,17 @@ function onSiteSelChange(siteId) {
 }
 
 // ===== 図面読み込み =====
+// 現場を切り替えるたびに読み直す。図面が0件の現場でも、
+// 前の現場の図面が画面に残らないよう必ず空にしてから始める。
+var _dwgLoadSeq = 0;
 function loadDrawings() {
   document.getElementById('mainArea').innerHTML = '<div class="loading"><span class="spinner"></span>図面を読み込み中…</div>';
+
+  var mySeq    = ++_dwgLoadSeq;   // 連続で切り替えたとき、古い応答で上書きしないため
+  var mySiteId = _siteId;
+
+  // 前の現場のデータを必ず捨てる
+  _allDrawings = [];
 
   // 路盤マスタ（rbKey→名称変換用）
   try {
@@ -459,26 +468,30 @@ function loadDrawings() {
     _rbMasters = rbRaw ? JSON.parse(rbRaw) : [];
   } catch(e) { _rbMasters = []; }
 
-  // localStorageキャッシュ
+  // localStorageキャッシュ（この現場のぶんだけ）
   try {
-    var cached = localStorage.getItem('drawings_' + _siteId);
-    if (cached) { _allDrawings = JSON.parse(cached); }
+    var cached = localStorage.getItem('drawings_' + mySiteId);
+    _allDrawings = cached ? (JSON.parse(cached) || []) : [];
   } catch(e) { _allDrawings = []; }
+  if (!Array.isArray(_allDrawings)) _allDrawings = [];
 
   _fbDb.collection('masters').doc('drawings').get()
     .then(function(doc) {
+      if (mySeq !== _dwgLoadSeq) return;        // 既に別の現場へ切り替わっている
+      var list = [];
       if (doc.exists && doc.data().data) {
         var all = doc.data().data;
-        if (all[_siteId]) {
-          _allDrawings = all[_siteId];
-          localStorage.setItem('drawings_' + _siteId, JSON.stringify(_allDrawings));
-        }
+        if (Array.isArray(all[mySiteId])) list = all[mySiteId];
       }
+      // 0件でも反映する。キャッシュも空で上書きして古い図面を残さない。
+      _allDrawings = list;
+      try { localStorage.setItem('drawings_' + mySiteId, JSON.stringify(list)); } catch(e) {}
       buildRbFilter();
       renderCards();
     })
     .catch(function() {
-      // エラー（権限なし含む）→ キャッシュがあれば表示
+      if (mySeq !== _dwgLoadSeq) return;
+      // エラー（権限なし・オフライン含む）→ この現場のキャッシュがあればそれを表示
       buildRbFilter();
       renderCards();
     });
