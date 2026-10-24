@@ -390,6 +390,7 @@ main{padding:10px 14px 90px;}
 
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('check',this)">📋 チェック</button>
+  <button class="tab-btn" onclick="switchTab('seq',this)">🔢 撮影順</button>
   <button class="tab-btn" onclick="switchTab('history',this)">🕐 履歴</button>
   <button class="tab-btn" onclick="switchTab('items',this)">📷 品目一覧</button>
   <a class="tab-btn" href="manage.html" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">📊 集計アプリ <span style="font-size:13px;opacity:0.7;">↗</span></a>
@@ -433,6 +434,18 @@ main{padding:10px 14px 90px;}
       <button onclick="clearAllHistory()" style="background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.18);border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer">全削除</button>
     </div>
     <div id="histList"></div>
+  </main>
+</div>
+
+<!-- ===== 撮影順タブ ===== -->
+<div class="tab-pane" id="pane-seq">
+  <main>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="font-size:15px;color:var(--text2)" id="seqCount"></div>
+      <button onclick="copyPhotoSeq()" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer">📋 一覧をコピー</button>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:8px;line-height:1.5;">チェックタブの並び順＝撮影順です。数値はチェックタブで計算した値をそのまま表示します。</div>
+    <div id="seqList"></div>
   </main>
 </div>
 
@@ -4107,7 +4120,7 @@ function irrNoteList(){
   secs.forEach(function(sec,si){
     sec.items.forEach(function(item,ii){
       var k = itemKey(si,ii);
-      if(_irrNotes[k]) out.push({ key:k, section:sec.title||'', item:item.n||'', note:_irrNotes[k] });
+      if(_irrNotes[k]) out.push({ key:k, section:sec.phase||sec.title||'', item:item.n||'', note:_irrNotes[k] });
     });
   });
   return out;
@@ -5044,6 +5057,18 @@ function _wizFinish() {
     saveLocDataState(i);
   });
 
+  // ウィザードで旗揚げマスタ（設計値）と違う DP・管下H を入れた箇所は「現場変更」として残す
+  var _wizFc = {};
+  _wiz.locs.forEach(function(loc){
+    var des = _ckDesignOf(_wizHataEntry(loc.hata));
+    if(!des || des.dp == null || loc.dp == null) return;
+    var dph = loc.dph != null ? loc.dph : des.dph;
+    if(Math.abs(des.dp - loc.dp) < 0.0005 && (dph == null || des.dph == null || Math.abs(des.dph - dph) < 0.0005)) return;
+    _wizFc[loc.hata] = { designDp:des.dp, designDph:des.dph, designFloor:des.floor,
+      dp:loc.dp, dph:dph, floor:(dph!=null ? +(loc.dp+dph).toFixed(3) : null),
+      reason:'入力ウィザードで変更', by:($v('inRecorder')||'').trim(), at:new Date().toISOString() };
+  });
+
   hideWizard();
 
   var loc0 = _wiz.locs[0];
@@ -5057,6 +5082,7 @@ function _wizFinish() {
   if (hEl2) hEl2.value = loc0.hata;
   // 旗揚げ情報・図面を表示
   _hataEntry = null;
+  Object.keys(_wizFc).forEach(function(h){ _fieldChanges[h] = _wizFc[h]; });
   loadHata();
   // ★ loadHata()がDP値をマスタ値で上書きするため、ウィザード入力値を再適用
   if (loc0.dp !== null) { sv('inDP1', loc0.dp); if (_locData[0]) _locData[0].dp1 = String(loc0.dp); }
@@ -5418,7 +5444,7 @@ function saveState(){
     dp1:$v('inDP1'),dp2:$v('inDP2'),dph:$v('inDPH'),dph2:$v('inDPH2'),dp3:$v('inDP3'),dph3:$v('inDPH3'),dp4:$v('inDP4'),dph4:$v('inDPH4'),bh:$v('inBH'),extra:$v('inExtra'),pipeCount:_pipeCount,pipeTypes:_pipeTypes,pipeCustomNames:_pipeCustomNames,showDummy:_showDummy,pipeGradient:_pipeGradient,
     dp1s:$v('inDP1s'),dph1s:$v('inDPH1s'),dp2s:$v('inDP2s'),dph2s:$v('inDPH2s'),dp3s:$v('inDP3s'),dph3s:$v('inDPH3s'),dp4s:$v('inDP4s'),dph4s:$v('inDPH4s'),
     hata:$v('hataInput'),checks:_checks,na:_naItems,subChecks:_subChecks,kojiKbn:_kojiKbn,kussKbn:_kussuri_kbn,
-    irrNotes:_irrNotes, shikutsu:_skCollect(),
+    irrNotes:_irrNotes, shikutsu:_skCollect(), fieldChanges:_fieldChanges,
     savedAt: Date.now()
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
@@ -5455,6 +5481,7 @@ document.addEventListener('input', function(e){
   _ckDraftTimer = setTimeout(function(){ try{ saveState(); }catch(e2){} }, 500);
 });
 function restoreState(){
+  _fieldChanges = {};
   var raw = localStorage.getItem(storeKey());
   if(!raw) return;
   try{
@@ -5503,6 +5530,7 @@ function restoreState(){
     }
     _checks = d.checks||{}; _naItems = d.na||{}; _subChecks = d.subChecks||{};
     _irrNotes = d.irrNotes||{};
+    _fieldChanges = d.fieldChanges||{};
     // 試掘の検測値は常に復元（作業日と紐づく実測値なので、古くても捨てない）
     _skData = d.shikutsu || _skBlank();
     if(d.kojiKbn)  _kojiKbn     = d.kojiKbn;
@@ -5991,6 +6019,8 @@ function renderMain(){
   updateProgress();
   renderLocTabs();
   _rebuildLocRbSelect(); // renderMainでlocRbSelectが再生成されるため選択値を復元
+  renderFcPanel();
+  renderOrderDimInfo();
 }
 
 function renderSection(sec, si, isHon){
@@ -6728,6 +6758,8 @@ function renderGLPanel() {
     +     '<div id="dphResult2" style="font-size:14px;color:#0369a1;font-weight:700;min-height:16px;"></div>'
     +   '</div>'
     + '</details>'
+    + '<div id="fcPanel"></div>'
+    + '<div id="ordDimInfo"></div>'
     + '<div id="glResult" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:16px;line-height:1.8;"></div>'
     + '<div class="field-row c2" style="margin-top:8px">'
     +   '<div class="field"><label>BH バケット径 (m)</label><input type="number" id="inBH" step="0.01" placeholder="0.50" value="0.50" oninput="recalcGL()"></div>'
@@ -6736,6 +6768,175 @@ function renderGLPanel() {
     + '</div>';
 
   return h;
+}
+
+// =====================================================
+// 現場変更（フリー入力モード）
+//   旗揚げマスタの値＝設計値はそのまま残し、突発的な土被り・床付けの変更を
+//   「変更記録」として旗揚げ番号ごとに持つ。床付けを直接入れれば管下Hは逆算する。
+// =====================================================
+var _fieldChanges = {};   // 旗揚げ番号 -> {designDp, designDph, designFloor, dp, dph, floor, reason, by, at}
+function _ckNum(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
+function _ckDesignOf(e){
+  if(!e) return null;
+  var dp  = e.dp  != null ? e.dp  : (e.dp1 != null ? e.dp1 : (e.rangeFrom != null ? e.rangeFrom : null));
+  var dph = e.dph != null ? e.dph : (e.kanH != null ? e.kanH : (e.dph1 != null ? e.dph1 : null));
+  dp = _ckNum(dp); dph = _ckNum(dph);
+  return { dp:dp, dph:dph, floor:(dp!=null && dph!=null) ? +(dp+dph).toFixed(3) : null };
+}
+// 旗揚げ番号からマスタのエントリを探す（現場別→全体の順。hata / num どちらの形式でも）
+function _ckFindHata(num){
+  if(!num) return null;
+  var keys = (_siteId ? ['hata_master_'+_siteId] : []).concat(['hata_master']);
+  for(var i=0;i<keys.length;i++){
+    try{
+      var arr = JSON.parse(localStorage.getItem(keys[i])||'[]');
+      if(!Array.isArray(arr)) continue;
+      var e = arr.find(function(x){ return String(x.hata||x.num||'')===String(num); });
+      if(e) return e;
+    }catch(e){}
+  }
+  return null;
+}
+function _ckDepthSnapshot(){
+  var dp1 = _ckNum($v('inDP1')), dph = _ckNum($v('inDPH'));
+  var _h = ($v('hataInput')||'').trim();
+  var _he = (_hataEntry && String(_hataEntry.hata||_hataEntry.num||'')===_h) ? _hataEntry : _ckFindHata(_h);
+  var des = _ckDesignOf(_he);
+  return {
+    dp1:dp1, dph:dph, floor1:(dp1!=null && dph!=null) ? +(dp1+dph).toFixed(3) : null,
+    dp1s:_ckNum($v('inDP1s')), dph1s:_ckNum($v('inDPH1s')),
+    dp2:_ckNum($v('inDP2')), dph2:_ckNum($v('inDPH2')),
+    design: des,
+    changed: !!(des && dp1!=null && des.dp!=null && (Math.abs(des.dp-dp1)>0.0005 || (dph!=null && des.dph!=null && Math.abs(des.dph-dph)>0.0005)))
+  };
+}
+function renderFcPanel(){
+  var el = document.getElementById('fcPanel');
+  if(!el) return;
+  var hata = ($v('hataInput')||'').trim();
+  var des = _ckDesignOf(_hataEntry);
+  var fc = _fieldChanges[hata];
+  var f3 = function(v){ return v==null ? '—' : Number(v).toFixed(3); };
+  var h = '<details id="fcWrap" style="margin-top:8px;border:1.5px solid '+(fc?'#f59e0b':'#e2e8f0')+';border-radius:6px;overflow:hidden;"'+(fc?' open':'')+'>'
+    + '<summary style="background:'+(fc?'#fffbeb':'#f8fafc')+';padding:7px 12px;font-size:14px;font-weight:700;color:'+(fc?'#92400e':'#475569')+';cursor:pointer;list-style:none;">'
+    + '✏ 現場変更（突発的な土被り・床付け変更）'+(fc?'　<span style="background:#f59e0b;color:#fff;border-radius:4px;padding:1px 7px;font-size:12px;">変更中</span>':'')
+    + '</summary><div style="padding:10px 12px;background:#fff;">';
+  if(!hata){
+    h += '<div style="font-size:13px;color:#64748b;">旗揚げ番号を入れると設計値が表示されます。番号がない箇所は上の DP・管下H 欄に直接入力してください。</div>';
+  } else {
+    h += '<div style="font-size:14px;color:#334155;margin-bottom:8px;">📋 設計値（旗揚げNo.'+_irrEsc(hata)+'）: DP '+f3(des&&des.dp)+'m　管下H '+f3(des&&des.dph)+'m　床付け '+f3(des&&des.floor)+'m</div>';
+    if(fc){
+      h += '<div style="font-size:14px;color:#92400e;font-weight:700;margin-bottom:8px;">現在の変更値: DP '+f3(fc.dp)+'m　管下H '+f3(fc.dph)+'m　床付け '+f3(fc.floor)+'m'
+        + (fc.reason ? '<br><span style="font-weight:400;">理由: '+_irrEsc(fc.reason)+'</span>' : '') + '</div>';
+    }
+    h += '<div class="field-row c2" style="margin-bottom:6px;">'
+      + '<div class="field"><label style="font-size:13px;">変更後 土被り DP (m)</label><input type="number" id="fcDp" step="0.001" inputmode="decimal" placeholder="'+(des&&des.dp!=null?des.dp:'0.000')+'" value="'+(fc?fc.dp:'')+'"></div>'
+      + '<div class="field"><label style="font-size:13px;">変更後 床付け (m)</label><input type="number" id="fcFloor" step="0.001" inputmode="decimal" placeholder="'+(des&&des.floor!=null?des.floor:'0.000')+'" value="'+(fc?fc.floor:'')+'"></div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#64748b;margin-bottom:6px;">片方だけ入れた場合、もう片方は今の値のまま。管下H＝床付け−DP で自動計算します。</div>'
+      + '<div class="field" style="margin-bottom:8px;"><label style="font-size:13px;">変更理由</label><input type="text" id="fcReason" placeholder="例：既設ガス管回避のため土被り変更（監督員承諾）" value="'+_irrEsc(fc?fc.reason:'')+'"></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button type="button" onclick="applyFieldChange()" style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;font-weight:700;cursor:pointer;">変更を適用</button>'
+      + (fc ? '<button type="button" onclick="revertFieldChange()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:7px 14px;font-size:14px;font-weight:700;cursor:pointer;">設計値に戻す</button>' : '')
+      + '</div>';
+  }
+  h += '</div></details>';
+  el.innerHTML = h;
+}
+function _fcAfterSet(){
+  recalcGL();
+  saveState();
+  if(_locData.length>=2){ syncCurrentToLocData(); saveLocDataState(_locIdx); }
+  renderFcPanel();
+}
+function applyFieldChange(){
+  var hata = ($v('hataInput')||'').trim();
+  if(!hata){ alert('旗揚げ番号を入力してください'); return; }
+  var curDp = _ckNum($v('inDP1')), curDph = _ckNum($v('inDPH'));
+  var inDp = _ckNum($v('fcDp')), inFloor = _ckNum($v('fcFloor'));
+  if(inDp==null && inFloor==null){ alert('変更後の土被り DP か 床付け を入力してください'); return; }
+  var dp = inDp!=null ? inDp : curDp;
+  if(dp==null){ alert('土被り DP を入力してください'); return; }
+  var floor = inFloor!=null ? inFloor : (curDph!=null ? dp+curDph : null);
+  if(floor==null){ alert('床付け を入力してください'); return; }
+  var dph = +(floor - dp).toFixed(3);
+  if(!(dph > 0)){ alert('床付けは土被り DP より深くしてください（管下H＝床付け−DP が 0 以下です）'); return; }
+  var reason = ($v('fcReason')||'').trim();
+  if(!reason && !confirm('変更理由が空です。このまま適用しますか？')) return;
+  var des = _ckDesignOf(_hataEntry) || {dp:curDp, dph:curDph, floor:(curDp!=null&&curDph!=null)?+(curDp+curDph).toFixed(3):null};
+  _fieldChanges[hata] = {
+    designDp:des.dp, designDph:des.dph, designFloor:des.floor,
+    dp:+dp.toFixed(3), dph:dph, floor:+floor.toFixed(3),
+    reason:reason, by:($v('inRecorder')||'').trim(), at:new Date().toISOString()
+  };
+  var e1 = document.getElementById('inDP1'); if(e1) e1.value = _fieldChanges[hata].dp;
+  var e2 = document.getElementById('inDPH'); if(e2) e2.value = dph;
+  _fcAfterSet();
+  _showToast('✏ No.'+hata+' に現場変更を適用しました（設計値はマスタに残ります）', 3000);
+}
+function revertFieldChange(){
+  var hata = ($v('hataInput')||'').trim();
+  if(!_fieldChanges[hata]) return;
+  if(!confirm('No.'+hata+' の現場変更を取り消して設計値に戻しますか？')) return;
+  delete _fieldChanges[hata];
+  var des = _ckDesignOf(_hataEntry);
+  if(des){
+    var e1 = document.getElementById('inDP1'); if(e1 && des.dp!=null) e1.value = des.dp;
+    var e2 = document.getElementById('inDPH'); if(e2 && des.dph!=null) e2.value = des.dph;
+  }
+  _fcAfterSet();
+}
+
+// =====================================================
+// 発注計算の入力寸法（W・L・DP・管下H）を参照表示
+//   同じ旗揚げ番号の発注記録から寸法を引いてくる（再入力しないため）
+// =====================================================
+var _ordDimCache = {};
+function _ordDimText(rec){
+  var pn = {n:'通常', ns:'特殊部', k:'勾配', ks:'勾配特殊部'};
+  var f = function(v){ return (v==null||v==='') ? '' : v; };
+  var parts = [];
+  Object.keys(rec.dims||{}).forEach(function(k){
+    var d = rec.dims[k]; if(!d) return;
+    var t = (pn[k]||k)+': W'+f(d.W)+' L'+f(d.L);
+    if(d.DP!=null) t += ' DP'+d.DP+(d.DPH!=null?' 管下H'+d.DPH+' → 床付け'+(+(d.DP+d.DPH).toFixed(3)):'');
+    if(d.DP1!=null) t += ' 起点DP'+d.DP1+' 終点DP'+f(d.DP2);
+    parts.push(t);
+  });
+  return parts.join('<br>');
+}
+function _pickOrderRec(list, hata){
+  var date = $v('inDate');
+  var c = (list||[]).filter(function(r){
+    return String(r.hata) === String(hata) && r.dims && (!_siteId || !r.siteId || r.siteId === _siteId);
+  });
+  if(!c.length) return null;
+  c.sort(function(a,b){ return (a.date===date?1:0)-(b.date===date?1:0) || String(a.date).localeCompare(String(b.date)); });
+  return c[c.length-1];
+}
+function renderOrderDimInfo(){
+  var el = document.getElementById('ordDimInfo');
+  if(!el) return;
+  var hata = ($v('hataInput')||'').trim();
+  if(!hata){ el.innerHTML=''; return; }
+  var show = function(rec){
+    if(!rec){ el.innerHTML=''; return; }
+    el.innerHTML = '<div style="margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:13px;color:#334155;line-height:1.6;">'
+      + '📦 発注計算の寸法（'+_irrEsc(rec.date||'')+'）<br>'+_ordDimText(rec)+'</div>';
+  };
+  var local = [];
+  try{ local = JSON.parse(localStorage.getItem('order_history')||'[]'); }catch(e){}
+  var rec = _pickOrderRec(local, hata);
+  if(rec){ show(rec); return; }
+  var ck = (_siteId||'')+'|'+hata;
+  if(_ordDimCache[ck] !== undefined){ show(_ordDimCache[ck]); return; }
+  if(!_fbDb){ show(null); return; }
+  _fbDb.collection('order_records').where('hata','==',hata).limit(30).get().then(function(snap){
+    var arr = []; snap.forEach(function(d){ arr.push(d.data()); });
+    _ordDimCache[ck] = _pickOrderRec(arr, hata);
+    if((($v('hataInput')||'').trim()) === hata) show(_ordDimCache[ck]);
+  }).catch(function(){ _ordDimCache[ck] = null; });
 }
 
 function saveDpDphToMaster(){
@@ -6750,11 +6951,19 @@ function saveDpDphToMaster(){
   var mkKey = _siteId ? 'hata_master_'+_siteId : 'hata_master';
   var arr = [];
   try{ arr = JSON.parse(localStorage.getItem(mkKey)||'[]'); }catch(e){}
-  var idx = arr.findIndex(function(e){ return String(e.hata)===String(num); });
+  var idx = arr.findIndex(function(e){ return String(e.hata||e.num||'')===String(num); });
   if(idx < 0){ alert('No.'+num+' はマスタに見つかりません'); return; }
+  if(!confirm('No.'+num+' の設計値（旗揚げマスタ）を DP '+dp+'m／管下H '+dph+'m に書き換えます。\n現場だけの変更なら「✏ 現場変更」を使ってください。\n\n書き換えますか？')) return;
 
+  // 書き換え前の値を履歴に残す（設計値が消えないように）
+  var _prev = arr[idx];
+  var _hist = Array.isArray(_prev.dpHistory) ? _prev.dpHistory.slice(-9) : [];
+  _hist.push({ dp:_prev.dp, dph:(_prev.dph!=null?_prev.dph:_prev.kanH), dp1s:_prev.dp1s, dph1s:_prev.dph1s,
+    at:new Date().toISOString(), by:($v('inRecorder')||'').trim() });
+  arr[idx].dpHistory = _hist;
   arr[idx].dp   = dp;
   arr[idx].dph  = dph;
+  if('kanH' in arr[idx]) arr[idx].kanH = dph;   // roadbed.html 形式のエントリも揃える
   // 勾配②端DP値も保存（入力があれば）
   var dp1sVal  = parseFloat($v('inDP1s'))  || null;
   var dph1sVal = parseFloat($v('inDPH1s')) || null;
@@ -7997,6 +8206,9 @@ function loadHata(){
   }
   if(entry.dp2s  != null) sv('inDP2s',  entry.dp2s);
   if(entry.dph2s != null) sv('inDPH2s', entry.dph2s);
+  // 現場変更（フリー入力）がある旗揚げ番号は、設計値の上に変更値を重ねる
+  var _fcLoaded = _fieldChanges[String(num)];
+  if(_fcLoaded){ sv('inDP1', _fcLoaded.dp); sv('inDPH', _fcLoaded.dph); }
   var info = entry.name?entry.name+'　':'';
   info += '①DP:'+(_dp!=null?_dp+'m':'未登録')+' 管下H:'+(_dph!=null?_dph+'m':'未登録');
   if(dp2val) info += '　②DP:'+dp2val+'m 管下H:'+(dph2val||_dph)+'m';
@@ -8052,6 +8264,8 @@ function loadHata(){
   // loadHata後は_locData[_locIdx].dp1がDOMと乖離しているためここで同期
   if(_locData.length>=2){ syncCurrentToLocData(); saveLocDataState(_locIdx); }
   _rebuildLocRbSelect();
+  renderFcPanel();
+  renderOrderDimInfo();
 }
 
 // ===== checklist 図面ズーム =====
@@ -8195,7 +8409,12 @@ function saveRecord(){
     checks:JSON.parse(JSON.stringify(_checks)),
     na:JSON.parse(JSON.stringify(_naItems)),
     shikutsu: _skMode ? JSON.parse(JSON.stringify(_skCollect())) : null,
-    irrNotes: irrNoteList()
+    irrNotes: irrNoteList(),
+    // 撮影順（チェックタブの並び順）と各撮影ポイントの数値
+    photoSeq: buildPhotoSeq(),
+    // 入力した深さ（設計値と区別して保存）
+    depth: _ckDepthSnapshot(),
+    fieldChange: (function(){ var h=($v('hataInput')||'').trim(); return _fieldChanges[h] ? JSON.parse(JSON.stringify(_fieldChanges[h])) : null; })()
   });
   if(_history.length>200) _history.pop();
   saveHistory();
@@ -8234,9 +8453,58 @@ function renderHistory(){
         '<span class="chip pct">'+pct+'%</span>' +
         '<span class="chip '+(r.done===r.total&&r.total>0?'done':'')+'">'+r.done+'/'+r.total+' 完了</span>' +
         (r.typeName?'<span class="chip">'+r.typeName+'</span>':'')+
+        (r.fieldChange?'<span class="chip" style="background:#fef3c7;color:#92400e;">✏ 現場変更</span>':'')+
+        (r.shikutsu?'<span class="chip" style="background:#fef3c7;color:#92400e;">⛏ 試掘</span>':'')+
       '</div>' +
+      _histDetailHTML(r) +
     '</div>';
   }).join('');
+}
+
+// 履歴の詳細（撮影順・入力した深さ・現場変更・試掘検測値・備考）
+function _histDetailHTML(r){
+  var parts = '';
+  var d = r.depth;
+  if(d && (d.dp1 || d.dph)){
+    parts += '<div style="font-size:14px;margin:4px 0;">📏 土被りDP '+(d.dp1||'—')+'m　管下H '+(d.dph||'—')+'m　床付け '+(d.floor1||'—')+'m'
+      + (d.dp1s ? '　（終点側 DP '+d.dp1s+'m）' : '')
+      + (d.design && d.design.dp!=null ? '<br><span style="color:var(--text3);">設計値 DP '+d.design.dp+'m　管下H '+(d.design.dph!=null?d.design.dph:'—')+'m</span>' : '')
+      + '</div>';
+  }
+  var fc = r.fieldChange;
+  if(fc){
+    parts += '<div style="font-size:14px;margin:4px 0;color:#92400e;">✏ 現場変更: DP '+fc.designDp+'→'+fc.dp+'m　床付け '+fc.designFloor+'→'+fc.floor+'m'
+      + (fc.reason ? '<br>理由: '+_irrEsc(fc.reason) : '') + (fc.by ? '（'+_irrEsc(fc.by)+'）' : '') + '</div>';
+  }
+  if(r.photoSeq && r.photoSeq.length){
+    parts += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:14px;font-weight:700;color:#0369a1;">🔢 撮影順（'+r.photoSeq.length+'枚）</summary>'
+      + '<div style="margin-top:6px;">'+_seqListHTML(r.photoSeq)+'</div></details>';
+  }
+  var sk = r.shikutsu;
+  if(sk && sk.pits && sk.pits.length){
+    var sh = sk.pits.map(function(p, i){
+      var t = '<b>試掘'+(i+1)+(p.no?' '+_irrEsc(p.no):'')+'</b>'+(p.pos?' '+_irrEsc(p.pos):'')
+        + '<br>W '+(p.W||'—')+' × L '+(p.L||'—')+' × H '+(p.H||'—')+'m　舗装 '+(p.pave||'—')+'mm　路盤 '+(p.rb||'—')+'mm';
+      (p.offsets||[]).forEach(function(o, oi){
+        if(!o.base && !o.dist && !o.dp) return;
+        t += '<br>オフセット'+['①','②','③'][oi]+' '+_irrEsc(o.base==='その他'?(o.other||'その他'):(o.base||''))+' 離れ'+(o.dist||'—')+'m DP'+(o.dp||'—')+'m';
+      });
+      (p.buried||[]).forEach(function(b){
+        if(!b.kind && !b.dia && !b.cover) return;
+        t += '<br>埋設物 '+_irrEsc(b.kind||'')+' '+_irrEsc(b.dia||'')+' '+_irrEsc(b.mat||'')+' 土被り'+(b.cover||'—')+'m 離隔'+(b.sep||'—')+'mm';
+      });
+      if(p.witness) t += '<br>立会: '+_irrEsc(p.witness);
+      if(p.memo) t += '<br>備考: '+_irrEsc(p.memo);
+      return '<div style="margin-bottom:6px;">'+t+'</div>';
+    }).join('');
+    parts += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:14px;font-weight:700;color:#92400e;">⛏ 試掘 検測値（'+sk.pits.length+'箇所）</summary>'
+      + '<div style="margin-top:6px;font-size:14px;line-height:1.6;">'+sh+'</div></details>';
+  }
+  if(r.irrNotes && r.irrNotes.length){
+    parts += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:14px;font-weight:700;color:#475569;">📝 備考（'+r.irrNotes.length+'件）</summary>'
+      + '<div style="margin-top:6px;font-size:14px;line-height:1.6;">'+r.irrNotes.map(function(n){ return '・'+_irrEsc(n.item)+': '+_irrEsc(n.note); }).join('<br>')+'</div></details>';
+  }
+  return parts ? '<div style="margin-top:6px;border-top:1px dashed var(--border);padding-top:4px;">'+parts+'</div>' : '';
 }
 
 function delRecord(id){
@@ -8261,6 +8529,86 @@ function switchTab(name, btn){
   btn.classList.add('active');
   if(name==='history') renderHistory();
   if(name==='items') ilRender();
+  if(name==='seq') renderPhotoSeq();
+}
+
+// =====================================================
+// 撮影順（チェックタブの並び順を撮影順として、数値付きで一覧化）
+//   撮影時刻はまちまちなので時刻順にはしない。
+//   画面に出ている撮影ポイントを上から順に番号付けする。
+//   GL値の並び（中間転圧・埋設シートなど）は1行＝1撮影として展開する。
+// =====================================================
+function _seqText(node){
+  var c = node.cloneNode(true);
+  c.querySelectorAll('.check-locs,.subchk-box,.chk-loc,button,.irr-wrap,.irr-ta').forEach(function(x){ x.remove(); });
+  return (c.textContent||'').replace(/\s+/g,' ').trim();
+}
+function buildPhotoSeq(){
+  var out = [], no = 0;
+  var root = document.getElementById('checkMain');
+  if(!root) return out;
+  root.querySelectorAll('.check-item').forEach(function(el){
+    if(el.style.display === 'none') return;
+    var sec = el.closest('.checklist-section');
+    var st = sec ? sec.querySelector('.stitle') : null;
+    var phase = st ? (st.textContent||'').trim() : '';
+    var nmEl = el.querySelector('.cname');
+    var name = nmEl ? (nmEl.textContent||'').trim() : '';
+    var dimEl = el.querySelector('.cdim');
+    var dim = dimEl ? (dimEl.textContent||'').trim() : '';
+    var na = el.classList.contains('na');
+    var rows = el.querySelectorAll('.combo-seq-row');
+    if(!rows.length) rows = el.querySelectorAll('.subchk-item');
+    if(rows.length){
+      rows.forEach(function(r){
+        var done = r.classList.contains('on') || !!r.querySelector('.chk-loc.on,.subchk-item.on');
+        no++; out.push({ no:no, phase:phase, name:name, val:_seqText(r), done:done, na:na });
+      });
+      return;
+    }
+    var tg = el.querySelector('.tags');
+    var val = tg ? _seqText(tg) : '';
+    if(dim && val.indexOf(dim) < 0) val = dim + (val ? '　' + val : '');
+    var done = el.classList.contains('checked') || !!el.querySelector('.check-locs .chk-loc.on');
+    no++; out.push({ no:no, phase:phase, name:name, val:val, done:done, na:na });
+  });
+  return out;
+}
+function _seqListHTML(seq){
+  if(!seq || !seq.length) return '<div style="text-align:center;color:var(--text3);padding:20px">撮影項目がありません（現場と型を選択してください）</div>';
+  var h = '', lastPh = null;
+  seq.forEach(function(e){
+    if(e.phase !== lastPh){ lastPh = e.phase; h += '<div style="font-size:14px;font-weight:700;color:#7030a0;margin:12px 0 4px;">'+e.phase+'</div>'; }
+    var bg = e.na ? '#f1f5f9' : (e.done ? '#ecfdf5' : '#fff');
+    h += '<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 9px;margin-bottom:4px;border:1px solid var(--border);border-radius:6px;background:'+bg+';'+(e.na?'opacity:.6;':'')+'">'
+      + '<span style="min-width:30px;font-weight:900;color:#0369a1;font-size:15px;">'+e.no+'</span>'
+      + '<span style="flex:1;min-width:0;"><span style="font-size:15px;font-weight:700;color:var(--text1);">'+e.name+'</span>'
+      + (e.val ? '<br><span style="font-size:14px;color:#92400e;">'+e.val+'</span>' : '')
+      + '</span>'
+      + '<span style="font-size:15px;font-weight:700;color:'+(e.done?'#059669':'#cbd5e1')+';">'+(e.na?'対象外':(e.done?'✓':'未'))+'</span>'
+      + '</div>';
+  });
+  return h;
+}
+function renderPhotoSeq(){
+  var seq = buildPhotoSeq();
+  var cnt = document.getElementById('seqCount');
+  var done = seq.filter(function(e){ return e.done; }).length;
+  var hata = ($v('hataInput')||'').trim();
+  if(cnt) cnt.textContent = (hata ? '🚩No.'+hata+'　' : '') + '撮影 ' + seq.length + '枚（済 ' + done + '）';
+  var el = document.getElementById('seqList');
+  if(el) el.innerHTML = _seqListHTML(seq);
+}
+function copyPhotoSeq(){
+  var seq = buildPhotoSeq();
+  var hata = ($v('hataInput')||'').trim();
+  var txt = (hata ? '旗揚げNo.'+hata+'\n' : '') + seq.map(function(e){
+    return e.no + '. ' + e.name + (e.val ? '　' + e.val : '') + (e.na ? '（対象外）' : (e.done ? '　✓' : ''));
+  }).join('\n');
+  try{
+    navigator.clipboard.writeText(txt).then(function(){ _showToast('📋 撮影順をコピーしました', 2000); },
+      function(){ prompt('コピーしてください', txt); });
+  }catch(e){ prompt('コピーしてください', txt); }
 }
 
 // =====================================================

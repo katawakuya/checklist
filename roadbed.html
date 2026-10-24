@@ -2321,7 +2321,19 @@ function _viewDwgEntry(d){
 // 旗揚げマスタ CRUD
 // ======================================
 function getHataKey(id){return 'hata_master_'+id;}
-function getLocalHata(id){return JSON.parse(localStorage.getItem(getHataKey(id))||'[]');}
+// 旗揚げマスタの項目名をそろえる（order.html 形式の hata / dph / dp_start / dp_end も
+// roadbed.html 形式の num / kanH / rangeFrom / rangeTo として読めるようにする。元の項目は消さない）
+function _normHata(e){
+  if(!e||typeof e!=='object')return e;
+  if(e.num==null&&e.hata!=null)e.num=e.hata;
+  if(e.hata==null&&e.num!=null)e.hata=e.num;
+  if(e.kanH==null&&e.dph!=null)e.kanH=e.dph;
+  if(e.rangeFrom==null&&e.dp_start!=null)e.rangeFrom=e.dp_start;
+  if(e.rangeTo==null&&e.dp_end!=null)e.rangeTo=e.dp_end;
+  if(!e.key&&e.num!=null)e.key='h_n_'+e.num;
+  return e;
+}
+function getLocalHata(id){return (JSON.parse(localStorage.getItem(getHataKey(id))||'[]')||[]).map(_normHata);}
 function saveLocalHata(id,list){localStorage.setItem(getHataKey(id),JSON.stringify(list));}
 function getLocalSites(){return JSON.parse(localStorage.getItem('site_master')||'[]');}
 
@@ -2590,7 +2602,8 @@ function saveHata(){
   };
   const id=_selectedSiteId;
   let list=getLocalHata(id);
-  if(editKey){const idx=list.findIndex(r=>r.key===editKey);if(idx>=0)list[idx]=rec;else list.push(rec);}
+  // 既存エントリの項目（order.html の imgData・現場変更履歴など）は残したまま上書きする
+  if(editKey){const idx=list.findIndex(r=>r.key===editKey);if(idx>=0){const o=list[idx];list[idx]=Object.assign({},o,rec,{hata:num,dph:kanH,dp_start:rec.rangeFrom,dp_end:rec.rangeTo});if('dp1s' in o){list[idx].dp1s=rec.rangeTo;list[idx].dph1s=rec.dph2;}}else list.push(rec);}
   else list.push(rec);
   saveLocalHata(id,list);
   fbSaveAllHata(id,list);

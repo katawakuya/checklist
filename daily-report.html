@@ -1151,7 +1151,20 @@ function summarizeOrder(recs){
       zando:   { qty: zandoM3, unit:'m³', ton: zandoM3 * HAUL_DENSITY.zando },
       congara: { qty: cnOutM3, unit:'m³', ton: cnOutM3 * HAUL_DENSITY.congara },
     },
-    detail: recs.map(r => ({ date:r.date, hata:r.hata, typeLabel:r.typeLabel, calcMode:r.calcMode }))
+    detail: recs.map(r => ({ date:r.date, hata:r.hata, typeLabel:r.typeLabel, calcMode:r.calcMode })),
+    // 発注計算で入力済みの配管（日報の配管欄へそのまま取り込むため）
+    pipes: [].concat(...recs.map(r => {
+      const d = (r.dims && (r.dims.n || r.dims.k || r.dims.ns || r.dims.ks)) || {};
+      return (r.pipes || []).map(p => ({
+        type: p.kind === '曲げ管' ? '曲げ管' : (p.kind === '直管' || !p.kind ? '直管' : p.kind),
+        size: String(p.diam || '').replace(/[^\d.]/g, ''),
+        qty:  p.N != null ? String(p.N) : '',
+        meter: p.totalL ? String(p.totalL) : '',
+        dp:    d.DP  != null ? d.DP  + 'm' : (d.DP1 != null ? d.DP1 + 'm' : ''),
+        kanka: d.DPH != null ? d.DPH + 'm' : (d.DPH1 != null ? d.DPH1 + 'm' : ''),
+        note: (p.name || '') + (r.hata ? ' No.' + r.hata : '')
+      }));
+    }))
   };
 }
 const _dumpCount = (ton, cap) => (ton > 0 ? Math.ceil(ton / cap) : 0);
@@ -1199,6 +1212,7 @@ function renderOrderRef(){
           ${d.calcMode==='hon'?'本復旧':'仮復旧'}</span>`).join('')}
      </div>
      ${tbl('🚚 搬出', outRows)} ${tbl('🚚 搬入', inRows)}
+     ${(s.pipes && s.pipes.length) ? `<button type="button" onclick="importPipesFromOrderRef()" style="margin-top:8px;padding:6px 12px;font-size:13px;font-weight:700;background:#0ea5e9;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔧 発注計算の配管 ${s.pipes.length}件を配管欄に取り込む</button>` : ''}
      <div style="font-size:11px;color:#888;margin-top:6px;">
        比重 AS ${HAUL_DENSITY.as} ／ 路盤材 ${HAUL_DENSITY.rb} ／ 再生砂 ${HAUL_DENSITY.sand}
        ／ 改良土 ${HAUL_DENSITY.soil} ／ 残土 ${HAUL_DENSITY.zando} ／ ガラ ${HAUL_DENSITY.congara} t/m³
@@ -1469,6 +1483,22 @@ function loadOrderRefCloud(){
     renderOrderRef();
     alert('クラウドからの読み込みに失敗しました。\n' + e.message);
   });
+}
+// 発注計算で入力済みの配管を日報の配管欄へ取り込む（同じ値を手入力しないため）
+function importPipesFromOrderRef(){
+  const pipes = (ORDER_REF && ORDER_REF.pipes) || [];
+  if (!pipes.length) { alert('取り込める配管がありません。'); return; }
+  const existing = collectPipes();
+  if (existing.length && !confirm('配管欄に入力済みの ' + existing.length + '件 があります。\n発注計算の配管 ' + pipes.length + '件 を後ろに追加しますか？')) return;
+  // 何も入っていない空の配管カードは取り除いてから追加する
+  document.querySelectorAll('#pipeList .pipe-card').forEach(card => {
+    const empty = [...card.querySelectorAll('input[data-field]')].every(i => !i.value.trim());
+    if (empty) card.remove();
+  });
+  pipes.forEach(p => addPipeRow(p));
+  renumberPipes();
+  try { scheduleDraftSave(); } catch (e) {}
+  showToast('発注計算から配管 ' + pipes.length + '件を取り込みました');
 }
 function clearOrderRef(){ ORDER_REF = null; renderOrderRef(); }
 
