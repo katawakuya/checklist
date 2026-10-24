@@ -308,6 +308,7 @@ main{padding:10px 14px 90px;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="work-record.js"></script>
   <!-- eruda: モバイルデバッグコンソール（タップで開閉） -->
   <script>
     (function () {
@@ -5528,6 +5529,8 @@ function removeLocation(idx){
 }
 
 function saveState(){
+  // 今の作業日の入力をしたことを覚える（夜勤明けの確認用。開いただけで昔の日付を記録しないよう当日分のみ）
+  if(window.WorkRecord && $v('inDate') && $v('inDate') === WorkRecord.workDate()) WorkRecord.touch($v('inDate'));
   if(!_siteId||!_typeKey) return;
   var data = {
     date:$v('inDate'),mgmt:$v('inMgmtNo'),rec:$v('inRecorder'),
@@ -5539,6 +5542,7 @@ function saveState(){
   };
   localStorage.setItem(storeKey(), JSON.stringify(data));
   _showAutoSaved();
+  _wrPutFromChecklist(false);
 }
 
 // 下書きを「そのまま使ってよい」とみなす時間。
@@ -6056,10 +6060,13 @@ function renderMain(){
   restoreState();
   renderSkPanel();
 
-  // 日付は常に今日に設定（restoreState で古い日付が入る場合があるため後から上書き）
+  // 日付は常に今日の作業日に設定（restoreState で古い日付が入る場合があるため後から上書き）
+  // 作業日は日替わり時刻（既定7時）で決める。夜勤で0時をまたいでも開始日のまま
   var dateEl = document.getElementById('inDate');
-  var _today = new Date().toISOString().slice(0,10);
+  var _today = WorkRecord.workDate();
   if(dateEl) dateEl.value = _today;
+  // 日替わり後に昨夜の入力が残っていれば、夜勤の続きか確認する
+  WorkRecord.askCarryOver(function(prev){ if(dateEl){ dateEl.value = prev; saveState(); } });
 
   // ── 記録者デバイス記憶 ──────────────────────────────────
   var _recEl = document.getElementById('inRecorder');
@@ -6829,6 +6836,7 @@ function renderGLPanel() {
     +   '<span>この現場は掘削出来形を撮らない（復旧延長で代用）</span>'
     + '</label>'
     + _rbStepRowHTML()
+    + _wrCutoffRowHTML()
     + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
     +   '<input type="checkbox" id="chkOdawaraGlobal" onchange="toggleOdawara(this.checked)"'+(_showOdawara?' checked':'')+' style="width:14px;height:14px;accent-color:#7c3aed;">'
     +   '<span>詳細撮影（小田原仕様等）を表示する</span>'
@@ -6946,6 +6954,7 @@ function renderFcPanel(){
 function _fcAfterSet(){
   recalcGL();
   saveState();
+  _wrPutFromChecklist(false, true);
   if(_locData.length>=2){ syncCurrentToLocData(); saveLocDataState(_locIdx); }
   renderFcPanel();
 }
@@ -7120,6 +7129,14 @@ function _frRender(){
   b.innerHTML = h;
   _frUpdTotal();
 }
+// GL設定パネルの「日替わり時刻」行（この時刻より前の入力は前日の作業日。全アプリ共通・端末ごと）
+function _wrCutoffRowHTML(){
+  var cur = window.WorkRecord ? WorkRecord.cutoffHour() : 7, opts = '';
+  for(var h=0; h<=12; h++) opts += '<option value="'+h+'"'+(h===cur?' selected':'')+'>'+h+'時</option>';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'
+    + '<span style="font-size:14px;color:var(--text2);">作業日の日替わり時刻（夜勤は開始日にまとめる）</span>'
+    + '<select onchange="WorkRecord.setCutoffHour(this.value);sv(\'inDate\',WorkRecord.workDate());saveState();" style="font-size:14px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:5px;">'+opts+'</select></div>';
+}
 // GL設定パネルの「路盤層転圧の撒き出し」行
 function _rbStepRowHTML(){
   var r = _siteRules();
@@ -7218,6 +7235,41 @@ function saveFreeMode(){
 // 発注計算の入力寸法（W・L・DP・管下H）を参照表示
 //   同じ旗揚げ番号の発注記録から寸法を引いてくる（再入力しないため）
 // =====================================================
+// =====================================================
+// 作業記録の共通化（work-record.js）
+//   チェックリストで決まった DP・管下H を発注計算・日報へ渡し、
+//   先に発注計算で入っていればその値をここに入れる（同じ数値を二度入れない）
+// =====================================================
+function _wrPutFromChecklist(toCloud, force){
+  if(!window.WorkRecord) return;
+  var hata = ($v('hataInput')||'').trim(), date = $v('inDate');
+  var dp = _ckNum($v('inDP1')), dph = _ckNum($v('inDPH'));
+  if(!_siteId || !hata || !date || dp == null) return;
+  var sel = document.getElementById('selType');
+  var tl = (sel && sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) ? sel.options[sel.selectedIndex].textContent : '';
+  WorkRecord.put(_siteId, date, hata, { dp:dp, dph:dph, kbn:_kojiKbn, typeLabel:tl }, 'checklist',
+    toCloud ? _fbDb : null, force ? null : { keepOthers:true });
+}
+function _wrApplyToChecklist(){
+  if(!window.WorkRecord) return;
+  var hata = ($v('hataInput')||'').trim(), date = $v('inDate');
+  if(!_siteId || !hata || !date) return;
+  WorkRecord.fetch(_siteId, date, hata, _fbDb, function(rec){
+    if(!rec || rec.dp == null || !rec.src || rec.src.dp === 'checklist') return;
+    if((($v('hataInput')||'').trim()) !== hata || $v('inDate') !== date) return;   // 待つ間に別の番号へ移った
+    var curDp = _ckNum($v('inDP1')), curDph = _ckNum($v('inDPH'));
+    var dph = rec.dph != null ? rec.dph : curDph;
+    if(curDp != null && Math.abs(curDp - rec.dp) < 0.0005 && (dph == null || (curDph != null && Math.abs(curDph - dph) < 0.0005))) return;
+    var from = WorkRecord.srcLabel(rec.src.dp);
+    var des = _ckDesignOf(_hataEntry) || {};
+    _fieldChanges[hata] = { designDp:des.dp, designDph:des.dph, designFloor:des.floor, dp:rec.dp, dph:dph,
+      floor:(dph != null ? +(rec.dp + dph).toFixed(3) : null), reason:from + 'で入力済み', by:'', at:rec.updatedAt || new Date().toISOString() };
+    sv('inDP1', rec.dp); if(dph != null) sv('inDPH', dph);
+    _fcAfterSet();
+    _showToast('📦 ' + from + 'で入れた DP ' + rec.dp + (dph != null ? '／管下H ' + dph : '') + ' を入れました', 3500);
+  });
+}
+
 var _ordDimCache = {};
 function _ordDimText(rec){
   var pn = {n:'通常', ns:'特殊部', k:'勾配', ks:'勾配特殊部'};
@@ -8592,6 +8644,7 @@ function loadHata(){
   _rebuildLocRbSelect();
   renderFcPanel();
   renderOrderDimInfo();
+  _wrApplyToChecklist();
 }
 
 // ===== checklist 図面ズーム =====
@@ -8745,6 +8798,7 @@ function saveRecord(){
   if(_history.length>200) _history.pop();
   saveHistory();
   if(_history.length > 0) fbSaveRecord('cl_records', _history[0]);
+  _wrPutFromChecklist(true, true);
   alert('✅ 保存しました（'+done+'/'+total+' 完了）');
 }
 

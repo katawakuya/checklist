@@ -1,6 +1,6 @@
 // Service Worker - 現場管理システム
 // キャッシュバージョン（更新時はここを変える）
-const CACHE_VERSION = 'v4.76';
+const CACHE_VERSION = 'v4.77';
 const CACHE_NAME = 'kanri-' + CACHE_VERSION;
 
 // キャッシュするファイル一覧
@@ -10,6 +10,7 @@ const CACHE_FILES = [
   './roadbed.html',
   './order.html',
   './excel-diagrams.json',
+  './work-record.js',
   './checklist.html',
   './viewer.html',
   './manage.html',
