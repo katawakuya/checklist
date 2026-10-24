@@ -28,6 +28,7 @@ function forceReload(){
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="work-record.js"></script>
+<script src="free-entry.js"></script>
 <style>
 
   :root {
@@ -744,6 +745,9 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       animation:pulse-guide 2s ease-in-out infinite;
     ">現場を選ぶと路盤構成に合わせた型タブが表示されます</div>
   </div>
+
+  <!-- フリー入力（マスタ未登録・突発の箇所）。チェックリストと共通 -->
+  <button type="button" onclick="openOrderFreeMode()" style="width:100%;margin:6px 0;background:rgba(217,119,6,.1);border:1.5px dashed #d97706;color:#f59e0b;border-radius:8px;padding:8px 10px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);">✏ フリー入力で箇所をつくる（マスタ未登録・突発の箇所）</button>
 
   <!-- 入力ウィザード起動ボタン -->
   <button id="owizOpenBtn" onclick="openOrderWizard()" style="display:none;">🧭 ウィザードで入力する</button>
@@ -7331,6 +7335,11 @@ function onGlobalSiteChange() {
   var _mastersOnly = _getMastersAsTypes(siteId);
   _lastMergedCount = _mastersOnly.length;
   buildDynamicCalcTabs(siteId, site.name, _mastersOnly);
+  // フリー入力の箇所を他の端末・チェックリストと共有（増えていたらタブを作り直す）
+  WorkRecord.syncFree(siteId, _fbDb, { cb: function(changed){
+    if (changed && document.getElementById('global-site-sel')?.value === siteId)
+      _rebuildDynTabsKeepingInput(siteId, site.name);
+  }});
 
   // 路盤構成マスタを現場連動でロード（Firestore同期）
   loadRoadbedForCurrentSite(siteId);
@@ -7791,8 +7800,72 @@ function _getMastersAsTypes(siteId) {
   var localKey = 'roadbed_masters_' + siteId;
   var masters = JSON.parse(localStorage.getItem(localKey) || 'null');
   if (!masters) masters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
-  if (!Array.isArray(masters) || masters.length === 0) return [];
+  if (!Array.isArray(masters)) masters = [];
+  // フリー入力の箇所（チェックリスト・発注計算で共通、free-entry.js）も型として並べる
+  var free = (window.WorkRecord && siteId) ? WorkRecord.freeLocal(siteId).rb : [];
+  var keys = masters.map(function(m){ return m.key; });
+  masters = masters.concat(free.filter(function(m){ return keys.indexOf(m.key) < 0; }));
+  if (masters.length === 0) return [];
   return masters.map(_rbMasterToTypeObj);
+}
+
+// 型タブを作り直す。入力中の値は消さずに戻す（フリー入力の箇所が増えたとき用）
+function _rebuildDynTabsKeepingInput(siteId, siteName, activeTid) {
+  var box = document.getElementById('dynamic-calc-tabs');
+  var saved = {};
+  if (box) box.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){
+    if (el.type === 'checkbox' || el.type === 'radio') saved[el.id] = { c: el.checked };
+    else if (el.value !== '') saved[el.id] = { v: el.value };
+  });
+  var types = _getMastersAsTypes(siteId);
+  _lastMergedCount = types.length;
+  buildDynamicCalcTabs(siteId, siteName, types);
+  setTimeout(function(){
+    Object.keys(saved).forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      if ('c' in saved[id]) el.checked = saved[id].c; else el.value = saved[id].v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    if (activeTid) {
+      var b = document.querySelector('#type-subnav [data-typetab="' + activeTid + '"]');
+      if (b) b.click();
+    }
+  }, 60);
+}
+
+function openOrderFreeMode() {
+  var siteId = document.getElementById('global-site-sel')?.value || '';
+  var site = getSites().find(function(x){ return x.id === siteId; });
+  var by = '';
+  try { by = (_getActiveAuthorEl()?.value || '').trim(); } catch (e) {}
+  FreeEntry.open({ siteId: siteId, siteName: site ? site.name : '', rules: WorkRecord.siteRules(siteId, site ? site.name : ''),
+    db: _fbDb, by: by, saveLabel: 'この内容で発注計算の型をつくる',
+    onSaved: _orderAfterFreeSave,
+    onDeleted: function(){ _rebuildDynTabsKeepingInput(siteId, site ? site.name : ''); } });
+}
+// フリー入力の箇所ができたら、その型タブを開いて旗揚げ番号・DP・管下H・仮/本を入れる（残りは W・L）
+function _orderAfterFreeSave(res) {
+  var siteId = document.getElementById('global-site-sel')?.value || '';
+  var site = getSites().find(function(x){ return x.id === siteId; });
+  var tid = 'dyntype_type_import_' + res.rbKey;   // _rbMasterToTypeObj が type_import_ を付ける
+  _rebuildDynTabsKeepingInput(siteId, site ? site.name : '', tid);
+  setTimeout(function(){
+    var setV = function(id, v){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    setV(tid + '-hata', res.hata);
+    setV(tid + 'n-DP', res.dp);
+    setV(tid + 'n-DPH', res.dph);
+    try { switchDynMode(tid, res.kbn === 'hon' ? 'hon' : 'kari'); } catch (e) {}
+    var date = document.getElementById(tid + '-date')?.value || WorkRecord.workDate();
+    WorkRecord.put(siteId, date, res.hata, { dp: res.dp, dph: res.dph, kbn: res.kbn, typeLabel: res.entry.label }, 'order', _fbDb);
+    var w = document.getElementById(tid + 'n-W');
+    if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'center' }); w.focus(); }
+  }, 150);
 }
 
 function _mergeRbMastersIntoTypes(baseTypes, siteId) {
@@ -9710,6 +9783,11 @@ function _wrFillOrderTab(tid) {
   info('');
   if (!hata || !date) return;
   WorkRecord.fetch(siteId, date, hata, _fbDb, function (rec) {
+    if (!rec) {
+      // フリー入力で作った番号なら、その DP・管下H を使う
+      const fh = WorkRecord.freeHata(siteId, hata);
+      if (fh) rec = { dp: fh.dp, dph: fh.dph, src: { dp: 'free' } };
+    }
     if (!rec) return;
     if ((document.getElementById(tid + '-hata')?.value || '').trim() !== hata) return;
     const map = { DP: 'dp', DPH: 'dph', W: 'W', L: 'L' };
