@@ -214,7 +214,8 @@
   // =====================================================
   var SITE_RULE_DEFAULTS = [
     { re:/磯子/, rule:{ noYuka:true, rbStep:200 } },
-    { re:/小田原|環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
+    { re:/小田原/, rule:{ rbStep:150, rbStepFixed:true } },
+    { re:/環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
   ];
   function siteRules(siteId, siteName){
     var name = siteName || '', r = {};
