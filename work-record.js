@@ -153,8 +153,82 @@
       }).catch(fromOrders);
     }catch(e){ finish(null); }
   }
-  var SRC_LABEL = { checklist:'チェックリスト', order:'発注計算', daily:'日報' };
+  // =====================================================
+  // フリー入力の箇所（チェックリストの「✏ フリー入力」）を端末間・アプリ間で共有する
+  //   端末: ckfree_roadbed_masters_<現場> / ckfree_hata_master_<現場>
+  //   Firestore: masters/ckfree_<現場> { roadbed, hata, deleted, updatedAt }（書けなければ端末だけ）
+  //   同じ箇所は新しい方を残す。削除した箇所は deleted に残して、他端末から復活しないようにする
+  // =====================================================
+  function _arr(k){ try{ var a = JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function freeKeys(siteId){ return { rb:'ckfree_roadbed_masters_'+siteId, hata:'ckfree_hata_master_'+siteId }; }
+  function freeLocal(siteId){ var k = freeKeys(siteId); return { rb:_arr(k.rb), hata:_arr(k.hata) }; }
+  function _stamp(e){ return String(e.savedAt || e.at || e.updatedAt || ''); }
+  function _merge(a, b, idOf, deleted){
+    var m = {};
+    a.concat(b).forEach(function(e){
+      var id = idOf(e);
+      if(!id || deleted.indexOf(id) >= 0) return;
+      if(!m[id] || _stamp(e) > _stamp(m[id])) m[id] = e;
+    });
+    return Object.keys(m).map(function(k){ return m[k]; });
+  }
+  function syncFree(siteId, db, opts){
+    opts = opts || {};
+    var cb = opts.cb || function(){};
+    if(!siteId){ cb(false); return; }
+    var k = freeKeys(siteId), loc = freeLocal(siteId);
+    var before = JSON.stringify(loc);
+    var apply = function(remote){
+      var deleted = (remote.deleted || []).slice();
+      (opts.deleted || []).forEach(function(d){ if(deleted.indexOf(d) < 0) deleted.push(d); });
+      var rb = _merge(loc.rb, remote.roadbed || [], function(e){ return e.key; }, deleted);
+      var ha = _merge(loc.hata, remote.hata || [], function(e){ return String(e.hata||''); }, [])
+        .filter(function(e){ return deleted.indexOf(e.rbKey) < 0; });
+      try{ localStorage.setItem(k.rb, JSON.stringify(rb)); localStorage.setItem(k.hata, JSON.stringify(ha)); }catch(e){}
+      var out = { roadbed:rb, hata:ha, deleted:deleted.slice(-200) };
+      if(db && (opts.deleted || JSON.stringify(out.roadbed) !== JSON.stringify(remote.roadbed||[]) || JSON.stringify(out.hata) !== JSON.stringify(remote.hata||[]))){
+        out.updatedAt = new Date().toISOString();
+        try{ db.collection('masters').doc('ckfree_'+siteId).set(out).catch(function(){}); }catch(e){}
+      }
+      cb(JSON.stringify({ rb:rb, hata:ha }) !== before);
+    };
+    if(!db){ apply({}); return; }
+    try{
+      db.collection('masters').doc('ckfree_'+siteId).get()
+        .then(function(doc){ apply(doc.exists ? (doc.data()||{}) : {}); })
+        .catch(function(){ apply({}); });
+    }catch(e){ apply({}); }
+  }
+  // フリー入力の旗揚げ番号（DP・管下H は m）
+  function freeHata(siteId, hata){
+    var h = normHata(hata);
+    return freeLocal(siteId).hata.find(function(e){ return String(e.hata) === h; }) || null;
+  }
+
+  // =====================================================
+  // 現場ルール（チェックリスト・発注計算で共通）
+  //   noYuka: 掘削出来形は撮らず、復旧延長（L×W 検測）で代用する（例: PFI磯子）
+  //   rbStep: 路盤層転圧の撒き出し厚（mm）。150 / 200。未設定なら従来ルール（層定義、無ければ@150）
+  //           rbStepFixed=true の現場は画面でも変えられない。中間転圧は常に@200
+  //   現場名から既定値を決め、チェックリストの画面で現場ごとに切り替えられる（端末に保存: ck_site_rules）
+  // =====================================================
+  var SITE_RULE_DEFAULTS = [
+    { re:/磯子/, rule:{ noYuka:true, rbStep:200 } },
+    { re:/小田原|環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
+  ];
+  function siteRules(siteId, siteName){
+    var name = siteName || '', r = {};
+    SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name)) Object.keys(d.rule).forEach(function(k){ r[k]=d.rule[k]; }); });
+    var saved = (_json('ck_site_rules') || {})[siteId];
+    if(saved) Object.keys(saved).forEach(function(k){ r[k]=saved[k]; });
+    // 固定ルールは端末の設定より優先
+    SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name) && d.rule.rbStepFixed){ r.rbStep = d.rule.rbStep; r.rbStepFixed = true; } });
+    return r;
+  }
+
+  var SRC_LABEL = { checklist:'チェックリスト', order:'発注計算', daily:'日報', free:'フリー入力' };
   g.WorkRecord = { workDate:workDate, cutoffHour:cutoffHour, setCutoffHour:setCutoffHour,
     touch:touch, askCarryOver:askCarryOver, carryOverDate:carryOverDate,
+    freeLocal:freeLocal, syncFree:syncFree, freeHata:freeHata, siteRules:siteRules,
     get:get, put:put, fetch:fetch, srcLabel:function(s){ return SRC_LABEL[s] || s || ''; } };
 })(window);
