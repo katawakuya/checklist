@@ -27,6 +27,7 @@ function forceReload(){
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="work-record.js"></script>
 <style>
 
   :root {
@@ -2855,7 +2856,7 @@ try { _opCondMem = JSON.parse(localStorage.getItem(OP_COND_MEM)   || '{}') || {}
 // ウィザードは 'dyntype_85' 形式、計算画面は '85' 形式で型を呼ぶため正規化する
 function _opKey(typeKey){ return String(typeKey == null ? '' : typeKey).replace(/^dyntype_/, ''); }
 
-function _todayISO(){ return new Date().toISOString().slice(0,10); }
+function _todayISO(){ return WorkRecord.workDate(); }
 // 係数キーは 'dyntype_' を外した形で持つが、DOM の id は 'dyntype_85-...' のまま。
 // 動的タブ側を先に探し、無ければ素のidにフォールバックする。
 function _opDomId(k, suffix){
@@ -5795,11 +5796,17 @@ function updateCutoffDisplay(typeKey) {
   if(cel && cel.parentElement) cel.parentElement.style.display='none';
 });
 
-// 今日の日付をデフォルト（アーカイブタブ）
-const today = new Date().toISOString().slice(0,10);
+// 今日の作業日をデフォルト（アーカイブタブ）
+const today = WorkRecord.workDate();
 ['85','40','30','20','14'].forEach(t => {
   const d = document.getElementById(`${t}-date`);
   if (d && !d.value) d.value = today;
+});
+// 日替わり後に昨夜の入力が残っていれば、夜勤の続きか確認する（前日にしたら作業日欄をそろえる）
+WorkRecord.askCarryOver(function (prev) {
+  document.querySelectorAll('input[type=date][id$="-date"]').forEach(function (el) {
+    if (el.value === today) el.value = prev;
+  });
 });
 
 // =====================================================================
@@ -8139,7 +8146,7 @@ function resetAllDynForms(){
 
 function setTodayDate(id) {
   const el = document.getElementById(id);
-  if (el && !el.value) el.value = new Date().toISOString().slice(0,10);
+  if (el && !el.value) el.value = WorkRecord.workDate();   // 日替わり時刻で決めた作業日（夜勤は開始日）
 }
 
 function buildDynamicTypeHTML(siteId, siteName, t) {
@@ -9664,8 +9671,70 @@ function _commitRecord(record) {
   h.push(record);
   saveHistory(_sortHistory(h));
   _autoFbSend(record, replaced);
+  // 作業記録（チェックリスト・日報と共通）にも寸法を残す
+  try {
+    const n = (record.dims && (record.dims.n || record.dims[Object.keys(record.dims)[0]])) || {};
+    WorkRecord.put(record.siteId, record.date, record.hata,
+      { dp: n.DP, dph: n.DPH, W: n.W, L: n.L, typeLabel: record.typeLabel }, 'order', _fbDb);
+  } catch (e) { console.warn('[workRecord]', e); }
   return replaced;
 }
+
+// =====================================================================
+// 旗揚げ番号を入れたら、同じ現場・作業日・番号の作業記録から DP・管下H（・W・L）を入れる
+//   チェックリストを先に入れた日は、ここで再入力しなくて済む。入っている欄は上書きしない。
+// =====================================================================
+function _wrSiteIdFor(tid) {
+  const hid = document.getElementById(tid + '-siteid');
+  if (hid && hid.value) return hid.value;
+  const nm = document.getElementById(tid + '-site')?.value || '';
+  if (nm) { const st = getSites().find(x => x.name === nm); if (st) return st.id; }
+  return document.getElementById('global-site-sel')?.value || '';
+}
+function _wrFillOrderTab(tid) {
+  const hata = (document.getElementById(tid + '-hata')?.value || '').trim();
+  const date = document.getElementById(tid + '-date')?.value || '';
+  const siteId = _wrSiteIdFor(tid);
+  const info = (msg) => {
+    const hEl = document.getElementById(tid + '-hata');
+    if (!hEl) return;
+    let el = document.getElementById(tid + '-wrinfo');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = tid + '-wrinfo';
+      el.style.cssText = 'font-size:13px;color:#0369a1;margin-top:4px;line-height:1.5;';
+      hEl.insertAdjacentElement('afterend', el);
+    }
+    el.textContent = msg || '';
+  };
+  info('');
+  if (!hata || !date) return;
+  WorkRecord.fetch(siteId, date, hata, _fbDb, function (rec) {
+    if (!rec) return;
+    if ((document.getElementById(tid + '-hata')?.value || '').trim() !== hata) return;
+    const map = { DP: 'dp', DPH: 'dph', W: 'W', L: 'L' };
+    const filled = [];
+    Object.keys(map).forEach(function (f) {
+      const v = rec[map[f]];
+      const el = document.getElementById(tid + 'n-' + f);
+      if (v == null || !el || el.value !== '') return;
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      filled.push((f === 'DPH' ? '管下H' : f) + ' ' + v);
+    });
+    if (filled.length) {
+      const from = WorkRecord.srcLabel((rec.src || {}).dp || (rec.src || {}).W);
+      info('📋 ' + from + 'の値を入れました：' + filled.join('／'));
+    }
+  });
+}
+document.addEventListener('change', function (e) {
+  const id = (e.target && e.target.id) || '';
+  const m = id.match(/^(.+)-(hata|date)$/);
+  if (!m || m[1] === 'm' || m[1] === 'hp') return;
+  if (!document.getElementById(m[1] + 'n-DP')) return;
+  _wrFillOrderTab(m[1]);
+});
 
 // 型タブ直下の 📦資材管理 CTA を表示
 function _showZmCta(tid, recordId) {

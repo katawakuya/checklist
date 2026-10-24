@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="work-record.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -1844,6 +1845,8 @@ function getLastUsedContext(){
 function clearForm(){
   populateForm({});
   document.getElementById('workDate').value = todayStr();
+  // 日替わり後に昨夜の入力が残っていれば、夜勤の続きか確認する
+  WorkRecord.askCarryOver(function(prev){ document.getElementById('workDate').value = prev; });
   editingId = null;
   const ctx = getLastUsedContext();
   if(ctx){
@@ -1860,11 +1863,8 @@ function clearForm(){
     document.getElementById('editingNote').textContent = '';
   }
 }
-function todayStr(){
-  const d = new Date();
-  const p = n=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
-}
+// 作業日（日替わり時刻より前は前日。夜勤で0時をまたいでも開始日の日報になる）
+function todayStr(){ return WorkRecord.workDate(); }
 
 /* ---------- CRUD ---------- */
 function newReport(){
@@ -1880,6 +1880,7 @@ function saveReport(){
   const data = collectFormData();
   if(!data.siteName){ alert('現場名を入力してください'); return; }
   if(!data.workDate){ alert('作業日を入力してください'); return; }
+  WorkRecord.touch(data.workDate);
 
   const list = loadReports();
   const now = new Date().toISOString();
