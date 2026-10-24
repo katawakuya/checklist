@@ -1305,10 +1305,10 @@ var _PHOTO_GUIDE = {
   why:'埋め戻し材が適正に転圧されていることを記録する。\n不十分な転圧は路盤沈下・道路変形の原因となる。',
   how:'・ランマーで転圧中の状況を撮影\n・スケールで現在のGL値（深さ）を計測して撮影\n・黒板に「@200転圧 ○回目 GL-○○m」と記入\n・200mm以内の撒き出し毎に撮影（@200ルール）'},
 '路盤構成変更':{
-  why:'路盤材（RC/RM）の設置下端に達したことを記録する。\n@150ルール適用開始の管理基準点となる。',
+  why:'路盤材（RC/RM）の設置下端に達したことを記録する。\nここから中間転圧（@200）を終え、仮復旧／本復旧の路盤層転圧（@150 または @200、現場ルール）に切り替わる管理基準点となる。',
   how:'・スケールで路盤変更点のGL値を計測して撮影\n・黒板に「路盤変更点 GL-○○m」と記入\n・転圧完了面が水平であることを確認'},
 '路盤転圧':{
-  why:'各路盤層が150mm以内の撒き出し毎に転圧されていることを記録する。\n路盤強度・平坦性の品質管理記録。',
+  why:'各路盤層が150mm以内（現場ルールにより200mm以内）の撒き出し毎に転圧されていることを記録する。\n路盤強度・平坦性の品質管理記録。',
   how:'・ランマー/振動ローラーで転圧中の状況を撮影\n・スケールで転圧完了面のGL値を計測して撮影\n・黒板に「○○転圧 ○/○ GL-○○m」と記入'},
 'プライムコート':{
   why:'既設路盤面とAS混合物の付着性を高めるプライムコートの散布を記録する。\n散布不足はAS層の剥離・早期変形の原因となる。',
@@ -2158,6 +2158,7 @@ function _ckRbMasterToTypeObj(m){
       return (m.honRbLayers||[]).filter(function(r){ return r.cat==='free'||r.subcat==='subfree'; })
         .reduce(function(s,r){ return s+(r.t||0); },0)/1000;
     })(),
+    rbStep: m.rbStep || 0,
     kariRM_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRmCat, m.kariRmLayers, m.kariRmH, false),
     kariRC_layers: _ckDeriveLayersArr(m.kariRbLayers, _ckIsRcCat, m.kariRcLayers, m.kariRcH, true),
     honRM_layers:  _ckDeriveLayersArr(m.honRbLayers,  _ckIsRmCat, m.honRmLayers,  m.honRmH,  false),
@@ -2243,7 +2244,7 @@ function _ckApplyLiveRbOverride(presetType, siteId, typeKey, presetTypeKey){
       'key','label','ckType','rmH','rcH','rmSize','rcSize','honRmSize','honRcSize','asT密粒','asT粗粒','totalH','asLayers',
       'honAsLayers','genkyoAsH','genkyoRM','genkyoRC','genkyoCnH','genkyoCnRC','genkyoCnRCSubcat','honFreeRows','genkyoTotalH','genkyoFreeRows','genkyoFreeH',
       'kariRM_layers','kariRC_layers','honRM_layers','honRC_layers',
-      'kariRmLayers','kariRcLayers','honRmLayers','honRcLayers',
+      'kariRmLayers','kariRcLayers','honRmLayers','honRcLayers','rbStep',
     ];
     overrideKeys.forEach(function(k){ merged[k] = fresh[k]; });
     return merged;
@@ -3125,7 +3126,7 @@ function buildChecklistFromPreset(presetType){
     var rcLabel = (_rcLayers && !_isStdLayersStr(_rcLayers))
       ? ('路盤転圧　' + _rcLayers)
       : ('下層路盤転圧　RC-'+rcS);
-    var _rcStep = _rcCompactStep(presetType.kariRC_layers);
+    var _rcStep = _ckRbStep(presetType) || _rcCompactStep(presetType.kariRC_layers);
     rcLayers = compactLayers(totalH - rcH, rcH, rcLabel, _rcStep, _odawaraRbNote);
     rcCompact = rcLayers.map(function(l){ return l.dim; });
   }
@@ -3138,7 +3139,7 @@ function buildChecklistFromPreset(presetType){
     var rmLabel = (_rmLayers && !_isStdLayersStr(_rmLayers))
       ? ('路盤転圧　' + (_rmLayers.replace(/^路盤[　 ]*/, '') || _rmLayers))
       : ('上層路盤転圧　RM-'+rmS);
-    var _rmStep = _rmCompactStep(presetType.kariRM_layers);
+    var _rmStep = _ckRbStep(presetType) || _rmCompactStep(presetType.kariRM_layers);
     rmLayers = compactLayers(totalH - rcH - rmH, rmH, rmLabel, _rmStep, _odawaraRbNote);
     rmCompact = rmLayers.map(function(l){ return l.dim; });
   }
@@ -3161,13 +3162,13 @@ function buildChecklistFromPreset(presetType){
   var honRmLayers = [];
   if (genRcH > 0) {
     var _hRcTop = Math.max(0, honTotalH - genRcH);
-    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+rcS, 0.150).map(function(l){
+    honRcLayers = compactLayers(_hRcTop, genRcH, '下層路盤転圧　RC-'+rcS, _ckRbStep(presetType) || 0.150).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
   if (genRmH > 0) {
     var _hRmTop = Math.max(0, honTotalH - genRcH - genRmH);
-    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+rmS, 0.150).map(function(l){
+    honRmLayers = compactLayers(_hRmTop, genRmH, '上層路盤転圧　RM-'+rmS, _ckRbStep(presetType) || 0.150).map(function(l){
       return { dim: l.dim, n: l.n.replace('仮復旧　', '本復旧　') };
     });
   }
@@ -3798,7 +3799,7 @@ function buildChecklistFromPreset(presetType){
       }
       if(insertIdx >= 0){
         var newRmItems = rmLayers.map(function(l, _ri){
-          return {n:l.n, dim:l.dim, _rbStepType:'kariRm', _rbStepIdx:_ri, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。【小田原仕様】'};
+          return {n:l.n, dim:l.dim, _rbStepType:'kariRm', _rbStepIdx:_ri, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。'};
         });
         sec.items.splice.apply(sec.items, [insertIdx+1, 0].concat(newRmItems));
       }
@@ -3810,7 +3811,7 @@ function buildChecklistFromPreset(presetType){
       }
       for(var ri4=rmItems.length; ri4<rmLayers.length; ri4++){
         sec.items.splice(lastRmIdx+1+(ri4-rmItems.length), 0,
-          {n:rmLayers[ri4].n, dim:rmLayers[ri4].dim, _rbStepType:'kariRm', _rbStepIdx:ri4, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。【小田原仕様】'});
+          {n:rmLayers[ri4].n, dim:rmLayers[ri4].dim, _rbStepType:'kariRm', _rbStepIdx:ri4, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。'});
       }
     }
 
@@ -3830,7 +3831,7 @@ function buildChecklistFromPreset(presetType){
       }
       for(var ri3=rcItems.length; ri3<rcLayers.length; ri3++){
         sec.items.splice(lastRcIdx+1+(ri3-rcItems.length), 0,
-          {n:rcLayers[ri3].n, dim:rcLayers[ri3].dim, _rbStepType:'kariRc', _rbStepIdx:ri3, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。【小田原仕様】'});
+          {n:rcLayers[ri3].n, dim:rcLayers[ri3].dim, _rbStepType:'kariRc', _rbStepIdx:ri3, note:'ランマーで転圧している状況とスケールで確認している状況を撮影。転圧後に黒板を持った状態でGL値が読めるよう撮影すること。スケールで幅を実測・撮影。黒板に敷均し・締固め状況と記載。'});
       }
     }
   });
@@ -3918,9 +3919,14 @@ function _skExcluded(item){ return (_skMode && _skIsPipeItem(item)) || _siteRule
 // =====================================================
 // 現場ルール
 //   noYuka: 掘削出来形は撮らず、復旧延長（L×W 検測）で代用する（例: PFI磯子）
+//   rbStep: 路盤層転圧の撒き出し厚（mm）。150 / 200。未設定なら従来ルール（層定義、無ければ@150）
+//           rbStepFixed=true の現場は画面でも変えられない。中間転圧は常に@200
 //   現場名から既定値を決め、画面のチェックで現場ごとに切り替えられる（端末に保存）
 // =====================================================
-var SITE_RULE_DEFAULTS = [ { re:/磯子/, rule:{ noYuka:true } } ];
+var SITE_RULE_DEFAULTS = [
+  { re:/磯子/, rule:{ noYuka:true, rbStep:200 } },
+  { re:/小田原|環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
+];
 function _siteRules(){
   var site = (_sites||[]).find(function(x){ return x.id===_siteId; });
   var name = site ? (site.name||'') : '';
@@ -3930,14 +3936,22 @@ function _siteRules(){
     var saved = JSON.parse(localStorage.getItem('ck_site_rules')||'{}')[_siteId];
     if(saved) Object.keys(saved).forEach(function(k){ r[k]=saved[k]; });
   }catch(e){}
+  // 固定ルールは端末の設定より優先
+  SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name) && d.rule.rbStepFixed){ r.rbStep = d.rule.rbStep; r.rbStepFixed = true; } });
   return r;
+}
+// 路盤層転圧の撒き出し厚（m）。固定の現場ルール ＞ 箇所の指定（フリー入力） ＞ 現場の既定。0 = 従来ルール
+function _ckRbStep(pt){
+  var r = _siteRules();
+  var s = r.rbStepFixed ? r.rbStep : ((pt && pt.rbStep) || r.rbStep);
+  return s ? s/1000 : 0;
 }
 function setSiteRule(k, v){
   if(!_siteId){ alert('先に現場を選択してください'); return; }
   var all = {};
   try{ all = JSON.parse(localStorage.getItem('ck_site_rules')||'{}'); }catch(e){}
   all[_siteId] = all[_siteId] || {};
-  all[_siteId][k] = !!v;
+  all[_siteId][k] = v;
   localStorage.setItem('ck_site_rules', JSON.stringify(all));
   saveState();
   renderMain();
@@ -6813,6 +6827,7 @@ function renderGLPanel() {
     +   '<input type="checkbox" id="chkNoYuka" onchange="setSiteRule(\'noYuka\',this.checked)"'+(_siteRules().noYuka?' checked':'')+' style="width:14px;height:14px;accent-color:#d97706;">'
     +   '<span>この現場は掘削出来形を撮らない（復旧延長で代用）</span>'
     + '</label>'
+    + _rbStepRowHTML()
     + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
     +   '<input type="checkbox" id="chkOdawaraGlobal" onchange="toggleOdawara(this.checked)"'+(_showOdawara?' checked':'')+' style="width:14px;height:14px;accent-color:#7c3aed;">'
     +   '<span>詳細撮影（小田原仕様等）を表示する</span>'
@@ -6977,13 +6992,23 @@ function revertFieldChange(){
 //   路盤マスタと同じ形のデータを端末に作り、型として選べるようにする。
 //   撮影項目（路盤転圧のGL・埋設シート・中間転圧など）は通常の型と同じ計算で出る。
 // =====================================================
-var FREE_AS_OPTS = ['密粒度AS混合物','再生密粒度AS混合物','粗粒度AS混合物','再生粗粒度AS混合物','瀝青安定処理','その他'];
-var FREE_RB_OPTS = ['RM-40','RM-30','RC-40','RC-30','その他'];
+var FREE_AS_OPTS = ['密粒度AS混合物','再生密粒度AS混合物','粗粒度AS混合物','再生粗粒度AS混合物','細粒度AS混合物','開粒度AS混合物','瀝青安定処理','再生瀝青安定処理'];
+var FREE_RB_OPTS = ['RM-40','RM-30','RM-25','再生RM-40','RC-40','RC-30','再生RC-40','改良土','砂'];
+var FREE_KIND_OPTS = ['上層','下層'];
 var _fr = null;
 function _frBlank(){
-  return { road:'車道', hata:'', dp:'', dph:'', floor:'',
-    as:[ {name:'密粒度AS混合物', custom:'', t:50}, {name:'粗粒度AS混合物', custom:'', t:50} ],
-    rb:[ {kind:'上層', mat:'RM-40', custom:'', t:150}, {kind:'下層', mat:'RC-40', custom:'', t:150} ] };
+  var st = _siteRules().rbStep || 150;
+  return { road:'車道', kbn:'kari', rbStep:st, hata:'', dp:'', dph:'', floor:'',
+    as:[ {name:'密粒度AS混合物', t:50}, {name:'粗粒度AS混合物', t:50} ],
+    rb:[ {kind:'上層', mat:'RM-40', t:150}, {kind:'下層', mat:'RC-40', t:150} ] };
+}
+// 旧形式（「その他」＋custom）の入力を名前1つにまとめる
+function _frNormForm(f){
+  f.kbn = f.kbn || 'kari';
+  f.rbStep = f.rbStep || _siteRules().rbStep || 150;
+  (f.as||[]).forEach(function(a){ if(a.name==='その他'){ a.name = a.custom||''; } delete a.custom; });
+  (f.rb||[]).forEach(function(r){ if(r.mat==='その他'){ r.mat = r.custom||''; } delete r.custom; });
+  return f;
 }
 function _frKey(kind){ return 'ckfree_' + kind + '_' + _siteId; }
 function _frLoad(kind){ try{ var a = JSON.parse(localStorage.getItem(_frKey(kind))||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
@@ -7009,14 +7034,17 @@ function _frInp(path, val, ph, type, w){
   return '<input type="'+(type||'text')+'" value="'+_irrEsc(val)+'" placeholder="'+(ph||'')+'"'+(type==='number'?' inputmode="decimal" step="1"':'')
     + ' oninput="_frSet(\''+path+'\',this.value);_frUpdTotal()" style="width:'+(w||'100%')+';box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">';
 }
-function _frSel(path, val, opts, rerender){
-  return '<select onchange="_frSet(\''+path+'\',this.value);'+(rerender?'_frRender()':'_frUpdTotal()')+'" style="width:100%;box-sizing:border-box;font-size:15px;padding:7px 6px;border:1px solid #cbd5e1;border-radius:6px;">'
-    + opts.map(function(o){ return '<option'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('') + '</select>';
+// 選択＋フリー入力: 文字欄に直接書くか、右の▼から定型の名前を選ぶ
+function _frCombo(path, val, opts, ph){
+  return '<div style="display:flex;gap:3px;">'
+    + '<input type="text" value="'+_irrEsc(val)+'" placeholder="'+(ph||'')+'" oninput="_frSet(\''+path+'\',this.value)" style="flex:1;min-width:0;box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">'
+    + '<select onchange="if(this.value){_frSet(\''+path+'\',this.value);_frRender();}" title="定型から選ぶ" style="width:38px;flex:none;font-size:15px;padding:0;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;">'
+    + '<option value="">▼</option>' + opts.map(function(o){ return '<option value="'+_irrEsc(o)+'">'+_irrEsc(o)+'</option>'; }).join('') + '</select></div>';
 }
 function _frUpdTotal(){
   var t = _frTotals();
   var el = document.getElementById('frTotal');
-  if(el) el.textContent = 'AS '+t.asT+'mm ＋ 路盤 '+t.rbT+'mm ＝ 路盤変更点 GL-'+(t.total/1000).toFixed(3)+'m';
+  if(el) el.textContent = 'AS '+t.asT+'mm ＋ 路盤 '+t.rbT+'mm ＝ 路盤構成変更点 GL-'+(t.total/1000).toFixed(3)+'m（中間転圧@200の終点。ここから'+(_fr.kbn==='hon'?'本':'仮')+'復旧の路盤層転圧）';
   var dp = parseFloat(_fr.dp)||0, dph = parseFloat(_fr.dph)||0, fl = parseFloat(_fr.floor)||0;
   var el2 = document.getElementById('frDepth');
   if(el2){
@@ -7027,34 +7055,48 @@ function _frUpdTotal(){
   }
 }
 function _frLab(t){ return '<div style="font-size:13px;font-weight:700;color:#475569;margin:10px 0 4px;">'+t+'</div>'; }
+function _frSeg(field, opts){
+  return '<div style="display:flex;gap:8px;">'
+    + opts.map(function(o){ var on = String(_fr[field])===String(o[0]);
+        return '<button type="button" onclick="_fr.'+field+'='+JSON.stringify(o[0]).replace(/"/g,'\'')+';_frRender()" style="flex:1;padding:9px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer;border:2px solid '+(on?'#d97706':'#cbd5e1')+';background:'+(on?'#fffbeb':'#fff')+';color:'+(on?'#92400e':'#64748b')+';">'+o[1]+'</button>'; }).join('')
+    + '</div>';
+}
 function _frRender(){
   var b = document.getElementById('freeBody');
   if(!b) return;
+  _frNormForm(_fr);
   var site = (_sites||[]).find(function(x){ return x.id===_siteId; });
+  var rules = _siteRules();
   var emb = _fr.road==='車道' ? 300 : 200;
   var h = '<div style="font-size:14px;color:#334155;margin-bottom:6px;">🏗 現場: <b>'+_irrEsc(site?site.name:'')+'</b></div>';
-  h += _frLab('車道／歩道（埋設シートの高さが決まります）')
-    + '<div style="display:flex;gap:8px;">'
-    + ['車道','歩道'].map(function(r){ var on=_fr.road===r; return '<button type="button" onclick="_fr.road=\''+r+'\';_frRender()" style="flex:1;padding:9px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer;border:2px solid '+(on?'#d97706':'#cbd5e1')+';background:'+(on?'#fffbeb':'#fff')+';color:'+(on?'#92400e':'#64748b')+';">'+r+'</button>'; }).join('')
-    + '</div><div style="font-size:13px;color:#0369a1;margin-top:4px;">埋設シート: 管上 '+emb+'mm</div>';
+  h += _frLab('車道／歩道（埋設シートの高さが決まります）') + _frSeg('road', [['車道','車道'],['歩道','歩道']])
+    + '<div style="font-size:13px;color:#0369a1;margin-top:4px;">埋設シート: 管上 '+emb+'mm</div>';
+  h += _frLab('仮復旧／本復旧') + _frSeg('kbn', [['kari','仮復旧'],['hon','本復旧']]);
+  h += _frLab('路盤層転圧の撒き出し（中間転圧は@200固定）');
+  if(rules.rbStepFixed){
+    _fr.rbStep = rules.rbStep;
+    h += '<div style="font-size:14px;color:#7030a0;font-weight:700;">@'+rules.rbStep+' 固定（この現場のルール）</div>';
+  } else {
+    h += _frSeg('rbStep', [[200,'@200'],[150,'@150']]);
+  }
   h += _frLab('旗揚げ番号') + _frInp('hata', _fr.hata, '例: 1485');
   h += _frLab('AS層（上から）');
   _fr.as.forEach(function(a, i){
-    h += '<div style="display:grid;grid-template-columns:1.6fr .8fr 30px;gap:6px;margin-bottom:6px;align-items:center;">'
-      + '<div>'+_frSel('as.'+i+'.name', a.name, FREE_AS_OPTS, true)+(a.name==='その他'?'<div style="margin-top:4px;">'+_frInp('as.'+i+'.custom', a.custom, '名称')+'</div>':'')+'</div>'
-      + '<div style="display:flex;align-items:center;gap:3px;">'+_frInp('as.'+i+'.t', a.t, 'mm', 'number')+'<span style="font-size:13px;">mm</span></div>'
+    h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) 88px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+      + '<div>'+_frCombo('as.'+i+'.name', a.name, FREE_AS_OPTS, '層の名前')+'</div>'
+      + '<div style="display:flex;align-items:center;gap:3px;">'+_frInp('as.'+i+'.t', a.t, 'mm', 'number', '58px')+'<span style="font-size:13px;">mm</span></div>'
       + '<button type="button" onclick="_fr.as.splice('+i+',1);_frRender()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;padding:6px 0;">✕</button></div>';
   });
-  h += '<button type="button" onclick="_fr.as.push({name:\'瀝青安定処理\',custom:\'\',t:100});_frRender()" style="background:#fff;border:1px dashed #94a3b8;color:#475569;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">＋ AS層追加</button>';
+  h += '<button type="button" onclick="_fr.as.push({name:\'瀝青安定処理\',t:100});_frRender()" style="background:#fff;border:1px dashed #94a3b8;color:#475569;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">＋ AS層追加</button>';
   h += _frLab('路盤層（上から）');
   _fr.rb.forEach(function(r, i){
-    h += '<div style="display:grid;grid-template-columns:.8fr 1.2fr .8fr 30px;gap:6px;margin-bottom:6px;align-items:center;">'
-      + '<div>'+_frSel('rb.'+i+'.kind', r.kind, ['上層','下層'], false)+'</div>'
-      + '<div>'+_frSel('rb.'+i+'.mat', r.mat, FREE_RB_OPTS, true)+(r.mat==='その他'?'<div style="margin-top:4px;">'+_frInp('rb.'+i+'.custom', r.custom, '材料名')+'</div>':'')+'</div>'
-      + '<div style="display:flex;align-items:center;gap:3px;">'+_frInp('rb.'+i+'.t', r.t, 'mm', 'number')+'<span style="font-size:13px;">mm</span></div>'
+    h += '<div style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) 88px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+      + '<div>'+_frCombo('rb.'+i+'.kind', r.kind, FREE_KIND_OPTS, '上層')+'</div>'
+      + '<div>'+_frCombo('rb.'+i+'.mat', r.mat, FREE_RB_OPTS, '材料名')+'</div>'
+      + '<div style="display:flex;align-items:center;gap:3px;">'+_frInp('rb.'+i+'.t', r.t, 'mm', 'number', '58px')+'<span style="font-size:13px;">mm</span></div>'
       + '<button type="button" onclick="_fr.rb.splice('+i+',1);_frRender()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;padding:6px 0;">✕</button></div>';
   });
-  h += '<button type="button" onclick="_fr.rb.push({kind:\'下層\',mat:\'RC-40\',custom:\'\',t:150});_frRender()" style="background:#fff;border:1px dashed #94a3b8;color:#475569;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">＋ 路盤層追加</button>';
+  h += '<button type="button" onclick="_fr.rb.push({kind:\'下層\',mat:\'RC-40\',t:150});_frRender()" style="background:#fff;border:1px dashed #94a3b8;color:#475569;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;">＋ 路盤層追加</button>';
   h += '<div id="frTotal" style="margin-top:8px;font-size:14px;font-weight:700;color:#7030a0;"></div>';
   h += _frLab('深さ（mm）')
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">'
@@ -7067,8 +7109,9 @@ function _frRender(){
   if(list.length){
     h += _frLab('この端末のフリー入力箇所')
       + list.map(function(e){
+        var f = e.form || {};
         return '<div style="display:flex;gap:6px;align-items:center;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;font-size:14px;">'
-          + '<span style="flex:1;">No.'+_irrEsc(e.hata)+'　'+_irrEsc(e.road||'')+'　DP '+(e.dp*1000).toFixed(0)+' / 床付け '+((e.dp+e.dph)*1000).toFixed(0)+'mm</span>'
+          + '<span style="flex:1;">No.'+_irrEsc(e.hata)+'　'+_irrEsc(e.road||'')+(f.kbn==='hon'?'・本復旧':'・仮復旧')+'　DP '+(e.dp*1000).toFixed(0)+' / 床付け '+((e.dp+e.dph)*1000).toFixed(0)+'mm</span>'
           + '<button type="button" onclick="editFreeEntry(\''+_irrEsc(e.hata)+'\')" style="background:#f0f9ff;border:1px solid #0ea5e9;color:#0369a1;border-radius:5px;padding:3px 8px;cursor:pointer;">編集</button>'
           + '<button type="button" onclick="deleteFreeEntry(\''+_irrEsc(e.hata)+'\')" style="background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;border-radius:5px;padding:3px 8px;cursor:pointer;">削除</button></div>';
       }).join('');
@@ -7076,10 +7119,21 @@ function _frRender(){
   b.innerHTML = h;
   _frUpdTotal();
 }
+// GL設定パネルの「路盤層転圧の撒き出し」行
+function _rbStepRowHTML(){
+  var r = _siteRules();
+  var lab = '<span style="font-size:14px;color:var(--text2);">路盤層転圧の撒き出し（中間転圧は@200固定）</span>';
+  if(r.rbStepFixed) return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'+lab+'<b style="font-size:14px;color:#7030a0;">@'+r.rbStep+' 固定</b></div>';
+  var cur = r.rbStep ? String(r.rbStep) : '';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'+lab
+    + '<select id="selRbStep" onchange="setSiteRule(\'rbStep\', parseInt(this.value)||0)" style="font-size:14px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:5px;">'
+    + [['','従来（マスタの層・@150）'],['200','@200'],['150','@150']].map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===cur?' selected':'')+'>'+o[1]+'</option>'; }).join('')
+    + '</select></div>';
+}
 function editFreeEntry(hata){
   var e = _frLoad('hata_master').find(function(x){ return String(x.hata)===String(hata); });
   if(!e || !e.form){ alert('この箇所は編集できません'); return; }
-  _fr = JSON.parse(JSON.stringify(e.form));
+  _fr = _frNormForm(JSON.parse(JSON.stringify(e.form)));
   _frRender();
 }
 function deleteFreeEntry(hata){
@@ -7097,13 +7151,17 @@ function saveFreeMode(){
   if(!dp){ alert('DP（土被り）を入力してください'); return; }
   if(fl) dph = fl - dp;
   if(!(dph > 0)){ alert('DP下配管高さH か 床付け を入力してください（床付けは DP より深く）'); return; }
+  _frNormForm(_fr);
   var as = _fr.as.filter(function(a){ return (parseFloat(a.t)||0) > 0; }).map(function(a){
-    return { name: a.name==='その他' ? (a.custom||'その他AS') : a.name, t: parseFloat(a.t) };
+    return { name: String(a.name||'').trim() || 'AS層', t: parseFloat(a.t) };
   });
   var rb = _fr.rb.filter(function(r){ return (parseFloat(r.t)||0) > 0; }).map(function(r){
-    var t = parseFloat(r.t), other = r.mat==='その他';
-    var sub = other ? (r.kind==='上層' ? 'rmfree' : 'rcfree') : r.mat;
-    return { cat:r.kind, subcat:sub, size:other?'':r.mat, name:other?(r.custom||'その他路盤'):'', t:t, n:1, totalMm:t };
+    var t = parseFloat(r.t), mat = String(r.mat||'').trim(), kind = String(r.kind||'').trim() || '下層';
+    // 材料名に RM-40 / RC-40 などがあれば上層・下層路盤として扱う（全角も可）
+    var z = mat.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }).replace(/[－‐ー―]/g,'-').toUpperCase();
+    var m = z.match(/R([MC])\s*-?\s*(\d+)/);
+    var sub = m ? ('R'+m[1]+'-'+m[2]) : (kind.indexOf('上')>=0 ? 'rmfree' : 'rcfree');
+    return { cat:kind, subcat:sub, size:m?sub:'', name:(m && z===sub)?'':(mat||'路盤材'), t:t, n:1, totalMm:t };
   });
   var tot = _frTotals();
   if(!(tot.total > 0)){ alert('AS層か路盤層の厚さを入力してください'); return; }
@@ -7114,14 +7172,15 @@ function saveFreeMode(){
   var ckType = _fr.road==='車道' ? '85' : '30';
   var rbOld = _frLoad('hata_master').find(function(x){ return String(x.hata)===hata; });
   var rbKey = (rbOld && rbOld.rbKey) || ('free_'+Date.now());
-  var label = '✏ No.'+hata+' '+_fr.road+' AS'+as.length+'層 計'+tot.total+'mm';
+  var kbn = _fr.kbn==='hon' ? 'hon' : 'kari';
+  var label = '✏ No.'+hata+' '+_fr.road+' '+(kbn==='hon'?'本':'仮')+'復旧 AS'+as.length+'層 計'+tot.total+'mm';
   var side = {
     AsLayers: as, RbLayers: rb,
     RmSize: size(isRm), RmH: sumT(isRm), RmLayers: lstr(isRm),
     RcSize: size(isRc), RcH: sumT(isRc), RcLayers: lstr(isRc),
     TotalH: tot.total/1000
   };
-  var entry = { key:rbKey, free:true, label:label, color:'#d97706', ckType:ckType, updatedAt:new Date().toISOString().slice(0,10) };
+  var entry = { key:rbKey, free:true, label:label, color:'#d97706', ckType:ckType, rbStep:parseInt(_fr.rbStep)||0, updatedAt:new Date().toISOString().slice(0,10) };
   ['kari','hon'].forEach(function(p){ Object.keys(side).forEach(function(k){ entry[p+k] = side[k]; }); });
   var rbs = _frLoad('roadbed_masters').filter(function(x){ return x.key!==rbKey; });
   rbs.push(entry); _frSave('roadbed_masters', rbs);
@@ -7139,6 +7198,9 @@ function saveFreeMode(){
   onTypeChange();
   var hEl = document.getElementById('hataInput');
   if(hEl){ hEl.value = hata; _hataEntry = null; loadHata(); }
+  // 仮復旧／本復旧
+  if(_locData[_locIdx]){ if((_locData[_locIdx].kbn||'kari') !== kbn) setLocKbn(kbn); }
+  else if(_kojiKbn !== kbn) setKojiKbn(kbn);
   // 同じ番号が共有マスタにもある場合は、マスタを設計値として残し入力値を「現場変更」として重ねる
   var dpM = +(dp/1000).toFixed(3), dphM = +(dph/1000).toFixed(3);
   if(Math.abs((_ckNum($v('inDP1'))||0) - dpM) > 0.0005 || Math.abs((_ckNum($v('inDPH'))||0) - dphM) > 0.0005){
