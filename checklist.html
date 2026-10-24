@@ -3468,8 +3468,9 @@ function buildChecklistFromPreset(presetType){
       var isSurface = (idx === _revNorm.length - 1);
       var tMm = Math.round(layer.t || 0);
       var tM  = tMm / 1000;
-      var bottomGL = parseFloat(_normGLBottom.toFixed(4));
       _normGLBottom = parseFloat((_normGLBottom - tM).toFixed(4));
+      // 転圧写真はその層の上端（天端）で撮る
+      var topGL = parseFloat(_normGLBottom.toFixed(4));
       var nm = normalizeMaterialName(layer.name || layer.preset || layer.custom || '');
       if(isSurface){
         _dynNormItems.push({
@@ -3487,7 +3488,7 @@ function buildChecklistFromPreset(presetType){
           : nm + 'をランマーで転圧。転圧後スケールでGL値と幅を実測・撮影。黒板に敷均し・締固め状況と記載。';
         _dynNormItems.push({
           n: itemNm,
-          dim: 'GL-' + bottomGL.toFixed(3) + 'm（t=' + tMm + 'mm）',
+          dim: 'GL-' + topGL.toFixed(3) + 'm（t=' + tMm + 'mm）',
           note: noteStr,
           _isDynHonNorm: true
         });
