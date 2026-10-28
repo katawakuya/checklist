@@ -1198,8 +1198,12 @@ function renderOrderRef(){
            <th style="padding:4px 8px;border:1px solid #ddd;">数量</th>
            <th style="padding:4px 8px;border:1px solid #ddd;">ダンプ目安</th></tr>
          ${rows}</table>` : '';
+  // 現場ルールで「管上100mmより上は発生土で埋め戻す」現場（例: PFI磯子）は、その分は搬出しない
+  const _site = getSiteMaster().find(x => _norm(x.name) === _norm((document.getElementById('siteName') || {}).value));
+  const _bf = (window.WorkRecord && _site) ? WorkRecord.siteRules(_site.id, _site.name).backfill : '';
+  const _zLbl = _bf === 'hassei' ? '発生残土（改良土ぶん。路盤変更点までは発生土で埋戻し）' : '発生残土（再生砂＋改良土）';
   const outRows = row('既存アスファルト廃材', s.out.as) + row('路盤廃材', s.out.rb)
-                + row('発生残土（再生砂＋改良土）', s.out.zando) + row('コンクリートガラ', s.out.congara);
+                + row(_zLbl, s.out.zando) + row('コンクリートガラ', s.out.congara);
   const inRows  = row('アスファルト', s.in.as) + row('路盤材 RM・RC', s.in.rb)
                 + row('再生砂', s.in.sand) + row('改良土', s.in.soil);
   box.innerHTML =

@@ -275,6 +275,13 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
             <option value="">― 現場を選択 ―</option>
           </select>
         </div>
+        <!-- 現場ルール（現場マスタに保存。発注計算・チェックリストと共通） -->
+        <details id="siteRulesWrap" style="display:none;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.45);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+          <summary style="font-size:14px;font-weight:700;color:#eab308;cursor:pointer;">📏 この現場のルール（埋戻し・路盤層転圧・掘削出来形）<span id="siteRulesSum" style="font-weight:400;color:var(--text2);"></span></summary>
+          <div id="siteRulesBox" style="color:var(--text);"></div>
+          <button class="btn" type="button" onclick="saveSiteRulesRb()" style="margin-top:8px;">💾 この現場のルールを保存</button>
+          <div style="font-size:13px;color:var(--text3);margin-top:5px;">保存すると全端末の発注計算（埋戻し材・ウィザード）とチェックリスト（転圧ピッチ・掘削出来形）に反映されます。</div>
+        </details>
         <!-- 既存構成の選択・編集 -->
         <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
           <label style="font-size:14px;font-weight:700;color:var(--accent);display:block;margin-bottom:6px;">📋 既存の路盤構成を選んで修正</label>
@@ -713,6 +720,7 @@ header h1{font-size:18px;font-weight:700;white-space:nowrap;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="work-record.js"></script>
 <script>
 'use strict';
 const FIREBASE_CONFIG={
@@ -946,12 +954,38 @@ function onSiteChange(id){
     document.getElementById('dwgList').innerHTML='<div class="empty-state">現場を選択してください</div>';
     return;
   }
+  renderSiteRulesRb(id);
   loadRoadbedsForSite(id);
   loadDrawingsForSite(id);
   updateExistingConfigSel();
   initCrossSiteSel();
   loadHataForSite(id);
   refreshViewerFilter();
+}
+
+// ======================================
+// 現場ルール（定義と入力欄は work-record.js）
+// ======================================
+function renderSiteRulesRb(id){
+  var wrap=document.getElementById('siteRulesWrap'), box=document.getElementById('siteRulesBox');
+  if(!wrap||!box||!window.WorkRecord) return;
+  var site=getLocalSites().find(function(s){return (s.id||s.siteId||s.name)===id;});
+  if(!site){wrap.style.display='none';return;}
+  wrap.style.display='';
+  box.innerHTML=WorkRecord.rulesFormHTML('rbrule-', site.rules||{}, site.name||'');
+  var r=WorkRecord.siteRules(site.id, site.name), t=[];
+  if(r.backfill) t.push('埋戻し: '+WorkRecord.backfillLabel(r.backfill));
+  if(r.rbStep) t.push('@'+r.rbStep+(r.rbStepFixed?'固定':''));
+  if(r.noYuka) t.push('出来形なし');
+  document.getElementById('siteRulesSum').textContent=t.length?'　'+t.join('／'):'　未設定';
+}
+function saveSiteRulesRb(){
+  var id=_selectedSiteId;
+  if(!id){alert('先に現場を選択してください');return;}
+  WorkRecord.saveSiteRules(id, WorkRecord.readRulesForm('rbrule-'), _fbDb, function(ok, where){
+    renderSiteRulesRb(id);
+    alert(ok&&where==='cloud'?'✅ この現場のルールを保存しました（全端末に反映）':'⚠ この端末には保存しました。クラウドへの保存は失敗したので、通信のある所でもう一度保存してください。');
+  });
 }
 
 // ======================================
