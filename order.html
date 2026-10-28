@@ -7884,14 +7884,14 @@ function _rebuildDynTabsKeepingInput(siteId, siteName, activeTid) {
   }, 60);
 }
 
-function openOrderFreeMode() {
+function openOrderFreeMode(afterSave) {
   var siteId = document.getElementById('global-site-sel')?.value || '';
   var site = getSites().find(function(x){ return x.id === siteId; });
   var by = '';
   try { by = (_getActiveAuthorEl()?.value || '').trim(); } catch (e) {}
   FreeEntry.open({ siteId: siteId, siteName: site ? site.name : '', rules: WorkRecord.siteRules(siteId, site ? site.name : ''),
     db: _fbDb, by: by, saveLabel: 'この内容で発注計算の型をつくる',
-    onSaved: _orderAfterFreeSave,
+    onSaved: function(res){ _orderAfterFreeSave(res); if (typeof afterSave === 'function') afterSave(res); },
     onDeleted: function(){ _rebuildDynTabsKeepingInput(siteId, site ? site.name : ''); } });
 }
 // フリー入力の箇所ができたら、その型タブを開いて旗揚げ番号・DP・管下H・仮/本を入れる（残りは W・L）
@@ -12023,7 +12023,43 @@ function _owizHataEntry(h){
   for (var i = 0; i < list.length; i++) {
     if (String(list[i].hata || list[i].num || '') === String(h)) return list[i];
   }
-  return null;
+  return _owizFree(h);
+}
+// フリー入力でつくった箇所（突発の路盤構成。チェックリストと共通）
+function _owizFree(h){
+  if (h === '' || h == null) return null;
+  try { return WorkRecord.freeHata(_owizSiteId(), h); } catch(e) { return null; }
+}
+// フリー入力の箇所なら、型・仮/本・埋設シート位置・DP をその内容で先に入れておく
+function _owizApplyFree(h){
+  var e = _owizFree(h), c = _owiz.cur;
+  if (!e) return false;
+  var tid = 'dyntype_type_import_' + e.rbKey;
+  if (!_owizTypeByTid(tid)) return false;
+  _owizSetType(tid);
+  var f = e.form || {};
+  c.mode = (f.kbn === 'hon') ? 'hon' : 'kari';
+  if (f.road === '車道' || f.road === '歩道') { c.sheetPos = (f.road === '車道') ? '300' : '200'; if (!c.sheetCols) c.sheetCols = 1; }
+  if (c.DP == null && e.dp > 0)   c.DP  = e.dp;
+  if (c.DPH == null && e.dph > 0) c.DPH = e.dph;
+  c.fromFree = true;
+  return true;
+}
+// ウィザードから突発の路盤構成をフリー入力でつくる。保存したらその型で続ける
+function _owizOpenFree(){
+  try { _owizReadStep(); } catch(e) {}
+  var h = _owiz.cur.hata;
+  openOrderFreeMode(function(res){
+    setTimeout(function(){
+      if (!_owiz) return;
+      if (!_owiz.cur.hata) _owiz.cur.hata = res.hata;
+      _owiz.cur.DP = null; _owiz.cur.DPH = null;
+      if (_owizApplyFree(res.hata) && _owizCurStep() === 'type') _owiz.step++;   // 型はつくった構成で決まり
+      _owizRender();
+    }, 400);
+  });
+  // 旗揚げ番号はウィザードで入れた番号にそろえる（別の箇所を上書きしないため）
+  try { var st = FreeEntry._state(); if (st && h && st.hata !== h) { st.hata = h; FreeEntry.render(); } } catch(e) {}
 }
 // マスタから DP / DP下配管H を取り出す（roadbed.html 形式と order.html 形式の両対応）
 function _owizMasterDP(e){
@@ -12067,7 +12103,8 @@ function _owizSteps(){
   if (c.mode === 'hon') s.push('w3');   // 本復旧は段々断面（AS幅・路盤幅）
   s.push('L', 'genzai', 'DP', 'DPH');
   if (c.hasGrad)    s.push('DP2', 'DPH2');
-  s.push('isoil', 'sheet');
+  if (!_btmIsoil()) s.push('isoil');   // PFI磯子は埋戻しが現場ルールで決まっている（管上100mmまで改良土・その上は発生土）
+  s.push('sheet');
   if (c.hasSpecial) s.push('mas');
   s.push('kongara');
   if (c.hasKongara) s.push('kongaraDim');
@@ -12174,6 +12211,7 @@ function _owizRender(){
     var recent = _owizMem('recent_hata') || [];
     var reg = _owizHataList().map(function(r){ return String(r.hata || r.num || ''); })
                              .filter(function(v){ return v !== ''; });
+    try { WorkRecord.freeLocal(_owizSiteId()).hata.forEach(function(e){ var v = String(e.hata || ''); if (v && reg.indexOf(v) < 0) reg.unshift(v); }); } catch(e) {}
     var cand = recent.concat(reg.filter(function(v){ return recent.indexOf(v) < 0; })).slice(0, 12);
     if (cand.length) {
       html += '<div class="owiz-label">候補</div><div class="owiz-chips">';
@@ -12185,6 +12223,8 @@ function _owizRender(){
     html += '<div class="owiz-label">直接入力</div>'
           + '<input type="text" id="owizHata" class="owiz-input" placeholder="例: 1-1" value="' + esc(c.hata) + '" '
           + 'oninput="_owiz.cur.hata=this.value">';
+    var _fe = _owizFree(c.hata);
+    if (_fe) html += '<div class="owiz-master-note">✏ No.' + esc(c.hata) + ' はフリー入力の箇所です（' + esc((_fe.form && _fe.form.road) || '') + '・' + ((_fe.form && _fe.form.kbn) === 'hon' ? '本復旧' : '仮復旧') + '）。型・仮/本・シート位置・DP はこの内容で入ります。</div>';
     var im = _owizDiagImg(c.hata);
     if (im) html += '<div class="owiz-diag-preview"><div class="owiz-diag-label">📐 登録図面</div><img class="owiz-diag-img" src="' + im + '"></div>';
   }
@@ -12206,6 +12246,8 @@ function _owizRender(){
             + '</div>';
     });
     html += '</div>';
+    html += '<div class="owiz-pick-row" style="margin-top:12px;"><div class="owiz-pick warn" onclick="_owizOpenFree()">✏ 合う路盤構成がない（突発）→ フリー入力でつくる</div></div>';
+    html += '<div class="owiz-hint">土被り・床付けの急な変更や、図面と違う路盤構成のときに使います。つくった構成はこの箇所の型になり、チェックリストでも使えます。</div>';
   }
 
   else if (st === 'mode') {
@@ -12312,7 +12354,8 @@ function _owizRender(){
   }
 
   else if (st === 'sheet') {
-    html += '<div class="owiz-q">埋設シートの敷設位置を選んでください<small>管の上 何mm の位置に敷くか。列数は次で指定します</small></div>';
+    html += '<div class="owiz-q">埋設シートの敷設位置を選んでください<small>管の上 何mm の位置に敷くか。列数は次で指定します。車道は管上300mm、歩道は管上200mm が基本です</small></div>';
+    if (c.fromFree && c.sheetPos) html += '<div class="owiz-master-note">✏ フリー入力の箇所（' + (c.sheetPos === '300' ? '車道' : '歩道') + '）なので 管上' + c.sheetPos + 'mm を選んであります。</div>';
     var _sp = function(v, lbl, sub){
       return '<div class="owiz-rb-item' + (c.sheetPos === v ? ' sel' : '') + '" onclick="_owizReadStep();_owiz.cur.sheetPos=' + _esc0(JSON.stringify(v)) + ';_owizRender()">'
            + '<div class="owiz-rb-name">' + (c.sheetPos === v ? '✅ ' : '') + esc(lbl) + '</div>'
@@ -12491,7 +12534,7 @@ function _owizRender(){
     }
 
     // 路盤・砂・桝
-    html += '<div class="owiz-label" style="margin-top:16px;">路盤材・砂の嵩増率（空欄＝1.25・その日限り）</div>';
+    html += '<div class="owiz-label" style="margin-top:16px;">路盤材・砂の嵩増率（状況を選ぶと目安が入ります・その日限り）</div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
           + [['RC','rc','owizCoefRc'],['RM','rm','owizCoefRm'],['再生砂','sand','owizCoefSand'],['改良土','soil','owizCoefSoil']]
               .map(function(a){
@@ -12595,8 +12638,11 @@ function _owizDelPipe(i){
 
 // ── 型を選択 ──────────────────────────────────
 function _owizPickType(tid){
+  if (_owizSetType(tid)) _owizRender();
+}
+function _owizSetType(tid){
   var t = _owizTypeByTid(tid);
-  if (!t) return;
+  if (!t) return false;
   _owiz.cur.tid         = t.tid;
   _owiz.cur.typeLabel   = t.label;
   _owiz.cur.siteName    = t.site;
@@ -12608,7 +12654,7 @@ function _owizPickType(tid){
   if (!t.hasSpec) _owiz.cur.hasSpecial = false;
   // この旗揚げ番号がどの路盤構成だったかを記憶（次回の取り違え防止）
   if (_owiz.cur.hata) _owizMem('hata_type_' + _owiz.cur.hata, t.tid);
-  _owizRender();
+  return true;
 }
 
 // ── ステップ移動 ───────────────────────────────
@@ -12652,6 +12698,7 @@ function _owizNext(){
   // 必須チェック
   var need = { hata:'旗揚げ番号', W:'W（掘削幅）', L:'L（掘削延長）', DP:'DP（土被り）', DPH:'DP下配管H', DP2:'終点側の DP' };
   if (st === 'hata' && !c.hata) { alert('旗揚げ番号を入力してください。'); return; }
+  if (st === 'hata') _owizApplyFree(c.hata);
   if (st === 'type' && !c.tid)  { alert('型を選んでください。'); return; }
   if (st === 'isoil' && !c.isoil) { alert('管上100mm〜路盤下端の埋戻し材を選んでください。'); return; }
   if (st === 'sheet') {
@@ -12727,7 +12774,8 @@ function _owizSummaryHTML(locs){
           + '</span>'
           + '<span class="owiz-sm-sub">'
           + (l.mode === 'hon' ? '🏗 本復旧' : '🔧 仮復旧')
-          + (l.isoil ? '　埋戻し材: ' + esc(l.isoil === 'none' ? '該当なし' : l.isoil) : '')
+          + (_btmIsoil() ? '　埋戻し: 管上100mmまで改良土／路盤変更点まで発生土'
+             : (l.isoil ? '　埋戻し材: ' + esc(l.isoil === 'none' ? '該当なし' : l.isoil) : ''))
           + '　' + ({ gen:'🔨 現況ASを撤去', part:'🔨 現況＋仮復旧ASを撤去', kari:'🔨 仮復旧ASを撤去' }[l.genMode || 'kari'])
           + (l.genMode === 'part' && l.genW > 0 ? '(現況 ' + l.genW + '×' + l.genL + 'm)' : '')
           + (l.genAsH > 0 && l.genMode !== 'kari' ? '(現況AS ' + l.genAsH + 'mm 実測)' : '')
@@ -13039,7 +13087,9 @@ function _owizFinish(){
     warns.push('今回使わなかったパターンに残っていた入力をクリアしました（' + clearedPats.join('、') + '）');
   }
 
-  closeOrderWizard();
+  // 反映が終わったので「閉じますか？」は聞かずに閉じ、次は新しく始める
+  document.getElementById('owizModal').style.display = 'none';
+  _owiz = null;
 
   // 再計算＋対象タブへ移動
   setTimeout(function(){
