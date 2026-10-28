@@ -10,6 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>現場管理システム</title>
 <script>
+// 発注計算のアイコン（電卓）。絵文字には電卓が無く 🖩 は多くの端末で表示されないため、表示時に SVG に置き換える
+var CALC_ICON_SVG = '<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="display:inline-block;vertical-align:middle"><rect x="5" y="2" width="22" height="28" rx="4" fill="#475569"/><rect x="8" y="4.6" width="16" height="6.6" rx="1.5" fill="#a7f3d0"/><text x="22.5" y="9.9" font-size="5.5" font-family="monospace" font-weight="700" text-anchor="end" fill="#065f46">123</text><rect x="8" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="25.9" width="4" height="3.2" rx="1" fill="#f97316"/></svg>';
+function _appLabelHTML(name){
+  var esc = String(name==null?'':name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace('\u{1F5A9}', CALC_ICON_SVG.replace('width="32" height="32"', 'width="1.2em" height="1.2em"'));
+}
 function forceReload(){
   var go=function(){
     var url=location.href.split('?')[0]+'?v='+Date.now();
@@ -385,7 +391,7 @@ body{
       </a>
 
       <a class="app-card card-green" onclick="return goApp('order.html')">
-        <div class="card-icon">🧮</div>
+        <div class="card-icon"><svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="display:inline-block;vertical-align:middle"><rect x="5" y="2" width="22" height="28" rx="4" fill="#475569"/><rect x="8" y="4.6" width="16" height="6.6" rx="1.5" fill="#a7f3d0"/><text x="22.5" y="9.9" font-size="5.5" font-family="monospace" font-weight="700" text-anchor="end" fill="#065f46">123</text><rect x="8" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="25.9" width="4" height="3.2" rx="1" fill="#f97316"/></svg></div>
         <div class="card-name">発注計算</div>
         <div class="card-desc">材料発注量の計算・記録</div>
       </a>
@@ -733,7 +739,7 @@ function openQrModal() {
   var apps = [
     {name:'🏠 ホーム',    url: base + '/index.html'},
     {name:'📐 路盤マスタ', url: base + '/roadbed.html'},
-    {name:'🧮 発注計算',  url: base + '/order.html'},
+    {name:'🖩 発注計算',  url: base + '/order.html'},
     {name:'✅ チェックリスト', url: base + '/checklist.html'},
     {name:'📂 図面ビューア',  url: base + '/viewer.html'},
     {name:'📝 作業日報',  url: base + '/daily-report.html'},
@@ -756,7 +762,7 @@ function openQrModal() {
     var wrap = document.createElement('div');
     wrap.style.cssText = 'margin-bottom:20px;';
     var title = document.createElement('p');
-    title.textContent = app.name;
+    title.innerHTML = _appLabelHTML(app.name);
     title.style.cssText = 'font-weight:700;margin-bottom:6px;color:var(--text);font-size:14px;';
     var qrDiv = document.createElement('div');
     qrDiv.style.cssText = 'display:inline-block;background:#fff;padding:8px;border-radius:8px;';
