@@ -55,7 +55,9 @@
     // 各アプリ側の共通 input 指定（PCで大きい padding 等）に負けて数字が切れないよう、この画面内だけ固定する
     var st = document.createElement('style');
     st.textContent = '#freeModal input,#freeModal select{font-size:15px !important;padding:7px 6px !important;height:auto !important;min-height:0 !important;line-height:1.3 !important;box-sizing:border-box !important;margin:0 !important;}'
-      + '#freeModal select{padding:0 !important;}';
+      + '#freeModal select{padding:0 !important;}'
+      + '#freeModal input[type=number]{padding:7px 4px !important;-moz-appearance:textfield;appearance:textfield;}'
+      + '#freeModal input[type=number]::-webkit-inner-spin-button,#freeModal input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}';
     document.head.appendChild(st);
   }
   function open(opts){
@@ -99,8 +101,8 @@
   function combo(path, val, opts, ph, rerender){
     return '<div style="display:flex;gap:3px;">'
       + '<input type="text" value="'+esc(val)+'" placeholder="'+(ph||'')+'" oninput="FreeEntry.set(\''+path+'\',this.value)"'+(rerender?' onchange="FreeEntry.render()"':'')+'" style="flex:1;min-width:0;box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">'
-      + '<select onchange="if(this.value){FreeEntry.set(\''+path+'\',this.value);FreeEntry.render();}" title="定型から選ぶ" style="width:38px;flex:none;font-size:15px;padding:0;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;">'
-      + '<option value="">▼</option>' + opts.map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('') + '</select></div>';
+      + '<select onchange="if(this.value){FreeEntry.set(\''+path+'\',this.value);FreeEntry.render();}" title="定型から選ぶ" style="width:30px;flex:none;font-size:13px;padding:0;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;">'
+      + '<option value=""></option>' + opts.map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('') + '</select></div>';
   }
   function updTotal(){
     var t = totals();
@@ -143,18 +145,18 @@
     h += lab('旗揚げ番号') + inp('hata', _fr.hata, '例: 1485');
     h += lab('AS層（上から）');
     _fr.as.forEach(function(a, i){
-      h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+      h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) 98px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
         + '<div>'+combo('as.'+i+'.name', a.name, AS_OPTS, '層の名前')+'</div>'
-        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('as.'+i+'.t', a.t, 'mm', 'number', '68px')+'<span style="font-size:13px;">mm</span></div>'
+        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('as.'+i+'.t', a.t, 'mm', 'number', '66px')+'<span style="font-size:13px;">mm</span></div>'
         + '<button type="button" onclick="FreeEntry.removeRow(\'as\','+i+')" style="'+BTN_X+'">✕</button></div>';
     });
     h += '<button type="button" onclick="FreeEntry.addRow(\'as\')" style="'+BTN_ADD+'">＋ AS層追加</button>';
     h += lab('路盤層（上から）');
     _fr.rb.forEach(function(x, i){
-      h += '<div style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) 100px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+      h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 98px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
         + '<div>'+combo('rb.'+i+'.kind', x.kind, KIND_OPTS, '上層', true)+'</div>'
         + '<div>'+combo('rb.'+i+'.mat', x.mat, RB_OPTS, '材料名')+'</div>'
-        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('rb.'+i+'.t', x.t, 'mm', 'number', '68px')+'<span style="font-size:13px;">mm</span></div>'
+        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('rb.'+i+'.t', x.t, 'mm', 'number', '66px')+'<span style="font-size:13px;">mm</span></div>'
         + '<button type="button" onclick="FreeEntry.removeRow(\'rb\','+i+')" style="'+BTN_X+'">✕</button></div>';
     });
     h += '<button type="button" onclick="FreeEntry.addRow(\'rb\')" style="'+BTN_ADD+'">＋ 路盤層追加</button>';

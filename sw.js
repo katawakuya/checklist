@@ -1,6 +1,6 @@
 // Service Worker - 現場管理システム
 // キャッシュバージョン（更新時はここを変える）
-const CACHE_VERSION = 'v4.81';
+const CACHE_VERSION = 'v4.82';
 const CACHE_NAME = 'kanri-' + CACHE_VERSION;
 
 // キャッシュするファイル一覧
@@ -68,9 +68,10 @@ self.addEventListener('fetch', function(event) {
     return; // ブラウザデフォルト（ネットワーク）
   }
 
-  // HTMLページ：ネットワーク優先（オフライン時のみキャッシュ）
-  // → リロードボタンを押すだけで常に最新版が取得できる
-  if (event.request.mode === 'navigate' || url.endsWith('.html')) {
+  // HTMLページ・アプリ共通JS：ネットワーク優先（オフライン時のみキャッシュ）
+  // → リロードボタンを押すだけで常に最新版が取得できる（JSが古いまま残らないように）
+  var path = url.split('?')[0];
+  if (event.request.mode === 'navigate' || path.endsWith('.html') || (path.endsWith('.js') && url.startsWith(self.location.origin))) {
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response.ok) {
