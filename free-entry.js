@@ -46,7 +46,7 @@
     var d = document.createElement('div');
     d.id = 'freeModal';
     d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:16px 8px 40px;';
-    d.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:560px;width:100%;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);color:#1e293b;">'
+    d.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:760px;width:100%;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);color:#1e293b;">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
       + '<div style="font-size:18px;font-weight:800;color:#92400e;">✏ フリー入力で箇所をつくる</div>'
       + '<button type="button" onclick="FreeEntry.close()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#64748b;">✕</button></div>'
