@@ -52,6 +52,11 @@
       + '<button type="button" onclick="FreeEntry.close()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#64748b;">✕</button></div>'
       + '<div id="freeBody"></div></div>';
     document.body.appendChild(d);
+    // 各アプリ側の共通 input 指定（PCで大きい padding 等）に負けて数字が切れないよう、この画面内だけ固定する
+    var st = document.createElement('style');
+    st.textContent = '#freeModal input,#freeModal select{font-size:15px !important;padding:7px 6px !important;height:auto !important;min-height:0 !important;line-height:1.3 !important;box-sizing:border-box !important;margin:0 !important;}'
+      + '#freeModal select{padding:0 !important;}';
+    document.head.appendChild(st);
   }
   function open(opts){
     _o = opts || {};
@@ -65,16 +70,35 @@
   function set(path, v){
     var p = path.split('.'), o = _fr;
     for(var i=0;i<p.length-1;i++) o = o[p[i]];
+    var old = String(o[p[p.length-1]]||'');
     o[p[p.length-1]] = v;
+    // 上層を選んだら RM、下層なら RC を自動で入れる（イレギュラーは材料欄で手動変更）
+    var mk = path.match(/^rb\.(\d+)\.kind$/);
+    if(mk){
+      var row = _fr.rb[+mk[1]], k = String(v||''), m = String(row.mat||'');
+      if(/上/.test(k) && !/上/.test(old) && (!m || /RC/i.test(m))) row.mat = 'RM-40';
+      else if(/下/.test(k) && !/下/.test(old) && (!m || /RM/i.test(m))) row.mat = 'RC-40';
+    }
+    // 深さ: DP・管下H を入れたら床付けを計算、床付けを直接入れたら管下H を逆算して欄に入れる
+    if(path==='dp' || path==='dph' || path==='floor'){
+      var dp = parseFloat(_fr.dp), dph = parseFloat(_fr.dph), fl = parseFloat(_fr.floor);
+      if(path==='floor'){ if(!isNaN(fl) && !isNaN(dp)) _fr.dph = String(fl - dp); }
+      else if(!isNaN(dp) && !isNaN(dph)) _fr.floor = String(dp + dph);
+      else if(path==='dp' && !isNaN(dp) && !isNaN(fl)) _fr.dph = String(fl - dp);
+      ['dp','dph','floor'].forEach(function(f){
+        var e = document.getElementById('fr_'+f);
+        if(e && f!==path && e.value !== String(_fr[f])) e.value = _fr[f];
+      });
+    }
   }
   function inp(path, val, ph, type, w){
-    return '<input type="'+(type||'text')+'" value="'+esc(val)+'" placeholder="'+(ph||'')+'"'+(type==='number'?' inputmode="decimal" step="1"':'')
+    return '<input'+(/^(dp|dph|floor)$/.test(path)?' id="fr_'+path+'"':'')+' type="'+(type||'text')+'" value="'+esc(val)+'" placeholder="'+(ph||'')+'"'+(type==='number'?' inputmode="decimal" step="1"':'')
       + ' oninput="FreeEntry.set(\''+path+'\',this.value);FreeEntry.updTotal()" style="width:'+(w||'100%')+';box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">';
   }
   // 選択＋フリー入力: 文字欄に直接書くか、右の▼から定型の名前を選ぶ
-  function combo(path, val, opts, ph){
+  function combo(path, val, opts, ph, rerender){
     return '<div style="display:flex;gap:3px;">'
-      + '<input type="text" value="'+esc(val)+'" placeholder="'+(ph||'')+'" oninput="FreeEntry.set(\''+path+'\',this.value)" style="flex:1;min-width:0;box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">'
+      + '<input type="text" value="'+esc(val)+'" placeholder="'+(ph||'')+'" oninput="FreeEntry.set(\''+path+'\',this.value)"'+(rerender?' onchange="FreeEntry.render()"':'')+'" style="flex:1;min-width:0;box-sizing:border-box;font-size:15px;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;">'
       + '<select onchange="if(this.value){FreeEntry.set(\''+path+'\',this.value);FreeEntry.render();}" title="定型から選ぶ" style="width:38px;flex:none;font-size:15px;padding:0;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;">'
       + '<option value="">▼</option>' + opts.map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('') + '</select></div>';
   }
@@ -86,8 +110,7 @@
     var el2 = document.getElementById('frDepth');
     if(el2){
       var txt = '';
-      if(dp && fl) txt = '管下H ＝ 床付け − DP ＝ '+(fl-dp)+'mm（床付けを優先）';
-      else if(dp && dph) txt = '床付け ＝ DP ＋ 管下H ＝ '+(dp+dph)+'mm';
+      if(dp && fl) txt = '床付け '+fl+' ＝ DP '+dp+' ＋ 管下H '+(fl-dp)+'mm';
       el2.textContent = txt;
     }
   }
@@ -120,18 +143,18 @@
     h += lab('旗揚げ番号') + inp('hata', _fr.hata, '例: 1485');
     h += lab('AS層（上から）');
     _fr.as.forEach(function(a, i){
-      h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) 88px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+      h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
         + '<div>'+combo('as.'+i+'.name', a.name, AS_OPTS, '層の名前')+'</div>'
-        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('as.'+i+'.t', a.t, 'mm', 'number', '58px')+'<span style="font-size:13px;">mm</span></div>'
+        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('as.'+i+'.t', a.t, 'mm', 'number', '68px')+'<span style="font-size:13px;">mm</span></div>'
         + '<button type="button" onclick="FreeEntry.removeRow(\'as\','+i+')" style="'+BTN_X+'">✕</button></div>';
     });
     h += '<button type="button" onclick="FreeEntry.addRow(\'as\')" style="'+BTN_ADD+'">＋ AS層追加</button>';
     h += lab('路盤層（上から）');
     _fr.rb.forEach(function(x, i){
-      h += '<div style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) 88px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
-        + '<div>'+combo('rb.'+i+'.kind', x.kind, KIND_OPTS, '上層')+'</div>'
+      h += '<div style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) 100px 30px;gap:6px;margin-bottom:6px;align-items:center;">'
+        + '<div>'+combo('rb.'+i+'.kind', x.kind, KIND_OPTS, '上層', true)+'</div>'
         + '<div>'+combo('rb.'+i+'.mat', x.mat, RB_OPTS, '材料名')+'</div>'
-        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('rb.'+i+'.t', x.t, 'mm', 'number', '58px')+'<span style="font-size:13px;">mm</span></div>'
+        + '<div style="display:flex;align-items:center;gap:3px;">'+inp('rb.'+i+'.t', x.t, 'mm', 'number', '68px')+'<span style="font-size:13px;">mm</span></div>'
         + '<button type="button" onclick="FreeEntry.removeRow(\'rb\','+i+')" style="'+BTN_X+'">✕</button></div>';
     });
     h += '<button type="button" onclick="FreeEntry.addRow(\'rb\')" style="'+BTN_ADD+'">＋ 路盤層追加</button>';
