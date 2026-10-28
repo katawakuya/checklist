@@ -2845,6 +2845,13 @@ const OP_CONDS = [
   ['normal', '普通',         'いつもどおり'],
   ['wet',    'ぬかるみ',     '湧水・軟弱で砂が食われる']
 ];
+// 状況ごとの嵩増率の既定値（オペが入れ直せば、その値を状況ごとに覚える）
+//   締まっている・普通は同じ。ぬかるみは砂・改良土が食われるぶん大きめ。
+const OP_COND_DEFAULTS = {
+  firm:   { rc:1.25, rm:1.25, sand:1.25, soil:1.25 },
+  normal: { rc:1.25, rm:1.25, sand:1.25, soil:1.25 },
+  wet:    { rc:1.30, rm:1.30, sand:1.40, soil:1.35 }
+};
 function _opCondLabel(c){
   for (var i=0;i<OP_CONDS.length;i++) if (OP_CONDS[i][0] === c) return OP_CONDS[i][1];
   return '';
@@ -2950,8 +2957,10 @@ function setOpCond(tid, cond){
   else {
     _opCoefs[k].cond = cond;
     var mem = (_opCondMem[k] || {})[cond] || {};
+    var def = OP_COND_DEFAULTS[cond] || {};
     ['rc','rm','sand','soil'].forEach(function(f){
       if (mem[f] != null && mem[f] > 0) _opCoefs[k][f] = mem[f];
+      else if (def[f] != null) _opCoefs[k][f] = def[f];
     });
   }
   _opCoefs[k].date = _opWorkDate(k) || _todayISO();
@@ -3152,6 +3161,23 @@ function updateIsoilLabel(tid) {
   _dynIsoilLabel[tid] = label;
   if (disp) disp.textContent = label;
   if (typeof _typeUpdateFns !== 'undefined' && typeof _typeUpdateFns[tid] === 'function') _typeUpdateFns[tid]();
+}
+// 現場ルール（work-record.js の WorkRecord.siteRules。チェックリストと共通）
+function _orderSiteRules() {
+  try {
+    var id = document.getElementById('global-site-sel')?.value || '';
+    var s = getSites().find(function(x){ return x.id === id; });
+    return WorkRecord.siteRules(id, s ? s.name : '');
+  } catch(e) { return {}; }
+}
+// PFI磯子: 管上100mmまで＝改良土、そこから路盤変更点まで＝発生土（発注しない）
+function _btmIsoil() { return !!_orderSiteRules().btmIsoil; }
+// 床付け〜管上100mm の高さ（路盤変更点より深い部分だけ）
+function _btmIsoilH(dp, dph, typeKey) {
+  const t = TYPES[typeKey];
+  if (!t) return 0;
+  const _refH = (t.kariTotalH != null && t.kariTotalH > 0) ? t.kariTotalH : t.totalH;
+  return Math.min(dph + 0.1, Math.max(0, dp + dph - _refH));
 }
 function splitExcess(dp, dph, typeKey) {
   const t = TYPES[typeKey];
@@ -3376,7 +3402,7 @@ function calcNormal(prefix, typeKey) {
   const rmOrd = rmH * w3.rbW * L * r.bulkRatioRM + kg.addRm;
 
   const { excessSandH, soilH } = splitExcess(DP, DPH, typeKey);
-  const isoilOrd = soilH * w3.exW * L * r.bulkRatioSoil;
+  let isoilOrd = soilH * w3.exW * L * r.bulkRatioSoil;
 
   const pipeVol   = getPipeVolume(`${prefix}-pipes`);
   const hasExcess = excessSandH > 0;
@@ -3386,7 +3412,11 @@ function calcNormal(prefix, typeKey) {
   const sandH     = (_isSk && soilH > 0) ? 0
                   : hasExcess ? excessSandH : Math.max(0, _floor - t.totalH);  // 床付け基準（路盤変更点より下～床付け）
   // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
-  const sandOrd   = Math.max(0, (sandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
+  let sandOrd     = Math.max(0, (sandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
+  if (!_isSk && _btmIsoil()) {
+    isoilOrd = Math.max(0, (_btmIsoilH(DP, DPH, typeKey) * w3.exW * L - pipeVol)) * r.bulkRatioSoil;
+    sandOrd  = 0;
+  }
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
            sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
@@ -3423,8 +3453,9 @@ function calcSpecial(prefix, typeKey) {
   const masAS粗粒 = asH粗粒 * masW * masL;
   const masRC     = rcH           * masW * masL;
   const masRM     = rmH           * masW * masL;
-  const masSoil   = masSoilH      * masW * masL;
-  const masSand   = masTotalSandH * masW * masL;
+  const _bi = _btmIsoil() && !(typeof _dynSkMode !== 'undefined' && _dynSkMode[typeKey]);
+  const masSoil   = (_bi ? _btmIsoilH(masH - masDPH, masDPH, typeKey) : masSoilH) * masW * masL;
+  const masSand   = _bi ? 0 : masTotalSandH * masW * masL;
 
   // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
   // 桝係数（オペ入力）があればそれを使い、空欄なら本体と同じ係数（＝従来どおり）
@@ -3485,7 +3516,7 @@ function calcGradient(prefix, typeKey) {
 
   const avgDPH = (DPH1 + DPH2) / 2;
   const { excessSandH: gExSandH, soilH: gSoilH } = splitExcess(avgDP, avgDPH, typeKey);
-  const isoilOrd  = gSoilH * w3.exW * L * r.bulkRatioSoil;
+  let isoilOrd    = gSoilH * w3.exW * L * r.bulkRatioSoil;
 
   const pipeVol    = getPipeVolume(`${prefix}-pipes`);
   const gHasExcess = gExSandH > 0;
@@ -3493,7 +3524,11 @@ function calcGradient(prefix, typeKey) {
   const gSandH     = (_isSk && gSoilH > 0) ? 0
                    : gHasExcess ? gExSandH : Math.max(0, (avgDP + avgDPH) - t.totalH);  // 床付け基準
   // 配管体積が砂の体積を上回る場合に負の発注量にならないよう 0 で下限を切る
-  const sandOrd    = Math.max(0, (gSandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
+  let sandOrd      = Math.max(0, (gSandH * w3.exW * L - pipeVol)) * r.bulkRatioSand;
+  if (!_isSk && _btmIsoil()) {
+    isoilOrd = Math.max(0, (_btmIsoilH(avgDP, avgDPH, typeKey) * w3.exW * L - pipeVol)) * r.bulkRatioSoil;
+    sandOrd  = 0;
+  }
 
   return { asTon密粒, asTon粗粒, rcOrd, rmOrd, isoilOrd, sandOrd,
            sandSoilSum: isoilOrd + sandOrd, rcRmSum: rcOrd + rmOrd,
@@ -3529,8 +3564,9 @@ function calcGradientSpecial(prefix, typeKey) {
   const masAS粗粒 = asH粗粒 * masW * masL;
   const masRC     = rcH            * masW * masL;
   const masRM     = rmH            * masW * masL;
-  const masSoil   = ksSoilH        * masW * masL;
-  const masSand   = ksTotalSandH   * masW * masL;
+  const _bi = _btmIsoil() && !(typeof _dynSkMode !== 'undefined' && _dynSkMode[typeKey]);
+  const masSoil   = (_bi ? _btmIsoilH(masH - ksDPH, ksDPH, typeKey) : ksSoilH) * masW * masL;
+  const masSand   = _bi ? 0 : ksTotalSandH   * masW * masL;
 
   // 桝ぶんを控除。控除しすぎて負の発注量にならないよう 0 で下限を切る
   // 桝係数（オペ入力）があればそれを使い、空欄なら本体と同じ係数（＝従来どおり）
@@ -3867,10 +3903,15 @@ function renderChips(containerId, result, typeKey) {
   }
   if (showRM && _honFrbChip.length === 0) html += chip('RC+RM 合計', fmt(result.rcRmSum), 'm³', true);
   if (_isHonFreeChip) html += '<div style="flex-basis:100%;font-size:13px;font-weight:700;color:var(--orange);padding:4px 2px 2px;margin-top:2px;">再生砂・改良土</div>';
+  if (_btmIsoil()) {
+    html += chip(getIsoilLabel(typeKey) + '（管上100mmまで）', fmt(result.isoilOrd), 'm³');
+    html += chip('発生土（路盤変更点まで）', '発注なし', '');
+  } else {
   if (t.hasImprovedSoil || !!_dynUseIsoil[typeKey]) html += chip(getIsoilLabel(typeKey), fmt(result.isoilOrd), 'm³');
   html += chip('再生砂', fmt(result.sandOrd), 'm³');
   { const _isoilLbl = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[typeKey]) ? getIsoilLabel(typeKey) : '改良土';
     html += chip(_isoilLbl + '＋再生砂', fmt(result.sandSoilSum), 'm³'); }
+  }
   // ── 掘削影響範囲AS再舗装（per-pattern表示）──
   {
     const _asPrefix = containerId.replace('-result', '');
@@ -4309,10 +4350,13 @@ function renderTotal(typeKey) {
   if ((t.rmH||0) > 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', true);
   // hon フリーモード: 再生砂・改良土 セクションヘッダーを挿入
   if (_isHonFree && totalWL > 0) html += sep('再生砂・改良土', 'rgba(249,115,22,0.5)');
+  if (_btmIsoil()) html += add(getIsoilLabel(tid) + '（管上100mmまで）', s.isoilOrd, 'm³');
+  else {
   if (t.hasImprovedSoil || !!_dynUseIsoil[tid]) html += add(getIsoilLabel(tid), s.isoilOrd, 'm³');
   html += add('再生砂', s.sandOrd, 'm³');
   { const _isoilLbl2 = ((t && t.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
     html += add(_isoilLbl2 + '＋再生砂', s.sandSoilSum, 'm³'); }
+  }
 
   // ── 路盤廃材 ──
   if (totalWL > 0) {
@@ -7799,7 +7843,13 @@ function _rbMasterToTypeObj(m) {
 function _getMastersAsTypes(siteId) {
   var localKey = 'roadbed_masters_' + siteId;
   var masters = JSON.parse(localStorage.getItem(localKey) || 'null');
-  if (!masters) masters = JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+  if (!masters) {
+    // 現場別マスタを使っている端末では roadbed_masters は全現場の寄せ集めなので、
+    // そのまま出すと他現場の路盤構成が並ぶ。旧形式（現場別キーが1つも無い）のときだけ使う。
+    var _perSite = false;
+    try { for (var i = 0; i < localStorage.length; i++) { if (String(localStorage.key(i)).indexOf('roadbed_masters_') === 0) { _perSite = true; break; } } } catch(e) {}
+    masters = _perSite ? [] : JSON.parse(localStorage.getItem('roadbed_masters') || '[]');
+  }
   if (!Array.isArray(masters)) masters = [];
   // フリー入力の箇所（チェックリスト・発注計算で共通、free-entry.js）も型として並べる
   var free = (window.WorkRecord && siteId) ? WorkRecord.freeLocal(siteId).rb : [];
@@ -7955,7 +8005,7 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       flex-shrink:0;
       background:${idx===0?typeConf.color||'var(--accent)':'transparent'};
       color:${idx===0?'#fff':'var(--text2)'};
-      white-space:normal;word-break:keep-all;font-family:var(--sans);
+      white-space:normal;word-break:keep-all;overflow-wrap:anywhere;font-family:var(--sans);
       max-width:120px;text-align:center;line-height:1.3;
       transition:background 0.15s,color 0.15s;
     `;
@@ -8312,7 +8362,9 @@ function buildDynamicTypeHTML(siteId, siteName, t) {
         onchange="toggleDynIsoil('${tid}',this.checked,TYPES['${tid}'])"
         style="width:22px;height:22px;cursor:${t.hasImprovedSoil?'default':'pointer'};accent-color:#eab308;flex-shrink:0;">
       <label for="${tid}-isoil-toggle" style="font-size:19px;font-weight:800;color:rgba(234,179,8,1);cursor:${t.hasImprovedSoil?'default':'pointer'};line-height:1.4;letter-spacing:0.3px;">
-        🔁 改良土ルール：管上100mm→路盤変更点＝<span id="${tid}-isoil-label-disp">改良土</span>／それ以下＝再生砂（小田原は砂）
+        ${_btmIsoil()
+          ? '🔁 PFI磯子ルール：管上100mmまで＝<span id="' + tid + '-isoil-label-disp">改良土</span>／そこから路盤変更点まで＝発生土（発注なし）'
+          : '🔁 改良土ルール：管上100mm→路盤変更点＝<span id="' + tid + '-isoil-label-disp">改良土</span>／それ以下＝再生砂（小田原は砂）'}
         ${t.hasImprovedSoil ? '<span style="font-weight:400;color:var(--text3);font-size:14px;">（常時有効）</span>' : ''}
       </label>
     </div>
@@ -9508,7 +9560,8 @@ function renderDynTotal(tid, typeConf) {
     html += add(`${getModeRcLabel(_effT2, tid, _effRcS)}合計`, s.rcOrd, 'm³', 'var(--green)');
   }
   if (_effRmH > 0 && _honFrbDisp.length === 0) html += add('RC + RM 合計', s.rcRmSum, 'm³', 'var(--green)');
-  { const _isoilLbl3 = ((_effT2 && _effT2.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
+  if (_btmIsoil()) html += add(getIsoilLabel(tid) + '（管上100mmまで）', s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
+  else { const _isoilLbl3 = ((_effT2 && _effT2.hasImprovedSoil) || !!_dynUseIsoil[tid]) ? getIsoilLabel(tid) : '改良土';
     if (_effT2.hasImprovedSoil || !!_dynUseIsoil[tid]) html += add(_isoilLbl3, s.isoilOrd, 'm³', 'rgba(234,179,8,0.95)');
     html += add('再生砂', s.sandOrd, 'm³', 'var(--orange)');
     html += add(_isoilLbl3 + '＋再生砂', s.sandSoilSum, 'm³', 'var(--orange)'); }

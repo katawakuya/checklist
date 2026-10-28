@@ -213,7 +213,7 @@
   //   現場名から既定値を決め、チェックリストの画面で現場ごとに切り替えられる（端末に保存: ck_site_rules）
   // =====================================================
   var SITE_RULE_DEFAULTS = [
-    { re:/磯子/, rule:{ noYuka:true, rbStep:200 } },
+    { re:/磯子/, rule:{ noYuka:true, rbStep:200, btmIsoil:true } },
     { re:/小田原/, rule:{ rbStep:150, rbStepFixed:true } },
     { re:/環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
   ];
