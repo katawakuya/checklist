@@ -214,6 +214,12 @@ select:focus,input:focus{border-color:var(--accent);}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// 発注計算のアイコン（電卓）。絵文字には電卓が無く 🖩 は多くの端末で表示されないため、表示時に SVG に置き換える
+var CALC_ICON_SVG = '<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="display:inline-block;vertical-align:middle"><rect x="5" y="2" width="22" height="28" rx="4" fill="#475569"/><rect x="8" y="4.6" width="16" height="6.6" rx="1.5" fill="#a7f3d0"/><text x="22.5" y="9.9" font-size="5.5" font-family="monospace" font-weight="700" text-anchor="end" fill="#065f46">123</text><rect x="8" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="13.6" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="17.7" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="21.8" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="8" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="14" y="25.9" width="4" height="3.2" rx="1" fill="#e2e8f0"/><rect x="20" y="25.9" width="4" height="3.2" rx="1" fill="#f97316"/></svg>';
+function _appLabelHTML(name){
+  var esc = String(name==null?'':name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace('\u{1F5A9}', CALC_ICON_SVG.replace('width="32" height="32"', 'width="1.2em" height="1.2em"'));
+}
 // ── 強制リロード ─────────────────────────────────────
 function forceReload(){
   var go=function(){
@@ -242,7 +248,7 @@ var _sites=[], _currentUser=null;
 var APPS=[
   {key:'home',     name:'🏠 ホーム',    file:'index.html',    siteParam:false},
   {key:'roadbed',  name:'📐 路盤マスタ', file:'roadbed.html',  siteParam:false},
-  {key:'order',    name:'🧮 発注計算',   file:'order.html',    siteParam:false},
+  {key:'order',    name:'🖩 発注計算',   file:'order.html',    siteParam:false},
   {key:'checklist',name:'✅ チェックリスト',file:'checklist.html',siteParam:false},
   {key:'viewer',   name:'📂 図面ビューア',file:'viewer.html',   siteParam:true},
   {key:'manage',      name:'📊 集計',          file:'manage.html',          siteParam:false},
@@ -332,7 +338,7 @@ function buildAppSelector(){
   APPS.forEach(function(app){
     var btn=document.createElement('button');
     btn.className='app-toggle on';
-    btn.textContent=app.name;
+    btn.innerHTML=_appLabelHTML(app.name);
     btn.dataset.key=app.key;
     btn.onclick=function(){
       if(_enabledApps.has(app.key)){
@@ -408,7 +414,7 @@ function addQrCard(container,siteName,appName,url){
 
   var appEl=document.createElement('div');
   appEl.className='app-label';
-  appEl.textContent=appName;
+  appEl.innerHTML=_appLabelHTML(appName);
 
   var wrap=document.createElement('div');
   wrap.className='qr-wrap';
