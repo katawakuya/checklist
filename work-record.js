@@ -212,18 +212,96 @@
   //           rbStepFixed=true の現場は画面でも変えられない。中間転圧は常に@200
   //   現場名から既定値を決め、チェックリストの画面で現場ごとに切り替えられる（端末に保存: ck_site_rules）
   // =====================================================
-  var SITE_RULE_DEFAULTS = [
-    { re:/磯子/, rule:{ noYuka:true, rbStep:200, btmIsoil:true } },
-    { re:/小田原/, rule:{ rbStep:150, rbStepFixed:true } },
-    { re:/環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true } }
+  // backfill（管上100mm〜路盤変更点の埋戻し）:
+  //   'isoil'  … 管上100mmまで再生砂（水締め）／その上 路盤変更点まで改良土（例: 環状2号線）
+  //   'sand'   … 管上100mmから上も再生砂（例: 小田原）
+  //   'hassei' … 管上100mmまで改良土／その上 路盤変更点まで発生土（発注なし）（例: PFI磯子）
+  //   ''       … 未設定（発注計算のウィザードで箇所ごとに聞く）
+  var BACKFILL_OPTS = [
+    ['',       '未設定（ウィザードで毎回聞く）'],
+    ['isoil',  '管上100mmまで再生砂／その上は改良土'],
+    ['sand',   '管上100mmから上も再生砂（改良土なし）'],
+    ['hassei', '管上100mmまで改良土／その上は発生土（発注なし）']
   ];
+  var SITE_RULE_DEFAULTS = [
+    { re:/磯子/, rule:{ noYuka:true, rbStep:200, backfill:'hassei' } },
+    { re:/小田原/, rule:{ rbStep:150, rbStepFixed:true, backfill:'sand' } },
+    { re:/環状\s*[2２]|環[2２]/, rule:{ rbStep:200, rbStepFixed:true, backfill:'isoil' } }
+  ];
+  function _siteRec(siteId){
+    var sites = _json('site_master') || [];
+    for(var i=0;i<sites.length;i++){ if(sites[i] && sites[i].id === siteId) return sites[i]; }
+    return null;
+  }
+  // 優先順: 現場名からの既定 → この端末の設定（チェックリスト） → 現場マスタの設定（全端末共通） → 固定ルール
+  //   r._master に現場マスタで決めた項目名が入る（画面で「現場マスタで設定」と出すため）
   function siteRules(siteId, siteName){
-    var name = siteName || '', r = {};
+    var rec = _siteRec(siteId);
+    var name = siteName || (rec && rec.name) || '', r = {};
     SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name)) Object.keys(d.rule).forEach(function(k){ r[k]=d.rule[k]; }); });
     var saved = (_json('ck_site_rules') || {})[siteId];
     if(saved) Object.keys(saved).forEach(function(k){ r[k]=saved[k]; });
-    // 固定ルールは端末の設定より優先
-    SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name) && d.rule.rbStepFixed){ r.rbStep = d.rule.rbStep; r.rbStepFixed = true; } });
+    var m = (rec && rec.rules) || {};
+    r._master = [];
+    Object.keys(m).forEach(function(k){
+      if(m[k] === '' || m[k] == null) return;
+      r[k] = m[k]; r._master.push(k);
+    });
+    if(m.rbStep) r.rbStepFixed = !!m.rbStepFixed;
+    // 固定ルールは端末の設定より優先（現場マスタで決めていない場合）
+    if(!m.rbStep) SITE_RULE_DEFAULTS.forEach(function(d){ if(d.re.test(name) && d.rule.rbStepFixed){ r.rbStep = d.rule.rbStep; r.rbStepFixed = true; } });
+    r.btmIsoil = (r.backfill === 'hassei');
+    return r;
+  }
+  function backfillLabel(v){
+    for(var i=0;i<BACKFILL_OPTS.length;i++) if(BACKFILL_OPTS[i][0] === (v||'')) return BACKFILL_OPTS[i][1];
+    return '';
+  }
+  // 現場マスタに現場ルールを書く。クラウドは最新を読んでからその現場の rules だけ差し替える（他の現場を巻き戻さない）
+  function saveSiteRules(siteId, rules, db, cb){
+    cb = cb || function(){};
+    var patch = function(arr){
+      return (arr || []).map(function(x){ if(x && x.id === siteId){ x = Object.assign({}, x); x.rules = rules; x.updatedAt = new Date().toISOString().slice(0,10); } return x; });
+    };
+    try{ localStorage.setItem('site_master', JSON.stringify(patch(_json('site_master')))); }catch(e){}
+    if(!db){ cb(true, 'local'); return; }
+    var ref = db.collection('masters').doc('site_master');
+    ref.get().then(function(doc){
+      var cur = (doc.exists && doc.data().data) ? doc.data().data : (_json('site_master') || []);
+      var next = patch(cur);
+      try{ localStorage.setItem('site_master', JSON.stringify(next)); }catch(e){}
+      return ref.set({ data:next, updatedAt:new Date().toISOString() });
+    }).then(function(){ cb(true, 'cloud'); }).catch(function(e){ console.warn('[WorkRecord] site rules save failed', e); cb(false, 'local'); });
+  }
+  // 現場ルールの入力欄（現場マスタ・路盤マスタの画面で共通）。値は readRulesForm で読む
+  function rulesFormHTML(prefix, rules, siteName){
+    rules = rules || {};
+    var def = siteRules('', siteName || '');
+    var sel = function(id, opts, v){
+      return '<select id="'+prefix+id+'" style="font-size:15px;padding:6px 8px;border-radius:6px;max-width:100%;">'
+        + opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(v==null?'':v)===String(o[0])?' selected':'')+'>'+o[1]+'</option>'; }).join('') + '</select>';
+    };
+    var row = function(label, ctrl, hint){
+      return '<div style="margin:8px 0;"><div style="font-size:13px;font-weight:700;margin-bottom:3px;">'+label+'</div>'+ctrl
+        + (hint ? '<div style="font-size:12px;opacity:.75;margin-top:2px;">'+hint+'</div>' : '') + '</div>';
+    };
+    var defTxt = function(k, txt){ return def[k] != null && def[k] !== '' ? '空欄なら現場名からの既定: '+txt : ''; };
+    return row('埋戻し（管上100mm〜路盤変更点）', sel('backfill', BACKFILL_OPTS, rules.backfill),
+               defTxt('backfill', backfillLabel(def.backfill)))
+      + row('路盤層転圧の撒き出し（中間転圧は@200固定）', sel('rbStep', [['','未設定（現場名の既定・端末で選択）'],['200','@200'],['150','@150']], rules.rbStep),
+               defTxt('rbStep', '@'+def.rbStep+(def.rbStepFixed?' 固定':'')))
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:14px;margin:4px 0;"><input type="checkbox" id="'+prefix+'rbStepFixed"'+(rules.rbStepFixed?' checked':'')+'> 撒き出しを固定（端末で変えられないようにする）</label>'
+      + row('掘削出来形の撮影', sel('noYuka', [['','未設定（現場名の既定）'],['0','撮影する'],['1','撮らない（復旧延長で代用）']], rules.noYuka == null ? '' : (rules.noYuka ? '1' : '0')),
+               defTxt('noYuka', def.noYuka ? '撮らない' : '撮影する'));
+  }
+  function readRulesForm(prefix){
+    var v = function(id){ var e = document.getElementById(prefix+id); return e ? e.value : ''; };
+    var r = {};
+    if(v('backfill')) r.backfill = v('backfill');
+    if(v('rbStep')) r.rbStep = parseInt(v('rbStep'), 10);
+    var fx = document.getElementById(prefix+'rbStepFixed');
+    if(r.rbStep && fx && fx.checked) r.rbStepFixed = true;
+    if(v('noYuka') !== '') r.noYuka = v('noYuka') === '1';
     return r;
   }
 
@@ -231,5 +309,6 @@
   g.WorkRecord = { workDate:workDate, cutoffHour:cutoffHour, setCutoffHour:setCutoffHour,
     touch:touch, askCarryOver:askCarryOver, carryOverDate:carryOverDate,
     freeLocal:freeLocal, syncFree:syncFree, freeHata:freeHata, siteRules:siteRules,
+    saveSiteRules:saveSiteRules, rulesFormHTML:rulesFormHTML, readRulesForm:readRulesForm, backfillLabel:backfillLabel, BACKFILL_OPTS:BACKFILL_OPTS,
     get:get, put:put, fetch:fetch, srcLabel:function(s){ return SRC_LABEL[s] || s || ''; } };
 })(window);

@@ -1680,6 +1680,10 @@ body{padding-bottom:env(safe-area-inset-bottom)}
           <div class="field"><label>工期終了（予定）</label><input type="date" id="site-end"></div>
           <div class="field" style="grid-column:1/-1"><label>備考</label><input type="text" id="site-note" placeholder="メモ（任意）" style="width:100%"></div>
         </div>
+        <div style="border:1px solid rgba(234,179,8,.45);background:rgba(234,179,8,.07);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+          <div style="font-size:15px;font-weight:800;color:rgba(234,179,8,1);">📏 現場ルール（発注計算・チェックリスト・路盤マスタで共通）</div>
+          <div id="site-rules-box"></div>
+        </div>
         <input type="hidden" id="site-edit-id">
         <div class="actions">
           <button class="btn btn-primary" onclick="saveSite()">💾 登録する</button>
@@ -8055,7 +8059,8 @@ function buildDynamicCalcTabs(siteId, siteName, types) {
       // 改良土ルールトグル復元
       try {
         var _savedIsoil = JSON.parse(localStorage.getItem('order_dyn_isoil') || '{}');
-        if (_savedIsoil[tabId]) {
+        // 保存した切替が無ければ、現場ルール（埋戻し＝改良土）に合わせて最初からONにする
+        if ((tabId in _savedIsoil) ? _savedIsoil[tabId] : (_orderSiteRules().backfill === 'isoil')) {
           _dynUseIsoil[tabId] = true;
           var _el = document.getElementById(tabId + '-isoil-toggle');
           if (_el) _el.checked = true;
@@ -11401,6 +11406,7 @@ function saveSite() {
         end:   document.getElementById('site-end')?.value||'',
         note:  document.getElementById('site-note')?.value?.trim()||'',
         presetId: document.getElementById('site-preset-sel')?.value || sites[idx].presetId || '',
+        rules: WorkRecord.readRulesForm('srule-'),
         updatedAt: new Date().toISOString().slice(0,10)
       };
     }
@@ -11412,6 +11418,7 @@ function saveSite() {
       end:   document.getElementById('site-end')?.value||'',
       note:  document.getElementById('site-note')?.value?.trim()||'',
       presetId: document.getElementById('site-preset-sel')?.value || '',
+      rules: WorkRecord.readRulesForm('srule-'),
       createdAt: new Date().toISOString().slice(0,10),
       updatedAt: new Date().toISOString().slice(0,10)
     });
@@ -11424,11 +11431,17 @@ function saveSite() {
   alert(`✅ 現場「${name}」を登録しました`);
 }
 
+// 現場ルール欄（定義と入力欄は work-record.js。現場名からの既定を見せるため名前を渡す）
+function renderSiteRulesBox(rules, name) {
+  const box = document.getElementById('site-rules-box');
+  if (box && window.WorkRecord) box.innerHTML = WorkRecord.rulesFormHTML('srule-', rules || {}, name || '');
+}
 function clearSiteForm() {
   ['site-name','site-manager','site-start','site-end','site-note','site-edit-id'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  renderSiteRulesBox({}, '');
   const psel = document.getElementById('site-preset-sel');
   if (psel) psel.value = '';
   const prev = document.getElementById('site-preset-preview');
@@ -11444,6 +11457,7 @@ function editSite(id) {
   document.getElementById('site-end').value     = s.end || '';
   document.getElementById('site-note').value    = s.note || '';
   document.getElementById('site-edit-id').value = s.id;
+  renderSiteRulesBox(s.rules || {}, s.name || '');
   if (s.presetId) {
     const sel = document.getElementById('site-preset-sel');
     if (sel) { sel.value = s.presetId; onSitePresetChange(); }
@@ -11469,6 +11483,7 @@ function deleteSite(id) {
 }
 
 function renderSiteList() {
+  try { const _rb = document.getElementById('site-rules-box'); if (_rb && !_rb.innerHTML) renderSiteRulesBox({}, ''); } catch(e) {}
   const el = document.getElementById('siteList');
   if (!el) return;
   const sites = getSites();
@@ -11489,6 +11504,11 @@ function renderSiteList() {
         ${s.manager ? `<div style="font-size:16px;color:var(--text2);margin-top:2px;">担当: ${s.manager}</div>` : ''}
         ${s.start ? `<div style="font-size:16px;color:var(--text2);">工期: ${s.start}${s.end?' 〜 '+s.end:''}</div>` : ''}
         ${s.note ? `<div style="font-size:16px;color:var(--text2);">備考: ${s.note}</div>` : ''}
+        ${(() => { const r = WorkRecord.siteRules(s.id, s.name); const t = [];
+            if (r.backfill) t.push('埋戻し: ' + WorkRecord.backfillLabel(r.backfill));
+            if (r.rbStep) t.push('路盤層転圧 @' + r.rbStep + (r.rbStepFixed ? ' 固定' : ''));
+            if (r.noYuka) t.push('掘削出来形は撮らない');
+            return t.length ? `<div style="font-size:14px;color:rgba(234,179,8,1);margin-top:2px;">📏 ${t.join('　／　')}${(s.rules && Object.keys(s.rules).length) ? '' : '（現場名からの既定）'}</div>` : ''; })()}
       </div>
       <div style="font-size:16px;color:var(--text2);text-align:right;">
         <div>発注記録 <strong style="color:var(--accent);">${hist.length}件</strong></div>
@@ -12103,7 +12123,7 @@ function _owizSteps(){
   if (c.mode === 'hon') s.push('w3');   // 本復旧は段々断面（AS幅・路盤幅）
   s.push('L', 'genzai', 'DP', 'DPH');
   if (c.hasGrad)    s.push('DP2', 'DPH2');
-  if (!_btmIsoil()) s.push('isoil');   // PFI磯子は埋戻しが現場ルールで決まっている（管上100mmまで改良土・その上は発生土）
+  if (!_orderSiteRules().backfill) s.push('isoil');   // 現場マスタで埋戻しが決まっている現場は聞かない
   s.push('sheet');
   if (c.hasSpecial) s.push('mas');
   s.push('kongara');
@@ -12120,7 +12140,7 @@ function _owizNewLoc(){
   return { hata:'', tid:'', typeLabel:'', typeHasGrad:false, typeHasSpec:false,
            hasSpecial:false, hasGrad:false,
            mode:'kari',                                   // 仮復旧 / 本復旧
-           isoil:null, isoilLabel:'',                     // 管上100〜路盤変更点の埋戻し材
+           isoil:({ isoil:'改良土', sand:'再生砂RC-10' })[_orderSiteRules().backfill] || null, isoilLabel:'',   // 管上100〜路盤変更点の埋戻し材（現場ルールで決まっていれば最初から入れる）
            sheetPos:null, sheetMm:null, sheetCols:null,    // 埋設シート 敷設位置・列数（1〜複数列）
            W:null, L:null, DP:null, DPH:null, DP2:null, DPH2:null,
            asW:null, rbW:null,                            // 本復旧の段々断面（AS幅 / 路盤幅）
@@ -12774,7 +12794,7 @@ function _owizSummaryHTML(locs){
           + '</span>'
           + '<span class="owiz-sm-sub">'
           + (l.mode === 'hon' ? '🏗 本復旧' : '🔧 仮復旧')
-          + (_btmIsoil() ? '　埋戻し: 管上100mmまで改良土／路盤変更点まで発生土'
+          + (_orderSiteRules().backfill ? '　埋戻し: ' + esc(WorkRecord.backfillLabel(_orderSiteRules().backfill)) + '（現場ルール）'
              : (l.isoil ? '　埋戻し材: ' + esc(l.isoil === 'none' ? '該当なし' : l.isoil) : ''))
           + '　' + ({ gen:'🔨 現況ASを撤去', part:'🔨 現況＋仮復旧ASを撤去', kari:'🔨 仮復旧ASを撤去' }[l.genMode || 'kari'])
           + (l.genMode === 'part' && l.genW > 0 ? '(現況 ' + l.genW + '×' + l.genL + 'm)' : '')

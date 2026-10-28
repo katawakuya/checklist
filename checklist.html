@@ -3932,6 +3932,8 @@ function _ckRbStep(pt){
   var s = r.rbStepFixed ? r.rbStep : ((pt && pt.rbStep) || r.rbStep);
   return s ? s/1000 : 0;
 }
+// 現場マスタ（発注計算の現場管理・路盤マスタ）で決めた項目は、この端末では変えない
+function _ckMasterRule(k){ var m = _siteRules()._master || []; return m.indexOf(k) >= 0; }
 function setSiteRule(k, v){
   if(!_siteId){ alert('先に現場を選択してください'); return; }
   var all = {};
@@ -6826,8 +6828,8 @@ function renderGLPanel() {
     +   '<span>舗装切断工の撮影項目を表示する</span>'
     + '</label>'
     + '<label style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-bottom:2px;cursor:pointer;font-size:14px;color:var(--text2);">'
-    +   '<input type="checkbox" id="chkNoYuka" onchange="setSiteRule(\'noYuka\',this.checked)"'+(_siteRules().noYuka?' checked':'')+' style="width:14px;height:14px;accent-color:#d97706;">'
-    +   '<span>この現場は掘削出来形を撮らない（復旧延長で代用）</span>'
+    +   '<input type="checkbox" id="chkNoYuka" onchange="setSiteRule(\'noYuka\',this.checked)"'+(_siteRules().noYuka?' checked':'')+(_ckMasterRule('noYuka')?' disabled':'')+' style="width:14px;height:14px;accent-color:#d97706;">'
+    +   '<span>この現場は掘削出来形を撮らない（復旧延長で代用）'+(_ckMasterRule('noYuka')?'<small style="color:#b45309;">（現場マスタで設定）</small>':'')+'</span>'
     + '</label>'
     + _rbStepRowHTML()
     + _wrCutoffRowHTML()
@@ -7016,6 +7018,7 @@ function _rbStepRowHTML(){
   var r = _siteRules();
   var lab = '<span style="font-size:14px;color:var(--text2);">路盤層転圧の撒き出し（中間転圧は@200固定）</span>';
   if(r.rbStepFixed) return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'+lab+'<b style="font-size:14px;color:#7030a0;">@'+r.rbStep+' 固定</b></div>';
+  if(_ckMasterRule('rbStep')) return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'+lab+'<b style="font-size:14px;color:#7030a0;">@'+r.rbStep+'</b><small style="color:#b45309;">（現場マスタで設定）</small></div>';
   var cur = r.rbStep ? String(r.rbStep) : '';
   return '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;margin-bottom:2px;">'+lab
     + '<select id="selRbStep" onchange="setSiteRule(\'rbStep\', parseInt(this.value)||0)" style="font-size:14px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:5px;">'
